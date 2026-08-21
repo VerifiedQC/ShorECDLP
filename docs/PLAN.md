@@ -1,8 +1,15 @@
 # ShorECDLP — Algorithm and Project Structure
 
 Repo: https://github.com/VerifiedQC/ShorECDLP. Curve: secp256k1 (Bitcoin), constants hardcoded.
-Goal: a verified, end-to-end resource estimate (program + proof of correctness + proof of
-gate count) for Shor's algorithm solving ECDLP.
+
+**What this project is.** A minimal, **ecdsa.fail-style verification infrastructure** (the
+`Framework/`) for quantum resource-estimate submissions: it fixes a tiny trusted gate set + a
+curve-agnostic cost model and defines the submission contract `program + proof of correctness +
+proof of gate count`. **The infra is the product.** To show it works, we ship **one
+deliberately super-naive** end-to-end Shor/ECDLP submission (the `Submission/`) that fills the
+contract exactly once — the existence proof, not an optimized estimate. Every optimization
+(pseudo-Mersenne reduction, windowing, cheaper inversion, semiclassical QFT, …) is a *future*
+submission against the same unchanged infra.
 
 > **Status labels.** M0 and the M1 field piece are concrete and landed. M2–M3 files are
 > planned-concrete. The `Framework/Quantum/`, `Framework/Contract`, `Submission/QFT`,
@@ -58,10 +65,12 @@ Top-level split (mirrors ForShor's Framework / Implementation):
   the primitive gate set, the Toffoli cost model (with **zero disclosures baked in**), the
   quantum semantics, and the submission **contract** (`program + correct + counted`). It is a
   small audited base that can judge *any* EC submission.
-- **`Submission/`** — the concrete **secp256k1** ECDLP construction: hardcoded constants, the
+- **`Submission/`** — one **deliberately super-naive** secp256k1 ECDLP construction whose only
+  job is to fill the contract once and prove the infra works: hardcoded constants, the
   arithmetic/EC/oracle circuits, the QFT the construction uses, the correctness + success
   proofs, and the instance that fills the contract — **plus this submission's own disclosure
-  note, beside the constants it describes.**
+  note, beside the constants it describes.** No choice here is optimized; each optimization
+  would be a separate future submission.
 
 **Why disclosures are submission-side** (settled with proof-review / arxiv-scout): the three
 obligations are machine-checked; disclosures ("we used generic reduction / Fermat / coherent
