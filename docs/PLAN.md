@@ -1,138 +1,148 @@
-# ShorECDLP — Algorithm and Project Structure
+# ShorECDLP
 
-Repo: https://github.com/VerifiedQC/ShorECDLP. Curve: secp256k1 (Bitcoin), constants hardcoded.
+A minimal, **ecdsa.fail-style verification infrastructure** for quantum resource-estimate
+submissions, together with **one super-naive Shor/ECDLP submission** that fills it.
 
-**What this project is.** A minimal, **ecdsa.fail-style verification infrastructure** (the
-`Framework/`) for quantum resource-estimate submissions: it fixes a tiny trusted gate set + a
-curve-agnostic cost model and defines the submission contract `program + proof of correctness +
-proof of gate count`. **The infra is the product.** To show it works, we ship **one
-deliberately super-naive** end-to-end Shor/ECDLP submission (the `Submission/`) that fills the
-contract exactly once — the existence proof, not an optimized estimate. Every optimization
-(pseudo-Mersenne reduction, windowing, cheaper inversion, semiclassical QFT, …) is a *future*
-submission against the same unchanged infra.
-
-> **Status labels.** M0 and the M1 field piece are concrete and landed. M2–M3 files are
-> planned-concrete. The `Framework/Quantum/`, `Framework/Contract`, `Submission/QFT`,
-> `Submission/Correctness/*`, `Submission/{Instance,Reference}` entries are **provisional** —
-> a forecast of unwritten layers, to be updated or deleted when M4/M5 content exists.
+Repo: https://github.com/VerifiedQC/ShorECDLP. Toolchain: `leanprover/lean4:v4.28.0`,
+Mathlib pinned. Curve: secp256k1 (Bitcoin).
 
 ---
 
-## 1. Algorithm — pseudocode
+## 1. The infrastructure (`Framework/`)
 
-**Problem.** On secp256k1, given base point `P` of prime order `n` and target `Q = [k]P`,
-recover `k` (the ECDLP; ECDSA key recovery reduces to it). Let `m` be the register width
-(≥ `⌈log₂ n⌉`, with phase-estimation precision padding).
+The framework fixes three things and nothing else:
 
-**Quantum core = 2-D period finding** (hidden-subgroup over `Z_N × Z_N`, `N = 2^m`). Key
-identity:
-```
-f(a, b) := [a]P  ⊞  [b]Q  =  [a + k·b] P        (since Q = [k]P)
-```
-so `f` is constant on cosets of the hidden subgroup `H = ⟨(−k, 1)⟩`. The QFT runs on the
-**domain** registers — not on the curve; `E` is only the codomain "label."
+- **A trusted primitive gate set** `{X, H, CX, CCX, P(k)}` and a circuit as a list of them
+  (`Circuit := List Gate`). The Clifford/Toffoli gates `{X, H, CX, CCX}` express all
+  reversible arithmetic; `P(k)` is a single-qubit phase rotation, which supplies the phases
+  the QFT needs (none of the other four can produce a non-trivial phase).
+- **A naive, simple T-count cost model** `tCount : Circuit → ℕ`, curve- and
+  construction-agnostic: Cliffords `{X, H, CX}` cost 0, Toffoli `CCX` costs 7, a rotation
+  `P(k)` costs 1. A submission that wants a different or tighter count (a 4-T Toffoli, an
+  exact rotation-synthesis cost, a Toffoli count, …) proves that as its own theorem — the
+  framework only fixes the simple baseline.
+- **A submission contract.** A submission provides a `program` (a circuit family) together
+  with a proof that it is `correct` and a proof of its `counted` T-count bound — both stated
+  about the *same* `program` term.
 
-```
-Input : secp256k1 E/F_p, base point P (prime order n), target Q = [k]P.
-Output: k = dlog_P(Q).
-
-1.  Registers:  a, b (each m qubits, domain);  R (an affine point of E(F_p), init O).
-2.  Superposition:  H^{⊗m} on a and on b  →  (1/N) Σ_{a,b} |a⟩|b⟩|O⟩.
-3.  Oracle  U_f : |a⟩|b⟩|O⟩ ↦ |a⟩|b⟩ | [a]P ⊞ [b]Q ⟩, via classically-controlled scalar
-      mult over PRECOMPUTED classical tables:
-          for i in 0..m-1:  if a_i : R ← R ⊞ table_P[i]     # table_P[i] = [2^i]P
-          for i in 0..m-1:  if b_i : R ← R ⊞ table_Q[i]     # table_Q[i] = [2^i]Q
-      → 2m ≈ 512 conditional point additions (each = 1 Fermat inversion + a few modmuls).
-4.  Measure-and-discard R (NO uncompute — decision 1); a,b now on cosets of H.
-5.  QFT_N on a, QFT_N on b   (textbook coherent in-register QFT over 2^m — decision 6).
-6.  Measure a, b → (α, β). Recover k from H^⊥ (β ≡ k·α mod n) by the standard
-      phase-estimation / continued-fraction rounding (N = 2^m ≠ n → approximate recovery;
-      success governed by the phase-estimation bound, not a naive (n−1)/n).
-7.  Verify Q == [k]P classically; repeat if needed (expected O(1)).
-```
-
-**Lighter than factoring in exactly one place:** the *reduction / number-theory* layer —
-`P, Q` are fixed, so no random-base casework (no order parity, no trivial-factor case). The
-phase-estimation success analysis does **not** disappear.
+The framework checks the two proofs and makes no claim about which curve or algorithm a
+submission uses. Any construction that fills the contract is a submission; optimized
+constructions are simply different submissions against the same framework.
 
 ---
 
-## 2. Structure — `Framework/` and `Submission/`
+## 2. The submission: Shor for ECDLP over secp256k1
 
-Top-level split (mirrors ForShor's Framework / Implementation):
+### 2.1 Problem
 
-- **`Framework/`** — the reusable, **curve- and construction-agnostic** judging apparatus:
-  the primitive gate set, the Toffoli cost model (with **zero disclosures baked in**), the
-  quantum semantics, and the submission **contract** (`program + correct + counted`). It is a
-  small audited base that can judge *any* EC submission.
-- **`Submission/`** — one **deliberately super-naive** secp256k1 ECDLP construction whose only
-  job is to fill the contract once and prove the infra works: hardcoded constants, the
-  arithmetic/EC/oracle circuits, the QFT the construction uses, the correctness + success
-  proofs, and the instance that fills the contract — **plus this submission's own disclosure
-  note, beside the constants it describes.** No choice here is optimized; each optimization
-  would be a separate future submission.
+Given the secp256k1 base point `P` of prime order `n` and a target `Q = [k]P`, recover `k`.
 
-**Why disclosures are submission-side** (settled with proof-review / arxiv-scout): the three
-obligations are machine-checked; disclosures ("we used generic reduction / Fermat / coherent
-QFT") are *documentation of algorithm choices*, not theorems. Different epistemic status →
-different home. A future optimized submission carries a *different* disclosure list against
-the *identical* framework — the "each optimization is a new submission" story.
+### 2.2 Algorithm
 
-Every circuit is a **derived circuit** over the four primitives `{X, H, CX, CCX}`; the trusted
-counting surface never grows. Each layer with both obligations obeys the same-`prog`-term
-discipline (the counted circuit is the proven one).
+Shor's algorithm as 2-D period finding. The oracle `f(a,b) = [a]P ⊞ [b]Q = [a + k·b]P` is
+constant on cosets of the hidden subgroup `H = ⟨(−k, 1)⟩`; the QFT runs on the domain
+registers, and one measurement yields `(α, β)` with `β ≡ k·α (mod n)`.
+
+```
+Input : secp256k1 E/F_p, base point P (order n), target Q = [k]P.
+Output: k.
+
+1.  Registers: a, b (each m qubits);  R (an affine point of E, init O).
+2.  H^{⊗m} on a and on b.
+3.  Oracle U_f, by classically-controlled double-and-add over precomputed tables:
+        for i in 0..m-1:  if a_i : R ← R ⊞ [2^i]P
+        for i in 0..m-1:  if b_i : R ← R ⊞ [2^i]Q
+    → 2m conditional point additions (each = one Fermat inversion + modular muls).
+4.  Measure and discard R.
+5.  QFT over 2^m on a, and on b.
+6.  Measure a, b → (α, β);  k = β·α⁻¹ (mod n) by continued-fraction rounding.
+7.  Verify Q == [k]P classically; repeat if needed.
+```
+
+### 2.3 Construction (naive, un-optimized)
+
+- **Field** `F_p`, `p = 2^256 − 2^32 − 977` (hardcoded). Schoolbook modular multiplication;
+  inversion by Fermat, `a⁻¹ = a^(p−2)`.
+- **Point addition**: affine Weierstrass, a quantum point ⊞ a classical constant point; the
+  `[2^i]P` / `[2^i]Q` tables are precomputed classical constants with a verified doubling
+  recurrence.
+- **Scalar multiplication**: classically-controlled binary double-and-add, `2m` additions.
+- **Oracle**: writes `[a]P ⊞ [b]Q` into `R`; `R` is then measured and discarded.
+- **QFT**: textbook coherent in-register QFT over `2^m` on each exponent register
+  (`H` + controlled-`P`, the controlled phase built from `P` and `CX`).
+- **Recovery**: from `(α, β)`, `k = β·α⁻¹ (mod n)` via phase-estimation / continued-fraction
+  rounding.
+
+### 2.4 What is proved
+
+- **`correct`**: the assembled circuit yields the ideal ECDLP-oracle measurement
+  distribution, with a phase-estimation success bound.
+- **`counted`**: an end-to-end T-count bound on the same circuit (framework metric).
+
+Every layer below carries both obligations as a derived circuit over the four primitives.
+
+---
+
+## 3. File structure
 
 ```
 ShorECDLP/
-  lakefile.lean  lean-toolchain  lake-manifest.json   # lean4:v4.28.0, Mathlib pinned to ForShor
+  lakefile.lean  lean-toolchain  lake-manifest.json
   docs/PLAN.md
-  ShorECDLP.lean                         # root aggregator
+  ShorECDLP.lean
   ShorECDLP/
-    Framework/                           # reusable, curve-agnostic
-      InstructionSet.lean                # [M0 ✓] Gate {X,H,CX,CCX}, Wire, Circuit
-      CostModel.lean                     # [M0 ✓] Toffoli gateCount (+append) — NO disclosures
+    Framework/
+      InstructionSet.lean                # [M0] Gate {X,H,CX,CCX,P(k)}, Wire, Circuit
+      CostModel.lean                     # [M0] tCount (naive T-count: Clifford 0, Toffoli 7, P 1), curve-agnostic
       Quantum/            (provisional)
-        Semantics.lean                   # [M4] state space + gate semantics (borrow ForShor QSemantics design)
+        Semantics.lean                   # [M4] state space + gate semantics
         Measure.lean                     # [M4] measurement semantics
-      Contract.lean       (provisional)  # [M5] the submission contract: program + correct + counted
-    Submission/                          # concrete secp256k1 ECDLP construction
-      Field.lean                         # [M1 ✓] hardcoded secp256k1 constants (p, order, a=0, b=7) + fermat_inv + submission-side disclosure
+      Contract.lean       (provisional)  # [M5] program + correct + counted (same-term)
+    Submission/
+      Field.lean                         # [M1 ✓] secp256k1 constants + Fermat-inversion correctness
       Arithmetic/
-        ModMul.lean  ModExp.lean         # [M1] reversible modmul / modexp — correct + counted (ModInv folds into ModExp unless it earns a theorem)
+        ModMul.lean  ModExp.lean         # [M1] modular multiplication / exponentiation
       EllipticCurve/
-        Precompute.lean                  # [M2] verified classical tables [2^i]P,[2^i]Q (table[i+1]=table[i]⊞table[i])
-        PointAdd.lean                    # [M2] affine add: quantum point ⊞ classical constant — correct + counted
-        ScalarMul.lean                   # [M3] classically-controlled double-and-add (2m adds) — correct + counted
-        ECDLPOracle.lean                 # [M3] U_f — correct + counted (no premature Oracle/ folder)
-      QFT.lean            (provisional)  # [M4] textbook coherent in-register QFT over 2^m (the construction's QFT)
+        Precompute.lean                  # [M2] verified [2^i]P, [2^i]Q tables
+        PointAdd.lean                    # [M2] affine add (quantum ⊞ classical constant)
+        ScalarMul.lean                   # [M3] double-and-add (2m additions)
+        ECDLPOracle.lean                 # [M3] U_f
+      QFT.lean            (provisional)  # [M4] coherent QFT over 2^m
       Correctness/        (provisional)
-        Reduction.lean                   # [M4] ECDLP ↔ ⟨(−k,1)⟩; k ≡ β·α⁻¹ (mod n)
-        SuccessBound.lean                # [M4] phase-estimation success bound (borrow ForShor's analysis)
-        EndToEnd.lean                    # [M4] assembled circuit implements the ECDLP oracle
-      Instance.lean       (provisional)  # [M5] fills Framework.Contract for ECDLP
-      Reference.lean      (provisional)  # [M5] instantiate at secp256k1 → the checked end-to-end Toffoli number
+        Reduction.lean                   # [M4] ECDLP ↔ ⟨(−k,1)⟩; k = β·α⁻¹ (mod n)
+        SuccessBound.lean                # [M4] phase-estimation success bound
+        EndToEnd.lean                    # [M4] the circuit implements the ECDLP oracle
+      Instance.lean       (provisional)  # [M5] fills Framework.Contract
+      Reference.lean      (provisional)  # [M5] secp256k1 → the checked Toffoli number
 ```
 
-### Design decisions (locked with proof-review / arxiv-scout / runzhou)
+The four primitive gates + the cost model are the entire trusted surface; everything else is
+a derived circuit. Measurement and ancilla live in `Framework/Quantum/`, never as new gates.
 
-1. **R measure-and-discarded, not uncomputed** — keeps point-adds at ~2m ≈ 512; the success
-   proof traces R out. Stated in `ECDLPOracle`'s docstring.
-2. **No premature `Oracle/` folder** — `ECDLPOracle.lean` sits in `EllipticCurve/`.
-3. **M4/M5 subtree labelled provisional** — forecast, not spec.
-4. **`ModInv` folds into `ModExp`** unless it carries its own `correct` (discharge vs `fermat_inv`).
-5. **Precompute tables are verified constants** — a wrong table breaks oracle correctness while
-   the count stays valid.
-6. **QFT model = textbook coherent stored-register `Z_{2^m}`** (runzhou: "naive QFT over 2^n,
-   phase-estimation approximation needed, textbook only"). Borrows ForShor's coherent QFT; keeps
-   the circuit unitary (measurement at M4, same-`prog`-term over a unitary circuit). Roetteler's
-   baseline is *semiclassical* (confirmed, arXiv:1706.06752), so our qubit count is **+2n**, but
-   the headline **Toffoli** count (dominated by the 2m point-adds) is unaffected and still
-   reconciles against `1.26×10¹¹`.
-7. **Constants hardcoded** — secp256k1 is the Bitcoin target, so `p`, `order`, `a`, `b` (and the
-   base point at M2/M3) are explicit literals, not parameters.
-8. **Disclosures live submission-side**, beside the constants; `Framework/CostModel` stays
-   disclosure-free and curve-agnostic. Reviewer checks the boundary holds (no disclosure leaks
-   into `Framework/`).
+---
 
-**Trusted surface** = only `Framework/InstructionSet` (4 gates) + `Framework/CostModel`.
-Measurement/ancilla live in `Framework/Quantum/` (semantics), never as new primitives.
+## 4. Milestones
+
+- **M0** — framework skeleton: instruction set `{X,H,CX,CCX,P(k)}` + naive T-count cost
+  model + the contract. (Skeleton builds; being updated for the `P` gate and T-count.)
+- **M1** — field arithmetic: `Field.lean` ✓; then ModMul / ModExp (correct + counted).
+- **M2** — point addition + precompute tables.
+- **M3** — scalar multiplication + oracle → end-to-end secp256k1 Toffoli count.
+- **M4** — quantum semantics + coherent QFT + end-to-end correctness + success bound.
+- **M5** — the contract instance and the checked secp256k1 reference number.
+
+Each layer: `lake build` green, `#print axioms` free of `sorry` / `native_decide` / new
+axioms, and `counted` bound to the same `program` term as `correct`.
+
+---
+
+## 5. Notes
+
+- **Disclosures** for this submission live beside its constants in `Submission/` (generic
+  reduction, Fermat inversion, un-windowed scalar mult, coherent-QFT qubit count). The
+  framework cost model carries none.
+- The register width `m` exceeds `⌈log₂ n⌉` by the phase-estimation precision padding.
+- Primality of `p` is a hypothesis `[Fact (Nat.Prime p)]`, not an axiom.
+- The framework metric is T-count; against Roetteler's `1.26×10¹¹` **Toffoli** the cross-check
+  is `×7` (naive Toffoli→T), since the arithmetic Toffolis dominate and the QFT rotations are
+  a lower-order term.
