@@ -7,3 +7,4 @@
 -- and the submission spec (M5).
 import ShorECDLP.InstructionSet
 import ShorECDLP.CostModel
+import ShorECDLP.Field
