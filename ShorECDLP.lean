@@ -1,0 +1,9 @@
+-- ShorECDLP: verified end-to-end resource estimate for Shor's algorithm on the
+-- elliptic-curve discrete-log problem over secp256k1 (the quantum attack on ECDSA).
+--
+-- Root aggregator. M0 seeds the instruction set and the Toffoli-caliber cost model;
+-- later milestones add field arithmetic (M1), point addition (M2), scalar
+-- multiplication + oracle (M3), quantum semantics + end-to-end correctness (M4),
+-- and the submission spec (M5).
+import ShorECDLP.InstructionSet
+import ShorECDLP.CostModel
