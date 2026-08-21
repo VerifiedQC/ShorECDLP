@@ -10,12 +10,25 @@ modular-exponentiation *circuit* built in the next M1 step implements this funct
 its correctness proof will discharge against `fermat_inv` here — so the circuit's
 `correct` obligation and the mathematics it is judged against live in one place.
 
-## Disclosure (validity condition, per the launch checklist)
+## Submission-side disclosure (how to read this submission's number)
 
-Primality of the secp256k1 field prime `p` is a standard published fact carried here as a
-hypothesis `[Fact (Nat.Prime p)]`, not machine-checked in this version (a Pratt/Lucas
-certificate can discharge it later). It is a hypothesis, not an axiom — every theorem that
-uses it says so in its signature, so the trusted surface stays visible.
+Disclosures live here, beside the constants they describe — never in `framework/`, whose
+cost model is construction-agnostic. They document algorithm choices (not machine-checked
+theorems); a future optimized submission carries a different list against the same framework.
+
+  - **Constants are secp256k1-specific**, hardcoded below (`p`, `order`, `a = 0`, `b = 7`);
+    **the modular reduction is the generic prime algorithm and does not exploit the
+    pseudo-Mersenne structure of `p = 2^256 − 2^32 − 977`.** (Seeing the literal prime in
+    the source must not be read as a pseudo-Mersenne speedup.)
+  - **Primality of `p`** is a standard published fact carried as a hypothesis
+    `[Fact (Nat.Prime p)]`, not machine-checked in this version (a Pratt/Lucas certificate
+    can discharge it later). A hypothesis, not an axiom — it appears in every theorem's
+    signature, so the trusted surface stays visible.
+
+Further items attach to the modules they describe as those land (Fermat inversion →
+`Arithmetic/ModExp`, un-windowed double-and-add → `EllipticCurve/ScalarMul`, coherent-QFT
+`+2n` qubits vs the semiclassical baseline → `Framework/Quantum/QFT` statement), and are
+consolidated into the submission's reading-guide at M5.
 -/
 
 namespace ShorECDLP

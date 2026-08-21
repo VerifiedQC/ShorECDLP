@@ -5,6 +5,6 @@
 -- later milestones add field arithmetic (M1), point addition (M2), scalar
 -- multiplication + oracle (M3), quantum semantics + end-to-end correctness (M4),
 -- and the submission spec (M5).
-import ShorECDLP.InstructionSet
-import ShorECDLP.CostModel
-import ShorECDLP.Field
+import ShorECDLP.Framework.InstructionSet
+import ShorECDLP.Framework.CostModel
+import ShorECDLP.Submission.Field

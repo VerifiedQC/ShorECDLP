@@ -1,27 +1,18 @@
-import ShorECDLP.InstructionSet
+import ShorECDLP.Framework.InstructionSet
 
 /-
-# Cost model (M0 skeleton)
+# Cost model — framework layer (curve- and construction-agnostic)
 
 Primary unit = **Toffoli**; T-count is a derived quantity (the Toffoli→T conversion
 constant is pinned in a later milestone). In the Toffoli-count metric the Clifford
 gates (X, H, CNOT) are free and only Toffolis are charged — so `gateCount` below
 counts exactly the Toffolis of a constructed circuit.
 
-## Disclosure (this is the cost-model *statement* — read the number through it)
-
-The end-to-end resource number this model reports is for the **simplest, un-optimized**
-ShorECDLP construction over **secp256k1**, and specifically:
-
-  - **generic modular reduction** — NOT specialized to the pseudo-Mersenne prime
-    `p = 2^256 − 2^32 − 977`; the count is generic-prime grade;
-  - **Fermat inversion** `a^(p−2) mod p` — reuses modular exponentiation, not the
-    Toffoli-optimal inversion;
-  - **un-windowed double-and-add** scalar multiplication (2n sequential point adds).
-
-It is therefore a generic-prime-grade, end-to-end count and is not directly comparable
-to pseudo-Mersenne-specialized or windowed estimates. Each such specialization is a
-future submission, not a defect of this one.
+This model is deliberately **construction-agnostic**: it makes no claim about which
+curve, reduction, inversion, or QFT a submission used. Those are the submission's
+choices, and the note explaining how to read a particular number lives **submission-side**
+beside the constants it describes (see `ShorECDLP/Submission/`). Keeping `framework/`
+disclosure-free keeps this a small audited base that can judge any submission.
 -/
 
 namespace ShorECDLP
