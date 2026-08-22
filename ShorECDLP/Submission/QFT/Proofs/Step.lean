@@ -81,4 +81,154 @@ theorem run_qftStep_ket
     layerPhase_target_false (s[target ↦ false]) target (by simp) cs k]
   simp only [one_smul, smul_smul, mul_assoc]
 
+theorem qftPhaseLayer_wellFormed
+    (target anc : Wire)
+    (cs : List Wire)
+    (k : Nat)
+    (htanc : target ≠ anc)
+    (htcs : target ∉ cs)
+    (hanc : anc ∉ cs) :
+    CircuitWellFormed (qftPhaseLayer target anc cs k) := by
+  induction cs generalizing k with
+  | nil =>
+      simp [qftPhaseLayer]
+
+  | cons c cs ih =>
+      simp only [List.mem_cons, not_or] at htcs hanc
+      obtain ⟨htc, htcs⟩ := htcs
+      obtain ⟨hac, hacs⟩ := hanc
+      rw [qftPhaseLayer, circuitWellFormed_append]
+      constructor
+      · exact
+          cPhase_wellFormed
+            k c target anc
+            (Ne.symm htc)
+            (Ne.symm hac)
+            htanc
+      · exact ih (k + 1) htcs hacs
+
+theorem qftStep_wellFormed
+    (target anc : Wire)
+    (cs : List Wire)
+    (k : Nat)
+    (htanc : target ≠ anc)
+    (htcs : target ∉ cs)
+    (hanc : anc ∉ cs) :
+    CircuitWellFormed
+      ([Gate.H target] ++ qftPhaseLayer target anc cs k) := by
+  rw [circuitWellFormed_append]
+
+  constructor
+  · simp [CircuitWellFormed, Gate.WellFormed]
+
+  · exact
+      qftPhaseLayer_wellFormed
+        target anc cs k htanc htcs hanc
+
+/--
+The exponent accumulated by a phase layer.
+
+For controls `[c₀,c₁,...]` beginning at phase index `k`, this is
+
+    x(c₀) * i 2π/2^k
+  + x(c₁) * i 2π/2^(k+1)
+  + ...
+
+where a zero control contributes zero.
+-/
+noncomputable def layerExponent
+    (s : BasisState) :
+    List Wire → Nat → ℂ
+  | [], _ => 0
+
+  | c :: cs, k =>
+      (if s c then
+        Complex.I * (2 * Real.pi / (2 : ℝ) ^ k : ℂ)
+       else 0)
+      +
+      layerExponent s cs (k + 1)
+
+/--
+When `target` is set to `true`, the product of controlled phases is
+exactly the exponential of the sum of their phase angles.
+-/
+theorem layerPhase_set_target_true
+    (s : BasisState)
+    (target : Wire) :
+    ∀ (cs : List Wire) (k : Nat),
+      target ∉ cs →
+      layerPhase (s[target ↦ true]) target cs k
+        =
+      Complex.exp (layerExponent s cs k) := by
+  intro cs
+
+  induction cs with
+  | nil =>
+      intro k _
+      simp [layerPhase, layerExponent]
+
+  | cons c cs ih =>
+      intro k htc
+
+      simp only [List.mem_cons, not_or] at htc
+      obtain ⟨htargetc, htargetcs⟩ := htc
+
+      have hct : c ≠ target :=
+        Ne.symm htargetc
+
+      cases hc : s c with
+
+      | false =>
+          simp [layerPhase, cPhaseFactor, layerExponent, upd, hc, hct,
+            ih (k + 1) htargetcs]
+
+      | true =>
+          rw [layerPhase]
+
+          have hcontrol :
+              (s[target ↦ true]) c = true := by
+            simp [upd, hct, hc]
+
+          have htarget :
+              (s[target ↦ true]) target = true := by
+            simp
+          rw [cPhaseFactor]
+          simp only [hcontrol, htarget, Bool.true_and, if_true]
+          rw [ih (k + 1) htargetcs]
+          rw [← Complex.exp_add]
+          congr 1
+          simp [layerExponent, hc]
+
+/--
+Fourier-ready form of the single-target QFT step.
+
+The `|1⟩` branch acquires one combined exponential phase rather than
+a recursive product of phases.
+-/
+theorem run_qftStep_ket_exp
+    (target anc : Wire)
+    (cs : List Wire)
+    (k : Nat)
+    (s : BasisState)
+    (htanc : target ≠ anc)
+    (htcs : target ∉ cs)
+    (hanc : anc ∉ cs)
+    (hsanc : s anc = false) :
+    run ([Gate.H target] ++
+        qftPhaseLayer target anc cs k) (ket s)
+      =
+    (((Real.sqrt 2)⁻¹ : ℝ) : ℂ) •
+        ket (s[target ↦ false])
+      +
+    (
+      (((Real.sqrt 2)⁻¹ : ℝ) : ℂ)
+        *
+      (if s target then (-1 : ℂ) else 1)
+        *
+      Complex.exp (layerExponent s cs k)
+    ) •
+      ket (s[target ↦ true]) := by
+  rw [run_qftStep_ket target anc cs k s htanc hanc hsanc]
+  rw [layerPhase_set_target_true s target cs k htcs]
+
 end ShorECDLP.Quantum

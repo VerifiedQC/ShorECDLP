@@ -15,7 +15,11 @@ namespace ShorECDLP.Quantum
 and `s anc = false`, the QFT circuit produces the Fourier state. -/
 theorem qft_correct (r : List Wire) (anc : Wire) (s : BasisState)
     (hanc : anc ∉ r) (hnd : r.Nodup) (hsanc : s anc = false) :
-    run (qft r anc) (ket s) = fourierState r s :=
+    run (qft r anc) (ket s)
+     =
+    (((Real.sqrt (2 ^ r.length))⁻¹ : ℝ) : ℂ) •
+      ∑ y ∈ Finset.range (2 ^ r.length),
+        qftPhase (2 ^ r.length) (regValue r s) y • ket (setReg r y s) :=
   run_qft_ket r anc s hanc hnd hsanc
 
 end ShorECDLP.Quantum
