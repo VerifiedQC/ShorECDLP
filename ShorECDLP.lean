@@ -7,5 +7,6 @@
 -- and the submission spec (M5).
 import ShorECDLP.Framework.InstructionSet
 import ShorECDLP.Framework.CostModel
+import ShorECDLP.Framework.BasisState
 import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Submission.Field
