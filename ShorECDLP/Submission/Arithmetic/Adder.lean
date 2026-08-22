@@ -24,7 +24,7 @@ theorem fullAdder_tCount (a b cin s co : Nat) : tCount (fullAdder a b cin s co) 
 
 /-- Sum wire: with the output wires `s, co` fresh and distinct from the inputs, the adder
 writes `a ⊕ b ⊕ cin` on `s`. -/
-theorem fullAdder_sum (a b cin s co : Nat) (st : State) (hs : st s = false)
+theorem fullAdder_sum (a b cin s co : Nat) (st : BasisState) (hs : st s = false)
     (bs : b ≠ s) (cs : cin ≠ s)
     (ac : a ≠ co) (bc : b ≠ co) (cc : cin ≠ co) (sc : s ≠ co) :
     ⟪fullAdder a b cin s co⟫ st s
@@ -37,7 +37,7 @@ theorem fullAdder_sum (a b cin s co : Nat) (st : State) (hs : st s = false)
 
 /-- Carry wire: with the output wires `s, co` fresh and distinct from the inputs, the adder
 writes `majority(a, b, cin) = (a∧b) ⊕ (a∧cin) ⊕ (b∧cin)` on `co`. -/
-theorem fullAdder_carry (a b cin s co : Nat) (st : State) (hco : st co = false)
+theorem fullAdder_carry (a b cin s co : Nat) (st : BasisState) (hco : st co = false)
     (bs : b ≠ s) (cs : cin ≠ s)
     (ac : a ≠ co) (bc : b ≠ co) (cc : cin ≠ co) (sc : s ≠ co) :
     ⟪fullAdder a b cin s co⟫ st co
