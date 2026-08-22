@@ -177,3 +177,22 @@ axioms, and `counted` bound to the same `program` term as `correct`.
   discipline keeps `run` faithful *and* lets arithmetic lift).
 - **Notation** (`Classical`-scoped): `s[i ↦ b]` (wire update), `⟦g⟧` (a gate's classical
   transformer), `⟪c⟫` (a circuit's, run left to right).
+
+---
+
+## 6. Conventions (every PR follows this — the "PR #1 style")
+
+- **One PR per fine-grained step** (M1.0, M1.1, …), branched off the latest `main`, small
+  enough to review on its own.
+- **PR body**: what the step adds (bulleted), that it builds green, that `#print axioms` is
+  free of `sorry` / `native_decide` / new axioms, and the next step.
+- **Naming**: types stay layer-neutral (`BasisState`); the classical marker goes on the
+  *actions* (`Classical.*`). Nothing should read as a semantics it isn't.
+- **Notation**: use readable notation in statements *and* proofs so they read close to the
+  math, and introduce new notation for each new operation as it appears (with `@[inherit_doc]`
+  so it self-documents). Current: `s[i ↦ b]`, `⟦g⟧`, `⟪c⟫`.
+- **Proofs**: no `sorry` / `native_decide` / new axioms; `correct` and `counted` are stated
+  about the *same* `program` term; carry only the hypotheses actually used (the unused-argument
+  linters enforce this).
+- **Same trusted surface**: everything is a derived circuit over the five primitive gates;
+  the framework cost model stays disclosure-free and curve-agnostic.
