@@ -42,4 +42,17 @@ theorem run_qft_ket_nil (anc : Wire) (s : BasisState) :
     run (qft [] anc) (ket s) = fourierState [] s := by
   simp [qft, qftCore, qftCoreMSB, bitReverse, fourierState]
 
+/-- **Q3 — the QFT Fourier correctness theorem.**
+
+⚠️ WIP SCAFFOLD (`QFT-work` branch only, must NOT reach `main`): the general induction is
+being built in stages — `n = 0` is done (`run_qft_ket_nil`); `n = 1`, then `n = 2` (the
+first cross-qubit phase, the convention-lock), then the `qftCore` Fourier induction
+telescoping `layerPhase` into `qftPhase` remain. The `sorry` here is a deliberate placeholder
+so downstream (the ECDLP oracle) can state its dependence on this interface; it is to be
+discharged before the QFT PR merges. -/
+theorem run_qft_ket (r : List Wire) (anc : Wire) (s : BasisState)
+    (hanc : anc ∉ r) (hnd : r.Nodup) (hsanc : s anc = false) :
+    run (qft r anc) (ket s) = fourierState r s := by
+  sorry
+
 end ShorECDLP.Quantum
