@@ -35,4 +35,47 @@ inductive Gate where
 /-- A circuit is a straight-line list of primitive gates. -/
 abbrev Circuit := List Gate
 
+/-- A primitive gate is physically well-formed when its distinct roles
+are assigned to distinct wires. -/
+def Gate.WellFormed : Gate → Prop
+  | .X _       => True
+  | .H _       => True
+  | .CX c t    => c ≠ t
+  | .CCX a b t => a ≠ b ∧ a ≠ t ∧ b ≠ t
+  | .P _ _     => True
+
+/-- Every primitive gate in the circuit is well-formed. -/
+def CircuitWellFormed (c : Circuit) : Prop :=
+  ∀ g ∈ c, g.WellFormed
+
+@[simp]
+theorem circuitWellFormed_nil :
+    CircuitWellFormed [] := by
+  simp [CircuitWellFormed]
+
+@[simp]
+theorem circuitWellFormed_cons (g : Gate) (c : Circuit) :
+    CircuitWellFormed (g :: c) ↔
+      g.WellFormed ∧ CircuitWellFormed c := by
+  simp [CircuitWellFormed]
+
+@[simp]
+theorem circuitWellFormed_append (c₁ c₂ : Circuit) :
+    CircuitWellFormed (c₁ ++ c₂) ↔
+      CircuitWellFormed c₁ ∧ CircuitWellFormed c₂ := by
+  simp [CircuitWellFormed]
+  constructor
+  · intro h
+    constructor
+    · intro g hg
+      exact h g (Or.inl hg)
+    · intro g hg
+      exact h g (Or.inr hg)
+  · intro h g hg
+    cases hg with
+    | inl hg₁ =>
+        exact h.1 g hg₁
+    | inr hg₂ =>
+        exact h.2 g hg₂
+
 end ShorECDLP

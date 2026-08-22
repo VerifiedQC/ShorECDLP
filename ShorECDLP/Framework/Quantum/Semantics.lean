@@ -51,23 +51,10 @@ theorem ket_ne {s t : BasisState} (h : s ≠ t) :
   classical
   simp [ket, h]
 
-
-/-! ## Constants used by the primitive quantum gates -/
-
 /-! ## Primitive gates on basis kets -/
 
 /--
 Action of a primitive gate on a computational-basis ket.
-
-The reversible classical gates send one basis ket to another.
-
-Hadamard acts by
-
-    H|0⟩ = 1/√2 (|0⟩ + |1⟩)
-    H|1⟩ = 1/√2 (|0⟩ - |1⟩).
-
-`P k` fixes `|0⟩` and multiplies `|1⟩` by
-`exp(i · 2π / 2^k)`.
 -/
 def onKet : Gate → BasisState → State
   | .X t, s =>
@@ -317,4 +304,6 @@ theorem run_ket_agrees_classical
 
         _ = ket (Classical.run (g :: c) s) := by
               rfl
+
+
 end ShorECDLP.Quantum
