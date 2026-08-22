@@ -11,6 +11,12 @@ the QFT, whose correctness needs the full Hilbert-space semantics (a later layer
 
 This is enough to state and prove functional correctness of all the reversible modular
 arithmetic (M1–M3), which never uses `P`.
+
+## Notation
+
+  * `s[i ↦ b]` — the state `s` with wire `i` set to `b`.
+  * `⟦g⟧`      — the basis-state transformer of a single gate `g` (so `⟦g⟧ s`).
+  * `⟪c⟫`      — the basis-state transformer of a circuit `c`, run left to right (`⟪c⟫ s`).
 -/
 
 namespace ShorECDLP
@@ -21,11 +27,13 @@ abbrev State := Nat → Bool
 /-- Update wire `i` to `b`, leaving every other wire unchanged. -/
 def upd (s : State) (i : Nat) (b : Bool) : State := fun j => if j = i then b else s j
 
-@[simp] theorem upd_same (s : State) (i : Nat) (b : Bool) : upd s i b i = b := by
+@[inherit_doc] notation:max s:max "[" i " ↦ " b "]" => upd s i b
+
+@[simp] theorem upd_same (s : State) (i : Nat) (b : Bool) : s[i ↦ b] i = b := by
   simp [upd]
 
 theorem upd_other (s : State) (i : Nat) (b : Bool) {j : Nat} (h : j ≠ i) :
-    upd s i b j = s j := by
+    s[i ↦ b] j = s j := by
   simp [upd, h]
 
 /-- Action of a single primitive gate on a basis state.
@@ -33,26 +41,30 @@ theorem upd_other (s : State) (i : Nat) (b : Bool) {j : Nat} (h : j ≠ i) :
 Only the reversible-classical gates `{X, CX, CCX}` have a genuine basis-state action. `H`
 creates superposition and `P` adds a phase — neither is a basis-state permutation — so this
 classical semantics is **faithful only on `H`- and `P`-free circuits** (all the reversible
-arithmetic of M1–M3). `H` and `P` are set to the identity here solely to keep `applyGate`
+arithmetic of M1–M3). `H` and `P` are set to the identity here solely to keep the transformer
 total; no arithmetic correctness theorem is stated about a circuit that contains them, and
 the QFT is handled by the full Hilbert-space semantics in a later layer. -/
 def applyGate : Gate → State → State
-  | .X t,       s => upd s t (!s t)
-  | .CX c t,    s => upd s t (Bool.xor (s t) (s c))
-  | .CCX a b t, s => upd s t (Bool.xor (s t) (s a && s b))
+  | .X t,       s => s[t ↦ !s t]
+  | .CX c t,    s => s[t ↦ Bool.xor (s t) (s c)]
+  | .CCX a b t, s => s[t ↦ Bool.xor (s t) (s a && s b)]
   | .H _,       s => s
   | .P _ _,     s => s
 
-/-- Run a circuit on a basis state, left to right. -/
-def run (c : Circuit) (s : State) : State := c.foldl (fun s g => applyGate g s) s
+@[inherit_doc] notation:max "⟦" g "⟧" => applyGate g
 
-@[simp] theorem run_nil (s : State) : run [] s = s := rfl
+/-- Run a circuit on a basis state, left to right. -/
+def run (c : Circuit) (s : State) : State := c.foldl (fun s g => ⟦g⟧ s) s
+
+@[inherit_doc] notation:max "⟪" c "⟫" => run c
+
+@[simp] theorem run_nil (s : State) : ⟪[]⟫ s = s := rfl
 
 @[simp] theorem run_cons (g : Gate) (c : Circuit) (s : State) :
-    run (g :: c) s = run c (applyGate g s) := rfl
+    ⟪g :: c⟫ s = ⟪c⟫ (⟦g⟧ s) := rfl
 
 theorem run_append (c₁ c₂ : Circuit) (s : State) :
-    run (c₁ ++ c₂) s = run c₂ (run c₁ s) := by
+    ⟪c₁ ++ c₂⟫ s = ⟪c₂⟫ (⟪c₁⟫ s) := by
   simp [run, List.foldl_append]
 
 /-- The natural number held by a register — a list of wires, least-significant first. -/
@@ -67,7 +79,7 @@ theorem regValue_cons (w : Nat) (ws : List Nat) (s : State) :
 
 /-- Updating a wire outside a register leaves the register's value unchanged. -/
 theorem regValue_upd_not_mem (ws : List Nat) (s : State) (i : Nat) (b : Bool)
-    (h : i ∉ ws) : regValue ws (upd s i b) = regValue ws s := by
+    (h : i ∉ ws) : regValue ws s[i ↦ b] = regValue ws s := by
   induction ws with
   | nil => rfl
   | cons w ws ih =>
