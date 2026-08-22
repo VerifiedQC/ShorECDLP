@@ -196,3 +196,37 @@ axioms, and `counted` bound to the same `program` term as `correct`.
   linters enforce this).
 - **Same trusted surface**: everything is a derived circuit over the five primitive gates;
   the framework cost model stays disclosure-free and curve-agnostic.
+
+---
+
+## 7. M4 quantum layer — status and the QFT plan
+
+The quantum semantics is being built in parallel (branch `QFT-work`), additively over the same
+`BasisState`, and already has: the amplitude state `BasisState →₀ ℂ`, gates as linear maps
+(`onKet` + `linearCombination`), the **agreement bridge** (`run (ket s) = ket (Classical.run c s)`
+for `HPFree` circuits — transports all M1–M3 arithmetic correctness up for free), and **norm
+preservation** (`run_preservesNormSq` for `CircuitWellFormed` circuits ⇒ `normSq_run_ket = 1`,
+the Born-rule input for the success bound).
+
+**Two orthogonal circuit predicates** (keep separate, never bundled): `Classical.HPFree` (no H/P —
+for the agreement bridge) and `CircuitWellFormed` (distinct wires per gate — for unitarity).
+Arithmetic needs **both**; the QFT needs **`WellFormed` only** (it has H/P, so it is not HPFree,
+and its correctness goes through the quantum semantics, not the classical bridge).
+
+**QFT construction + correctness** (one PR per step, stated over `Quantum.run`):
+- **Q0/Q1 — controlled-phase atom.** Realize controlled-`P(k)` in-set. Recommended:
+  `cPhase k c t anc := [CCX c t anc, P k anc, CCX c t anc]` (`anc` fresh `|0⟩`) — ket action
+  `(if s c && s t then phase k else 1) • ket s` is a one-line `onKet` computation, cost 2 Toffoli
+  + 1 P, one reusable ancilla. Ancilla-free alternative: the negative dyadic phase in the 3-gate
+  `CP` decomposition is a *product* of positive `P`s (`−2π/2^{k+1} ≡ Σ_{j=1}^{k+1} 2π/2^j`), `O(k)`
+  phase gates, no ancilla. Prove ket action + `WellFormed` + tCount.
+- **Q2 — single-target step.** `H` on the target + the `cPhase` cascade from the remaining wires;
+  prove the one-qubit step action (`applyGate_H_ket` + Q1 + linearity).
+- **Q3 — full QFT (main theorem, hard).** `run (qft ws) (ket s) = (1/√N) Σ_{y<N} ω^(x·y) • ket (s
+  with ws↦y)`, `N=2^n`, `x=regValue ws s`, `ω=exp(2πi/N)`. Induction on `ws`; the phase telescoping
+  is the work. Pin conventions first (normalization, LSB-first, bit-reversal choice) and check
+  `n=1,2` before the induction.
+- **Q4 — WellFormed + normalization.** `CircuitWellFormed (qft ws)` (WellFormed only); normalization
+  falls out of `normSq_run_ket`.
+- **Q5 (later) — recovery.** Inverse QFT, computational-basis measurement, phase-estimation /
+  continued-fraction success bound — the `SuccessBound` pieces the ECDLP oracle needs.
