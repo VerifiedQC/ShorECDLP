@@ -55,4 +55,23 @@ theorem run_append (c₁ c₂ : Circuit) (s : State) :
     run (c₁ ++ c₂) s = run c₂ (run c₁ s) := by
   simp [run, List.foldl_append]
 
+/-- The natural number held by a register — a list of wires, least-significant first. -/
+def regValue : List Nat → State → Nat
+  | [],      _ => 0
+  | w :: ws, s => (if s w then 1 else 0) + 2 * regValue ws s
+
+@[simp] theorem regValue_nil (s : State) : regValue [] s = 0 := rfl
+
+theorem regValue_cons (w : Nat) (ws : List Nat) (s : State) :
+    regValue (w :: ws) s = (if s w then 1 else 0) + 2 * regValue ws s := rfl
+
+/-- Updating a wire outside a register leaves the register's value unchanged. -/
+theorem regValue_upd_not_mem (ws : List Nat) (s : State) (i : Nat) (b : Bool)
+    (h : i ∉ ws) : regValue ws (upd s i b) = regValue ws s := by
+  induction ws with
+  | nil => rfl
+  | cons w ws ih =>
+    simp only [List.mem_cons, not_or] at h
+    rw [regValue_cons, regValue_cons, upd_other s i b (fun e => h.1 e.symm), ih h.2]
+
 end ShorECDLP
