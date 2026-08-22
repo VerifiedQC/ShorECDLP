@@ -7,6 +7,6 @@
 -- and the submission spec (M5).
 import ShorECDLP.Framework.InstructionSet
 import ShorECDLP.Framework.CostModel
-import ShorECDLP.Framework.Quantum.Semantics
+import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Submission.Field
 import ShorECDLP.Submission.Arithmetic.Adder
