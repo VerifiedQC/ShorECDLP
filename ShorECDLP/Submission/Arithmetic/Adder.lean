@@ -1,4 +1,4 @@
-import ShorECDLP.Framework.Quantum.Semantics
+import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Framework.CostModel
 
 /-
@@ -11,6 +11,8 @@ classical basis-state semantics; the T-count is the naive framework metric.
 -/
 
 namespace ShorECDLP
+
+open Classical
 
 /-- A reversible full-adder cell over `{CCX, CX}`. `s` and `co` must be fresh wires. -/
 def fullAdder (a b cin s co : Nat) : Circuit :=
