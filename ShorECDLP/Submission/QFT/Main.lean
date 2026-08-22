@@ -5,8 +5,8 @@ import ShorECDLP.Submission.QFT.Proofs.Fourier
 
 The public entry point for the QFT's correctness: the circuit `qft r anc` maps a basis state
 `|s⟩` to the normalized Fourier superposition `fourierState r s`. It routes through the Q3
-theorem `run_qft_ket`, whose general induction is in progress on the `QFT-work` branch (see
-the WIP-scaffold note there — the `sorry` must be discharged before this reaches `main`).
+theorem `run_qft_ket`, which proves the product-form QFT core, the Fourier-sum expansion,
+and the final bit-reversal step.
 -/
 
 namespace ShorECDLP.Quantum

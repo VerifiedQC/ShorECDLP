@@ -61,8 +61,7 @@ The input list is ordered MSB-first.
 def qftCoreMSB
     (anc : Wire) :
     List Wire → Circuit
-  | [] =>
-      []
+  | [] => []
 
   | target :: rest =>
       [.H target] ++
