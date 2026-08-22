@@ -10,7 +10,7 @@ Mathlib pinned. Curve: secp256k1 (Bitcoin).
 
 ## 1. The infrastructure (`Framework/`)
 
-The framework fixes three things and nothing else:
+The framework fixes the following and nothing else:
 
 - **A trusted primitive gate set** `{X, H, CX, CCX, P(k)}` and a circuit as a list of them
   (`Circuit := List Gate`). The Clifford/Toffoli gates `{X, H, CX, CCX}` express all
@@ -24,6 +24,11 @@ The framework fixes three things and nothing else:
 - **A submission contract.** A submission provides a `program` (a circuit family) together
   with a proof that it is `correct` and a proof of its `counted` T-count bound — both stated
   about the *same* `program` term.
+- **The semantics `correct` is stated against.** A layer-neutral basis-state type
+  `BasisState := Nat → Bool` with a *classical* action (`Classical.run`, gates as basis-state
+  permutations) for the reversible arithmetic (M1–M3), and — added at M4 — a *separate*
+  Hilbert-space layer over `BasisState →₀ ℂ` for the QFT, bridged to the classical one by an
+  agreement lemma so arithmetic correctness lifts to the quantum layer for free (see §5).
 
 The framework checks the two proofs and makes no claim about which curve or algorithm a
 submission uses. Any construction that fills the contract is a submission; optimized
@@ -92,16 +97,20 @@ ShorECDLP/
   ShorECDLP.lean
   ShorECDLP/
     Framework/
-      InstructionSet.lean                # [M0] Gate {X,H,CX,CCX,P(k)}, Wire, Circuit
-      CostModel.lean                     # [M0] tCount (naive T-count: Clifford 0, Toffoli 7, P 1), curve-agnostic
+      InstructionSet.lean                # [M0 ✓] Gate {X,H,CX,CCX,P(k)}, Wire, Circuit
+      CostModel.lean                     # [M0 ✓] tCount (naive T-count: Clifford 0, Toffoli 7, P 1), curve-agnostic
+      BasisState.lean                    # [M0 ✓] layer-neutral BasisState := Nat→Bool, upd, regValue
+      Classical/
+        Semantics.lean                   # [M1.0 ✓] classical actions: Classical.applyGate / Classical.run
       Quantum/            (provisional)
-        Semantics.lean                   # [M4] state space + gate semantics
+        Semantics.lean                   # [M4] Hilbert-space layer over BasisState →₀ ℂ + the agreement lemma
         Measure.lean                     # [M4] measurement semantics
       Contract.lean       (provisional)  # [M5] program + correct + counted (same-term)
     Submission/
       Field.lean                         # [M1 ✓] secp256k1 constants + Fermat-inversion correctness
       Arithmetic/
-        ModMul.lean  ModExp.lean         # [M1] modular multiplication / exponentiation
+        Adder.lean                       # [M1.1 ✓] verified reversible full-adder cell
+        ModMul.lean  ModExp.lean         # [M1.4/M1.5] modular multiplication / exponentiation
       EllipticCurve/
         Precompute.lean                  # [M2] verified [2^i]P, [2^i]Q tables
         PointAdd.lean                    # [M2] affine add (quantum ⊞ classical constant)
@@ -123,12 +132,20 @@ a derived circuit. Measurement and ancilla live in `Framework/Quantum/`, never a
 
 ## 4. Milestones
 
-- **M0** — framework skeleton: instruction set `{X,H,CX,CCX,P(k)}` + naive T-count cost
-  model + the contract. (Skeleton builds; being updated for the `P` gate and T-count.)
-- **M1** — field arithmetic: `Field.lean` ✓; then ModMul / ModExp (correct + counted).
+- **M0 ✓** — framework: instruction set `{X,H,CX,CCX,P(k)}`, naive T-count cost model,
+  layer-neutral `BasisState`.
+- **M1** — field arithmetic, split into small steps (one PR per step):
+    - **M1.0 ✓** classical basis-state semantics + register encoding
+    - **M1.1 ✓** verified reversible full-adder cell
+    - **M1.2** n-bit ripple-carry adder (`regValue(out) = a + b mod 2^n`)
+    - **M1.3** modular adder (`(a + b) mod p`)
+    - **M1.4** modular multiplier (schoolbook) — also promotes the `HPFree` guard (§5)
+    - **M1.5** modular exponentiation (square-and-multiply)
+    - **M1.6** Fermat inversion `modExp(·, p−2)`, discharging against `fermat_inv`
 - **M2** — point addition + precompute tables.
-- **M3** — scalar multiplication + oracle → end-to-end secp256k1 Toffoli count.
-- **M4** — quantum semantics + coherent QFT + end-to-end correctness + success bound.
+- **M3** — scalar multiplication + oracle → end-to-end secp256k1 count.
+- **M4** — quantum semantics (agreement-lemma bridge over `BasisState`) + coherent QFT +
+  end-to-end correctness + success bound.
 - **M5** — the contract instance and the checked secp256k1 reference number.
 
 Each layer: `lake build` green, `#print axioms` free of `sorry` / `native_decide` / new
@@ -146,3 +163,17 @@ axioms, and `counted` bound to the same `program` term as `correct`.
 - The framework metric is T-count; against Roetteler's `1.26×10¹¹` **Toffoli** the cross-check
   is `×7` (naive Toffoli→T), since the arithmetic Toffolis dominate and the QFT rotations are
   a lower-order term.
+- **Classical→quantum bridge (M4 design locks).** `Classical.run` is the cheap base
+  (permutation proofs ≪ unitary proofs). At M4 the quantum layer is *additive over the same
+  `BasisState`* (amplitudes `BasisState →₀ ℂ`; `{X,CX,CCX}` permute the support exactly as the
+  classical action already says, `H` makes a 2-term superposition, `P` scales by phase — never
+  a parallel `Fin (2^n)` basis). One **agreement lemma** — on an H/P-free circuit, the quantum
+  run of `|s⟩` equals the delta at `⟪c⟫ s` — transports every M1–M3 arithmetic `correct` up to
+  the quantum layer for free; arithmetic is never re-proved in Hilbert space.
+- **H/P-free guard.** The classical semantics treats `H`/`P` as identity, so it is faithful
+  only on H/P-free circuits (all M1–M3 arithmetic). Enforcement: docstring + per-PR review
+  through M1.3; at **M1.4** promote to a machine-checked, composable `HPFree : Circuit → Prop`
+  proved per circuit — which is exactly the hypothesis of the M4 agreement lemma (one
+  discipline keeps `run` faithful *and* lets arithmetic lift).
+- **Notation** (`Classical`-scoped): `s[i ↦ b]` (wire update), `⟦g⟧` (a gate's classical
+  transformer), `⟪c⟫` (a circuit's, run left to right).
