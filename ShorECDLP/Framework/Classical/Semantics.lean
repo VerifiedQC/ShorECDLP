@@ -53,4 +53,53 @@ theorem run_append (c₁ c₂ : Circuit) (s : BasisState) :
     ⟪c₁ ++ c₂⟫ s = ⟪c₂⟫ (⟪c₁⟫ s) := by
   simp [run, List.foldl_append]
 
+/-! ## H/P-free circuits -/
+
+/--
+A primitive gate whose classical semantics is faithful.
+
+`X`, `CX`, and `CCX` are genuine basis-state permutations.
+`H` and `P` are excluded because their classical actions above are only
+identity placeholders.
+-/
+@[simp]
+def IsClassicalGate : Gate → Prop
+  | .X _       => True
+  | .CX _ _    => True
+  | .CCX _ _ _ => True
+  | .H _       => False
+  | .P _ _     => False
+
+/--
+A circuit containing no `H` or `P` gates.
+
+On such circuits, `Classical.run` is the actual computational-basis action
+of the circuit.
+-/
+def HPFree (c : Circuit) : Prop :=
+  ∀ g ∈ c, IsClassicalGate g
+
+@[simp]
+theorem hpFree_nil :
+    HPFree [] := by
+  simp [HPFree]
+
+@[simp]
+theorem hpFree_cons (g : Gate) (c : Circuit) :
+    HPFree (g :: c) ↔ IsClassicalGate g ∧ HPFree c := by
+  simp [HPFree]
+
+@[simp]
+theorem hpFree_append (c₁ c₂ : Circuit) :
+    HPFree (c₁ ++ c₂) ↔ HPFree c₁ ∧ HPFree c₂ := by
+  simp [HPFree]
+  apply Iff.intro
+  · intro a
+    simp_all only [true_or, implies_true, or_true, and_self]
+  · intro a g a_1
+    obtain ⟨left, right⟩ := a
+    cases a_1 with
+    | inl h => simp_all only
+    | inr h_1 => simp_all only
+
 end ShorECDLP.Classical

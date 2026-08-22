@@ -37,9 +37,8 @@ abbrev State := BasisState →₀ ℂ
 /-! ## Computational basis kets -/
 
 /-- The computational basis ket `|s⟩`. -/
-def ket (s : BasisState) : State := by
-  classical
-  exact Finsupp.single s 1
+def ket (s : BasisState) : State :=
+  Finsupp.single s 1 --If s, then 1, else 0
 
 @[simp]
 theorem ket_self (s : BasisState) :
@@ -54,32 +53,6 @@ theorem ket_ne {s t : BasisState} (h : s ≠ t) :
 
 
 /-! ## Constants used by the primitive quantum gates -/
-
-/-- `1 / √2`, viewed as a complex number. -/
-def invSqrtTwo : ℂ :=
-  (((Real.sqrt 2)⁻¹ : ℝ) : ℂ)
-
-/-- The angle `2π / 2^k` used by the primitive phase gate `P k`. -/
-def phaseAngle (k : Nat) : ℝ :=
-  2 * Real.pi / (2 : ℝ) ^ k
-
-/-- The phase `exp(i · 2π / 2^k)` applied by `P k` to `|1⟩`. -/
-def phase (k : Nat) : ℂ :=
-  Complex.exp (Complex.I * (phaseAngle k : ℂ))
-
-/-- The sign introduced by a Hadamard:
-`+1` on input `|0⟩`, `-1` on input `|1⟩`. -/
-def hSign (b : Bool) : ℂ :=
-  if b then -1 else 1
-
-@[simp]
-theorem hSign_false :
-    hSign false = 1 := rfl
-
-@[simp]
-theorem hSign_true :
-    hSign true = -1 := rfl
-
 
 /-! ## Primitive gates on basis kets -/
 
@@ -101,8 +74,9 @@ def onKet : Gate → BasisState → State
       ket (s[t ↦ !s t])
 
   | .H t, s =>
-      invSqrtTwo • ket (s[t ↦ false]) +
-        (invSqrtTwo * hSign (s t)) • ket (s[t ↦ true])
+      (((Real.sqrt 2)⁻¹ : ℝ) : ℂ) • ket (s[t ↦ false]) +
+        ((((Real.sqrt 2)⁻¹ : ℝ) : ℂ) * (if (s t) then -1 else 1))
+          • ket (s[t ↦ true])
 
   | .CX c t, s =>
       ket (s[t ↦ Bool.xor (s t) (s c)])
@@ -111,7 +85,9 @@ def onKet : Gate → BasisState → State
       ket (s[t ↦ Bool.xor (s t) (s a && s b)])
 
   | .P k t, s =>
-      (if s t then phase k else 1) • ket s
+      (if s t then
+        Complex.exp (Complex.I * (2 * Real.pi / (2 : ℝ) ^ k : ℂ))
+      else 1) • ket s
 
 
 /-! ## Linear action of primitive gates -/
@@ -144,8 +120,8 @@ theorem applyGate_X_ket (t : Wire) (s : BasisState) :
 @[simp]
 theorem applyGate_H_ket (t : Wire) (s : BasisState) :
     applyGate (.H t) (ket s) =
-      invSqrtTwo • ket (s[t ↦ false]) +
-        (invSqrtTwo * hSign (s t)) • ket (s[t ↦ true]) := by
+      (((Real.sqrt 2)⁻¹ : ℝ) : ℂ) • ket (s[t ↦ false]) +
+        ((((Real.sqrt 2)⁻¹ : ℝ) : ℂ) * (if (s t) then -1 else 1)) • ket (s[t ↦ true]) := by
   simp [onKet]
 
 @[simp]
@@ -163,7 +139,7 @@ theorem applyGate_CCX_ket (a b t : Wire) (s : BasisState) :
 @[simp]
 theorem applyGate_P_ket (k : Nat) (t : Wire) (s : BasisState) :
     applyGate (.P k t) (ket s) =
-      (if s t then phase k else 1) • ket s := by
+      (if s t then Complex.exp (Complex.I * (2 * Real.pi / (2 : ℝ) ^ k : ℂ)) else 1) • ket s := by
   simp [onKet]
 
 
@@ -276,4 +252,69 @@ theorem run_smul
 
 end
 
+/--
+On a classically faithful primitive gate, the quantum action on a
+computational-basis ket agrees exactly with the classical basis-state action.
+-/
+theorem applyGate_ket_agrees_classical
+    (g : Gate)
+    (s : BasisState)
+    (hg : Classical.IsClassicalGate g) :
+    applyGate g (ket s) =
+      ket (Classical.applyGate g s) := by
+  cases g with
+  | X t =>
+      exact applyGate_X_agrees_classical t s
+
+  | H t =>
+      simp at hg
+
+  | CX c t =>
+      exact applyGate_CX_agrees_classical c t s
+
+  | CCX a b t =>
+      exact applyGate_CCX_agrees_classical a b t s
+
+  | P k t =>
+      simp at hg
+
+/--
+Classical-to-quantum agreement.
+
+For an `H`/`P`-free circuit, running the quantum semantics on a
+computational-basis ket gives exactly the ket corresponding to the result
+of the classical semantics.
+
+This is the bridge that lifts the M1–M3 arithmetic correctness proofs into
+the quantum state space without re-proving the arithmetic in Hilbert space.
+-/
+theorem run_ket_agrees_classical
+    (c : Circuit)
+    (s : BasisState)
+    (hc : Classical.HPFree c) :
+    run c (ket s) =
+      ket (Classical.run c s) := by
+  induction c generalizing s with
+  | nil =>
+      simp
+
+  | cons g c ih =>
+      have hg : Classical.IsClassicalGate g :=
+        ((Classical.hpFree_cons g c).mp hc).1
+
+      have hc' : Classical.HPFree c :=
+        ((Classical.hpFree_cons g c).mp hc).2
+
+      calc
+        run (g :: c) (ket s)
+            = run c (applyGate g (ket s)) := rfl
+
+        _ = run c (ket (Classical.applyGate g s)) := by
+              rw [applyGate_ket_agrees_classical g s hg]
+
+        _ = ket (Classical.run c (Classical.applyGate g s)) := by
+              exact ih (Classical.applyGate g s) hc'
+
+        _ = ket (Classical.run (g :: c) s) := by
+              rfl
 end ShorECDLP.Quantum
