@@ -25,7 +25,7 @@ writes `a ⊕ b ⊕ cin` on `s`. -/
 theorem fullAdder_sum (a b cin s co : Nat) (st : State) (hs : st s = false)
     (bs : b ≠ s) (cs : cin ≠ s)
     (ac : a ≠ co) (bc : b ≠ co) (cc : cin ≠ co) (sc : s ≠ co) :
-    run (fullAdder a b cin s co) st s
+    ⟪fullAdder a b cin s co⟫ st s
       = Bool.xor (Bool.xor (st a) (st b)) (st cin) := by
   simp only [fullAdder, run_cons, run_nil, applyGate, upd_same,
     upd_other _ _ _ bs, upd_other _ _ _ cs,
@@ -38,7 +38,7 @@ writes `majority(a, b, cin) = (a∧b) ⊕ (a∧cin) ⊕ (b∧cin)` on `co`. -/
 theorem fullAdder_carry (a b cin s co : Nat) (st : State) (hco : st co = false)
     (bs : b ≠ s) (cs : cin ≠ s)
     (ac : a ≠ co) (bc : b ≠ co) (cc : cin ≠ co) (sc : s ≠ co) :
-    run (fullAdder a b cin s co) st co
+    ⟪fullAdder a b cin s co⟫ st co
       = Bool.xor (Bool.xor (st a && st b) (st a && st cin)) (st b && st cin) := by
   simp only [fullAdder, run_cons, run_nil, applyGate, upd_same,
     upd_other _ _ _ bs, upd_other _ _ _ cs,
