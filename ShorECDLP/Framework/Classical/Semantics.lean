@@ -1,25 +1,30 @@
 import ShorECDLP.Framework.InstructionSet
 
 /-
-# Classical basis-state semantics (framework)
+# Fully classical basis-state semantics (framework)
 
-The reversible gates `{X, CX, CCX}` act as permutations of computational basis states; this
-is the semantics an arithmetic circuit's `correct` obligation is stated against. A basis
-state assigns a bit to each wire. Phase gates `P` are diagonal — they carry a phase that is
-invisible to this classical layer — so here they act as the identity; they appear only in
-the QFT, whose correctness needs the full Hilbert-space semantics (a later layer).
+This is the **classical** semantics: a state is a single computational basis state (one bit
+per wire), and gates act as basis-state permutations. It is deliberately *not* a quantum
+semantics — there is no amplitude or phase — so it can express and cheaply prove the
+correctness of the reversible arithmetic (M1–M3, built from `{X, CX, CCX}`) and nothing more.
 
-This is enough to state and prove functional correctness of all the reversible modular
-arithmetic (M1–M3), which never uses `P`.
+`H` (superposition) and `P` (phase) have no basis-state action and are identity placeholders
+here; the classical semantics is faithful only on `H`/`P`-free circuits. The quantum
+(Hilbert-space) semantics for the QFT is a *separate*, additive layer added at M4 over this
+same basis index, bridged to this one by an agreement lemma — see `docs/PLAN.md`.
 
-## Notation
+Everything lives in the `ShorECDLP.Classical` namespace so the naming makes the classical
+scope unmistakable (`Classical.State`, `Classical.run`, …); the M4 quantum layer will be
+`ShorECDLP.Quantum.*`.
 
-  * `s[i ↦ b]` — the state `s` with wire `i` set to `b`.
-  * `⟦g⟧`      — the basis-state transformer of a single gate `g` (so `⟦g⟧ s`).
-  * `⟪c⟫`      — the basis-state transformer of a circuit `c`, run left to right (`⟪c⟫ s`).
+## Notation (scoped to `Classical`)
+
+  * `s[i ↦ b]` — the classical state `s` with wire `i` set to `b`.
+  * `⟦g⟧`      — a gate's classical basis-state transformer (so `⟦g⟧ s`).
+  * `⟪c⟫`      — a circuit's classical transformer, run left to right (`⟪c⟫ s`).
 -/
 
-namespace ShorECDLP
+namespace ShorECDLP.Classical
 
 /-- A classical basis state: one bit per wire. -/
 abbrev State := Nat → Bool
@@ -27,7 +32,7 @@ abbrev State := Nat → Bool
 /-- Update wire `i` to `b`, leaving every other wire unchanged. -/
 def upd (s : State) (i : Nat) (b : Bool) : State := fun j => if j = i then b else s j
 
-@[inherit_doc] notation:max s:max "[" i " ↦ " b "]" => upd s i b
+@[inherit_doc] scoped notation:max s:max "[" i " ↦ " b "]" => upd s i b
 
 @[simp] theorem upd_same (s : State) (i : Nat) (b : Bool) : s[i ↦ b] i = b := by
   simp [upd]
@@ -36,14 +41,14 @@ theorem upd_other (s : State) (i : Nat) (b : Bool) {j : Nat} (h : j ≠ i) :
     s[i ↦ b] j = s j := by
   simp [upd, h]
 
-/-- Action of a single primitive gate on a basis state.
+/-- Classical action of a single primitive gate on a basis state.
 
 Only the reversible-classical gates `{X, CX, CCX}` have a genuine basis-state action. `H`
 creates superposition and `P` adds a phase — neither is a basis-state permutation — so this
 classical semantics is **faithful only on `H`- and `P`-free circuits** (all the reversible
 arithmetic of M1–M3). `H` and `P` are set to the identity here solely to keep the transformer
 total; no arithmetic correctness theorem is stated about a circuit that contains them, and
-the QFT is handled by the full Hilbert-space semantics in a later layer. -/
+the QFT is handled by the separate quantum semantics at M4. -/
 def applyGate : Gate → State → State
   | .X t,       s => s[t ↦ !s t]
   | .CX c t,    s => s[t ↦ Bool.xor (s t) (s c)]
@@ -51,12 +56,12 @@ def applyGate : Gate → State → State
   | .H _,       s => s
   | .P _ _,     s => s
 
-@[inherit_doc] notation:max "⟦" g "⟧" => applyGate g
+@[inherit_doc] scoped notation:max "⟦" g "⟧" => applyGate g
 
-/-- Run a circuit on a basis state, left to right. -/
+/-- Run a circuit on a classical basis state, left to right. -/
 def run (c : Circuit) (s : State) : State := c.foldl (fun s g => ⟦g⟧ s) s
 
-@[inherit_doc] notation:max "⟪" c "⟫" => run c
+@[inherit_doc] scoped notation:max "⟪" c "⟫" => run c
 
 @[simp] theorem run_nil (s : State) : ⟪[]⟫ s = s := rfl
 
@@ -86,4 +91,4 @@ theorem regValue_upd_not_mem (ws : List Nat) (s : State) (i : Nat) (b : Bool)
     simp only [List.mem_cons, not_or] at h
     rw [regValue_cons, regValue_cons, upd_other s i b (fun e => h.1 e.symm), ih h.2]
 
-end ShorECDLP
+end ShorECDLP.Classical
