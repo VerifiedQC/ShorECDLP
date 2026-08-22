@@ -1,4 +1,5 @@
 import ShorECDLP.Submission.QFT.Proofs.Fourier
+import ShorECDLP.Submission.QFT.Proofs.Count
 
 /-
 # QFT — final correctness theorem
