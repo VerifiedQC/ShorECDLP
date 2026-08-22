@@ -217,7 +217,9 @@ and its correctness goes through the quantum semantics, not the classical bridge
 - **Q0/Q1 — controlled-phase atom.** Realize controlled-`P(k)` in-set. Recommended:
   `cPhase k c t anc := [CCX c t anc, P k anc, CCX c t anc]` (`anc` fresh `|0⟩`) — ket action
   `(if s c && s t then phase k else 1) • ket s` is a one-line `onKet` computation, cost 2 Toffoli
-  + 1 P, one reusable ancilla. Ancilla-free alternative: the negative dyadic phase in the 3-gate
+  + 1 P. **Require-and-restore spec:** `anc` must be `|0⟩` on entry and is returned to `|0⟩` (same
+  freshness discipline as the adder's `st s = false`), so a single ancilla is reused across the
+  whole QFT. Ancilla-free alternative: the negative dyadic phase in the 3-gate
   `CP` decomposition is a *product* of positive `P`s (`−2π/2^{k+1} ≡ Σ_{j=1}^{k+1} 2π/2^j`), `O(k)`
   phase gates, no ancilla. Prove ket action + `WellFormed` + tCount.
 - **Q2 — single-target step.** `H` on the target + the `cPhase` cascade from the remaining wires;
