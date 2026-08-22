@@ -1,0 +1,279 @@
+import ShorECDLP.Framework.Classical.Semantics
+
+import Mathlib.Analysis.Complex.Exponential
+import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+import Mathlib.LinearAlgebra.Finsupp.LinearCombination
+
+/-
+# Quantum semantics
+
+The quantum state space is the free complex vector space over the shared
+computational-basis type `BasisState`.
+
+A state therefore has type
+
+    BasisState →₀ ℂ
+
+so every state has finite support. This is sufficient for the finite circuits
+used in this development: a basis ket has support 1, and each Hadamard can at
+most double the support.
+
+Each primitive gate is first defined on computational-basis kets. We then
+extend that action linearly to arbitrary quantum states using
+`Finsupp.linearCombination`.
+
+This keeps the basis indexing exactly the same as in the classical semantics,
+which will later make the H/P-free classical→quantum agreement theorem direct.
+-/
+
+namespace ShorECDLP.Quantum
+
+noncomputable section
+
+/-- A finite-support quantum state over computational basis states. -/
+abbrev State := BasisState →₀ ℂ
+
+
+/-! ## Computational basis kets -/
+
+/-- The computational basis ket `|s⟩`. -/
+def ket (s : BasisState) : State := by
+  classical
+  exact Finsupp.single s 1
+
+@[simp]
+theorem ket_self (s : BasisState) :
+    ket s s = 1 := by
+  classical
+  simp [ket]
+
+theorem ket_ne {s t : BasisState} (h : s ≠ t) :
+    ket s t = 0 := by
+  classical
+  simp [ket, h]
+
+
+/-! ## Constants used by the primitive quantum gates -/
+
+/-- `1 / √2`, viewed as a complex number. -/
+def invSqrtTwo : ℂ :=
+  (((Real.sqrt 2)⁻¹ : ℝ) : ℂ)
+
+/-- The angle `2π / 2^k` used by the primitive phase gate `P k`. -/
+def phaseAngle (k : Nat) : ℝ :=
+  2 * Real.pi / (2 : ℝ) ^ k
+
+/-- The phase `exp(i · 2π / 2^k)` applied by `P k` to `|1⟩`. -/
+def phase (k : Nat) : ℂ :=
+  Complex.exp (Complex.I * (phaseAngle k : ℂ))
+
+/-- The sign introduced by a Hadamard:
+`+1` on input `|0⟩`, `-1` on input `|1⟩`. -/
+def hSign (b : Bool) : ℂ :=
+  if b then -1 else 1
+
+@[simp]
+theorem hSign_false :
+    hSign false = 1 := rfl
+
+@[simp]
+theorem hSign_true :
+    hSign true = -1 := rfl
+
+
+/-! ## Primitive gates on basis kets -/
+
+/--
+Action of a primitive gate on a computational-basis ket.
+
+The reversible classical gates send one basis ket to another.
+
+Hadamard acts by
+
+    H|0⟩ = 1/√2 (|0⟩ + |1⟩)
+    H|1⟩ = 1/√2 (|0⟩ - |1⟩).
+
+`P k` fixes `|0⟩` and multiplies `|1⟩` by
+`exp(i · 2π / 2^k)`.
+-/
+def onKet : Gate → BasisState → State
+  | .X t, s =>
+      ket (s[t ↦ !s t])
+
+  | .H t, s =>
+      invSqrtTwo • ket (s[t ↦ false]) +
+        (invSqrtTwo * hSign (s t)) • ket (s[t ↦ true])
+
+  | .CX c t, s =>
+      ket (s[t ↦ Bool.xor (s t) (s c)])
+
+  | .CCX a b t, s =>
+      ket (s[t ↦ Bool.xor (s t) (s a && s b)])
+
+  | .P k t, s =>
+      (if s t then phase k else 1) • ket s
+
+
+/-! ## Linear action of primitive gates -/
+
+/--
+Quantum action of a primitive gate.
+
+`onKet g` specifies the action on basis kets; `linearCombination`
+extends it uniquely by complex linearity to arbitrary finite-support states.
+-/
+def applyGate (g : Gate) : State →ₗ[ℂ] State :=
+  Finsupp.linearCombination ℂ (onKet g)
+
+/-- Applying a gate to a basis ket reduces to its `onKet` specification. -/
+@[simp]
+theorem applyGate_ket (g : Gate) (s : BasisState) :
+    applyGate g (ket s) = onKet g s := by
+  classical
+  simp [applyGate, ket]
+
+
+/-! Convenient basis-ket rules for the five primitives. -/
+
+@[simp]
+theorem applyGate_X_ket (t : Wire) (s : BasisState) :
+    applyGate (.X t) (ket s) =
+      ket (s[t ↦ !s t]) := by
+  simp [onKet]
+
+@[simp]
+theorem applyGate_H_ket (t : Wire) (s : BasisState) :
+    applyGate (.H t) (ket s) =
+      invSqrtTwo • ket (s[t ↦ false]) +
+        (invSqrtTwo * hSign (s t)) • ket (s[t ↦ true]) := by
+  simp [onKet]
+
+@[simp]
+theorem applyGate_CX_ket (c t : Wire) (s : BasisState) :
+    applyGate (.CX c t) (ket s) =
+      ket (s[t ↦ Bool.xor (s t) (s c)]) := by
+  simp [onKet]
+
+@[simp]
+theorem applyGate_CCX_ket (a b t : Wire) (s : BasisState) :
+    applyGate (.CCX a b t) (ket s) =
+      ket (s[t ↦ Bool.xor (s t) (s a && s b)]) := by
+  simp [onKet]
+
+@[simp]
+theorem applyGate_P_ket (k : Nat) (t : Wire) (s : BasisState) :
+    applyGate (.P k t) (ket s) =
+      (if s t then phase k else 1) • ket s := by
+  simp [onKet]
+
+
+/-! ## Agreement with the classical semantics on classical gates -/
+
+@[simp]
+theorem applyGate_X_agrees_classical (t : Wire) (s : BasisState) :
+    applyGate (.X t) (ket s) =
+      ket (Classical.applyGate (.X t) s) := by
+  simp [Classical.applyGate, onKet]
+
+@[simp]
+theorem applyGate_CX_agrees_classical
+    (c t : Wire) (s : BasisState) :
+    applyGate (.CX c t) (ket s) =
+      ket (Classical.applyGate (.CX c t) s) := by
+  simp [Classical.applyGate, onKet]
+
+@[simp]
+theorem applyGate_CCX_agrees_classical
+    (a b t : Wire) (s : BasisState) :
+    applyGate (.CCX a b t) (ket s) =
+      ket (Classical.applyGate (.CCX a b t) s) := by
+  simp [Classical.applyGate, onKet]
+
+
+/-! ## Circuit semantics -/
+
+/--
+Run a circuit from left to right.
+
+The result is itself bundled as a complex-linear map. Consequently,
+linearity of an entire circuit follows automatically from the type.
+-/
+def run : Circuit → State →ₗ[ℂ] State
+  | [] =>
+      LinearMap.id
+
+  | g :: c =>
+      (run c).comp (applyGate g)
+
+@[simp]
+theorem run_nil (ψ : State) :
+    run [] ψ = ψ := rfl
+
+@[simp]
+theorem run_cons
+    (g : Gate) (c : Circuit) (ψ : State) :
+    run (g :: c) ψ =
+      run c (applyGate g ψ) := rfl
+
+@[simp]
+theorem run_singleton
+    (g : Gate) (ψ : State) :
+    run [g] ψ = applyGate g ψ := by
+  simp
+
+/--
+Running `c₁ ++ c₂` means first running `c₁`, then running `c₂`.
+-/
+theorem run_append
+    (c₁ c₂ : Circuit) (ψ : State) :
+    run (c₁ ++ c₂) ψ =
+      run c₂ (run c₁ ψ) := by
+  induction c₁ generalizing ψ with
+  | nil =>
+      simp
+  | cons g c ih =>
+      simp [ih]
+
+/-- Linear-map form of `run_append`. -/
+theorem run_append_map
+    (c₁ c₂ : Circuit) :
+    run (c₁ ++ c₂) =
+      (run c₂).comp (run c₁) := by
+  apply LinearMap.ext
+  intro ψ
+  exact run_append c₁ c₂ ψ
+
+
+/-! ## Explicit linearity lemmas -/
+
+@[simp]
+theorem applyGate_add
+    (g : Gate) (ψ φ : State) :
+    applyGate g (ψ + φ) =
+      applyGate g ψ + applyGate g φ :=
+  (applyGate g).map_add ψ φ
+
+@[simp]
+theorem applyGate_smul
+    (g : Gate) (a : ℂ) (ψ : State) :
+    applyGate g (a • ψ) =
+      a • applyGate g ψ :=
+  (applyGate g).map_smul a ψ
+
+@[simp]
+theorem run_add
+    (c : Circuit) (ψ φ : State) :
+    run c (ψ + φ) =
+      run c ψ + run c φ :=
+  (run c).map_add ψ φ
+
+@[simp]
+theorem run_smul
+    (c : Circuit) (a : ℂ) (ψ : State) :
+    run c (a • ψ) =
+      a • run c ψ :=
+  (run c).map_smul a ψ
+
+end
+
+end ShorECDLP.Quantum
