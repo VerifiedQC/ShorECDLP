@@ -89,12 +89,14 @@ def carryOut : Nat → List Nat → Nat
   | cin, []          => cin
   | _,   co :: couts => carryOut co couts
 
-/-- Distinctness/freshness the ripple correctness needs: each column's two output wires are
-distinct from that column's inputs and from every later column's wires and carry. -/
+/-- Physical wire distinctness for the adder: each column's five wires `a, b, cin, s, co` are
+pairwise distinct, and its two output wires `s, co` are distinct from every later column's wires
+and carry. This is the honest well-formedness precondition (correctness needs only part of it;
+the `WellFormed`/unitarity side needs the full per-column distinctness). -/
 def wiresOK : List (Nat × Nat × Nat) → Nat → List Nat → Prop
   | [],               _,   _          => True
   | (a, b, s) :: rest, cin, co :: cs  =>
-      (b ≠ s ∧ cin ≠ s ∧ a ≠ co ∧ b ≠ co ∧ cin ≠ co ∧ s ≠ co)
+      (a ≠ b ∧ a ≠ cin ∧ a ≠ s ∧ a ≠ co ∧ b ≠ cin ∧ b ≠ s ∧ b ≠ co ∧ cin ≠ s ∧ cin ≠ co ∧ s ≠ co)
         ∧ (∀ c ∈ rest, (s ≠ c.1 ∧ co ≠ c.1) ∧ (s ≠ c.2.1 ∧ co ≠ c.2.1) ∧ (s ≠ c.2.2 ∧ co ≠ c.2.2))
         ∧ (∀ x ∈ cs, s ≠ x ∧ co ≠ x)
         ∧ wiresOK rest co cs
@@ -123,7 +125,7 @@ theorem ripple_correct :
       cases couts with
       | nil => simp at hlen
       | cons co cs =>
-          obtain ⟨⟨hbs, hcs, hac, hbc, hcc, hsc⟩, hrest, hcs', hokrest⟩ := hok
+          obtain ⟨⟨_, _, _, hac, _, hbs, hbc, hcs, hcc, hsc⟩, hrest, hcs', hokrest⟩ := hok
           have hlen' : cs.length = rest.length := by simpa using hlen
           have hsf : st s = false := hfs (a, b, s) (List.mem_cons_self ..)
           have hcof : st co = false := hfc co (List.mem_cons_self ..)
@@ -178,5 +180,52 @@ theorem ripple_correct :
           rw [Nat.pow_succ, Nat.mul_right_comm (2 ^ rest.length) 2]
           have hbc' := bit_column (st a) (st b) (st cin)
           omega
+
+/-! ## Structural predicates (for the quantum-layer bridge and unitarity)
+
+The adder ships both predicates the downstream milestones consume: `HPFree` (no `H`/`P`, so
+`Classical.run` *is* the quantum action — this is what lifts the correctness above to the
+quantum layer at M1.4) and `CircuitWellFormed` (distinct wires per gate — the unitarity /
+norm-preservation side). -/
+
+/-- The full-adder cell is well-formed when its five wires are suitably distinct. -/
+theorem fullAdder_wellFormed (a b cin s co : Nat)
+    (hab : a ≠ b) (hacin : a ≠ cin) (has : a ≠ s) (hac : a ≠ co)
+    (hbcin : b ≠ cin) (hbs : b ≠ s) (hbc : b ≠ co) (hcs : cin ≠ s) (hcc : cin ≠ co) :
+    CircuitWellFormed (fullAdder a b cin s co) := by
+  simp only [fullAdder, circuitWellFormed_cons, circuitWellFormed_nil, Gate.WellFormed, and_true]
+  exact ⟨⟨hab, hac, hbc⟩, ⟨hacin, hac, hcc⟩, ⟨hbcin, hbc, hcc⟩, has, hbs, hcs⟩
+
+/-- The ripple adder is `H`/`P`-free: it is built purely from `{X, CX, CCX}`, so its classical
+semantics coincides with its quantum action (used to lift correctness to the quantum layer). -/
+theorem ripple_HPFree (cols : List (Nat × Nat × Nat)) (cin : Nat) (couts : List Nat) :
+    Classical.HPFree (ripple cols cin couts) := by
+  induction cols generalizing cin couts with
+  | nil => simp [ripple]
+  | cons head rest ih =>
+      obtain ⟨a, b, s⟩ := head
+      cases couts with
+      | nil => simp [ripple]
+      | cons co cs =>
+          rw [ripple, Classical.hpFree_append]
+          exact ⟨by simp [fullAdder], ih co cs⟩
+
+/-- The ripple adder is well-formed (distinct wires per gate) whenever the wires are distinct. -/
+theorem ripple_wellFormed :
+    ∀ (cols : List (Nat × Nat × Nat)) (cin : Nat) (couts : List Nat),
+      wiresOK cols cin couts → CircuitWellFormed (ripple cols cin couts) := by
+  intro cols
+  induction cols with
+  | nil => intro cin couts _; simp [ripple]
+  | cons head rest ih =>
+      intro cin couts hok
+      obtain ⟨a, b, s⟩ := head
+      cases couts with
+      | nil => simp [ripple]
+      | cons co cs =>
+          obtain ⟨⟨hab, hacin, has, hac, hbcin, hbs, hbc, hcs, hcc, _⟩, _, _, hokrest⟩ := hok
+          rw [ripple, circuitWellFormed_append]
+          exact ⟨fullAdder_wellFormed a b cin s co hab hacin has hac hbcin hbs hbc hcs hcc,
+            ih co cs hokrest⟩
 
 end ShorECDLP
