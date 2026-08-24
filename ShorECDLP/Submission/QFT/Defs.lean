@@ -7,11 +7,11 @@ Controlled phase using one clean ancilla.
 
 The ancilla is required to start in `|0⟩`:
 
-    CCX c t anc
-    P forward k anc
-    CCX c t anc
+    .CCX c t anc
+    .P .forward k anc
+    .CCX c t anc
 
-The first Toffoli computes `c ∧ t` into `anc`, `P forward k` applies the phase
+The first Toffoli computes `c ∧ t` into `anc`, `.P .forward k anc` applies the phase
 exactly when both controls are set, and the final Toffoli uncomputes the
 ancilla.
 -/

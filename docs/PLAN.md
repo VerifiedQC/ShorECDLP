@@ -86,7 +86,8 @@ Output: k.
   distribution, with a phase-estimation success bound.
 - **`counted`**: an end-to-end T-count bound on the same circuit (framework metric).
 
-Every layer below carries both obligations as a derived circuit over the four primitives.
+Every layer below carries both obligations as a derived circuit over the five primitive
+gate families.
 
 ---
 
@@ -104,9 +105,10 @@ ShorECDLP/
       BasisState.lean                    # [M0 ✓] layer-neutral BasisState := Nat→Bool, upd, regValue
       Classical/
         Semantics.lean                   # [M1.0 ✓] classical actions: Classical.applyGate / Classical.run
-      Quantum/            (provisional)
-        Semantics.lean                   # [M4] Hilbert-space layer over BasisState →₀ ℂ + the agreement lemma
-        Measure.lean                     # [M4] measurement semantics
+      Quantum/
+        Semantics.lean                   # [M4 ✓] Hilbert-space layer over BasisState →₀ ℂ + agreement
+        InnerProduct.lean                # [M4 ✓] unitarity, normalization, and circuit adjoints
+        Measure.lean        (planned)    # [M4] measurement semantics
       Contract.lean       (provisional)  # [M5] program + correct + counted (same-term)
     Submission/
       Field.lean                         # [M1 ✓] secp256k1 constants + Fermat-inversion correctness
@@ -118,7 +120,10 @@ ShorECDLP/
         PointAdd.lean                    # [M2] affine add (quantum ⊞ classical constant)
         ScalarMul.lean                   # [M3] double-and-add (2m additions)
         ECDLPOracle.lean                 # [M3] U_f
-      QFT.lean            (provisional)  # [M4] coherent QFT over 2^m
+      QFT/
+        Defs.lean                        # [M4 ✓] coherent QFT and exact inverse QFT
+        Main.lean                        # [M4 ✓] public QFT/IQFT correctness theorems
+        Proofs/                         # [M4 ✓] phase, Fourier, count, and WF proofs
       Correctness/        (provisional)
         Reduction.lean                   # [M4] ECDLP ↔ ⟨(−k,1)⟩; k = β·α⁻¹ (mod n)
         SuccessBound.lean                # [M4] phase-estimation success bound
@@ -204,8 +209,8 @@ axioms, and `counted` bound to the same `program` term as `correct`.
 
 ## 7. M4 quantum layer — status and the QFT plan
 
-The quantum semantics is being built in parallel (branch `QFT-work`), additively over the same
-`BasisState`, and already has: the amplitude state `BasisState →₀ ℂ`, gates as linear maps
+The quantum semantics is implemented additively over the same `BasisState`. It provides the
+amplitude state `BasisState →₀ ℂ`, gates as linear maps
 (`onKet` + `linearCombination`), the **agreement bridge** (`run (ket s) = ket (Classical.run c s)`
 for `HPFree` circuits — transports all M1–M3 arithmetic correctness up for free), and **norm
 preservation** (`run_preservesNormSq` for `CircuitWellFormed` circuits ⇒ `normSq_run_ket = 1`,
@@ -220,8 +225,8 @@ and its correctness goes through the quantum semantics, not the classical bridge
 
 **QFT construction + correctness** (one PR per step, stated over `Quantum.run`):
 - **Q0/Q1 — controlled-phase atom.** Realize controlled-`P(.forward,k)` in-set:
-  `cPhase k c t anc := [CCX c t anc, P .forward k anc, CCX c t anc]` (`anc` fresh `|0⟩`) — ket action
-  `(if s c && s t then phase k else 1) • ket s` is a one-line `onKet` computation, cost 2 Toffoli
+  `cPhase k c t anc := [.CCX c t anc, .P .forward k anc, .CCX c t anc]` (`anc` fresh `|0⟩`) — ket action
+  `(if s c && s t then phaseCoeff .forward k else 1) • ket s` is a one-line `onKet` computation, cost 2 Toffoli
   + 1 P. **Require-and-restore spec:** `anc` must be `|0⟩` on entry and is returned to `|0⟩` (same
   freshness discipline as the adder's `st s = false`), so a single ancilla is reused across the
   whole QFT. The inverse atom is obtained by circuit adjoint and uses `P(.inverse,k)` at the

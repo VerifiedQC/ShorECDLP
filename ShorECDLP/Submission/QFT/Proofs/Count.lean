@@ -2,14 +2,13 @@ import ShorECDLP.Submission.QFT.Proofs.Step
 import ShorECDLP.Submission.QFT.Proofs.Swap
 
 /-
-# Q4 — the QFT's `counted` obligation
+# Q4 — QFT and inverse-QFT structural obligations
 
-This file discharges the non-correctness half of the QFT submission: the T-count of
-`qft r anc`, the well-formedness of the full circuit, and the resulting output
-normalization. None of it touches the Fourier semantics — it is a purely structural
-tally over the `++`/`flatMap` shape of the circuit, composed from the already-proven
-atom lemmas (`tCount_cPhase`, `tCount_swap`, `cPhase_wellFormed`, `swap_wellFormed`,
-`qftStep_wellFormed`).
+This file discharges the structural half of the QFT submission: exact T-count,
+well-formedness, and output normalization for `qft r anc` and its adjoint-defined
+inverse `iqft r anc`. None of it touches the Fourier semantics. The forward results
+are tallies over the `++`/`flatMap` circuit shape; the inverse results follow from
+the generic adjoint contracts.
 
 - **T-count** (`tCount_qft`): `qft r anc = qftCore r anc ++ bitReverse r`. The bit
   reversal is all SWAPs (T-count `0`); the core contributes one `qftPhaseLayer` of
@@ -19,6 +18,8 @@ atom lemmas (`tCount_cPhase`, `tCount_swap`, `cPhase_wellFormed`, `swap_wellForm
   register is `Nodup` and the shared ancilla lies outside it.
 - **Normalization** (`normSq_run_qft_ket`): well-formedness feeds the framework's
   `normSq_run_ket`, so a basis input stays a unit vector.
+- **Inverse QFT** (`tCount_iqft`, `iqft_wellFormed`, `normSq_run_iqft_ket`): circuit
+  adjoint preserves the forward circuit's cost, well-formedness, and normalization.
 -/
 
 namespace ShorECDLP.Quantum

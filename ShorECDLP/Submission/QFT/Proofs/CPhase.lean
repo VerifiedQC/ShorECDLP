@@ -15,13 +15,13 @@ Correctness of `cPhase` on a computational-basis state.
 If the ancilla starts clean (`s anc = false`) and is distinct from
 the two data wires, then
 
-    CCX c t anc;
-    P forward k anc;
-    CCX c t anc
+    .CCX c t anc;
+    .P .forward k anc;
+    .CCX c t anc
 
 has no effect on the computational basis state itself.  Its only
-effect is multiplication by the forward `phase k` exactly when both `c` and `t`
-are set.
+effect is multiplication by `phaseCoeff .forward k` exactly when both `c`
+and `t` are set.
 
 The fact that the result contains `ket s` also says that the ancilla
 has been restored to its original clean value.
