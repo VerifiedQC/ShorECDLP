@@ -1,4 +1,5 @@
 import ShorECDLP.Submission.Arithmetic.RippleAdder
+import ShorECDLP.Submission.Arithmetic.Contracts
 
 /-
 # Modular adder (M1.3) — `(a + b) mod p`
@@ -911,5 +912,663 @@ theorem modAdd_clean
   · rw [run_other_targets compute.reverse _ w (by simpa using htarget),
       selectPoint_other (carryOut cin₂ couts₂) w selectCols _ hs hw,
       run_other_targets compute st w htarget]
+
+namespace ModAddSupport
+
+/-! ## Syntactic support -/
+
+/-- `Gate.UsesOnly` is exactly containment of the complete gate support. -/
+theorem gate_usesOnly_iff (ws : List Wire) (g : Gate) :
+    g.UsesOnly ws ↔ ∀ w ∈ gateWires g, w ∈ ws := by
+  cases g <;> simp [Gate.UsesOnly, gateWires]
+
+/-- The gatewise and flattened presentations of a circuit footprint agree. -/
+theorem circuitUsesOnly_iff_support (ws : List Wire) (c : Circuit) :
+    CircuitUsesOnly ws c ↔ ∀ w ∈ circuitWires c, w ∈ ws := by
+  constructor
+  · intro h w hw
+    simp only [circuitWires, List.mem_flatMap] at hw
+    obtain ⟨g, hg, hwg⟩ := hw
+    exact (gate_usesOnly_iff ws g).mp (h g hg) w hwg
+  · intro h g hg
+    apply (gate_usesOnly_iff ws g).mpr
+    intro w hw
+    apply h w
+    simp only [circuitWires, List.mem_flatMap]
+    exact ⟨g, hg, hw⟩
+
+theorem circuitUsesOnly_mono {small big : List Wire} {c : Circuit}
+    (h : CircuitUsesOnly small c) (hsub : ∀ w ∈ small, w ∈ big) :
+    CircuitUsesOnly big c := by
+  intro g hg
+  apply (gate_usesOnly_iff big g).mpr
+  intro w hw
+  exact hsub w ((gate_usesOnly_iff small g).mp (h g hg) w hw)
+
+@[simp] theorem circuitUsesOnly_nil (ws : List Wire) :
+    CircuitUsesOnly ws ([] : Circuit) := by
+  intro g hg
+  simp at hg
+
+theorem circuitUsesOnly_append (ws : List Wire) (c₁ c₂ : Circuit) :
+    CircuitUsesOnly ws (c₁ ++ c₂) ↔
+      CircuitUsesOnly ws c₁ ∧ CircuitUsesOnly ws c₂ := by
+  constructor
+  · intro h
+    constructor
+    · intro g hg
+      exact h g (List.mem_append_left c₂ hg)
+    · intro g hg
+      exact h g (List.mem_append_right c₁ hg)
+  · intro h g hg
+    rcases List.mem_append.mp hg with hg | hg
+    · exact h.1 g hg
+    · exact h.2 g hg
+
+theorem circuitUsesOnly_reverse (ws : List Wire) (c : Circuit) :
+    CircuitUsesOnly ws c.reverse ↔ CircuitUsesOnly ws c := by
+  constructor <;> intro h g hg
+  · exact h g (by simpa using hg)
+  · exact h g (by simpa using hg)
+
+/-- The complete five-wire footprint of a full-adder cell. -/
+theorem fullAdder_usesOnly (a b cin s co : Wire) :
+    CircuitUsesOnly [a, b, cin, s, co] (fullAdder a b cin s co) := by
+  simp [CircuitUsesOnly, fullAdder, Gate.UsesOnly]
+
+/-- Loading a constant only touches its declared register. -/
+theorem loadConst_usesOnly (ws : List Wire) (k : Nat) :
+    CircuitUsesOnly ws (loadConst ws k) := by
+  induction ws generalizing k with
+  | nil => exact circuitUsesOnly_nil []
+  | cons w ws ih =>
+      rw [loadConst]
+      by_cases h : k % 2 = 1
+      · rw [if_pos h, circuitUsesOnly_append]
+        constructor
+        · simp [CircuitUsesOnly, Gate.UsesOnly]
+        · exact circuitUsesOnly_mono (ih (k / 2))
+            (fun x hx => List.mem_cons_of_mem w hx)
+      · rw [if_neg h]
+        simpa using circuitUsesOnly_mono (ih (k / 2))
+          (fun x hx => List.mem_cons_of_mem w hx)
+
+/-- Flatten the three role registers of a column list. -/
+def colsWires (cols : List (Wire × Wire × Wire)) : List Wire :=
+  cols.flatMap (fun c => [c.1, c.2.1, c.2.2])
+
+/-- All inputs, threaded carries, and sums that a ripple circuit may use. -/
+def rippleFootprint (cols : List (Wire × Wire × Wire))
+    (cin : Wire) (couts : List Wire) : List Wire :=
+  cin :: (couts ++ colsWires cols)
+
+/-- A ripple circuit stays inside its column/carry footprint, even for truncated `couts`. -/
+theorem ripple_usesOnly :
+    ∀ (cols : List (Wire × Wire × Wire)) (cin : Wire) (couts : List Wire),
+      CircuitUsesOnly (rippleFootprint cols cin couts) (ripple cols cin couts) := by
+  intro cols
+  induction cols with
+  | nil => intro cin couts; exact circuitUsesOnly_nil _
+  | cons head rest ih =>
+      intro cin couts
+      obtain ⟨a,b,s⟩ := head
+      cases couts with
+      | nil => exact circuitUsesOnly_nil _
+      | cons co cs =>
+          rw [ripple, circuitUsesOnly_append]
+          constructor
+          · exact circuitUsesOnly_mono (fullAdder_usesOnly a b cin s co) (by
+              intro w hw
+              simp only [List.mem_cons] at hw
+              simp only [rippleFootprint, colsWires, List.flatMap_cons,
+                List.mem_cons, List.mem_append, List.mem_flatMap]
+              rcases hw with rfl | rfl | rfl | rfl | rfl | hw
+              · simp
+              · simp
+              · simp
+              · simp
+              · simp
+              · contradiction)
+          · exact circuitUsesOnly_mono (ih co cs) (by
+              intro w hw
+              simp only [rippleFootprint, colsWires, List.flatMap_cons,
+                List.mem_cons, List.mem_append, List.mem_flatMap] at hw ⊢
+              rcases hw with rfl | hw | ⟨c, hc, hcw⟩
+              · exact Or.inr (Or.inl (Or.inl rfl))
+              · exact Or.inr (Or.inl (Or.inr hw))
+              · exact Or.inr (Or.inr (Or.inr ⟨c, hc, hcw⟩)))
+
+/-- Constant addition has the same footprint as its ripple core: its loaded B-register is
+already one of the column roles. -/
+theorem addConst_usesOnly (cols : List (Wire × Wire × Wire))
+    (cin : Wire) (couts : List Wire) (k : Nat) :
+    CircuitUsesOnly (rippleFootprint cols cin couts) (addConst cols cin couts k) := by
+  have hb : ∀ w ∈ cols.map (fun c => c.2.1), w ∈ rippleFootprint cols cin couts := by
+    intro w hw
+    simp only [List.mem_map] at hw
+    obtain ⟨c, hc, rfl⟩ := hw
+    simp only [rippleFootprint, List.mem_cons, List.mem_append, colsWires, List.mem_flatMap]
+    exact Or.inr (Or.inr ⟨c, hc, by simp⟩)
+  rw [addConst, circuitUsesOnly_append, circuitUsesOnly_append]
+  exact ⟨⟨circuitUsesOnly_mono (loadConst_usesOnly _ k) hb,
+    ripple_usesOnly cols cin couts⟩,
+    circuitUsesOnly_mono (loadConst_usesOnly _ k) hb⟩
+
+/-- One selector cell uses exactly its flag, two sources, and output. -/
+theorem selectBit_usesOnly (flag x y out : Wire) :
+    CircuitUsesOnly [flag, x, y, out] (selectBit flag x y out) := by
+  simp [CircuitUsesOnly, selectBit, Gate.UsesOnly]
+
+/-- Full syntactic footprint of a pointwise selector. -/
+def selectFootprint (flag : Wire) (cols : List (Wire × Wire × Wire)) : List Wire :=
+  flag :: colsWires cols
+
+theorem selectPoint_usesOnly (flag : Wire) :
+    ∀ cols : List (Wire × Wire × Wire),
+      CircuitUsesOnly (selectFootprint flag cols) (selectPoint flag cols) := by
+  intro cols
+  induction cols with
+  | nil => exact circuitUsesOnly_nil _
+  | cons head rest ih =>
+      obtain ⟨x,y,o⟩ := head
+      rw [selectPoint, circuitUsesOnly_append]
+      constructor
+      · exact circuitUsesOnly_mono (selectBit_usesOnly flag x y o) (by
+          intro w hw
+          simp only [List.mem_cons] at hw
+          simp only [selectFootprint, colsWires, List.flatMap_cons,
+            List.mem_cons, List.mem_append, List.mem_flatMap]
+          rcases hw with rfl | rfl | rfl | rfl | hw
+          · simp
+          · simp
+          · simp
+          · simp
+          · contradiction)
+      · exact circuitUsesOnly_mono ih (by
+          intro w hw
+          simp only [selectFootprint, colsWires, List.flatMap_cons,
+            List.mem_cons, List.mem_append, List.mem_flatMap] at hw ⊢
+          rcases hw with rfl | hw
+          · simp
+          · exact Or.inr (Or.inr hw))
+
+/-- The owner registers A/B/O followed by all modular-addition work registers. -/
+def modAddAllWires
+    (addCols redCols selectCols : List (Wire × Wire × Wire))
+    (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire) : List Wire :=
+  addCols.map (fun c => c.1) ++
+  addCols.map (fun c => c.2.1) ++
+  selectCols.map (fun c => c.2.2) ++
+  addCols.map (fun c => c.2.2) ++
+  redCols.map (fun c => c.2.1) ++
+  redCols.map (fun c => c.2.2) ++
+  [cin₁] ++ couts₁ ++ [cin₂] ++ couts₂
+
+theorem carryOut_mem_footprint (cin : Wire) (couts : List Wire) :
+    carryOut cin couts ∈ cin :: couts := by
+  induction couts generalizing cin with
+  | nil => simp [carryOut]
+  | cons co cs ih =>
+      rw [carryOut]
+      exact List.mem_cons_of_mem cin (ih co)
+
+/-- Every control and target of `modAdd` belongs to its declared register layout. -/
+theorem modAdd_usesOnly
+    (addCols redCols selectCols : List (Wire × Wire × Wire))
+    (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
+    (modulus : Nat)
+    (hredA : redCols.map (fun c => c.1) = addCols.map (fun c => c.2.2))
+    (hselectX : selectCols.map (fun c => c.1) = addCols.map (fun c => c.2.2))
+    (hselectY : selectCols.map (fun c => c.2.1) = redCols.map (fun c => c.2.2)) :
+    CircuitUsesOnly (modAddAllWires addCols redCols selectCols cin₁ couts₁ cin₂ couts₂)
+      (modAdd addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus) := by
+  let all := modAddAllWires addCols redCols selectCols cin₁ couts₁ cin₂ couts₂
+  have hadd : ∀ w ∈ rippleFootprint addCols cin₁ couts₁, w ∈ all := by
+    intro w hw
+    simp only [rippleFootprint, List.mem_cons, List.mem_append, colsWires,
+      List.mem_flatMap] at hw
+    rcases hw with rfl | hw
+    · simp [all, modAddAllWires]
+    · rcases hw with hw | ⟨c, hc, hw⟩
+      · simp [all, modAddAllWires, hw]
+      · have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hw
+        rcases hw' with rfl | rfl | rfl
+        · simp [all, modAddAllWires, List.mem_map_of_mem hc]
+        · simp [all, modAddAllWires, List.mem_map_of_mem hc]
+        · simp [all, modAddAllWires, List.mem_map_of_mem hc]
+  have hred : ∀ w ∈ rippleFootprint redCols cin₂ couts₂, w ∈ all := by
+    intro w hw
+    simp only [rippleFootprint, List.mem_cons, List.mem_append, colsWires,
+      List.mem_flatMap] at hw
+    rcases hw with rfl | hw
+    · simp [all, modAddAllWires]
+    · rcases hw with hw | ⟨c, hc, hw⟩
+      · simp [all, modAddAllWires, hw]
+      · have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hw
+        rcases hw' with rfl | rfl | rfl
+        · have hm : c.1 ∈ addCols.map (fun d => d.2.2) := by
+            rw [← hredA]
+            exact List.mem_map_of_mem hc
+          simp [all, modAddAllWires, hm]
+        · simp [all, modAddAllWires, List.mem_map_of_mem hc]
+        · simp [all, modAddAllWires, List.mem_map_of_mem hc]
+  have hselect : ∀ w ∈ selectFootprint (carryOut cin₂ couts₂) selectCols, w ∈ all := by
+    intro w hw
+    simp only [selectFootprint, List.mem_cons, colsWires, List.mem_flatMap] at hw
+    rcases hw with rfl | ⟨c, hc, hw⟩
+    · have hcarry := carryOut_mem_footprint cin₂ couts₂
+      simp only [List.mem_cons] at hcarry
+      rcases hcarry with hcarry | hcarry
+      · rw [hcarry]
+        simp [all, modAddAllWires]
+      · simp [all, modAddAllWires, hcarry]
+    · have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hw
+      rcases hw' with rfl | rfl | rfl
+      · have hm : c.1 ∈ addCols.map (fun d => d.2.2) := by
+          rw [← hselectX]
+          exact List.mem_map_of_mem hc
+        simp [all, modAddAllWires, hm]
+      · have hm : c.2.1 ∈ redCols.map (fun d => d.2.2) := by
+          rw [← hselectY]
+          exact List.mem_map_of_mem hc
+        simp [all, modAddAllWires, hm]
+      · simp [all, modAddAllWires, List.mem_map_of_mem hc]
+  rw [modAdd, circuitUsesOnly_append, circuitUsesOnly_append]
+  have hcompute : CircuitUsesOnly all
+      (modAddCompute addCols redCols cin₁ couts₁ cin₂ couts₂ modulus) := by
+    rw [modAddCompute, circuitUsesOnly_append]
+    exact ⟨circuitUsesOnly_mono (ripple_usesOnly addCols cin₁ couts₁) hadd,
+      circuitUsesOnly_mono (addConst_usesOnly redCols cin₂ couts₂ _) hred⟩
+  exact ⟨⟨hcompute, circuitUsesOnly_mono (selectPoint_usesOnly _ _) hselect⟩,
+    (circuitUsesOnly_reverse all _).2 hcompute⟩
+
+/-- The compute/uncompute core excludes selector outputs from its declared support. -/
+theorem modAddCompute_usesOnly
+    (addCols redCols : List (Wire × Wire × Wire))
+    (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
+    (modulus : Nat)
+    (hredA : redCols.map (fun c => c.1) = addCols.map (fun c => c.2.2)) :
+    CircuitUsesOnly
+      (addCols.map (fun c => c.1) ++
+       addCols.map (fun c => c.2.1) ++
+       addCols.map (fun c => c.2.2) ++
+       redCols.map (fun c => c.2.1) ++
+       redCols.map (fun c => c.2.2) ++
+       [cin₁] ++ couts₁ ++ [cin₂] ++ couts₂)
+      (modAddCompute addCols redCols cin₁ couts₁ cin₂ couts₂ modulus) := by
+  let all :=
+    addCols.map (fun c => c.1) ++
+    addCols.map (fun c => c.2.1) ++
+    addCols.map (fun c => c.2.2) ++
+    redCols.map (fun c => c.2.1) ++
+    redCols.map (fun c => c.2.2) ++
+    [cin₁] ++ couts₁ ++ [cin₂] ++ couts₂
+  have hadd : ∀ w ∈ rippleFootprint addCols cin₁ couts₁, w ∈ all := by
+    intro w hw
+    simp only [rippleFootprint, List.mem_cons, List.mem_append,
+      colsWires, List.mem_flatMap] at hw
+    rcases hw with rfl | hw
+    · simp [all]
+    · rcases hw with hw | ⟨c, hc, hw⟩
+      · simp [all, hw]
+      · have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hw
+        rcases hw' with rfl | rfl | rfl <;> simp [all, List.mem_map_of_mem hc]
+  have hred : ∀ w ∈ rippleFootprint redCols cin₂ couts₂, w ∈ all := by
+    intro w hw
+    simp only [rippleFootprint, List.mem_cons, List.mem_append,
+      colsWires, List.mem_flatMap] at hw
+    rcases hw with rfl | hw
+    · simp [all]
+    · rcases hw with hw | ⟨c, hc, hw⟩
+      · simp [all, hw]
+      · have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hw
+        rcases hw' with rfl | rfl | rfl
+        · have hm : c.1 ∈ addCols.map (fun d => d.2.2) := by
+            rw [← hredA]
+            exact List.mem_map_of_mem hc
+          simp [all, hm]
+        · simp [all, List.mem_map_of_mem hc]
+        · simp [all, List.mem_map_of_mem hc]
+  rw [modAddCompute, circuitUsesOnly_append]
+  exact ⟨circuitUsesOnly_mono (ripple_usesOnly addCols cin₁ couts₁) hadd,
+    circuitUsesOnly_mono (addConst_usesOnly redCols cin₂ couts₂ _) hred⟩
+
+end ModAddSupport
+
+/-! ## Clean modular-addition contract -/
+
+/-- Public `A`, public `B`, public output `O`, followed by each owned work register exactly
+once: unreduced sum `X`, loaded constant `K`, reduction candidate `Y`, then the two carry
+banks and their carry-ins. The selector flag is the final wire of `couts₂`, so it is not
+listed a second time. -/
+def modAddLayout
+    (addCols redCols selectCols : List (Wire × Wire × Wire))
+    (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire) :
+    RegisterLayout where
+  lhs := addCols.map (fun c => c.1)
+  rhs := addCols.map (fun c => c.2.1)
+  out := selectCols.map (fun c => c.2.2)
+  work :=
+    addCols.map (fun c => c.2.2) ++
+    redCols.map (fun c => c.2.1) ++
+    redCols.map (fun c => c.2.2) ++
+    [cin₁] ++ couts₁ ++ [cin₂] ++ couts₂
+
+/-- The genuine construction parameters of one concrete modular-adder instance.
+
+All cross-register disjointness and stage-freshness facts are derived inside `modAdd_contract`
+from `RegisterLayout.Valid`; callers do not have to restate consequences of its global
+`Nodup` premise. -/
+structure ModAddWiring
+    (addCols redCols selectCols : List (Wire × Wire × Wire))
+    (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
+    (modulus : Nat) : Prop where
+  addLen : couts₁.length = addCols.length
+  redLen : couts₂.length = redCols.length
+  width : redCols.length = addCols.length
+  selectLen : selectCols.length = addCols.length
+  addOK : wiresOK addCols cin₁ couts₁
+  redOK : wiresOK redCols cin₂ couts₂
+  selectOK : ShorECDLP.selectOK (carryOut cin₂ couts₂) selectCols
+  redA : redCols.map (fun c => c.1) = addCols.map (fun c => c.2.2)
+  selectX : selectCols.map (fun c => c.1) = addCols.map (fun c => c.2.2)
+  selectY : selectCols.map (fun c => c.2.1) = redCols.map (fun c => c.2.2)
+  modulusPos : 0 < modulus
+  fit : 2 * modulus ≤ 2 ^ addCols.length
+
+/-- Any target occurrence contributes a support occurrence. -/
+private theorem mem_circuitWires_of_mem_targets (c : Circuit) (w : Wire)
+    (h : w ∈ c.map gateTarget) : w ∈ circuitWires c := by
+  simp only [List.mem_map] at h
+  obtain ⟨g, hg, rfl⟩ := h
+  simp only [circuitWires, List.mem_flatMap]
+  exact ⟨g, hg, gateTarget_mem_gateWires g⟩
+
+/-- **M1.3.2 contract.** The exact `modAdd` term is correct, clean, confined to its declared
+registers, counted, H/P-free, and physically well-formed. -/
+theorem modAdd_contract
+    (addCols redCols selectCols : List (Wire × Wire × Wire))
+    (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
+    (modulus : Nat)
+    (wiring : ModAddWiring addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus) :
+    ModAddContract
+      (modAdd addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus)
+      (modAddLayout addCols redCols selectCols cin₁ couts₁ cin₂ couts₂)
+      modulus (91 * addCols.length) := by
+  let layout := modAddLayout addCols redCols selectCols cin₁ couts₁ cin₂ couts₂
+  let program := modAdd addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus
+  refine {
+    correct := ?_
+    usesOnly := ?_
+    counted := ?_
+    hpFree := ?_
+    wellFormed := ?_
+  }
+  · intro st hvalid ha hb hclean
+    dsimp only
+    let A := addCols.map (fun c => c.1)
+    let B := addCols.map (fun c => c.2.1)
+    let O := selectCols.map (fun c => c.2.2)
+    let X := addCols.map (fun c => c.2.2)
+    let K := redCols.map (fun c => c.2.1)
+    let Y := redCols.map (fun c => c.2.2)
+
+    have hnodup :
+        (A ++ (B ++ (O ++ (X ++ (K ++ (Y ++
+          ([cin₁] ++ (couts₁ ++ ([cin₂] ++ couts₂))))))))).Nodup := by
+      simpa [A, B, O, X, K, Y, layout, modAddLayout, RegisterLayout.allWires,
+        List.append_assoc] using hvalid.2.2
+
+    rcases List.nodup_append.mp hnodup with ⟨_, htailA, hAcrossA⟩
+    rcases List.nodup_append.mp htailA with ⟨_, htailB, hAcrossB⟩
+    rcases List.nodup_append.mp htailB with ⟨_, htailO, hAcrossO⟩
+    rcases List.nodup_append.mp htailO with ⟨_, htailX, hAcrossX⟩
+    rcases List.nodup_append.mp htailX with ⟨hKNodup, htailK, hAcrossK⟩
+    rcases List.nodup_append.mp htailK with ⟨_, htailY, hAcrossY⟩
+    rcases List.nodup_append.mp htailY with ⟨_, htailCin₁, hAcrossCin₁⟩
+    rcases List.nodup_append.mp htailCin₁ with ⟨_, _, hAcrossCouts₁⟩
+
+    have hworkClean : Clean layout.work st := by
+      intro w hw
+      exact hclean w (List.mem_append_right _ hw)
+    have haddCarryFresh : ∀ w ∈ couts₁, st w = false := by
+      intro w hw
+      apply hworkClean w
+      simp [layout, modAddLayout, hw]
+    have haddSumFresh : ∀ c ∈ addCols, st c.2.2 = false := by
+      intro c hc
+      apply hworkClean c.2.2
+      simp [layout, modAddLayout, List.mem_map_of_mem hc]
+    have hcin₁Fresh : st cin₁ = false := by
+      apply hworkClean cin₁
+      simp [layout, modAddLayout]
+
+    have hredAB : ∀ w ∈ X, w ∉ K := by
+      intro w hwX hwK
+      exact hAcrossX w hwX w (by simp [hwK]) rfl
+    have hredSB : ∀ w ∈ Y, w ∉ K := by
+      intro w hwY hwK
+      exact hAcrossK w hwK w (by simp [hwY]) rfl
+    have hredCarryB : ∀ w ∈ couts₂, w ∉ K := by
+      intro w hwC hwK
+      exact hAcrossK w hwK w (by simp [hwC]) rfl
+    have hredCinB : cin₂ ∉ K := by
+      intro hwK
+      exact hAcrossK cin₂ hwK cin₂ (by simp) rfl
+    have hredAS : ∀ w ∈ X, w ∉ Y := by
+      intro w hwX hwY
+      exact hAcrossX w hwX w (by simp [hwY]) rfl
+    have hredACarry : ∀ w ∈ X, w ∉ couts₂ := by
+      intro w hwX hwC
+      exact hAcrossX w hwX w (by simp [hwC]) rfl
+
+    have htargetSupport : ∀ w ∈ (ripple addCols cin₁ couts₁).map gateTarget,
+        w ∈ ModAddSupport.rippleFootprint addCols cin₁ couts₁ := by
+      intro w hw
+      exact (ModAddSupport.circuitUsesOnly_iff_support _ _).mp
+        (ModAddSupport.ripple_usesOnly addCols cin₁ couts₁) w
+        (mem_circuitWires_of_mem_targets _ _ hw)
+
+    have hnotRippleK : ∀ w ∈ K,
+        w ∉ (ripple addCols cin₁ couts₁).map gateTarget := by
+      intro w hwK hwTarget
+      have hw := htargetSupport w hwTarget
+      simp only [ModAddSupport.rippleFootprint, List.mem_cons, List.mem_append,
+        ModAddSupport.colsWires, List.mem_flatMap] at hw
+      rcases hw with rfl | hw
+      · exact hAcrossK w hwK w (by simp) rfl
+      · rcases hw with hw | ⟨c, hc, hw⟩
+        · exact hAcrossK w hwK w (by simp [hw]) rfl
+        · have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hw
+          rcases hw' with rfl | rfl | rfl
+          · exact hAcrossA c.1 (by simp [A, List.mem_map_of_mem hc]) c.1
+              (by simp [K, hwK]) rfl
+          · exact hAcrossB c.2.1 (by simp [B, List.mem_map_of_mem hc]) c.2.1
+              (by simp [K, hwK]) rfl
+          · exact hAcrossX c.2.2 (by simp [X, List.mem_map_of_mem hc]) c.2.2
+              (by simp [K, hwK]) rfl
+    have hnotRippleY : ∀ w ∈ Y,
+        w ∉ (ripple addCols cin₁ couts₁).map gateTarget := by
+      intro w hwY hwTarget
+      have hw := htargetSupport w hwTarget
+      simp only [ModAddSupport.rippleFootprint, List.mem_cons, List.mem_append,
+        ModAddSupport.colsWires, List.mem_flatMap] at hw
+      rcases hw with rfl | hw
+      · exact hAcrossY w hwY w (by simp) rfl
+      · rcases hw with hw | ⟨c, hc, hw⟩
+        · exact hAcrossY w hwY w (by simp [hw]) rfl
+        · have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hw
+          rcases hw' with rfl | rfl | rfl
+          · exact hAcrossA c.1 (by simp [A, List.mem_map_of_mem hc]) c.1
+              (by simp [Y, hwY]) rfl
+          · exact hAcrossB c.2.1 (by simp [B, List.mem_map_of_mem hc]) c.2.1
+              (by simp [Y, hwY]) rfl
+          · exact hAcrossX c.2.2 (by simp [X, List.mem_map_of_mem hc]) c.2.2
+              (by simp [Y, hwY]) rfl
+    have hnotRippleCin₂ : cin₂ ∉ (ripple addCols cin₁ couts₁).map gateTarget := by
+      intro hwTarget
+      have hw := htargetSupport cin₂ hwTarget
+      simp only [ModAddSupport.rippleFootprint, List.mem_cons, List.mem_append,
+        ModAddSupport.colsWires, List.mem_flatMap] at hw
+      rcases hw with hEq | hw
+      · exact hAcrossCin₁ cin₁ (by simp) cin₂ (by simp) hEq.symm
+      · rcases hw with hw | ⟨c, hc, hw⟩
+        · exact hAcrossCouts₁ cin₂ hw cin₂ (by simp) rfl
+        · have hw' : cin₂ = c.1 ∨ cin₂ = c.2.1 ∨ cin₂ = c.2.2 := by simpa using hw
+          rcases hw' with hw' | hw' | hw'
+          · subst cin₂
+            exact hAcrossA c.1 (by simp [A, List.mem_map_of_mem hc]) c.1 (by simp) rfl
+          · subst cin₂
+            exact hAcrossB c.2.1 (by simp [B, List.mem_map_of_mem hc]) c.2.1 (by simp) rfl
+          · subst cin₂
+            exact hAcrossX c.2.2 (by simp [X, List.mem_map_of_mem hc]) c.2.2 (by simp) rfl
+    have hnotRippleCouts₂ : ∀ w ∈ couts₂,
+        w ∉ (ripple addCols cin₁ couts₁).map gateTarget := by
+      intro w hwC hwTarget
+      have hw := htargetSupport w hwTarget
+      simp only [ModAddSupport.rippleFootprint, List.mem_cons, List.mem_append,
+        ModAddSupport.colsWires, List.mem_flatMap] at hw
+      rcases hw with rfl | hw
+      · exact hAcrossCin₁ w (by simp) w (by simp [hwC]) rfl
+      · rcases hw with hw | ⟨c, hc, hw⟩
+        · exact hAcrossCouts₁ w hw w (by simp [hwC]) rfl
+        · have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hw
+          rcases hw' with rfl | rfl | rfl
+          · exact hAcrossA c.1 (by simp [A, List.mem_map_of_mem hc]) c.1
+              (by simp [hwC]) rfl
+          · exact hAcrossB c.2.1 (by simp [B, List.mem_map_of_mem hc]) c.2.1
+              (by simp [hwC]) rfl
+          · exact hAcrossX c.2.2 (by simp [X, List.mem_map_of_mem hc]) c.2.2
+              (by simp [hwC]) rfl
+
+    have hredCarryFresh : ∀ w ∈ couts₂,
+        st w = false ∧ w ∉ (ripple addCols cin₁ couts₁).map gateTarget := by
+      intro w hw
+      constructor
+      · apply hworkClean w
+        simp [layout, modAddLayout, hw]
+      · exact hnotRippleCouts₂ w hw
+    have hredSumFresh : ∀ c ∈ redCols,
+        st c.2.2 = false ∧ c.2.2 ∉ (ripple addCols cin₁ couts₁).map gateTarget := by
+      intro c hc
+      constructor
+      · apply hworkClean c.2.2
+        simp [layout, modAddLayout, List.mem_map_of_mem hc]
+      · apply hnotRippleY c.2.2
+        exact List.mem_map_of_mem hc
+    have hredBFresh : ∀ c ∈ redCols,
+        st c.2.1 = false ∧ c.2.1 ∉ (ripple addCols cin₁ couts₁).map gateTarget := by
+      intro c hc
+      constructor
+      · apply hworkClean c.2.1
+        simp [layout, modAddLayout, List.mem_map_of_mem hc]
+      · apply hnotRippleK c.2.1
+        exact List.mem_map_of_mem hc
+    have hcin₂Fresh : st cin₂ = false ∧
+        cin₂ ∉ (ripple addCols cin₁ couts₁).map gateTarget := by
+      constructor
+      · apply hworkClean cin₂
+        simp [layout, modAddLayout]
+      · exact hnotRippleCin₂
+
+    have hcomputeSupport : ∀ w ∈ circuitWires
+        (modAddCompute addCols redCols cin₁ couts₁ cin₂ couts₂ modulus),
+        w ∈ A ++ (B ++ (X ++ (K ++ (Y ++
+          ([cin₁] ++ (couts₁ ++ ([cin₂] ++ couts₂))))))) := by
+      simpa [A, B, X, K, Y] using
+        (ModAddSupport.circuitUsesOnly_iff_support _ _).mp
+          (ModAddSupport.modAddCompute_usesOnly
+            addCols redCols cin₁ couts₁ cin₂ couts₂ modulus wiring.redA)
+    have houtFreshSupport : ∀ w ∈ O,
+        w ∉ circuitWires
+          (modAddCompute addCols redCols cin₁ couts₁ cin₂ couts₂ modulus) := by
+      intro w hwO hwSupport
+      have hw := hcomputeSupport w hwSupport
+      simp only [List.mem_append, List.mem_singleton] at hw
+      rcases hw with hwA | hwB | hwX | hwK | hwY | hwCin₁ | hwCouts₁ | hwCin₂ | hwCouts₂
+      · exact hAcrossA w hwA w (by simp [hwO]) rfl
+      · exact hAcrossB w hwB w (by simp [hwO]) rfl
+      · exact hAcrossO w hwO w (by simp [hwX]) rfl
+      · exact hAcrossO w hwO w (by simp [hwK]) rfl
+      · exact hAcrossO w hwO w (by simp [hwY]) rfl
+      · subst w
+        exact hAcrossO cin₁ hwO cin₁ (by simp) rfl
+      · exact hAcrossO w hwO w (by simp [hwCouts₁]) rfl
+      · subst w
+        exact hAcrossO cin₂ hwO cin₂ (by simp) rfl
+      · exact hAcrossO w hwO w (by simp [hwCouts₂]) rfl
+    have houtFresh : ∀ c ∈ selectCols,
+        st c.2.2 = false ∧
+          c.2.2 ∉ (modAddCompute addCols redCols cin₁ couts₁ cin₂ couts₂ modulus).map
+            gateTarget := by
+      intro c hc
+      have hco : c.2.2 ∈ O := List.mem_map_of_mem hc
+      constructor
+      · exact hclean c.2.2 (List.mem_append_left _ hco)
+      · intro ht
+        exact houtFreshSupport c.2.2 hco (mem_circuitWires_of_mem_targets _ _ ht)
+
+    have hresult := modAdd_correct
+      addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus st
+      wiring.addLen wiring.redLen wiring.width wiring.addOK wiring.redOK wiring.selectOK
+      wiring.redA wiring.selectX wiring.selectY wiring.modulusPos wiring.fit ha hb
+      haddCarryFresh haddSumFresh hcin₁Fresh
+      (by simpa [K] using hKNodup)
+      (by simpa [X, K, wiring.redA] using hredAB)
+      (by simpa [Y, K] using hredSB)
+      (by simpa [K] using hredCarryB)
+      (by simpa [K] using hredCinB)
+      (by simpa [X, Y, wiring.redA] using hredAS)
+      (by simpa [X, wiring.redA] using hredACarry)
+      hredCarryFresh hredSumFresh hredBFresh hcin₂Fresh houtFresh
+
+    have hrestore := modAdd_clean
+      addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus st
+      wiring.addOK wiring.redOK wiring.selectOK
+      (by simpa [O] using houtFreshSupport)
+
+    have hnodup' :
+        (layout.lhs ++ (layout.rhs ++ (layout.out ++ layout.work))).Nodup := by
+      simpa [RegisterLayout.allWires, List.append_assoc] using hvalid.2.2
+    have hlhsOut : ∀ w ∈ layout.lhs, w ∉ layout.out := by
+      intro w hw hwo
+      exact (List.nodup_append.mp hnodup').2.2 w hw w (by simp [hwo]) rfl
+    have htailNodup : (layout.rhs ++ (layout.out ++ layout.work)).Nodup :=
+      (List.nodup_append.mp hnodup').2.1
+    have hrhsOut : ∀ w ∈ layout.rhs, w ∉ layout.out := by
+      intro w hw hwo
+      exact (List.nodup_append.mp htailNodup).2.2 w hw w (by simp [hwo]) rfl
+    have houtWorkNodup : (layout.out ++ layout.work).Nodup :=
+      (List.nodup_append.mp htailNodup).2.1
+    have hworkOut : ∀ w ∈ layout.work, w ∉ layout.out := by
+      intro w hw hwo
+      exact (List.nodup_append.mp houtWorkNodup).2.2 w hwo w hw rfl
+
+    have hlhs : AgreesOn layout.lhs st (run program st) := by
+      intro w hw
+      exact hrestore w (hlhsOut w hw)
+    have hrhs : AgreesOn layout.rhs st (run program st) := by
+      intro w hw
+      exact hrestore w (hrhsOut w hw)
+    have hworkAfter : Clean layout.work (run program st) := by
+      intro w hw
+      rw [hrestore w (hworkOut w hw)]
+      exact hworkClean w hw
+
+    exact ⟨hlhs, hrhs, hresult, hworkAfter⟩
+
+  · simpa [layout, RegisterLayout.allWires, modAddLayout,
+      ModAddSupport.modAddAllWires] using
+      (ModAddSupport.modAdd_usesOnly addCols redCols selectCols cin₁ couts₁ cin₂ couts₂
+        modulus wiring.redA wiring.selectX wiring.selectY)
+
+  · exact modAdd_tCount addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus
+      wiring.addLen wiring.redLen wiring.width wiring.selectLen
+
+  · exact modAdd_HPFree addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus
+
+  · intro _
+    exact modAdd_wellFormed addCols redCols selectCols cin₁ couts₁ cin₂ couts₂ modulus
+      wiring.addOK wiring.redOK wiring.selectOK
 
 end ShorECDLP
