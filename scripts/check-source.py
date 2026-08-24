@@ -33,6 +33,42 @@ def tracked_lean_files() -> set[Path]:
     }
 
 
+def source_tree_symlinks() -> list[Path]:
+    """Find file and directory symlinks without following directory symlinks."""
+    symlinks = [
+        path
+        for path in (ENTRY, ROOT / "lakefile.lean", SOURCE_ROOT)
+        if path.is_symlink()
+    ]
+    if not SOURCE_ROOT.is_symlink() and SOURCE_ROOT.is_dir():
+        for directory, dirnames, filenames in os.walk(SOURCE_ROOT, followlinks=False):
+            for name in [*dirnames, *filenames]:
+                path = Path(directory) / name
+                if path.is_symlink():
+                    symlinks.append(path)
+    return sorted(set(symlinks))
+
+
+def lean_prefix() -> Path:
+    """Return the resolved root of the active, workflow-pinned Lean toolchain."""
+    result = subprocess.run(
+        ["lake", "env", "lean", "--print-prefix"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return Path(result.stdout.strip()).resolve()
+
+
+def is_within(path: Path, directory: Path) -> bool:
+    try:
+        path.relative_to(directory)
+        return True
+    except ValueError:
+        return False
+
+
 def direct_source_dependencies(source: Path) -> set[Path]:
     """Ask Lean itself to parse one module header and resolve its direct imports."""
     result = subprocess.run(
@@ -49,24 +85,29 @@ def direct_source_dependencies(source: Path) -> set[Path]:
     }
 
 
-def compiler_source_closure(files: list[Path]) -> set[Path]:
+def compiler_source_closure(files: list[Path], toolchain_root: Path) -> set[Path]:
     """Follow compiler-parsed import edges from the root aggregator."""
     with ThreadPoolExecutor(max_workers=min(8, len(files))) as executor:
         dependency_map = dict(zip(files, executor.map(direct_source_dependencies, files)))
 
-    sanctioned = set(files)
-    unexpected_local: set[Path] = set()
+    sanctioned = {path.resolve() for path in files}
+    dependency_path = ROOT / ".lake" / "packages"
+    if dependency_path.is_symlink():
+        raise ValueError(f"Lake package root must not be a symlink: {dependency_path}")
+    if not dependency_path.is_dir():
+        raise ValueError(f"Lake package root is missing: {dependency_path}")
+    dependency_root = dependency_path.resolve()
+    unexpected: set[Path] = set()
     for dependencies in dependency_map.values():
         for dependency in dependencies:
-            try:
-                relative = dependency.relative_to(ROOT)
-            except ValueError:
+            if dependency in sanctioned:
                 continue
-            if relative.parts and relative.parts[0] != ".lake" and dependency not in sanctioned:
-                unexpected_local.add(dependency)
-    if unexpected_local:
-        names = ", ".join(str(path.relative_to(ROOT)) for path in sorted(unexpected_local))
-        raise ValueError(f"compiler resolved local Lean source outside sanctioned tree: {names}")
+            if is_within(dependency, dependency_root) or is_within(dependency, toolchain_root):
+                continue
+            unexpected.add(dependency)
+    if unexpected:
+        names = ", ".join(str(path) for path in sorted(unexpected))
+        raise ValueError(f"compiler resolved Lean source outside allowed roots: {names}")
 
     reachable: set[Path] = set()
     pending = [ENTRY]
@@ -83,15 +124,18 @@ def compiler_source_closure(files: list[Path]) -> set[Path]:
 
 
 def main() -> int:
+    symlinked = source_tree_symlinks()
+    if symlinked:
+        print("source gate failed:", file=sys.stderr)
+        print(
+            "  Lean sources must be regular in-tree files, not symlinks: "
+            + ", ".join(str(path.relative_to(ROOT)) for path in symlinked),
+            file=sys.stderr,
+        )
+        return 1
+
     files = source_files()
     failures: list[str] = []
-
-    symlinked = [path for path in files if path.is_symlink()]
-    if symlinked:
-        failures.append(
-            "Lean sources must be regular in-tree files, not symlinks: "
-            + ", ".join(str(path.relative_to(ROOT)) for path in symlinked)
-        )
 
     try:
         tracked = tracked_lean_files()
@@ -114,7 +158,8 @@ def main() -> int:
             )
 
     try:
-        reachable = compiler_source_closure(files)
+        toolchain_root = lean_prefix()
+        reachable = compiler_source_closure(files, toolchain_root)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         failures.append(f"could not obtain Lean source dependencies: {error}")
     else:
