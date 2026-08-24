@@ -13,6 +13,24 @@ namespace ShorECDLP
 /-- A qubit / wire index. -/
 abbrev Wire := Nat
 
+/-- Direction of a dyadic phase rotation. The two constructors are mutual
+adjoints, so the primitive gate set is closed under circuit adjoint. -/
+inductive PhaseDir where
+  | forward
+  | inverse
+  deriving Repr, DecidableEq
+
+/-- Reverse the direction of a phase rotation. -/
+@[simp]
+def PhaseDir.adjoint : PhaseDir → PhaseDir
+  | .forward => .inverse
+  | .inverse => .forward
+
+@[simp]
+theorem PhaseDir.adjoint_adjoint (dir : PhaseDir) :
+    dir.adjoint.adjoint = dir := by
+  cases dir <;> rfl
+
 /-- The primitive gate set. The Clifford/Toffoli gates `{X, H, CX, CCX}` express all
 reversible arithmetic; `P` supplies the phases the QFT needs (none of the other four can
 produce a non-trivial phase). Higher-level operations are expressed as `List Gate` circuits
@@ -27,10 +45,31 @@ inductive Gate where
   | CX   (control target : Wire)
   /-- Toffoli (CCX): flips `target` when both `c1` and `c2` are set. -/
   | CCX  (c1 c2 target : Wire)
-  /-- Phase rotation on `target` by the dyadic angle `2π / 2^k` (so `k=1,2,3` give `Z, S, T`).
-  These are exactly the angles the QFT uses; a controlled phase is built from `P` and `CX`. -/
-  | P    (k : Nat) (target : Wire)
+  /-- Phase rotation on `target` by the signed dyadic angle `±2π / 2^k`
+  (`forward` uses `+`, `inverse` uses `-`; `k=1,2,3` give `Z`, `S`/`S†`,
+  and `T`/`T†`). These are exactly the angles the QFT and inverse QFT use. -/
+  | P    (dir : PhaseDir) (k : Nat) (target : Wire)
   deriving Repr, DecidableEq
+
+/-- The primitive-gate adjoint. Classical gates and `H` are self-adjoint;
+phase rotations reverse direction. -/
+@[simp]
+def Gate.adjoint : Gate → Gate
+  | .X t       => .X t
+  | .H t       => .H t
+  | .CX c t    => .CX c t
+  | .CCX a b t => .CCX a b t
+  | .P dir k t => .P dir.adjoint k t
+
+@[simp]
+theorem Gate.adjoint_adjoint (g : Gate) :
+    g.adjoint.adjoint = g := by
+  cases g with
+  | X t => rfl
+  | H t => rfl
+  | CX c t => rfl
+  | CCX a b t => rfl
+  | P dir k t => cases dir <;> rfl
 
 /-- A circuit is a straight-line list of primitive gates. -/
 abbrev Circuit := List Gate
@@ -42,7 +81,12 @@ def Gate.WellFormed : Gate → Prop
   | .H _       => True
   | .CX c t    => c ≠ t
   | .CCX a b t => a ≠ b ∧ a ≠ t ∧ b ≠ t
-  | .P _ _     => True
+  | .P _ _ _   => True
+
+@[simp]
+theorem Gate.wellFormed_adjoint (g : Gate) :
+    g.adjoint.WellFormed ↔ g.WellFormed := by
+  cases g <;> simp [Gate.WellFormed]
 
 /-- Every primitive gate in the circuit is well-formed. -/
 def CircuitWellFormed (c : Circuit) : Prop :=
@@ -77,5 +121,47 @@ theorem circuitWellFormed_append (c₁ c₂ : Circuit) :
         exact h.1 g hg₁
     | inr hg₂ =>
         exact h.2 g hg₂
+
+/-- Reverse gate order and adjoint every primitive. -/
+def Circuit.adjoint (c : Circuit) : Circuit :=
+  c.reverse.map Gate.adjoint
+
+@[simp]
+theorem circuit_adjoint_nil :
+    Circuit.adjoint [] = [] := rfl
+
+@[simp]
+theorem circuit_adjoint_cons (g : Gate) (c : Circuit) :
+    Circuit.adjoint (g :: c) = Circuit.adjoint c ++ [g.adjoint] := by
+  simp [Circuit.adjoint]
+
+@[simp]
+theorem circuit_adjoint_append (c₁ c₂ : Circuit) :
+    Circuit.adjoint (c₁ ++ c₂) =
+      Circuit.adjoint c₂ ++ Circuit.adjoint c₁ := by
+  simp [Circuit.adjoint]
+
+@[simp]
+theorem circuit_adjoint_adjoint (c : Circuit) :
+    Circuit.adjoint (Circuit.adjoint c) = c := by
+  induction c with
+  | nil => rfl
+  | cons g c ih =>
+      rw [circuit_adjoint_cons, circuit_adjoint_append,
+        circuit_adjoint_cons, circuit_adjoint_nil,
+        Gate.adjoint_adjoint, ih]
+      rfl
+
+@[simp]
+theorem circuitWellFormed_adjoint (c : Circuit) :
+    CircuitWellFormed (Circuit.adjoint c) ↔ CircuitWellFormed c := by
+  induction c with
+  | nil => simp
+  | cons g c ih =>
+      rw [circuit_adjoint_cons, circuitWellFormed_append, ih,
+        circuitWellFormed_cons]
+      simp only [circuitWellFormed_cons, circuitWellFormed_nil,
+        and_true, Gate.wellFormed_adjoint]
+      exact and_comm
 
 end ShorECDLP

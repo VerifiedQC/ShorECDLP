@@ -35,7 +35,7 @@ def applyGate : Gate → BasisState → BasisState
   | .CX c t,    s => s[t ↦ Bool.xor (s t) (s c)]
   | .CCX a b t, s => s[t ↦ Bool.xor (s t) (s a && s b)]
   | .H _,       s => s
-  | .P _ _,     s => s
+  | .P _ _ _,   s => s
 
 @[inherit_doc] scoped notation:max "⟦" g "⟧" => applyGate g
 
@@ -68,7 +68,7 @@ def IsClassicalGate : Gate → Prop
   | .CX _ _    => True
   | .CCX _ _ _ => True
   | .H _       => False
-  | .P _ _     => False
+  | .P _ _ _   => False
 
 /--
 A circuit containing no `H` or `P` gates.

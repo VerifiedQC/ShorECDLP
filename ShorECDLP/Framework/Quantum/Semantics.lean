@@ -33,6 +33,39 @@ noncomputable section
 /-- A finite-support quantum state over computational basis states. -/
 abbrev State := BasisState →₀ ℂ
 
+/-- The signed real angle represented by a dyadic phase gate. -/
+def phaseAngle (dir : PhaseDir) (k : Nat) : ℝ :=
+  match dir with
+  | .forward => 2 * Real.pi / (2 : ℝ) ^ k
+  | .inverse => -(2 * Real.pi / (2 : ℝ) ^ k)
+
+/-- The unit complex scalar applied to `|1⟩` by a dyadic phase gate. -/
+def phaseCoeff (dir : PhaseDir) (k : Nat) : ℂ :=
+  Complex.exp (Complex.I * (phaseAngle dir k : ℂ))
+
+@[simp]
+theorem phaseAngle_adjoint (dir : PhaseDir) (k : Nat) :
+    phaseAngle dir.adjoint k = -phaseAngle dir k := by
+  cases dir <;> simp [phaseAngle]
+
+@[simp]
+theorem phaseCoeff_adjoint_mul (dir : PhaseDir) (k : Nat) :
+    phaseCoeff dir.adjoint k * phaseCoeff dir k = 1 := by
+  unfold phaseCoeff
+  rw [← Complex.exp_add]
+  have h :
+      Complex.I * (phaseAngle dir.adjoint k : ℂ) +
+          Complex.I * (phaseAngle dir k : ℂ) = 0 := by
+    rw [phaseAngle_adjoint]
+    push_cast
+    ring
+  rw [h, Complex.exp_zero]
+
+@[simp]
+theorem phaseCoeff_mul_adjoint (dir : PhaseDir) (k : Nat) :
+    phaseCoeff dir k * phaseCoeff dir.adjoint k = 1 := by
+  rw [mul_comm, phaseCoeff_adjoint_mul]
+
 
 /-! ## Computational basis kets -/
 
@@ -71,10 +104,8 @@ def onKet : Gate → BasisState → State
   | .CCX a b t, s =>
       ket (s[t ↦ Bool.xor (s t) (s a && s b)])
 
-  | .P k t, s =>
-      (if s t then
-        Complex.exp (Complex.I * (2 * Real.pi / (2 : ℝ) ^ k : ℂ))
-      else 1) • ket s
+  | .P dir k t, s =>
+      (if s t then phaseCoeff dir k else 1) • ket s
 
 
 /-! ## Linear action of primitive gates -/
@@ -124,9 +155,9 @@ theorem applyGate_CCX_ket (a b t : Wire) (s : BasisState) :
   simp [onKet]
 
 @[simp]
-theorem applyGate_P_ket (k : Nat) (t : Wire) (s : BasisState) :
-    applyGate (.P k t) (ket s) =
-      (if s t then Complex.exp (Complex.I * (2 * Real.pi / (2 : ℝ) ^ k : ℂ)) else 1) • ket s := by
+theorem applyGate_P_ket (dir : PhaseDir) (k : Nat) (t : Wire) (s : BasisState) :
+    applyGate (.P dir k t) (ket s) =
+      (if s t then phaseCoeff dir k else 1) • ket s := by
   simp [onKet]
 
 
@@ -262,7 +293,7 @@ theorem applyGate_ket_agrees_classical
   | CCX a b t =>
       exact applyGate_CCX_agrees_classical a b t s
 
-  | P k t =>
+  | P dir k t =>
       simp at hg
 
 /--

@@ -12,13 +12,14 @@ Mathlib pinned. Curve: secp256k1 (Bitcoin).
 
 The framework fixes the following and nothing else:
 
-- **A trusted primitive gate set** `{X, H, CX, CCX, P(k)}` and a circuit as a list of them
+- **A trusted primitive gate set** `{X, H, CX, CCX, P(dir,k)}` and a circuit as a list of them
   (`Circuit := List Gate`). The Clifford/Toffoli gates `{X, H, CX, CCX}` express all
-  reversible arithmetic; `P(k)` is a single-qubit phase rotation, which supplies the phases
-  the QFT needs (none of the other four can produce a non-trivial phase).
+  reversible arithmetic; `P(dir,k)` is a single-qubit rotation by `±2π/2^k`, which supplies
+  the mutually adjoint phases the QFT and inverse QFT need (none of the other four can produce
+  a non-trivial phase).
 - **A naive, simple T-count cost model** `tCount : Circuit → ℕ`, curve- and
   construction-agnostic: Cliffords `{X, H, CX}` cost 0, Toffoli `CCX` costs 7, a rotation
-  `P(k)` costs 1. A submission that wants a different or tighter count (a 4-T Toffoli, an
+  `P(dir,k)` costs 1 in either direction. A submission that wants a different or tighter count (a 4-T Toffoli, an
   exact rotation-synthesis cost, a Toffoli count, …) proves that as its own theorem — the
   framework only fixes the simple baseline.
 - **A submission contract.** A submission provides a `program` (a circuit family) together
@@ -74,7 +75,8 @@ Output: k.
 - **Scalar multiplication**: classically-controlled binary double-and-add, `2m` additions.
 - **Oracle**: writes `[a]P ⊞ [b]Q` into `R`; `R` is then measured and discarded.
 - **QFT**: textbook coherent in-register QFT over `2^m` on each exponent register
-  (`H` + controlled-`P`, the controlled phase built from `P` and `CX`).
+  (`H` + controlled-`P(.forward,k)`), with the inverse QFT defined by the generic
+  circuit adjoint.
 - **Recovery**: from `(α, β)`, `k = β·α⁻¹ (mod n)` via phase-estimation / continued-fraction
   rounding.
 
@@ -97,7 +99,7 @@ ShorECDLP/
   ShorECDLP.lean
   ShorECDLP/
     Framework/
-      InstructionSet.lean                # [M0 ✓] Gate {X,H,CX,CCX,P(k)}, Wire, Circuit
+      InstructionSet.lean                # [M0 ✓] Gate {X,H,CX,CCX,P(dir,k)}, adjoint, Wire, Circuit
       CostModel.lean                     # [M0 ✓] tCount (naive T-count: Clifford 0, Toffoli 7, P 1), curve-agnostic
       BasisState.lean                    # [M0 ✓] layer-neutral BasisState := Nat→Bool, upd, regValue
       Classical/
@@ -125,14 +127,14 @@ ShorECDLP/
       Reference.lean      (provisional)  # [M5] secp256k1 → the checked Toffoli number
 ```
 
-The four primitive gates + the cost model are the entire trusted surface; everything else is
+The five primitive gate families + the cost model are the entire trusted surface; everything else is
 a derived circuit. Measurement and ancilla live in `Framework/Quantum/`, never as new gates.
 
 ---
 
 ## 4. Milestones
 
-- **M0 ✓** — framework: instruction set `{X,H,CX,CCX,P(k)}`, naive T-count cost model,
+- **M0 ✓** — framework: instruction set `{X,H,CX,CCX,P(dir,k)}`, naive T-count cost model,
   layer-neutral `BasisState`.
 - **M1** — field arithmetic, split into small steps (one PR per step):
     - **M1.0 ✓** classical basis-state semantics + register encoding
@@ -166,7 +168,8 @@ axioms, and `counted` bound to the same `program` term as `correct`.
 - **Classical→quantum bridge (M4 design locks).** `Classical.run` is the cheap base
   (permutation proofs ≪ unitary proofs). At M4 the quantum layer is *additive over the same
   `BasisState`* (amplitudes `BasisState →₀ ℂ`; `{X,CX,CCX}` permute the support exactly as the
-  classical action already says, `H` makes a 2-term superposition, `P` scales by phase — never
+  classical action already says, `H` makes a 2-term superposition, `P(dir,k)` scales by the
+  corresponding signed phase — never
   a parallel `Fin (2^n)` basis). One **agreement lemma** — on an H/P-free circuit, the quantum
   run of `|s⟩` equals the delta at `⟪c⟫ s` — transports every M1–M3 arithmetic `correct` up to
   the quantum layer for free; arithmetic is never re-proved in Hilbert space.
@@ -206,7 +209,9 @@ The quantum semantics is being built in parallel (branch `QFT-work`), additively
 (`onKet` + `linearCombination`), the **agreement bridge** (`run (ket s) = ket (Classical.run c s)`
 for `HPFree` circuits — transports all M1–M3 arithmetic correctness up for free), and **norm
 preservation** (`run_preservesNormSq` for `CircuitWellFormed` circuits ⇒ `normSq_run_ket = 1`,
-the Born-rule input for the success bound).
+the Born-rule input for the success bound). The gate set is adjoint-closed, and
+`run_adjoint_run` / `run_run_adjoint` prove two-sided cancellation on arbitrary finite-support
+states.
 
 **Two orthogonal circuit predicates** (keep separate, never bundled): `Classical.HPFree` (no H/P —
 for the agreement bridge) and `CircuitWellFormed` (distinct wires per gate — for unitarity).
@@ -214,14 +219,13 @@ Arithmetic needs **both**; the QFT needs **`WellFormed` only** (it has H/P, so i
 and its correctness goes through the quantum semantics, not the classical bridge).
 
 **QFT construction + correctness** (one PR per step, stated over `Quantum.run`):
-- **Q0/Q1 — controlled-phase atom.** Realize controlled-`P(k)` in-set. Recommended:
-  `cPhase k c t anc := [CCX c t anc, P k anc, CCX c t anc]` (`anc` fresh `|0⟩`) — ket action
+- **Q0/Q1 — controlled-phase atom.** Realize controlled-`P(.forward,k)` in-set:
+  `cPhase k c t anc := [CCX c t anc, P .forward k anc, CCX c t anc]` (`anc` fresh `|0⟩`) — ket action
   `(if s c && s t then phase k else 1) • ket s` is a one-line `onKet` computation, cost 2 Toffoli
   + 1 P. **Require-and-restore spec:** `anc` must be `|0⟩` on entry and is returned to `|0⟩` (same
   freshness discipline as the adder's `st s = false`), so a single ancilla is reused across the
-  whole QFT. Ancilla-free alternative: the negative dyadic phase in the 3-gate
-  `CP` decomposition is a *product* of positive `P`s (`−2π/2^{k+1} ≡ Σ_{j=1}^{k+1} 2π/2^j`), `O(k)`
-  phase gates, no ancilla. Prove ket action + `WellFormed` + tCount.
+  whole QFT. The inverse atom is obtained by circuit adjoint and uses `P(.inverse,k)` at the
+  same cost; synthesizing it from a product of positive phases would distort the resource count.
 - **Q2 — single-target step.** `H` on the target + the `cPhase` cascade from the remaining wires;
   prove the one-qubit step action (`applyGate_H_ket` + Q1 + linearity).
 - **Q3 — full QFT (main theorem, hard).** `run (qft ws) (ket s) = (1/√N) Σ_{y<N} ω^(x·y) • ket (s
@@ -230,5 +234,6 @@ and its correctness goes through the quantum semantics, not the classical bridge
   `n=1,2` before the induction.
 - **Q4 — WellFormed + normalization.** `CircuitWellFormed (qft ws)` (WellFormed only); normalization
   falls out of `normSq_run_ket`.
-- **Q5 (later) — recovery.** Inverse QFT, computational-basis measurement, phase-estimation /
-  continued-fraction success bound — the `SuccessBound` pieces the ECDLP oracle needs.
+- **Q5 — recovery.** The inverse QFT and its exact two-sided cancellation proof are complete.
+  Remaining: computational-basis measurement and the phase-estimation / continued-fraction
+  success bound — the `SuccessBound` pieces the ECDLP oracle needs.

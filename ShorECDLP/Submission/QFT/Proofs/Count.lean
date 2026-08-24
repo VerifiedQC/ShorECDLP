@@ -85,6 +85,14 @@ theorem tCount_qft
   rw [qft, tCount_append, tCount_bitReverse, qftCore, tCount_qftCoreMSB,
     List.length_reverse, Finset.sum_range_id, Nat.add_zero]
 
+/-- The inverse QFT has exactly the same T-count as the QFT: taking a
+circuit adjoint changes phase direction but not primitive cost. -/
+theorem tCount_iqft
+    (r : List Wire) (anc : Wire) :
+    tCount (iqft r anc)
+      = 15 * (r.length * (r.length - 1) / 2) := by
+  rw [iqft, tCount_adjoint, tCount_qft]
+
 /-! ============================================================
     Well-formedness
 ============================================================ -/
@@ -159,6 +167,16 @@ theorem qft_wellFormed
   rw [qft, circuitWellFormed_append]
   exact ⟨qftCore_wellFormed r anc hanc hnd, bitReverse_wellFormed r hnd⟩
 
+/-- The inverse QFT is well-formed under exactly the QFT's wire-layout
+hypotheses. -/
+theorem iqft_wellFormed
+    (r : List Wire) (anc : Wire)
+    (hanc : anc ∉ r) (hnd : r.Nodup) :
+    CircuitWellFormed (iqft r anc) := by
+  rw [iqft]
+  exact (circuitWellFormed_adjoint (qft r anc)).2
+    (qft_wellFormed r anc hanc hnd)
+
 /-! ============================================================
     Output normalization
 ============================================================ -/
@@ -171,5 +189,13 @@ theorem normSq_run_qft_ket
     (hanc : anc ∉ r) (hnd : r.Nodup) :
     normSq (run (qft r anc) (ket s)) = 1 :=
   normSq_run_ket (qft r anc) (qft_wellFormed r anc hanc hnd) s
+
+/-- Running the inverse QFT on a computational-basis ket also yields a
+unit vector. -/
+theorem normSq_run_iqft_ket
+    (r : List Wire) (anc : Wire) (s : BasisState)
+    (hanc : anc ∉ r) (hnd : r.Nodup) :
+    normSq (run (iqft r anc) (ket s)) = 1 :=
+  normSq_run_ket (iqft r anc) (iqft_wellFormed r anc hanc hnd) s
 
 end ShorECDLP.Quantum
