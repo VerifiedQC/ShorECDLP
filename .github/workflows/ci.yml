@@ -1,0 +1,89 @@
+name: Lean CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lean-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned Elan and Lean
+        env:
+          ELAN_VERSION: v4.2.3
+          ELAN_SHA256: df0b2b3a439961ffcbb3985214365ffe40f49bc871df04dff268c7d8e21ca8b2
+          LEAN_VERSION: 4.28.0
+          LEAN_SHA256: ceb3a3f844f7aebf63245e2b51c28d5b0ed38942c19f93cf3febd520302160bd
+        run: |
+          set -euo pipefail
+          elan_archive="$RUNNER_TEMP/elan-x86_64-unknown-linux-gnu.tar.gz"
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            "https://github.com/leanprover/elan/releases/download/${ELAN_VERSION}/elan-x86_64-unknown-linux-gnu.tar.gz" \
+            -o "$elan_archive"
+          printf '%s  %s\n' "$ELAN_SHA256" "$elan_archive" | sha256sum --check
+          tar -xzf "$elan_archive" -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/elan-init" -y --default-toolchain none
+
+          lean_archive="$RUNNER_TEMP/lean-${LEAN_VERSION}-linux.tar.zst"
+          lean_dir="$RUNNER_TEMP/lean-toolchain"
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            "https://github.com/leanprover/lean4/releases/download/v${LEAN_VERSION}/lean-${LEAN_VERSION}-linux.tar.zst" \
+            -o "$lean_archive"
+          printf '%s  %s\n' "$LEAN_SHA256" "$lean_archive" | sha256sum --check
+          mkdir -p "$lean_dir"
+          tar --zstd -xf "$lean_archive" --strip-components=1 -C "$lean_dir"
+          "$HOME/.elan/bin/elan" toolchain link leanprover/lean4:v4.28.0 "$lean_dir"
+
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Verify pinned project toolchain
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < lean-toolchain)" = "leanprover/lean4:v4.28.0"
+          test "$(lean --githash)" = "7e01a1bf5c70fc6167d49c345d3bf80596e9a79b"
+          lean --version
+          lake --version
+
+      - name: Install pinned leantar and fetch Mathlib cache
+        # Trust boundary: the pinned Mathlib client still trusts its hosted olean cache.
+        # Dependency source revisions remain fixed by lake-manifest.json.
+        env:
+          LEANTAR_VERSION: 0.1.16
+          LEANTAR_SHA256: 2cbc40ca214227a0e536721c021bad719a802dd86b1f2d8989571efafbfbd3d1
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/leantar-x86_64-unknown-linux-musl.tar.gz"
+          unpacked="$RUNNER_TEMP/leantar"
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            "https://github.com/digama0/leangz/releases/download/v${LEANTAR_VERSION}/leantar-v${LEANTAR_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+            -o "$archive"
+          printf '%s  %s\n' "$LEANTAR_SHA256" "$archive" | sha256sum --check
+          mkdir -p "$unpacked"
+          tar -xzf "$archive" --strip-components=1 -C "$unpacked"
+          chmod 0755 "$unpacked/leantar"
+          export PATH="$unpacked:$PATH"
+          test "$(leantar --version)" = "leantar ${LEANTAR_VERSION}"
+          lake exe cache get
+
+      - name: Run proof gate
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash scripts/verify.sh
