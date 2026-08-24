@@ -18,4 +18,5 @@ import ShorECDLP.Submission.Arithmetic.ModAdd
 import ShorECDLP.Submission.Arithmetic.ModMul
 import ShorECDLP.Submission.Arithmetic.Primitives
 import ShorECDLP.Submission.Arithmetic.RippleAdder
+import ShorECDLP.Submission.EllipticCurve.Precompute
 import ShorECDLP.Submission.Correctness.Reduction
