@@ -15,6 +15,7 @@ import ShorECDLP.Submission.Arithmetic.Contracts
 import ShorECDLP.Submission.Arithmetic.Adder
 import ShorECDLP.Submission.Arithmetic.FermatInv
 import ShorECDLP.Submission.Arithmetic.ModAdd
+import ShorECDLP.Submission.Arithmetic.ModExp
 import ShorECDLP.Submission.Arithmetic.ModMul
 import ShorECDLP.Submission.Arithmetic.Primitives
 import ShorECDLP.Submission.Arithmetic.RippleAdder
