@@ -22,3 +22,4 @@ import ShorECDLP.Submission.Arithmetic.RippleAdder
 import ShorECDLP.Submission.EllipticCurve.Precompute
 import ShorECDLP.Submission.EllipticCurve.Secp256k1
 import ShorECDLP.Submission.Correctness.Reduction
+import ShorECDLP.Submission.OrderFinding.OracleSpec

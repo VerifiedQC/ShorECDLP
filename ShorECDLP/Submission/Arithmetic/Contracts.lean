@@ -57,7 +57,7 @@ def UsesOnly (ws : List Wire) : Gate → Prop
   | .H t       => t ∈ ws
   | .CX c t    => c ∈ ws ∧ t ∈ ws
   | .CCX a b t => a ∈ ws ∧ b ∈ ws ∧ t ∈ ws
-  | .P _ t     => t ∈ ws
+  | .P _ _ t   => t ∈ ws
 
 end Gate
 
@@ -93,7 +93,7 @@ theorem CircuitUsesOnly.preservesOutside {ws : List Wire} {program : Circuit}
       | CCX a b t =>
           simp only [Gate.UsesOnly] at hg
           exact upd_other st t (Bool.xor (st t) (st a && st b)) (fun e => hw (e ▸ hg.2.2))
-      | P _ _ => rfl
+      | P _ _ _ => rfl
 
 /-- Complete clean out-of-place contract for one binary arithmetic circuit.
 

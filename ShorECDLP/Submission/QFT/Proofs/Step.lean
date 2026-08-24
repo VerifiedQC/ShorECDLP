@@ -20,7 +20,7 @@ namespace ShorECDLP.Quantum
 
 open scoped Classical
 
-/-- The phase a single controlled-`P(k)` contributes to `|s⟩`: `exp(i·2π/2^k)` when both the
+/-- The phase a single controlled-`P(.forward,k)` contributes to `|s⟩`: `exp(i·2π/2^k)` when both the
 control `c` and the shared `target` are set, `1` otherwise. -/
 noncomputable def cPhaseFactor (s : BasisState) (target c : Wire) (k : Nat) : ℂ :=
   if s c && s target then Complex.exp (Complex.I * (2 * Real.pi / (2 : ℝ) ^ k : ℂ)) else 1

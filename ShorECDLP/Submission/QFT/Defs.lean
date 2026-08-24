@@ -7,11 +7,11 @@ Controlled phase using one clean ancilla.
 
 The ancilla is required to start in `|0⟩`:
 
-    CCX c t anc
-    P k anc
-    CCX c t anc
+    .CCX c t anc
+    .P .forward k anc
+    .CCX c t anc
 
-The first Toffoli computes `c ∧ t` into `anc`, `P k` applies the phase
+The first Toffoli computes `c ∧ t` into `anc`, `.P .forward k anc` applies the phase
 exactly when both controls are set, and the final Toffoli uncomputes the
 ancilla.
 -/
@@ -20,7 +20,7 @@ def cPhase
     (c t anc : Wire) : Circuit :=
   [
     .CCX c t anc,
-    .P k anc,
+    .P .forward k anc,
     .CCX c t anc
   ]
 
@@ -42,7 +42,7 @@ Apply all controlled phases into one QFT target qubit.
 
     [q_{j-1}, q_{j-2}, ..., q_0]
 
-so the first control uses P(2), the next P(3), etc.
+so the first control uses `P(.forward,2)`, the next `P(.forward,3)`, etc.
 -/
 def qftPhaseLayer
     (target anc : Wire) :
@@ -90,3 +90,11 @@ def qft
     (anc : Wire) : Circuit :=
   qftCore r anc ++
   bitReverse r
+
+/-- Textbook exact inverse QFT. Reversing gate order alone would be
+incorrect because phase gates are not self-adjoint; `Circuit.adjoint`
+also reverses every phase direction. -/
+def iqft
+    (r : List Wire)
+    (anc : Wire) : Circuit :=
+  Circuit.adjoint (qft r anc)

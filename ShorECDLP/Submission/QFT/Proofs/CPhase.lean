@@ -15,13 +15,13 @@ Correctness of `cPhase` on a computational-basis state.
 If the ancilla starts clean (`s anc = false`) and is distinct from
 the two data wires, then
 
-    CCX c t anc;
-    P k anc;
-    CCX c t anc
+    .CCX c t anc;
+    .P .forward k anc;
+    .CCX c t anc
 
 has no effect on the computational basis state itself.  Its only
-effect is multiplication by `phase k` exactly when both `c` and `t`
-are set.
+effect is multiplication by `phaseCoeff .forward k` exactly when both `c`
+and `t` are set.
 
 The fact that the result contains `ket s` also says that the ancilla
 has been restored to its original clean value.
@@ -65,13 +65,14 @@ theorem run_cPhase_ket
 
   --Step 2: apply the phase to the computed AND bit
   have hphase :
-      applyGate (.P k anc) (ket s₁)
+      applyGate (.P .forward k anc) (ket s₁)
         =
       (if bit then
         Complex.exp (Complex.I * (2 * Real.pi / (2 : ℝ) ^ k : ℂ))
         else 1) • ket s₁ := by
     rw [applyGate_P_ket]
     rw [hs₁anc]
+    simp [phaseCoeff, phaseAngle]
 
   --Step 3: uncompute the ancilla
   have hxor :

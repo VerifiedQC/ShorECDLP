@@ -179,7 +179,7 @@ def gateTarget : Gate → Wire
   | .H t       => t
   | .CX _ t    => t
   | .CCX _ _ t => t
-  | .P _ t     => t
+  | .P _ _ t   => t
 
 /-- All wires read or written by a primitive gate. -/
 def gateWires : Gate → List Wire
@@ -187,7 +187,7 @@ def gateWires : Gate → List Wire
   | .H t       => [t]
   | .CX c t    => [c, t]
   | .CCX a b t => [a, b, t]
-  | .P _ t     => [t]
+  | .P _ _ t   => [t]
 
 /-- The (not necessarily duplicate-free) support of a circuit. -/
 def circuitWires (c : Circuit) : List Wire := c.flatMap gateWires
@@ -222,7 +222,7 @@ theorem applyGate_congr_on (g : Gate) (ws : List Wire) (s t : BasisState)
       by_cases h : w = target
       · subst w; simp [applyGate, upd, ha, hb, ht]
       · simpa [applyGate, upd, h] using hst w hw
-  | P k target => exact hst w hw
+  | P dir k target => exact hst w hw
 
 /-- Circuit execution preserves agreement on a containing wire set. -/
 theorem run_congr_on (c : Circuit) (ws : List Wire) (s t : BasisState)
@@ -248,7 +248,7 @@ theorem applyGate_other_target (g : Gate) (st : BasisState) (w : Wire)
   | CX c t => simpa [gateTarget, applyGate] using upd_other st t (Bool.xor (st t) (st c)) h
   | CCX a b t =>
       simpa [gateTarget, applyGate] using upd_other st t (Bool.xor (st t) (st a && st b)) h
-  | P _ _ => rfl
+  | P _ _ _ => rfl
 
 /-- A circuit leaves a wire outside its target list unchanged. -/
 theorem run_other_targets (c : Circuit) (st : BasisState) (w : Wire)
@@ -281,7 +281,7 @@ theorem applyGate_twice (g : Gate) (st : BasisState)
         simp only [Gate.WellFormed] at hwf
         simp [applyGate, upd, hwf]
       · simp [applyGate, upd, h]
-  | P k t => simp at hc
+  | P dir k t => simp at hc
 
 /-- Reversing an arithmetic circuit undoes its classical action. -/
 theorem run_reverse_cancel (c : Circuit) (st : BasisState)
