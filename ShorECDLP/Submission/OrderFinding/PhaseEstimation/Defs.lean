@@ -22,6 +22,8 @@ layer.
 
 namespace ShorECDLP.Quantum.PhaseEstimation
 
+open scoped BigOperators
+
 noncomputable section
 
 /-- Apply one Hadamard to every wire of the phase register. -/
@@ -41,6 +43,27 @@ def labelState
 /-- The unit complex eigenvalue `exp(2πi·phase)`. -/
 def eigenvalue (phase : ℝ) : ℂ :=
   Complex.exp (Complex.I * ((2 * Real.pi * phase : ℝ) : ℂ))
+
+/-- Circular distance between `phase` and the grid point encoded by `value`. -/
+def circularDistance
+    (precision : Nat)
+    (phase : ℝ)
+    (value : Fin (2 ^ precision)) : ℝ :=
+  let delta := |phase - (value.val : ℝ) / (2 ^ precision : Nat)|
+  min delta |1 - delta|
+
+/--
+Born probability that a computational-basis measurement of `phaseReg` returns
+`value`.
+-/
+def registerProbability
+    (phaseReg : List Wire)
+    (value : Nat)
+    (psi : State) : ℝ := by
+  classical
+  exact
+    ∑ s ∈ psi.support,
+      if regValue phaseReg s = value then Complex.normSq (psi s) else 0
 
 /--
 Semantic contract for the controlled-power block on the input eigenstate.
