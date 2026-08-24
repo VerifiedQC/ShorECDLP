@@ -11,6 +11,7 @@ import ShorECDLP.Framework.BasisState
 import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Submission.Field
 import ShorECDLP.Submission.QFT.Main
+import ShorECDLP.Submission.Arithmetic.Contracts
 import ShorECDLP.Submission.Arithmetic.Adder
 import ShorECDLP.Submission.Arithmetic.ModAdd
 import ShorECDLP.Submission.Arithmetic.RippleAdder
