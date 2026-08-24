@@ -1,4 +1,3 @@
-import ShorECDLP.Submission.Arithmetic.ModAdd
 import ShorECDLP.Submission.Arithmetic.Primitives
 import Mathlib.Data.Nat.ModEq
 
@@ -292,13 +291,12 @@ theorem selectOK_of_nodup {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg 
 theorem selectReg_usesOnly {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width) :
     CircuitUsesOnly (flag :: (ifFalse.wires ++ ifTrue.wires ++ out.wires))
       (selectReg flag ifFalse ifTrue out) := by
-  apply ModAddSupport.circuitUsesOnly_mono
-    (ModAddSupport.selectPoint_usesOnly flag (ifFalse.selectorColumns ifTrue out))
+  apply usesOnly_mono (selectPoint_usesOnly flag (ifFalse.selectorColumns ifTrue out))
   intro w hw
-  simp only [ModAddSupport.selectFootprint, List.mem_cons] at hw ⊢
+  simp only [selectFootprint, List.mem_cons] at hw ⊢
   rcases hw with rfl | hw
   · exact Or.inl rfl
-  · simp only [ModAddSupport.colsWires, List.mem_flatMap] at hw
+  · simp only [List.mem_flatMap] at hw
     obtain ⟨c, hc, hwc⟩ := hw
     have hmaps := ifFalse.selectorColumns_maps ifTrue out
     have hx : c.1 ∈ ifFalse.wires := by
@@ -336,7 +334,7 @@ theorem initOne_other {width : Nat} (acc : Reg width) (st : BasisState) (w : Wir
 
 theorem initOne_usesOnly {width : Nat} (acc : Reg width) :
     CircuitUsesOnly acc.wires (initOne acc) :=
-  ModAddSupport.loadConst_usesOnly acc.wires 1
+  loadConst_usesOnly acc.wires 1
 
 theorem initOne_tCount {width : Nat} (acc : Reg width) :
     tCount (initOne acc) = 0 :=
