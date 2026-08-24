@@ -37,6 +37,12 @@ def regValue : List Nat → BasisState → Nat
   | [],      _ => 0
   | w :: ws, s => (if s w then 1 else 0) + 2 * regValue ws s
 
+/-- Write the low `ws.length` bits of `n` into `ws`, least-significant bit first. -/
+def writeReg : List Nat → Nat → BasisState → BasisState
+  | [], _, s => s
+  | w :: ws, n, s =>
+      writeReg ws (n / 2) (s[w ↦ n.testBit 0])
+
 @[simp] theorem regValue_nil (s : BasisState) : regValue [] s = 0 := rfl
 
 theorem regValue_cons (w : Nat) (ws : List Nat) (s : BasisState) :
