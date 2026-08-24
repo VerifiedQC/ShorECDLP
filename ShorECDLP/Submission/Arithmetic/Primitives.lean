@@ -570,7 +570,7 @@ theorem CircuitUsesOnly.run_congr {ws : List Wire} {c : Circuit}
             simp [applyGate, upd, hst target hg.2.2, hst control₁ hg.1,
               hst control₂ hg.2.1]
           · simp [applyGate, upd, hwt, hst w hw]
-      | P _ _ => exact hst w hw
+      | P _ _ _ => exact hst w hw
 
 /-- A well-formed classical primitive gate is self-inverse. -/
 theorem applyGate_twice (g : Gate) (st : BasisState)
@@ -594,7 +594,7 @@ theorem applyGate_twice (g : Gate) (st : BasisState)
         simp only [Gate.WellFormed] at hwf
         simp [applyGate, upd, hwf]
       · simp [applyGate, upd, h]
-  | P _ _ => simp at hc
+  | P _ _ _ => simp at hc
 
 /-- Reversing a well-formed H/P-free circuit cancels its classical action. -/
 theorem run_reverse_cancel (c : Circuit) (st : BasisState)

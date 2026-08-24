@@ -491,55 +491,40 @@ theorem applyGate_CCX_preservesInner
     Phase gate
 ============================================================ -/
 
-/-- The scalar occurring in the `P k` gate. -/
-private def phaseCoeff (k : Nat) : ℂ :=
-  Complex.exp
-    (Complex.I *
-      (2 * Real.pi / (2 : ℝ) ^ k : ℂ))
-
-
 /--
-The phase used by `P k` has modulus one, expressed in the algebraic form
+The phase used by `P dir k` has modulus one, expressed in the algebraic form
 needed by the inner product.
 -/
 private theorem phaseCoeff_star_mul
+    (dir : PhaseDir)
     (k : Nat) :
-    (starRingEnd ℂ) (phaseCoeff k) *
-        phaseCoeff k
+    (starRingEnd ℂ) (phaseCoeff dir k) *
+        phaseCoeff dir k
       = 1 := by
-  have hnorm : Complex.normSq (phaseCoeff k) = 1 := by
+  have hnorm : Complex.normSq (phaseCoeff dir k) = 1 := by
     rw [Complex.normSq_eq_norm_sq]
-    have hnorm' : ‖phaseCoeff k‖ = 1 := by
+    have hnorm' : ‖phaseCoeff dir k‖ = 1 := by
       unfold phaseCoeff
-      simpa [mul_comm] using
-        Complex.norm_exp_ofReal_mul_I
-          (2 * Real.pi / (2 : ℝ) ^ k)
+      simp
     rw [hnorm']
     norm_num
-  have hnormC : ((Complex.normSq (phaseCoeff k) : ℝ) : ℂ) = 1 := by
+  have hnormC : ((Complex.normSq (phaseCoeff dir k) : ℝ) : ℂ) = 1 := by
     exact_mod_cast hnorm
   rw [Complex.normSq_eq_conj_mul_self] at hnormC
   simpa using hnormC
 
 
 private theorem applyGate_P_preserves_ket_inner
+    (dir : PhaseDir)
     (k : Nat)
     (t : Wire)
     (s u : BasisState) :
     inner
-        (applyGate (.P k t) (ket s))
-        (applyGate (.P k t) (ket u))
+        (applyGate (.P dir k t) (ket s))
+        (applyGate (.P dir k t) (ket u))
       =
     inner (ket s) (ket u) := by
   rw [applyGate_P_ket, applyGate_P_ket]
-
-  change
-    inner
-        ((if s t then phaseCoeff k else 1) • ket s)
-        ((if u t then phaseCoeff k else 1) • ket u)
-      =
-    inner (ket s) (ket u)
-
   rw [inner_smul_smul]
 
   by_cases hsu : s = u
@@ -554,12 +539,13 @@ private theorem applyGate_P_preserves_ket_inner
 
 
 theorem applyGate_P_preservesInner
+    (dir : PhaseDir)
     (k : Nat)
     (t : Wire) :
-    PreservesInner (applyGate (.P k t)) :=
+    PreservesInner (applyGate (.P dir k t)) :=
   preservesInner_of_kets
-    (applyGate (.P k t))
-    (applyGate_P_preserves_ket_inner k t)
+    (applyGate (.P dir k t))
+    (applyGate_P_preserves_ket_inner dir k t)
 
 
 /-! ============================================================
@@ -856,6 +842,117 @@ theorem applyGate_H_preservesInner
 
 
 /-! ============================================================
+    Primitive adjoints cancel
+============================================================ -/
+
+private theorem hCoeff_mul_self :
+    ((↑(Real.sqrt 2) : ℂ)⁻¹) * ((↑(Real.sqrt 2) : ℂ)⁻¹) =
+      (1 / 2 : ℂ) := by
+  have hsqrt_ne : Real.sqrt 2 ≠ 0 := by
+    positivity
+  have hr :
+      (Real.sqrt 2)⁻¹ * (Real.sqrt 2)⁻¹ = (1 / 2 : ℝ) := by
+    field_simp [hsqrt_ne]
+    have hsqrt : Real.sqrt 2 * Real.sqrt 2 = (2 : ℝ) :=
+      Real.mul_self_sqrt (by norm_num)
+    nlinarith
+  have hc := congrArg (fun x : ℝ => (x : ℂ)) hr
+  simpa using hc
+
+private theorem upd_twice
+    (s : BasisState) (t : Wire) (a b : Bool) :
+    s[t ↦ a][t ↦ b] = s[t ↦ b] := by
+  funext i
+  by_cases hi : i = t
+  · subst i
+    simp
+  · simp [upd, hi]
+
+private theorem upd_eq_self
+    (s : BasisState) (t : Wire) (b : Bool)
+    (h : s t = b) :
+    s[t ↦ b] = s := by
+  funext i
+  by_cases hi : i = t
+  · subst i
+    simpa using h.symm
+  · simp [upd, hi]
+
+private theorem applyGate_H_twice_ket
+    (t : Wire) (s : BasisState) :
+    applyGate (.H t) (applyGate (.H t) (ket s)) = ket s := by
+  rw [applyGate_H_ket, applyGate_add, applyGate_smul, applyGate_smul,
+    applyGate_H_ket, applyGate_H_ket]
+  by_cases hb : s t
+  · have hs1 : s[t ↦ true] = s := upd_eq_self s t true hb
+    simp [hb, upd_twice, hs1, smul_smul]
+    rw [hCoeff_mul_self]
+    module
+  · have hb' : s t = false := Bool.eq_false_of_not_eq_true hb
+    have hs0 : s[t ↦ false] = s := upd_eq_self s t false hb'
+    simp [hb, upd_twice, hs0, smul_smul]
+    rw [hCoeff_mul_self]
+    module
+
+private theorem applyGate_adjoint_applyGate_ket
+    (g : Gate) (hg : g.WellFormed) (s : BasisState) :
+    applyGate g.adjoint (applyGate g (ket s)) = ket s := by
+  cases g with
+  | X t =>
+      simp only [Gate.adjoint]
+      rw [applyGate_X_ket, applyGate_X_ket]
+      simpa [xBasis] using congrArg ket (xBasis_involutive t s)
+  | H t =>
+      exact applyGate_H_twice_ket t s
+  | CX c t =>
+      simp only [Gate.adjoint]
+      rw [applyGate_CX_ket, applyGate_CX_ket]
+      simpa [cxBasis] using congrArg ket (cxBasis_involutive c t hg s)
+  | CCX a b t =>
+      simp only [Gate.adjoint]
+      rw [applyGate_CCX_ket, applyGate_CCX_ket]
+      simpa [ccxBasis] using
+        congrArg ket (ccxBasis_involutive a b t hg.2.1 hg.2.2 s)
+  | P dir k t =>
+      simp only [Gate.adjoint]
+      rw [applyGate_P_ket, applyGate_smul, applyGate_P_ket]
+      by_cases hb : s t
+      · simp only [hb, if_pos, smul_smul]
+        change
+          (phaseCoeff dir k * phaseCoeff dir.adjoint k) • ket s = ket s
+        rw [phaseCoeff_mul_adjoint]
+        simp
+      · simp [hb]
+
+/-- Applying a well-formed primitive and then its adjoint is the identity
+on every finitely supported quantum state. -/
+theorem applyGate_adjoint_applyGate
+    (g : Gate) (hg : g.WellFormed) (psi : State) :
+    applyGate g.adjoint (applyGate g psi) = psi := by
+  induction psi using Finsupp.induction_linear with
+  | zero => simp
+  | add psi phi ihpsi ihphi =>
+      rw [applyGate_add, applyGate_add, ihpsi, ihphi]
+  | single s a =>
+      have hs : Finsupp.single s a = a • ket s := by
+        ext x
+        simp [ket]
+      rw [hs, applyGate_smul, applyGate_smul,
+        applyGate_adjoint_applyGate_ket g hg s]
+
+/-- Applying the adjoint first and then the original well-formed primitive
+is also the identity. -/
+theorem applyGate_applyGate_adjoint
+    (g : Gate) (hg : g.WellFormed) (psi : State) :
+    applyGate g (applyGate g.adjoint psi) = psi := by
+  have hadj : g.adjoint.WellFormed :=
+    (Gate.wellFormed_adjoint g).2 hg
+  have h := applyGate_adjoint_applyGate g.adjoint hadj psi
+  rw [Gate.adjoint_adjoint] at h
+  exact h
+
+
+/-! ============================================================
     Every well-formed primitive gate preserves the inner product
 ============================================================ -/
 
@@ -879,8 +976,8 @@ theorem applyGate_preservesInner
         applyGate_CCX_preservesInner
           a b t hg.2.1 hg.2.2
 
-  | P k t =>
-      exact applyGate_P_preservesInner k t
+  | P dir k t =>
+      exact applyGate_P_preservesInner dir k t
 
 
 /--
@@ -928,6 +1025,36 @@ theorem run_preservesInner
 
       simpa [run] using
         hgate.comp hrest
+
+
+/-! ============================================================
+    Circuit adjoints cancel
+============================================================ -/
+
+/-- Running a well-formed circuit and then its adjoint is the identity. -/
+theorem run_adjoint_run
+    (c : Circuit) (hc : CircuitWellFormed c) (psi : State) :
+    run (Circuit.adjoint c) (run c psi) = psi := by
+  induction c generalizing psi with
+  | nil => simp
+  | cons g c ih =>
+      have hg : g.WellFormed :=
+        ((circuitWellFormed_cons g c).mp hc).1
+      have hc' : CircuitWellFormed c :=
+        ((circuitWellFormed_cons g c).mp hc).2
+      rw [run_cons, circuit_adjoint_cons, run_append, run_singleton]
+      rw [ih hc']
+      exact applyGate_adjoint_applyGate g hg psi
+
+/-- Running a well-formed circuit adjoint and then the original circuit is
+also the identity. -/
+theorem run_run_adjoint
+    (c : Circuit) (hc : CircuitWellFormed c) (psi : State) :
+    run c (run (Circuit.adjoint c) psi) = psi := by
+  have hadj : CircuitWellFormed (Circuit.adjoint c) :=
+    (circuitWellFormed_adjoint c).2 hc
+  have h := run_adjoint_run (Circuit.adjoint c) hadj psi
+  simpa using h
 
 
 /--
