@@ -127,7 +127,7 @@ ShorECDLP/
       OrderFinding/
         OracleSpec.lean                  # [M4] abstract ECDLP oracle action
         PhaseEstimation/
-          Defs.lean                      # [M4] ideal generic controlled-power + IQFT semantics
+          Defs.lean                      # [M4] generic controlled-power + IQFT circuit map
           Main.lean                      # [M4] exact-grid eigenphase correctness contract
       Correctness/        (provisional)
         Reduction.lean                   # [M4] ECDLP ↔ ⟨(−k,1)⟩; k = β·α⁻¹ (mod n)
