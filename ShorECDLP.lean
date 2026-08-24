@@ -14,3 +14,4 @@ import ShorECDLP.Submission.QFT.Main
 import ShorECDLP.Submission.Arithmetic.Adder
 import ShorECDLP.Submission.Arithmetic.ModAdd
 import ShorECDLP.Submission.Arithmetic.RippleAdder
+import ShorECDLP.Submission.Correctness.Reduction
