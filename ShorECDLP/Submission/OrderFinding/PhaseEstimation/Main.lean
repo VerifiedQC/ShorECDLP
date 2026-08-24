@@ -7,11 +7,13 @@ import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Proofs.Approximations
 /-!
 # Correctness of generic quantum phase estimation
 
-The theorem below is the exact-grid contract.  If `psi` is a normalized
-eigenstate of an inner-product-preserving operator `U` with eigenphase
-`value / 2^phaseReg.length`, the supplied block implements the controlled
-powers of `U`, and the phase register plus QFT ancilla start clean, then phase
-estimation writes `value` into the phase register and preserves `psi`.
+The first theorem is the exact-grid contract.  If `psi` is an eigenvector of
+`U` with eigenphase `value / 2^phaseReg.length`, the supplied block implements
+the controlled powers of `U` on that eigenvector, and the phase register plus
+QFT ancilla start clean, then phase estimation writes `value` into the phase
+register and preserves `psi`.  This algebraic state equality is linear, so it
+does not require `psi` to be normalized or `U` to preserve inner products
+globally; for a normalized input it has the usual certainty interpretation.
 
 The second theorem covers an arbitrary phase in `[0,1)`: a nearest grid label
 is within half a grid cell in circular distance and occurs with the standard
@@ -27,10 +29,9 @@ noncomputable section
 /--
 **Exact phase-estimation correctness.**  For an exactly representable
 eigenphase, phase estimation returns the corresponding computational-basis
-label with certainty while leaving the eigenstate unchanged.
-
-This proof is the one deliberately deferred obligation in the initial
-scaffold.
+label while leaving the eigenvector unchanged.  The equality holds without a
+normalization hypothesis; when the input is normalized, it yields the usual
+probability-one interpretation.
 -/
 theorem phaseEstimation_correct_exact
     (U controlledPowers : State →ₗ[ℂ] State)
