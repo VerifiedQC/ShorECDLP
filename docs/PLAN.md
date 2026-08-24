@@ -124,6 +124,11 @@ ShorECDLP/
         Defs.lean                        # [M4 ✓] coherent QFT and exact inverse QFT
         Main.lean                        # [M4 ✓] public QFT/IQFT correctness theorems
         Proofs/                         # [M4 ✓] phase, Fourier, count, and WF proofs
+      OrderFinding/
+        OracleSpec.lean                  # [M4] abstract ECDLP oracle action
+        PhaseEstimation/
+          Defs.lean                      # [M4] ideal generic controlled-power + IQFT semantics
+          Main.lean                      # [M4] exact-grid eigenphase correctness contract
       Correctness/        (provisional)
         Reduction.lean                   # [M4] ECDLP ↔ ⟨(−k,1)⟩; k = β·α⁻¹ (mod n)
         SuccessBound.lean                # [M4] phase-estimation success bound
