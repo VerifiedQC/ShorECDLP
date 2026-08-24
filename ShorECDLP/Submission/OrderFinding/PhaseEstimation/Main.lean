@@ -1,5 +1,8 @@
-import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Defs
-import ShorECDLP.Submission.QFT.Main
+import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Proofs.Hadamard
+import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Proofs.ControlledPowers
+import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Proofs.Fourier
+import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Proofs.Probability
+import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Proofs.Approximations
 
 /-!
 # Correctness of generic quantum phase estimation
@@ -35,8 +38,6 @@ theorem phaseEstimation_correct_exact
     (phaseReg : List Wire)
     (qftAncilla : Wire)
     (value : Fin (2 ^ phaseReg.length))
-    (hU : PreservesInner U)
-    (hnorm : normSq psi = 1)
     (heigen :
       U psi =
         eigenvalue
@@ -48,7 +49,19 @@ theorem phaseEstimation_correct_exact
     (hphaseReg : phaseReg.Nodup) :
     phaseEstimation phaseReg qftAncilla controlledPowers psi =
       labelState phaseReg value.val psi := by
-  sorry
+  change
+    run (iqft phaseReg qftAncilla)
+      (controlledPowers (run (hadamards phaseReg) psi)) =
+        labelState phaseReg value.val psi
+  rw [run_hadamards_clean phaseReg psi hphaseZero hphaseReg]
+  rw [controlledPowers_uniform_eigenstate
+    U controlledPowers psi phaseReg
+    (eigenvalue ((value.val : ℝ) / (2 ^ phaseReg.length : Nat)))
+    heigen hcontrolled]
+  rw [exact_phase_state_eq_run_qft phaseReg qftAncilla psi value
+    hancillaZero hancilla hphaseReg]
+  exact iqft_qft_cancel phaseReg qftAncilla
+    (labelState phaseReg value.val psi) hancilla hphaseReg
 
 /--
 **Approximate phase-estimation correctness.**  For an arbitrary eigenphase in
@@ -61,7 +74,6 @@ theorem phaseEstimation_correct_approx
     (phaseReg : List Wire)
     (qftAncilla : Wire)
     (phase : ℝ)
-    (hU : PreservesInner U)
     (hnorm : normSq psi = 1)
     (heigen : U psi = eigenvalue phase • psi)
     (hphaseNonneg : 0 ≤ phase)
@@ -77,7 +89,32 @@ theorem phaseEstimation_correct_approx
         (4 : ℝ) / Real.pi ^ 2 ≤
           registerProbability phaseReg value.val
             (phaseEstimation phaseReg qftAncilla controlledPowers psi) := by
-  sorry
+  obtain ⟨value, hnear⟩ :=
+    exists_nearest_phase_value
+      phaseReg.length phase hphaseNonneg hphaseLtOne
+  refine ⟨value, hnear, ?_⟩
+  change
+    (4 : ℝ) / Real.pi ^ 2 ≤
+      registerProbability phaseReg value.val
+        (run (iqft phaseReg qftAncilla)
+          (controlledPowers
+            (run (hadamards phaseReg) psi)))
+  rw [run_hadamards_clean phaseReg psi hphaseZero hphaseReg]
+  rw [controlledPowers_uniform_eigenstate
+    U controlledPowers psi phaseReg
+    (eigenvalue phase) heigen hcontrolled]
+  rw [run_iqft_kicked_phase_state
+    phaseReg qftAncilla psi phase
+    hancillaZero hancilla hphaseReg]
+  rw [registerProbability_label_superposition
+    phaseReg psi
+    (qpeAmplitude phaseReg.length phase)
+    value hphaseZero hphaseReg]
+  rw [hnorm, mul_one]
+  unfold qpeAmplitude
+  apply geometric_phase_average_lower_bound
+  · positivity
+  · simpa [circularDistance] using hnear
 
 end
 
