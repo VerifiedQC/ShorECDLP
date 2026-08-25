@@ -13,6 +13,52 @@ No primality or coprimality hypothesis is needed for modular exponentiation.  Th
 Fermat-inversion layer is responsible for adding its own field hypotheses.  The shared
 `CleanBinaryContract` conservatively carries an `exponent < modulus` precondition; this proof
 does not otherwise need that bound.
+
+## Program (syntax-sugared)
+
+`Plan` contains certified modular-multiplication calls and a fully disjoint register placement.
+The final unused square is deliberately omitted.
+
+```text
+schedule(base, exponentBits; acc, power = base):
+  for each LSB-first bit, from first through last:
+    product := ModMul(acc, power)
+    nextAcc := bit ? product : acc
+    if this is not the last bit:
+      nextPower := ModMul(power, power)
+      power := nextPower
+    acc := nextAcc
+
+modExp(base, exponent; clean out, work):
+  initialize acc to 1
+  run schedule(base, exponentBits; acc = 1, power = base)
+  copyReg(finalAcc; out)
+  reverse(initialization ++ schedule)           -- Bennett cleanup
+```
+
+## Specification
+
+For a valid `Plan`, `1 < modulus`, canonical base/exponent inputs, and clean output/work,
+
+```text
+after := run(Plan.program, before)
+value(out, after) = value(base, before) ^ value(exponent, before) mod modulus
+base and exponent are preserved
+work is clean in after
+CircuitUsesOnly(Plan.layout.allWires, Plan.program)
+HPFree(Plan.program)
+CircuitWellFormed(Plan.program)
+```
+
+The exact cost is `plan.cost = 2 * plan.schedule.forwardCost`. If every multiplier call costs
+`mulCost`, the same program has certified cost
+
+```text
+2 * ((2 * width - 1) * mulCost + 7 * width^2).
+```
+
+`Plan.modExp_contract` and `Plan.modExp_contract_uniform` package these specifications. Pure
+recurrence, schedule, locality, cost, and cleanup lemmas provide their proofs.
 -/
 
 namespace ShorECDLP

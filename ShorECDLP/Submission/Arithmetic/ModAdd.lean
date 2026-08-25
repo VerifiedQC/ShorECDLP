@@ -2,7 +2,7 @@ import ShorECDLP.Submission.Arithmetic.RippleAdder
 import ShorECDLP.Submission.Arithmetic.Contracts
 import ShorECDLP.Submission.Arithmetic.Primitives
 
-/-
+/-!
 # Modular adder (M1.3) — `(a + b) mod p`
 
 Naive/textbook construction: reuse the general `ripple` adder (M1.2) together with constant
@@ -16,6 +16,46 @@ Built up one sub-step per PR:
 - **M1.3.1 ✓** — constant adder `addConst` `(a + c)` (load ⇒ ripple ⇒ unload), correctness + `tCount`.
 - **M1.3.2** — the generic modular adder `(a + b) mod modulus`; here the
   `addConst`/`ripple` `HPFree`/`WellFormed` compose into the deliverable's full contract.
+
+## Program (syntax-sugared)
+
+All registers have width `w`, are LSB-first, and the public output starts clean.
+
+```text
+addConst(a, c; out):
+  loadConst(cReg, c)
+  ripple(a, cReg; out)
+  loadConst(cReg, c)              -- clear cReg
+
+compute(a, b; sum, reduced, flag):
+  ripple(a, b; sum)               -- sum = a + b
+  addConst(sum, 2^w - modulus; reduced)
+                                     -- flag records whether sum >= modulus
+
+modAdd(a, b; clean out, work):
+  compute
+  selectPoint(flag, sum, reduced; out)
+  reverse(compute)                 -- restore every work wire
+```
+
+## Specification
+
+`ModAddWiring` supplies the aligned columns, freshness conditions, and
+`2 * modulus <= 2^w`. For canonical inputs and a clean output/work area,
+
+```text
+after := run(modAdd, before)
+value(out, after) = (value(a, before) + value(b, before)) mod modulus
+a and b are preserved
+work is clean in after
+tCount(modAdd) = 91 * w
+CircuitUsesOnly(layout.allWires, modAdd)
+HPFree(modAdd)
+CircuitWellFormed(modAdd)
+```
+
+The public theorem `modAdd_contract` packages this complete specification for the exact
+`modAdd` term. Lower-level constant-addition and reduction lemmas provide its proof.
 -/
 
 namespace ShorECDLP

@@ -1,13 +1,39 @@
 import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Framework.CostModel
 
-/-
+/-!
 # Reversible full-adder cell (M1, submission arithmetic)
 
 The atom of the ripple-carry adder. Given input bits on wires `a, b, cin` and two fresh
 (`|0⟩`) output wires `s` (sum) and `co` (carry-out), `fullAdder` writes
 `s := a ⊕ b ⊕ cin` and `co := majority(a, b, cin)`. Correctness is proved against the
 classical basis-state semantics; the T-count is the naive framework metric.
+
+## Program (syntax-sugared)
+
+```text
+fullAdder(a, b, cin; clean s, clean co):
+  CCX a b   co
+  CCX a cin co
+  CCX b cin co
+  CX  a     s
+  CX  b     s
+  CX  cin   s
+```
+
+## Specification
+
+For fresh, appropriately distinct output wires `s` and `co`, if `after` is the result of
+running `fullAdder a b cin s co`, then
+
+```text
+after[s]  = a XOR b XOR cin
+after[co] = (a AND b) XOR (a AND cin) XOR (b AND cin)
+tCount(fullAdder) = 21
+```
+
+The program definition appears first below. The public sum/carry/count statements follow it;
+their proofs contain the remaining case analysis.
 -/
 
 namespace ShorECDLP

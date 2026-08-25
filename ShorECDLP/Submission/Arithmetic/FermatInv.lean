@@ -1,13 +1,38 @@
 import ShorECDLP.Submission.Arithmetic.Contracts
 import ShorECDLP.Submission.Field
 
-/-
+/-!
 # Fermat inversion from modular exponentiation (M1.6)
 
 This is the thin correctness closure for field inversion.  It consumes the exact circuit term
 already packaged by `ModExpContract`, fixes its preserved exponent register to `p - 2`, and
 identifies the circuit output with inversion in `Fp` using `fermat_inv`.  It defines no second
 exponentiation circuit and imports none of M1.5's private schedule or workspace.
+
+## Program (syntax-sugared)
+
+This file defines **no new circuit**. Its program is any supplied modular-exponentiation circuit
+already certified by `ModExpContract`:
+
+```text
+program := supplied ModExp program
+layout.rhs := p - 2
+after := run program before
+```
+
+## Specification
+
+Under `[Fact (Nat.Prime p)]`, a canonical nonzero base, exponent `p - 2`, a valid layout, and
+clean output/work registers,
+
+```text
+value(layout.out, after) as Fp = (value(layout.lhs, before) as Fp)^(-1)
+layout.lhs and layout.rhs are preserved
+layout.work is clean in after
+```
+
+The same supplied `program`, layout, cleanup guarantee, and cost remain those of the input
+`ModExpContract`; `FermatInv.correct` is only the final field-theory proof.
 -/
 
 namespace ShorECDLP

@@ -1,7 +1,7 @@
 import ShorECDLP.Submission.Arithmetic.Contracts
 import ShorECDLP.Submission.Arithmetic.RippleAdder
 
-/-
+/-!
 # Reusable clean reversible-circuit primitives
 
 This module contains the small, implementation-neutral leaves shared by the arithmetic
@@ -9,6 +9,40 @@ milestones: constant loading, reversible two-way selection, aligned register cop
 circuit-support composition, and cancellation of a well-formed H/P-free circuit by its reverse.
 Keeping them here prevents the modular arithmetic layers from growing divergent local copies or
 depending on a concrete higher-level arithmetic construction for a generic circuit primitive.
+
+## Programs (syntax-sugared)
+
+```text
+loadConst(ws, c):
+  for i in 0 .. ws.length - 1:
+    if bit(c, i) = 1: X ws[i]
+
+selectBit(flag, x, y; clean out):
+  CX x out; CX x y; CCX flag y out; CX x y
+  -- out = (flag ? y : x), while x and y are restored
+
+selectPoint(flag, columns):
+  for (x, y, out) in columns: selectBit(flag, x, y; out)
+
+copyReg(src; clean dst):
+  for aligned (s, d): CX s d
+```
+
+The module also supplies the generic inverse program `c.reverse` for any well-formed H/P-free
+circuit `c`.
+
+## Specifications
+
+```text
+ws.Nodup, clean ws, and c < 2^|ws| -> value(ws, run(loadConst(ws,c), st)) = c
+selectOK(flag, columns) and clean outputs -> selectPoint stores (flag ? y : x)
+equal-length disjoint src/dst and clean dst -> copyReg stores value(src) in dst
+HPFree(c) and CircuitWellFormed(c) -> run(c.reverse, run(c, st)) = st
+```
+
+Each primitive additionally exposes exact T-count, support/locality, H/P-free, and
+well-formedness lemmas. Program definitions precede their correctness results; the shared
+support and cancellation proof tools are collected after the leaf programs.
 -/
 
 namespace ShorECDLP
