@@ -1,11 +1,39 @@
 import ShorECDLP.Submission.Arithmetic.Adder
 
-/-
+/-!
 # Reversible n-bit ripple-carry adder (M1.2)
 
 Chains `fullAdder` cells, threading the carry: column `i` takes carry-in from column `i-1`
 and produces the carry-out consumed by column `i+1`. Built over `{X, CX, CCX}`, correctness
 proved against the classical basis-state semantics.
+
+## Program (syntax-sugared)
+
+All lists are LSB-first. A column is `(aᵢ, bᵢ, sumᵢ)` and `coᵢ` is its fresh carry-out.
+
+```text
+ripple([], cin, []) = []
+ripple((aᵢ,bᵢ,sumᵢ) :: cols, cin, coᵢ :: couts) =
+  fullAdder(aᵢ, bᵢ, cin; sumᵢ, coᵢ)
+  ++ ripple(cols, coᵢ, couts)
+```
+
+## Specification
+
+Let `A`, `B`, and `S` be the registers obtained by projecting the three column fields, let
+`n = cols.length`, and let `after = run (ripple cols cin couts) before`. Under `wiresOK`,
+matching lengths, and clean sum/carry outputs,
+
+```text
+value(S, after) + 2^n * bit(after, finalCarry)
+  = value(A, before) + value(B, before)
+tCount(ripple) = 21 * n
+HPFree(ripple)
+CircuitWellFormed(ripple)
+```
+
+The definitions needed to state this relation appear before the main theorem; auxiliary
+preservation, bit-column, H/P-free, and well-formedness lemmas support its proof.
 -/
 
 namespace ShorECDLP

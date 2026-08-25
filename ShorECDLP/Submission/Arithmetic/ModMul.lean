@@ -2,7 +2,7 @@ import ShorECDLP.Submission.Arithmetic.Primitives
 import Mathlib.Data.Nat.ModEq
 import Mathlib.Tactic.Ring
 
-/-
+/-!
 # Clean schoolbook modular multiplication (M1.4)
 
 This module builds a modular multiplier only from the public `ModAddContract` boundary.
@@ -10,6 +10,47 @@ The construction is deliberately naive and out-of-place.  It records a schoolboo
 modular doublings and conditionally masked additions, copies the final accumulator to the
 public output, and reverses the whole history (Bennett cleanup).  No theorem depends on a
 modular adder's private carry or reduction wiring.
+
+## Program (syntax-sugared)
+
+`Plan` stores two certified modular-adder calls per multiplier bit: one for doubling the
+current power and one for accumulating a controlled copy. Registers are LSB-first.
+
+```text
+forward(power = lhs, controls = rhs, acc = 0):
+  for bit in controls:
+    duplicate := copy(power)
+    nextPower := ModAdd(power, duplicate)       -- 2 * power mod modulus
+    mask := bit ? power : 0
+    nextAcc := ModAdd(mask, acc)                -- acc + bit * power mod modulus
+    power := nextPower
+    acc := nextAcc
+
+modMul(lhs, rhs; clean out, work):
+  forward
+  copyReg(finalAcc; out)
+  reverse(forward)                              -- Bennett cleanup
+```
+
+## Specification
+
+For a valid `Plan` and public `Plan.layout`, positive `modulus`, canonical inputs, and clean
+output/work registers,
+
+```text
+after := run(Plan.program, before)
+value(out, after) = value(lhs, before) * value(rhs, before) mod modulus
+lhs and rhs are preserved
+work is clean in after
+tCount(Plan.program) = 2 * rhs.length * (2 * addCost + 7 * width)
+CircuitUsesOnly(Plan.layout.allWires, Plan.program)
+HPFree(Plan.program)
+CircuitWellFormed(Plan.program)
+```
+
+`Plan.modMul_contract` is the complete public statement for that exact program. The remaining
+schedule, support, arithmetic, and Bennett-cancellation lemmas establish the contract without
+importing a concrete modular-adder implementation.
 -/
 
 namespace ShorECDLP

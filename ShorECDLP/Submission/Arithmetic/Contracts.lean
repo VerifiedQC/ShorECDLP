@@ -1,7 +1,7 @@
 import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Framework.CostModel
 
-/-
+/-!
 # Clean out-of-place arithmetic contracts
 
 This module is the narrow interface between the sequential M1 arithmetic implementations.
@@ -13,6 +13,35 @@ the result, and all `work` wires start and finish clean. `CleanBinaryContract` p
 obligations that travel together for one concrete circuit term: functional correctness,
 T-count, H/P-freedom, and physical well-formedness. Addition, multiplication, and exponentiation
 are thin specializations of this one structure rather than copied interfaces.
+
+## Program (syntax-sugared)
+
+This file defines **no concrete arithmetic program**. It defines the proposition that a supplied
+`program : Circuit` must satisfy. A caller packages one exact circuit term as follows:
+
+```text
+CleanBinaryContract(program, layout, modulus, op, cost)
+```
+
+## Specification
+
+For every valid `layout` and canonical input state whose public output and private work registers
+start clean, let `after = run program before`. The contract requires
+
+```text
+value(layout.out, after)
+  = op(value(layout.lhs, before), value(layout.rhs, before)) mod modulus
+layout.lhs and layout.rhs are preserved
+layout.work is clean in after
+all controls and targets belong to layout.allWires
+tCount(program) = cost
+HPFree(program)
+layout.Valid -> CircuitWellFormed(program)
+```
+
+`ModAddContract`, `ModMulContract`, and `ModExpContract` specialize `op` to addition,
+multiplication, and exponentiation. The declarations required to state the contract come first;
+the generic outside-wire preservation proof and the contract structure follow.
 -/
 
 namespace ShorECDLP
