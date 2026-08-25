@@ -65,4 +65,22 @@ structure ECDLPSetting
   order_P : addOrderOf P = r
   Q_eq : Q = d • P
 
+structure OrderFindingSetup
+    {G : Type*} [AddCommGroup G]
+    {w : ℕ}
+    (enc : PointEncoding G w)
+    (aReg bReg pointReg oracleWork : List Wire)
+    (qftAncilla : Wire)
+    (precision : ℕ)
+    (s : BasisState) : Prop where
+  a_width : aReg.length = precision
+  b_width : bReg.length = precision
+  a_zero : regValue aReg s = 0
+  b_zero : regValue bReg s = 0
+  point_zero : regValue pointReg s = (enc.encode (0 : G)).val
+  oracleWork_zero : Clean oracleWork s
+  ancilla_zero : s qftAncilla = false
+  ancilla_fresh :
+    qftAncilla ∉ aReg ++ bReg ++ pointReg ++ oracleWork
+
 end ShorECDLP.Quantum.OrderFinding

@@ -6,7 +6,7 @@ structure OrderFindingSetup
     {G : Type*} [AddCommGroup G]
     {w : ℕ}
     (enc : PointEncoding G w)
-    (aReg bReg pointReg : List Wire)
+    (aReg bReg pointReg oracleWork : List Wire)
     (qftAncilla : Wire)
     (precision : ℕ)
     (s : BasisState) : Prop where
@@ -15,8 +15,10 @@ structure OrderFindingSetup
   a_zero : regValue aReg s = 0
   b_zero : regValue bReg s = 0
   point_zero : regValue pointReg s = (enc.encode (0 : G)).val
+  oracleWork_zero : Clean oracleWork s
   ancilla_zero : s qftAncilla = false
-  ancilla_fresh : qftAncilla ∉ aReg ++ bReg ++ pointReg
+  ancilla_fresh :
+    qftAncilla ∉ aReg ++ bReg ++ pointReg ++ oracleWork
 
 theorem orderFinding_correct
     {G : Type*} [AddCommGroup G]
@@ -29,7 +31,7 @@ theorem orderFinding_correct
     (s : BasisState)
     (hsetting : ECDLPSetting P Q r d)
     (hspec : ECDLPOracleSpec enc oracle P Q aReg bReg pointReg oracleWork)
-    (hsetup : OrderFindingSetup enc aReg bReg pointReg qftAncilla precision s)
+    (hsetup : OrderFindingSetup enc aReg bReg pointReg oracleWork qftAncilla precision s)
     (hprecision : r ≤ 2 ^ precision) :
     ((r - 1 : ℝ) / r) * ((4 : ℝ) / Real.pi ^ 2) ^ 2 ≤
       orderFindingSuccessProbability
