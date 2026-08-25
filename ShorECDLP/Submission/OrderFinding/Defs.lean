@@ -64,6 +64,5 @@ structure ECDLPSetting
   prime_order : Nat.Prime r
   order_P : addOrderOf P = r
   Q_eq : Q = d • P
-  d_lt : d < r
 
 end ShorECDLP.Quantum.OrderFinding

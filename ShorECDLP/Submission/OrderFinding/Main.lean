@@ -30,7 +30,7 @@ theorem orderFinding_correct
     (hsetting : ECDLPSetting P Q r d)
     (hspec : ECDLPOracleSpec enc oracle P Q aReg bReg pointReg)
     (hsetup : OrderFindingSetup enc aReg bReg pointReg qftAncilla precision s)
-    (hprecision : r < 2 ^ precision) :
+    (hprecision : r ≤ 2 ^ precision) :
     ((r - 1 : ℝ) / r) * ((4 : ℝ) / Real.pi ^ 2) ^ 2 ≤
       orderFindingSuccessProbability
         r precision d hsetting.prime_order aReg bReg
