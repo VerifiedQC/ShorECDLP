@@ -24,11 +24,11 @@ theorem orderFinding_correct
     (enc : PointEncoding G w)
     (oracle : State →ₗ[ℂ] State)
     (P Q : G)
-    (aReg bReg pointReg : List Wire)
+    (aReg bReg pointReg oracleWork: List Wire)
     (qftAncilla : Wire)
     (s : BasisState)
     (hsetting : ECDLPSetting P Q r d)
-    (hspec : ECDLPOracleSpec enc oracle P Q aReg bReg pointReg)
+    (hspec : ECDLPOracleSpec enc oracle P Q aReg bReg pointReg oracleWork)
     (hsetup : OrderFindingSetup enc aReg bReg pointReg qftAncilla precision s)
     (hprecision : r ≤ 2 ^ precision) :
     ((r - 1 : ℝ) / r) * ((4 : ℝ) / Real.pi ^ 2) ^ 2 ≤
