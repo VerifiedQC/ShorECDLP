@@ -37,6 +37,12 @@ lake build
 Toolchain: `leanprover/lean4:v4.28.0`; Mathlib pinned to the same revision as
 [VerifiedQC/ForShor](https://github.com/VerifiedQC/ForShor).
 
+## Documentation
+
+- [Implementation plan and proof status](docs/PLAN.md)
+- [Verified reversible arithmetic: a bottom-up textbook](docs/ARITHMETIC.md)
+- [Arithmetic module and API guide](ShorECDLP/Submission/Arithmetic/README.md)
+
 ## Status
 
 M0 — project skeleton (instruction set + Toffoli cost model), builds green.

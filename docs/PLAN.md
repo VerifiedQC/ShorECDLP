@@ -124,6 +124,7 @@ Still open before the repository can claim the target end-to-end result:
 ```
 lakefile.lean  lean-toolchain  lake-manifest.json
 docs/PLAN.md
+docs/ARITHMETIC.md                         # bottom-up arithmetic textbook
 scripts/verify.sh
 ShorECDLP.lean                              # root aggregator
 ShorECDLP/

@@ -13,6 +13,9 @@ Each Lean file starts with a self-contained module header in the same order: the
 syntax-sugared pseudocode, its public specification, and then the implementation and proof
 details. Interface-only files explicitly say that they introduce no concrete circuit.
 
+For a bottom-up explanation of the construction and proofs, see
+[Verified Reversible Arithmetic for Shor ECDLP](../../../docs/ARITHMETIC.md).
+
 ## Import dependency DAG
 
 The graph below shows direct project-local Lean imports. An arrow `A --> B` means that
