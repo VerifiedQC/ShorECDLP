@@ -585,3 +585,30 @@ theorem oracle_pointEigenstate_kickback
 
   rw [kickback_phase_eq
     hsetting.prime_order.pos k a.val b.val]
+
+theorem labelState_pointEigenstate_comm
+    {G : Type*} [AddCommGroup G]
+    {w r : ℕ}
+    (enc : PointEncoding G w)
+    (P : G)
+    (aReg bReg pointReg : List Wire)
+    (s : BasisState)
+    (a b : ℕ)
+    (k : Fin r)
+    (hab : List.Disjoint aReg bReg)
+    (hap : List.Disjoint aReg pointReg)
+    (hbp : List.Disjoint bReg pointReg) :
+    labelState bReg b
+        (labelState aReg a
+          (pointEigenstate enc P pointReg s k)) =
+      labelState aReg a
+        (labelState bReg b
+          (pointEigenstate enc P pointReg s k)) := by
+  rw [labelState_pointEigenstate
+    enc P aReg bReg pointReg s a b k hap hbp]
+  rw [labelState_pointEigenstate
+    enc P bReg aReg pointReg s b a k hbp hap]
+  apply congrArg
+    (fun t : BasisState => pointEigenstate enc P pointReg t k)
+  exact writeReg_comm_of_disjoint
+    bReg aReg b a s hab.symm
