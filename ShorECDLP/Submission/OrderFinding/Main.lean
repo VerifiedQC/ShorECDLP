@@ -1,24 +1,8 @@
-import ShorECDLP.Submission.OrderFinding.Defs
+import ShorECDLP.Submission.OrderFinding.Proofs.SuccessProbability
 
 namespace ShorECDLP.Quantum.OrderFinding
 
-structure OrderFindingSetup
-    {G : Type*} [AddCommGroup G]
-    {w : ℕ}
-    (enc : PointEncoding G w)
-    (aReg bReg pointReg oracleWork : List Wire)
-    (qftAncilla : Wire)
-    (precision : ℕ)
-    (s : BasisState) : Prop where
-  a_width : aReg.length = precision
-  b_width : bReg.length = precision
-  a_zero : regValue aReg s = 0
-  b_zero : regValue bReg s = 0
-  point_zero : regValue pointReg s = (enc.encode (0 : G)).val
-  oracleWork_zero : Clean oracleWork s
-  ancilla_zero : s qftAncilla = false
-  ancilla_fresh :
-    qftAncilla ∉ aReg ++ bReg ++ pointReg ++ oracleWork
+open PhaseEstimation
 
 theorem orderFinding_correct
     {G : Type*} [AddCommGroup G]
@@ -26,15 +10,82 @@ theorem orderFinding_correct
     (enc : PointEncoding G w)
     (oracle : State →ₗ[ℂ] State)
     (P Q : G)
-    (aReg bReg pointReg oracleWork: List Wire)
+    (aReg bReg pointReg oracleWork : List Wire)
     (qftAncilla : Wire)
     (s : BasisState)
     (hsetting : ECDLPSetting P Q r d)
-    (hspec : ECDLPOracleSpec enc oracle P Q aReg bReg pointReg oracleWork)
-    (hsetup : OrderFindingSetup enc aReg bReg pointReg oracleWork qftAncilla precision s)
+    (hspec :
+      ECDLPOracleSpec enc oracle P Q
+        aReg bReg pointReg oracleWork)
+    (hsetup :
+      OrderFindingSetup enc aReg bReg pointReg oracleWork
+        qftAncilla precision s)
     (hprecision : r ≤ 2 ^ precision) :
-    ((r - 1 : ℝ) / r) * ((4 : ℝ) / Real.pi ^ 2) ^ 2 ≤
+    ((r - 1 : ℝ) / r) *
+        ((4 : ℝ) / Real.pi ^ 2) ^ 2 ≤
       orderFindingSuccessProbability
         r precision d hsetting.prime_order aReg bReg
         (orderFinding aReg bReg qftAncilla oracle (ket s)) := by
-  sorry
+  obtain ⟨aPeak, bPeak, hnearA, hnearB⟩ :=
+    exists_character_peak_family r precision d hsetting.prime_order
+
+  have haInj : Function.Injective aPeak :=
+    character_peak_first_injective
+      hsetting.prime_order hprecision aPeak hnearA
+
+  have hgood :
+      ∀ k : Fin r, k.val ≠ 0 →
+        orderFindingPostprocess r precision hsetting.prime_order
+            (aPeak k, bPeak k) =
+          some (d : ZMod r) := by
+    intro k hk
+    exact orderFindingPostprocess_of_character_peak
+      hsetting.prime_order hprecision k hk
+      (aPeak k) (bPeak k) (hnearA k) (hnearB k)
+
+  calc
+    ((r - 1 : ℝ) / r) *
+        ((4 : ℝ) / Real.pi ^ 2) ^ 2 =
+        ∑ k : Fin r,
+          if k.val = 0 then 0
+          else
+            (r : ℝ)⁻¹ *
+              ((4 : ℝ) / Real.pi ^ 2) ^ 2 := by
+      symm
+      exact nonzero_character_baseline_sum
+        hsetting.prime_order
+        (((4 : ℝ) / Real.pi ^ 2) ^ 2)
+    _ ≤
+        ∑ k : Fin r,
+          if k.val = 0 then 0
+          else
+            jointRegisterProbability
+              aReg bReg
+              (aPeak k).val (bPeak k).val
+              (orderFinding
+                aReg bReg qftAncilla oracle (ket s)) := by
+      apply Finset.sum_le_sum
+      intro k _
+      by_cases hk : k.val = 0
+      · simp [hk]
+      · simp only [hk, if_false]
+        exact jointRegisterProbability_character_peak_lower_bound
+          enc oracle P Q
+          aReg bReg pointReg oracleWork
+          qftAncilla s
+          hsetting hspec hsetup hprecision
+          k (aPeak k) (bPeak k)
+          (hnearA k) (hnearB k)
+    _ ≤
+        orderFindingSuccessProbability
+          r precision d hsetting.prime_order aReg bReg
+          (orderFinding
+            aReg bReg qftAncilla oracle (ket s)) := by
+      exact nonzero_character_peak_sum_le_success
+        hsetting.prime_order
+        aReg bReg
+        (orderFinding
+          aReg bReg qftAncilla oracle (ket s))
+        aPeak bPeak haInj hgood
+
+end ShorECDLP.Quantum.OrderFinding
