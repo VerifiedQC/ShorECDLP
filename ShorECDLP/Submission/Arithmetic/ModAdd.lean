@@ -41,7 +41,8 @@ modAdd(a, b; clean out, work):
 ## Specification
 
 `ModAddWiring` supplies the aligned columns, freshness conditions, and
-`2 * modulus <= 2^w`. For canonical inputs and a clean output/work area,
+`2 * modulus <= 2^w`. For a valid `modAddLayout`, canonical inputs, and a clean output/work
+area,
 
 ```text
 after := run(modAdd, before)

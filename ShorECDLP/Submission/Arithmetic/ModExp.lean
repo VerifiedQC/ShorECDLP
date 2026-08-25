@@ -38,7 +38,7 @@ modExp(base, exponent; clean out, work):
 
 ## Specification
 
-For a valid `Plan`, `1 < modulus`, canonical base/exponent inputs, and clean output/work,
+For a valid `Plan.layout`, `1 < modulus`, canonical base/exponent inputs, and clean output/work,
 
 ```text
 after := run(Plan.program, before)

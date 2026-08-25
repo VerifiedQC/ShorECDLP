@@ -34,7 +34,8 @@ modMul(lhs, rhs; clean out, work):
 
 ## Specification
 
-For a valid `Plan`, positive `modulus`, canonical inputs, and clean output/work registers,
+For a valid `Plan` and public `Plan.layout`, positive `modulus`, canonical inputs, and clean
+output/work registers,
 
 ```text
 after := run(Plan.program, before)

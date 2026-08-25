@@ -25,8 +25,8 @@ CleanBinaryContract(program, layout, modulus, op, cost)
 
 ## Specification
 
-For every canonical input state whose public output and private work registers start clean,
-let `after = run program before`. The contract requires
+For every valid `layout` and canonical input state whose public output and private work registers
+start clean, let `after = run program before`. The contract requires
 
 ```text
 value(layout.out, after)

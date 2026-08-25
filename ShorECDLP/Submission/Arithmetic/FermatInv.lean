@@ -16,7 +16,7 @@ already certified by `ModExpContract`:
 
 ```text
 program := supplied ModExp program
-layout.rhs := p - 2
+value(layout.rhs, before) := p - 2
 after := run program before
 ```
 

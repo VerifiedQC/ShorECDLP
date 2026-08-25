@@ -23,8 +23,8 @@ fullAdder(a, b, cin; clean s, clean co):
 
 ## Specification
 
-For fresh, appropriately distinct output wires `s` and `co`, if `after` is the result of
-running `fullAdder a b cin s co`, then
+If `s` and `co` start false and the five input/output wires are pairwise distinct, and `after`
+is the result of running `fullAdder a b cin s co`, then
 
 ```text
 after[s]  = a XOR b XOR cin
