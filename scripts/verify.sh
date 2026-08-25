@@ -49,11 +49,12 @@ import ShorECDLP
 #print axioms ShorECDLP.Quantum.iqft_wellFormed
 #print axioms ShorECDLP.Quantum.PhaseEstimation.phaseEstimation_correct_exact
 #print axioms ShorECDLP.Quantum.PhaseEstimation.phaseEstimation_correct_approx
+#print axioms ShorECDLP.Quantum.OrderFinding.orderFinding_correct
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 28 ]]; then
-  printf 'expected twenty-eight #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 29 ]]; then
+  printf 'expected twenty-nine #print axioms results\n' >&2
   exit 1
 fi
 

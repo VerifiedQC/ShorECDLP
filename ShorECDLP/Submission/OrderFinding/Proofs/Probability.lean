@@ -744,7 +744,6 @@ theorem jointRegisterProbability_character_peak_lower_bound
     (hsetup :
       OrderFindingSetup enc aReg bReg pointReg oracleWork
         qftAncilla precision s)
-    (_hprecision : r ≤ 2 ^ precision)
     (k : Fin r)
     (a b : Fin (2 ^ precision))
     (ha :

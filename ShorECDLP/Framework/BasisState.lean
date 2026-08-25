@@ -10,15 +10,20 @@ marker — that marker belongs on the *actions* (`Classical.run`, …), not on t
 index. Keeping one basis type is what makes the classical→quantum agreement lemma a clean
 restriction rather than a re-indexing.
 
-`upd` (wire update) and `regValue` (the number a register holds) live here because both
-layers use them: the quantum action of a classical gate on a basis ket is `|s⟩ ↦ |s[t ↦ …]⟩`,
-and register values are read the same way in either layer's correctness statements.
+`upd` (wire update), `regValue` / `writeReg` (register read/write), and `Clean` (an all-zero
+register) live here because both layers use them: the quantum action of a classical gate on a
+basis ket is `|s⟩ ↦ |s[t ↦ …]⟩`, and register values and cleanliness are interpreted identically
+in either layer's correctness statements.
 -/
 
 namespace ShorECDLP
 
 /-- A computational basis state: one bit per wire. Layer-neutral (see the module comment). -/
 abbrev BasisState := Nat → Bool
+
+/-- Every wire in `ws` holds `false` in the basis state `st`. -/
+def Clean (ws : List Wire) (st : BasisState) : Prop :=
+  ∀ w ∈ ws, st w = false
 
 /-- Update wire `i` to `b`, leaving every other wire unchanged. -/
 def upd (s : BasisState) (i : Nat) (b : Bool) : BasisState := fun j => if j = i then b else s j

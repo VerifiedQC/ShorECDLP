@@ -69,10 +69,6 @@ def Valid (layout : RegisterLayout) : Prop :=
 
 end RegisterLayout
 
-/-- All wires in `ws` hold `false` in the basis state `st`. -/
-def Clean (ws : List Wire) (st : BasisState) : Prop :=
-  ∀ w ∈ ws, st w = false
-
 /-- Two basis states agree pointwise on every wire in `ws`. -/
 def AgreesOn (ws : List Wire) (before after : BasisState) : Prop :=
   ∀ w ∈ ws, after w = before w

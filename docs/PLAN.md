@@ -6,10 +6,9 @@ submissions, together with **one super-naive Shor/ECDLP submission** that fills 
 Repo: https://github.com/VerifiedQC/ShorECDLP. Toolchain: `leanprover/lean4:v4.28.0`,
 Mathlib pinned. Curve: secp256k1 (Bitcoin).
 
-**Status snapshot.** This document reflects the root-reachable source on
-`main@21ca848` (the baseline used for this refresh). A `✓` below means the component is
-implemented, imported by `ShorECDLP.lean`, and covered by the repository verifier. “Planned”
-means that no implementation is present on that baseline; a partial milestone lists its exact
+**Status snapshot.** This document reflects the root-reachable source in this tree. A `✓` below
+means the component is implemented, imported by `ShorECDLP.lean`, and covered by the repository
+verifier. “Planned” means that no implementation is present; a partial milestone lists its exact
 landed and open boundaries.
 
 ---
@@ -68,8 +67,9 @@ Output: k.
         for i in 0..m-1:  if b_i : R ← R ⊞ [2^i]Q
     → 2m conditional point additions (each = one Fermat inversion + modular muls).
 4.  Measure and discard R.
-5.  QFT over 2^m on a, and on b.
-6.  Measure a, b → (α, β);  k = β·α⁻¹ (mod n) by continued-fraction rounding.
+5.  Inverse QFT over 2^m on a, and on b.
+6.  Measure a, b → (α, β); round each phase to the nearest numerator modulo the known n,
+    then recover k = β·α⁻¹ (mod n).
 7.  Verify Q == [k]P classically; repeat if needed.
 ```
 
@@ -82,11 +82,11 @@ Output: k.
   recurrence.
 - **Scalar multiplication**: classically-controlled binary double-and-add, `2m` additions.
 - **Oracle**: writes `[a]P ⊞ [b]Q` into `R`; `R` is then measured and discarded.
-- **QFT**: textbook coherent in-register QFT over `2^m` on each exponent register
-  (`H` + controlled-`P(.forward,k)`), with the inverse QFT defined by the generic
-  circuit adjoint.
-- **Recovery**: from `(α, β)`, `k = β·α⁻¹ (mod n)` via phase-estimation / continued-fraction
-  rounding.
+- **QFT**: textbook coherent in-register QFT over `2^m` (`H` +
+  controlled-`P(.forward,k)`), with the inverse QFT defined by the generic circuit adjoint and
+  applied to each exponent register in order finding.
+- **Recovery**: because the subgroup order is known, round both sampled phases to their nearest
+  numerators modulo `n`, then compute `k = β·α⁻¹ (mod n)` when `α ≠ 0`.
 
 ### 2.4 Current proof status
 
@@ -102,14 +102,17 @@ Landed on the status baseline:
 - **Partial M4.** The finite-support Hilbert-space semantics, classical-to-quantum agreement,
   inner-product preservation, exact QFT/IQFT circuits and proofs, generic exact/approximate
   phase estimation (under a supplied controlled-powers linear map), an abstract ECDLP-oracle
-  contract, and the algebraic hidden-subgroup recovery reduction are verified.
+  contract, the algebraic hidden-subgroup recovery reduction, and the conditional two-register
+  Fourier-sampling theorem are verified. Under the abstract oracle contract, the latter recovers
+  `d mod r` with one-shot probability at least `((r−1)/r)·(4/π²)²`.
 
 Still open before the repository can claim the target end-to-end result:
 
 - a concrete point encoding, mixed point-addition circuit, scalar multiplication, and ECDLP
   oracle, including a proved connection to the abstract oracle contract;
-- a primitive-gate implementation of the controlled-powers block, measurement/discard
-  semantics, and the ECDLP-specific two-register success/recovery argument;
+- a primitive-gate implementation of the generic controlled-powers block, measurement/discard
+  and repetition semantics, and composition of the conditional two-register theorem with the
+  concrete oracle and algebraic reduction;
 - the generator-order certificate needed by the concrete secp256k1 specialization;
 - the same-program end-to-end correctness and T-count theorem, `Framework.Contract` instance,
   and checked secp256k1 reference number.
@@ -127,7 +130,7 @@ ShorECDLP/
   Framework/
     InstructionSet.lean                    # [M0 ✓] gates, adjoints, wires, circuits, well-formedness
     CostModel.lean                         # [M0 ✓] curve-agnostic naive tCount
-    BasisState.lean                        # [M0 ✓] BasisState, register read/write
+    BasisState.lean                        # [M0 ✓] BasisState, register read/write, Clean
     Classical/
       Semantics.lean                       # [M1.0 ✓] basis-state run + HPFree
     Quantum/
@@ -163,6 +166,13 @@ ShorECDLP/
         Count.lean                         # [M4 ✓] tCount, WF, normalization
     OrderFinding/
       OracleSpec.lean                      # [M4 ✓] abstract inner-product-preserving ECDLP oracle
+      Defs.lean                            # [M4 ✓] two-register algorithm, postprocess, success mass
+      Main.lean                            # [M4 ✓] conditional one-shot ECDLP success theorem
+      Proofs/
+        CyclicEigenstates.lean  OracleKickback.lean
+        FourierSampling.lean   Probability.lean
+        Postprocess.lean        SuccessProbability.lean
+                                             # [M4 ✓] 2-D Fourier sampling and recovery proof chain
       PhaseEstimation/
         Defs.lean                          # [M4 ✓] generic semantic QPE map/contracts
         Main.lean                          # [M4 ✓] exact and ≥4/π² approximate theorems
@@ -172,7 +182,6 @@ ShorECDLP/
                                              # [M4 ✓] generic QPE proof chain
     Correctness/
       Reduction.lean                       # [M4 ✓] period invariance + exact recovery in ZMod order
-      SuccessBound.lean       (planned)    # [M4] ECDLP-specific sampling/recovery bound
       EndToEnd.lean           (planned)    # [M4] concrete oracle-to-ECDLP composition
     Instance.lean             (planned)    # [M5] fills Framework.Contract
     Reference.lean            (planned)    # [M5] checked secp256k1 resource number
@@ -200,9 +209,10 @@ a derived circuit. Measurement and ancilla live in `Framework/Quantum/`, never a
 - **M3 (open)** — scalar multiplication, the concrete oracle, and their end-to-end resource count
   remain.
 - **M4 (partial)** — quantum semantics/bridge, unitarity, coherent QFT/IQFT, abstract oracle
-  contract, generic exact/approximate phase estimation, and algebraic reduction are complete;
-  controlled-power circuit refinement, measurement, ECDLP-specific success, and end-to-end
-  composition remain.
+  contract, generic exact/approximate phase estimation, algebraic reduction, and conditional
+  two-register ECDLP sampling/recovery are complete; controlled-power circuit refinement,
+  measurement/repetition, concrete-oracle realization, generator-order specialization, and
+  end-to-end same-program composition remain.
 - **M5 (open)** — the framework contract instance and checked secp256k1 reference number remain.
 
 Each layer: `lake build` green, `#print axioms` free of `sorry` / `native_decide` / new
@@ -296,8 +306,14 @@ and its correctness goes through the quantum semantics, not the classical bridge
   result, and `phaseEstimation_correct_approx` supplies a nearest label within half a grid cell
   with probability at least `4/π²`. These theorems intentionally assume a supplied linear
   controlled-powers block satisfying `ControlledPowersOn`.
+- **Q7 ✓ — conditional two-register order finding.** `orderFinding_correct` decomposes the point
+  register into cyclic characters, proves the joint oracle kickback, applies the two inverse QFTs,
+  and combines peak rounding with division in `ZMod r`. Given `ECDLPOracleSpec`, it recovers the
+  hidden shift `d mod r` with one-shot probability at least `((r−1)/r)·(4/π²)²`. The theorem
+  marginalizes the unmeasured registers through `jointRegisterProbability`; it does not yet
+  provide a measurement circuit, a concrete secp256k1 oracle, or the final resource theorem.
 
 **Remaining M4 integration.** Refine that supplied controlled-powers map to a concrete
-primitive-gate circuit; add computational-basis measurement/discard semantics; connect the
-concrete two-register ECDLP oracle to `ECDLPOracleSpec`, phase estimation, and `Reduction`; then
-prove the ECDLP-specific repeated-sampling/recovery bound and the final same-program theorem.
+primitive-gate circuit; add computational-basis measurement/discard and repetition semantics;
+connect the concrete two-register ECDLP oracle to `ECDLPOracleSpec` and the conditional theorem
+to `Reduction`; then prove the final same-program correctness and resource theorem.

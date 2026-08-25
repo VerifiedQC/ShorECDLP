@@ -1,6 +1,5 @@
 import ShorECDLP.Framework.Quantum.InnerProduct
 import ShorECDLP.Framework.BasisState
-import ShorECDLP.Submission.Arithmetic.Contracts
 
 namespace ShorECDLP
 

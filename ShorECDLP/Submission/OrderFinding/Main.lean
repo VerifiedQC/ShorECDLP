@@ -1,5 +1,13 @@
 import ShorECDLP.Submission.OrderFinding.Proofs.SuccessProbability
 
+/-!
+# Abstract two-register ECDLP order finding
+
+This module proves a single-run lower bound for recovering the hidden shift `d` from a supplied
+`ECDLPOracleSpec`. It does not instantiate secp256k1 arithmetic, implement measurement/discard,
+or provide the final same-program resource theorem.
+-/
+
 namespace ShorECDLP.Quantum.OrderFinding
 
 open PhaseEstimation
@@ -73,7 +81,7 @@ theorem orderFinding_correct
           enc oracle P Q
           aReg bReg pointReg oracleWork
           qftAncilla s
-          hsetting hspec hsetup hprecision
+          hsetting hspec hsetup
           k (aPeak k) (bPeak k)
           (hnearA k) (hnearB k)
     _ ≤
