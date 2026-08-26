@@ -20,6 +20,8 @@ import ShorECDLP.Submission.Arithmetic.ModMul
 import ShorECDLP.Submission.Arithmetic.Primitives
 import ShorECDLP.Submission.Arithmetic.RippleAdder
 import ShorECDLP.Submission.EllipticCurve.Precompute
+import ShorECDLP.Submission.EllipticCurve.PointEncoding
+import ShorECDLP.Submission.EllipticCurve.PointRegister
 import ShorECDLP.Submission.EllipticCurve.Secp256k1
 import ShorECDLP.Submission.Correctness.Reduction
 import ShorECDLP.Submission.OrderFinding.OracleSpec
