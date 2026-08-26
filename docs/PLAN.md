@@ -7,7 +7,7 @@ Repo: https://github.com/VerifiedQC/ShorECDLP. Toolchain: `leanprover/lean4:v4.2
 Mathlib pinned. Curve: secp256k1 (Bitcoin).
 
 **Status snapshot.** This document reflects the root-reachable source in this tree, refreshed
-against code baseline `main@47980fa`. A `✓` below means the component is implemented, imported by
+against code baseline `main@ca058b7d`. A `✓` below means the component is implemented, imported by
 `ShorECDLP.lean`, and covered by the repository verifier. “Planned” means that no implementation
 is present; a partial milestone lists its exact landed and open boundaries.
 
@@ -96,25 +96,26 @@ Landed on the status baseline:
 
 - **Framework + M1 arithmetic.** Classical and quantum circuit semantics are defined, and the
   full reversible field-arithmetic chain is verified: ripple addition, modular addition,
-  schoolbook modular multiplication, square-and-multiply exponentiation, and Fermat inversion.
-  Correctness, cleanup/locality, `HPFree`, well-formedness, and exact `tCount` obligations refer
-  to the same circuit terms.
+  modular subtraction, clean zero/equality predicates, schoolbook modular multiplication,
+  square-and-multiply exponentiation, and Fermat inversion. The generic constructors now have a
+  concrete width-257 secp256k1 block allocation with exact numeric costs. Correctness,
+  cleanup/locality, `HPFree`, well-formedness, and exact `tCount` obligations refer to the same
+  circuit terms.
 - **Partial M2.** The canonical Mathlib secp256k1 affine point type and standard generator are
-  fixed, and generic `[2^i]P` tables have verified length, lookup, and doubling recurrence.
+  fixed; the injective 513-bit point encoding and its 256-to-257 register-padding interface are
+  root-reachable; and generic `[2^i]P` tables have verified length, lookup, and doubling recurrence.
 - **Partial M4.** The finite-support Hilbert-space semantics, classical-to-quantum agreement,
   inner-product preservation, exact QFT/IQFT circuits and proofs, generic exact/approximate
   phase estimation (under a supplied controlled-powers linear map), an abstract ECDLP-oracle
-  contract, the algebraic hidden-subgroup recovery reduction, and the conditional two-register
-  Fourier-sampling theorem are verified. Under the abstract oracle contract, the latter recovers
-  `d mod r` with one-shot probability at least `((r−1)/r)·(4/π²)²`.
+  contract, the generic circuit/classical-action-to-oracle refinement, the algebraic
+  hidden-subgroup recovery reduction, and the conditional two-register Fourier-sampling theorem
+  are verified. Under the abstract oracle contract, the latter recovers `d mod r` with one-shot
+  probability at least `((r−1)/r)·(4/π²)²`.
 
 Still open before the repository can claim the target end-to-end result:
 
-- a generic circuit-to-`ECDLPOracleSpec` refinement lemma, a concrete point encoding, and actual
-  width-257 secp256k1 arithmetic plan instances (the current arithmetic constructors are proved
-  for every valid supplied plan, but no final Bitcoin wire allocation is assembled);
-- reversible modular subtraction and clean equality/zero flags, followed by a total affine
-  point-addition circuit covering infinity, inverse-pair, doubling, and generic cases;
+- a circuit-free total affine formula and point-addition circuit covering infinity, inverse-pair,
+  doubling, and generic cases, built from the now-landed concrete arithmetic/encoding leaves;
 - controlled scalar addition over the verified doubling tables and one Bennett-clean ECDLP oracle
   with an exact classical whole-state theorem, then refinement to `ECDLPOracleSpec` and
   instantiation of the already-proved conditional `orderFinding_correct` theorem;
@@ -158,13 +159,14 @@ ShorECDLP/
       ModMul.lean                         # [M1.4 ✓] clean schoolbook modular multiplication
       ModExp.lean                         # [M1.5 ✓] clean square-and-multiply exponentiation
       FermatInv.lean                      # [M1.6 ✓] inversion from a ModExp contract
-      Secp256k1Instance.lean  (planned)    # concrete width-257 plans and wire allocation
-      ModSub.lean             (planned)    # clean modular subtraction
-      Predicates.lean         (planned)    # clean field equality/zero flags
+      Secp256k1Instance.lean              # [M1 ✓] concrete width-257 plans and wire allocation
+      ModSub.lean                         # [M1 ✓] clean modular subtraction
+      Predicates.lean                     # [M1 ✓] clean equality/zero flags
     EllipticCurve/
       Secp256k1.lean                      # [M2 ✓] canonical curve, affine Point, and generator
       Precompute.lean                     # [M2 ✓] generic verified [2^i]base tables
-      PointEncoding.lean      (planned)    # [M2] concrete injective point/register encoding
+      PointEncoding.lean                  # [M2 ✓] concrete injective 513-bit encoding
+      PointRegister.lean                  # [M2 ✓] slicing/write/padding interface
       AffineFormula.lean      (planned)    # [M2] total circuit-free group-law decision tree
       PointAdd.lean           (planned)    # [M2] quantum point + classical constant
       ScalarMul.lean          (planned)    # [M3] controlled double-and-add
@@ -178,7 +180,7 @@ ShorECDLP/
         Count.lean                         # [M4 ✓] tCount, WF, normalization
     OrderFinding/
       OracleSpec.lean                      # [M4 ✓] abstract inner-product-preserving ECDLP oracle
-      OracleRefinement.lean   (planned)    # circuit/classical-action → ECDLPOracleSpec
+      OracleRefinement.lean               # [M4 ✓] circuit/classical-action → ECDLPOracleSpec
       Defs.lean                            # [M4 ✓] two-register algorithm, postprocess, success mass
       Main.lean                            # [M4 ✓] conditional one-shot ECDLP success theorem
       Proofs/
@@ -217,14 +219,16 @@ a derived circuit. Measurement and ancilla live in `Framework/Quantum/`, never a
     - **M1.4 ✓** clean schoolbook modular multiplier + composable `HPFree` guard
     - **M1.5 ✓** clean modular exponentiation (square-and-multiply)
     - **M1.6 ✓** Fermat inversion from `ModExpContract`, discharged against `fermat_inv`
+    - **Concrete instance ✓** clean subtraction/predicates plus an actual width-257 secp256k1
+      adder wiring, multiplication plan, exponentiation plan, and same-program inversion theorem
 - **M2 (partial)** — canonical curve/generator spec and generic precompute tables are complete.
-  Concrete point encoding, width-257 field instances/glue, a total affine formula, and the mixed
-  point-addition circuit remain.
+  The concrete injective point encoding and 256-to-257 register-padding interface are complete;
+  a total affine formula and the mixed point-addition circuit remain.
 - **M3 (open)** — controlled scalar addition, the concrete clean oracle, its classical whole-state
   theorem, and the aggregate resource count remain.
 - **M4 (partial)** — quantum semantics/bridge, unitarity, coherent QFT/IQFT, abstract oracle
-  contract, generic exact/approximate phase estimation, algebraic reduction, and conditional
-  two-register ECDLP sampling/recovery are complete; the circuit-to-oracle refinement lemma,
+  contract, generic exact/approximate phase estimation, algebraic reduction, conditional
+  two-register ECDLP sampling/recovery, and the circuit-to-oracle refinement lemma are complete;
   concrete-oracle instantiation, measurement/repetition, generator-order specialization, and
   end-to-end same-program composition remain. Refining generic QPE's supplied
   `ControlledPowersOn` map is optional library work, not a dependency of the landed direct
@@ -243,10 +247,10 @@ axioms, and `counted` bound to the same `program` term as `correct`.
   and the coherent-QFT count; future scalar-multiplication disclosures belong with that future
   circuit.
 - The register width `m` exceeds `⌈log₂ n⌉` by the phase-estimation precision padding.
-- The reviewed point-encoding design uses 513 public bits: `O ↦ 0` and finite `(x,y) ↦
-  1 + 2*x.val + 2^257*y.val`. It is not merged in this snapshot. When it lands, the point circuit
-  must explicitly pad each 256-bit coordinate into 257-bit arithmetic scratch, because the
-  current generic modular adder needs `2*p ≤ 2^width` and therefore uses `width = 257`.
+- The landed point encoding uses 513 public bits: `O ↦ 0` and finite `(x,y) ↦
+  `1 + 2*x.val + 2^257*y.val`. `PointRegister.lean` proves the explicit 256-to-257 zero-padding
+  interface needed by the concrete field circuits, whose modular adder uses `width = 257` because
+  it requires `2*p ≤ 2^width`.
 - Primality of `p` and, where recovery needs field inversion, of `order` are visible
   `[Fact (Nat.Prime ...)]` hypotheses, not axioms. The stronger claim that `G` has order `order`
   is not yet proved.
@@ -365,23 +369,22 @@ registers.
 
 ### 8.1 Dependency order
 
-1. **Circuit-to-oracle refinement (small independent leaf).** Prove an
-   `ECDLPOracleSpec.ofCircuit`-style theorem from point width/global non-aliasing,
+1. **Circuit-to-oracle refinement ✓.** `ECDLPOracleSpec.ofCircuit` is proved from point
+   width/global non-aliasing,
    `Classical.HPFree oracleCircuit`, `CircuitWellFormed oracleCircuit`, and the classical equation
    above. Its two substantive fields then follow from existing framework theorems:
    `run_ket_agrees_classical` supplies `onKet`, while `run_preservesInner` supplies
    `preservesInner`. This module stays independent of concrete arithmetic.
 
-2. **Point representation.** Land the previously reviewed 513-bit affine encoding with raw-code
-   validity and injectivity. Add register-slicing, `writeReg`, and
-   256-to-257 zero-padding lemmas needed by the arithmetic implementation. Until this file is
-   merged and root-reachable it remains planned, regardless of its earlier isolated review.
+2. **Point representation ✓.** The 513-bit affine encoding with raw-code validity and injectivity
+   is root-reachable. `PointRegister.lean` supplies the register-slicing, `writeReg`, and
+   256-to-257 zero-padding lemmas needed by the arithmetic implementation.
 
-3. **Concrete field leaves.** Allocate actual width-257 secp256k1 `ModAddWiring`, `ModMul.Plan`,
-   and `ModExp.Plan` values and prove their validity. Package Fermat inversion from the exact
-   instantiated exponentiation program. Add clean reversible modular subtraction and equality/
-   zero predicates; these are prerequisites for slope numerators, exceptional-case branching,
-   and the nonzero premise of `FermatInv.correct`.
+3. **Concrete field leaves ✓.** The tree contains actual width-257 secp256k1 `ModAddWiring`,
+   `ModMul.Plan`, and `ModExp.Plan` values with proved validity and exact numeric costs. Fermat
+   inversion is specialized from that exact exponentiation program. Clean modular subtraction and
+   equality/zero predicates are also root-reachable; these supply slope numerators,
+   exceptional-case tests, and the nonzero premise of `FermatInv.correct`.
 
 4. **Circuit-free total affine specification.** Prove that one explicit decision tree agrees
    with Mathlib point addition for `R=O`, `C=O`, `R=-C`, `R=C` (doubling), and `x_R ≠ x_C`
@@ -410,18 +413,16 @@ registers.
    `addOrderOf Secp256k1.G = order`. Operational measurement/repetition and the final M5 resource
    contract remain later layers and must not be implied by this conditional specialization.
 
-The critical path is therefore:
+The remaining critical path is therefore:
 
 ```text
-width-257 field instances
-  → subtraction + equality/zero flags
-  → total affine formula + clean PointAdd
+total affine formula + clean PointAdd
   → controlled scalar folds
   → classical ECDLP oracle equation
   → ECDLPOracleSpec refinement
   → instantiate orderFinding_correct
 ```
 
-The generic refinement lemma and point encoding can land independently while the concrete field
-instances are being built. Each item remains a separate, reviewable PR with root reachability,
-warning-fatal build, targeted axiom disclosure, and exhaustive axiom audit.
+The first three leaves above are complete and root-reachable. The affine formula/PointAdd layer is
+next; each remaining item stays a separate, reviewable PR with root reachability, warning-fatal
+build, targeted axiom disclosure, and exhaustive axiom audit.

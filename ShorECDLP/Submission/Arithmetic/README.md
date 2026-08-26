@@ -3,7 +3,7 @@
 This directory contains the verified reversible field-arithmetic stack used by the
 secp256k1 submission. Registers are lists of wire indices in least-significant-bit-first
 order. The arithmetic circuits are deliberately textbook and generic in the modulus;
-only the final Fermat-inversion theorem fixes the modulus to secp256k1's field prime `p`.
+`Secp256k1Instance.lean` supplies their concrete 257-bit allocation at the field prime `p`.
 
 Every composite operation is proved against the classical basis-state semantics and
 packages correctness, locality, T-count, H/P-freedom, and gate well-formedness for the
@@ -37,6 +37,7 @@ flowchart LR
   ModMul["ModMul.lean"]
   ModExp["ModExp.lean"]
   FermatInv["FermatInv.lean"]
+  Instance["Secp256k1Instance.lean"]
 
   Semantics --> Adder
   CostModel --> Adder
@@ -54,6 +55,10 @@ flowchart LR
   Primitives --> ModExp
   Contracts --> FermatInv
   Field --> FermatInv
+  ModAdd --> Instance
+  ModMul --> Instance
+  ModExp --> Instance
+  FermatInv --> Instance
 ```
 
 The mathematical construction has an additional contract-composition DAG. These arrows
@@ -66,10 +71,15 @@ flowchart LR
   Mul["ModMul.Plan.modMul_contract"]
   Exp["ModExp.Plan.modExp_contract"]
   Inv["FermatInv.correct"]
+  Instance["Secp256k1Instance.secpProgram"]
 
   Add -->|ModAddContract| Mul
   Mul -->|ModMulContract| Exp
   Exp -->|ModExpContract at p, exponent p - 2| Inv
+  Add -->|fixed 257-bit wiring| Instance
+  Mul -->|fixed 257-bit plan| Instance
+  Exp -->|fixed 257-bit schedule| Instance
+  Inv -->|same-program specialization| Instance
 ```
 
 ## Files and public boundaries
@@ -86,6 +96,7 @@ flowchart LR
 | [`ModMul.lean`](ModMul.lean) | Bennett-clean schoolbook modular multiplication built from certified modular-addition calls. | `ModMul.Plan.program`, `ModMul.Plan.modMul_contract` |
 | [`ModExp.lean`](ModExp.lean) | Bennett-clean, LSB-first square-and-multiply built from certified modular-multiplication calls. | `ModExp.Plan.program`, `ModExp.Plan.modExp_contract`, `ModExp.Plan.modExp_contract_uniform` |
 | [`FermatInv.lean`](FermatInv.lean) | Thin field-specific correctness closure: exponentiation by `p - 2` computes inversion in `Fp`. It defines no second circuit. | `FermatInv.correct` |
+| [`Secp256k1Instance.lean`](Secp256k1Instance.lean) | Concrete block allocation for the width-257 secp256k1 modular adder, multiplier, exponentiator, and Fermat inversion specialization. | `Secp256k1Instance.secpAddWiring`, `secpMulPlan`, `secpPlan`, `secp_modExp_contract`, `secp_fermat_inverse` |
 
 ## Contract discipline
 
@@ -113,7 +124,9 @@ reverse. This restores all private work without exposing the lower-level impleme
 4. [`Predicates.lean`](Predicates.lean) for clean reversible zero/equality flags.
 5. [`ModAdd.lean`](ModAdd.lean), [`ModSub.lean`](ModSub.lean), [`ModMul.lean`](ModMul.lean), and
    [`ModExp.lean`](ModExp.lean) for the modular construction chain.
-6. [`FermatInv.lean`](FermatInv.lean) for the secp256k1 field-inversion closure.
+6. [`FermatInv.lean`](FermatInv.lean) for the generic secp256k1 field-inversion closure.
+7. [`Secp256k1Instance.lean`](Secp256k1Instance.lean) for the concrete 257-bit plans, allocation,
+   exact numeric costs, and same-program inversion specialization.
 
 Run the complete repository proof gate from the repository root with:
 
