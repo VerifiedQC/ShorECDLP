@@ -23,5 +23,6 @@ import ShorECDLP.Submission.EllipticCurve.Precompute
 import ShorECDLP.Submission.EllipticCurve.Secp256k1
 import ShorECDLP.Submission.Correctness.Reduction
 import ShorECDLP.Submission.OrderFinding.OracleSpec
+import ShorECDLP.Submission.OrderFinding.OracleRefinement
 import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Main
 import ShorECDLP.Submission.OrderFinding.Main
