@@ -32,6 +32,10 @@ import ShorECDLP
 #print axioms ShorECDLP.FermatInv.correct
 #print axioms ShorECDLP.Precompute.doublingTable_getElem
 #print axioms ShorECDLP.Precompute.doublingTable_adjacent
+#print axioms ShorECDLP.Secp256k1.encode_injective
+#print axioms ShorECDLP.Secp256k1.validCode_iff_exists_point
+#print axioms ShorECDLP.Secp256k1.PointRegister.slices_write_some
+#print axioms ShorECDLP.Secp256k1.PointRegister.regValue_padCoordinate_of_clean
 #print axioms ShorECDLP.Secp256k1.curve_discriminant_ne_zero
 #print axioms ShorECDLP.Secp256k1.generator_equation
 #print axioms ShorECDLP.Secp256k1.G_ne_zero
@@ -54,8 +58,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 30 ]]; then
-  printf 'expected thirty #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 34 ]]; then
+  printf 'expected thirty-four #print axioms results\n' >&2
   exit 1
 fi
 
