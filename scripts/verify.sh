@@ -24,6 +24,9 @@ import ShorECDLP
 #print axioms ShorECDLP.modAdd_contract
 #print axioms ShorECDLP.ModAddSupport.modAdd_usesOnly
 #print axioms ShorECDLP.ModAddSupport.modAddCompute_usesOnly
+#print axioms ShorECDLP.modSub_contract
+#print axioms ShorECDLP.modSub_usesOnly
+#print axioms ShorECDLP.modSubCompute_usesOnly
 #print axioms ShorECDLP.ModMul.Plan.modMul_contract
 #print axioms ShorECDLP.ModExp.Plan.modExp_contract
 #print axioms ShorECDLP.ModExp.Plan.modExp_contract_uniform
@@ -62,8 +65,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 38 ]]; then
-  printf 'expected thirty-eight #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 41 ]]; then
+  printf 'expected forty-one #print axioms results\n' >&2
   exit 1
 fi
 

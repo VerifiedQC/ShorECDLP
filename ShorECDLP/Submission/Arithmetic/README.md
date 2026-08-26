@@ -33,6 +33,7 @@ flowchart LR
   Primitives["Primitives.lean"]
   Predicates["Predicates.lean"]
   ModAdd["ModAdd.lean"]
+  ModSub["ModSub.lean"]
   ModMul["ModMul.lean"]
   ModExp["ModExp.lean"]
   FermatInv["FermatInv.lean"]
@@ -48,6 +49,7 @@ flowchart LR
   Contracts --> ModAdd
   Ripple --> ModAdd
   Primitives --> ModAdd
+  ModAdd --> ModSub
   Primitives --> ModMul
   Primitives --> ModExp
   Contracts --> FermatInv
@@ -74,12 +76,13 @@ flowchart LR
 
 | File | Role | Main public boundary |
 | --- | --- | --- |
-| [`Contracts.lean`](Contracts.lean) | Defines LSB-first public register layouts and the clean out-of-place interface shared by modular operations. | `RegisterLayout`, `CleanBinaryContract`, `ModAddContract`, `ModMulContract`, `ModExpContract` |
+| [`Contracts.lean`](Contracts.lean) | Defines LSB-first public register layouts and the clean out-of-place interface shared by modular operations. | `RegisterLayout`, `CleanBinaryContract`, `ModAddContract`, `ModSubContract`, `ModMulContract`, `ModExpContract` |
 | [`Adder.lean`](Adder.lean) | One-bit reversible full-adder cell over `CX` and `CCX`. | `fullAdder`, `fullAdder_sum`, `fullAdder_carry`, `fullAdder_tCount` |
 | [`RippleAdder.lean`](RippleAdder.lean) | Chains full-adder cells into an n-bit ripple-carry adder. | `ripple`, `ripple_correct`, `ripple_tCount`, `ripple_HPFree`, `ripple_wellFormed` |
 | [`Primitives.lean`](Primitives.lean) | Reusable implementation-neutral leaves: constant loading, controlled selection, register copying, support lemmas, and reverse-circuit cancellation. | `loadConst`, `selectPoint`, `copyReg`, `Arithmetic.run_reverse_cancel` |
 | [`Predicates.lean`](Predicates.lean) | Bennett-clean reversible zero and equality flags over `X`, `CX`, and `CCX`. | `zeroFlag`, `zeroFlag_correct`, `equalFlag`, `equalFlag_correct` |
 | [`ModAdd.lean`](ModAdd.lean) | Adds two registers modulo an arbitrary positive modulus using ripple addition, one conditional reduction, and uncomputation. | `modAdd`, `modAdd_contract` with exact cost `91 * width` |
+| [`ModSub.lean`](ModSub.lean) | Subtracts two registers modulo an arbitrary positive modulus using two's-complement ripple subtraction, conditional correction, and uncomputation. | `modSub`, `modSub_contract` with exact cost `91 * width` |
 | [`ModMul.lean`](ModMul.lean) | Bennett-clean schoolbook modular multiplication built from certified modular-addition calls. | `ModMul.Plan.program`, `ModMul.Plan.modMul_contract` |
 | [`ModExp.lean`](ModExp.lean) | Bennett-clean, LSB-first square-and-multiply built from certified modular-multiplication calls. | `ModExp.Plan.program`, `ModExp.Plan.modExp_contract`, `ModExp.Plan.modExp_contract_uniform` |
 | [`FermatInv.lean`](FermatInv.lean) | Thin field-specific correctness closure: exponentiation by `p - 2` computes inversion in `Fp`. It defines no second circuit. | `FermatInv.correct` |
@@ -108,7 +111,7 @@ reverse. This restores all private work without exposing the lower-level impleme
    arithmetic base.
 3. [`Primitives.lean`](Primitives.lean) for the shared reversible-circuit tools.
 4. [`Predicates.lean`](Predicates.lean) for clean reversible zero/equality flags.
-5. [`ModAdd.lean`](ModAdd.lean), [`ModMul.lean`](ModMul.lean), and
+5. [`ModAdd.lean`](ModAdd.lean), [`ModSub.lean`](ModSub.lean), [`ModMul.lean`](ModMul.lean), and
    [`ModExp.lean`](ModExp.lean) for the modular construction chain.
 6. [`FermatInv.lean`](FermatInv.lean) for the secp256k1 field-inversion closure.
 

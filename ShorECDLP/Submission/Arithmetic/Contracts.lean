@@ -39,9 +39,10 @@ HPFree(program)
 layout.Valid -> CircuitWellFormed(program)
 ```
 
-`ModAddContract`, `ModMulContract`, and `ModExpContract` specialize `op` to addition,
-multiplication, and exponentiation. The declarations required to state the contract come first;
-the generic outside-wire preservation proof and the contract structure follow.
+`ModAddContract`, `ModSubContract`, `ModMulContract`, and `ModExpContract` specialize `op` to
+addition, subtraction, multiplication, and exponentiation. The declarations required to state
+the contract come first; the generic outside-wire preservation proof and the contract structure
+follow.
 -/
 
 namespace ShorECDLP
@@ -146,6 +147,12 @@ structure CleanBinaryContract (program : Circuit) (layout : RegisterLayout)
 abbrev ModAddContract (program : Circuit) (layout : RegisterLayout)
     (modulus cost : Nat) : Prop :=
   CleanBinaryContract program layout modulus Nat.add cost
+
+/-- Contract for clean out-of-place modular subtraction.  Canonical inputs make
+`lhs + modulus - rhs` ordinary (non-truncated) subtraction before the final reduction. -/
+abbrev ModSubContract (program : Circuit) (layout : RegisterLayout)
+    (modulus cost : Nat) : Prop :=
+  CleanBinaryContract program layout modulus (fun lhs rhs => lhs + modulus - rhs) cost
 
 /-- Contract for clean out-of-place modular multiplication. -/
 abbrev ModMulContract (program : Circuit) (layout : RegisterLayout)
