@@ -30,6 +30,10 @@ import ShorECDLP
 #print axioms ShorECDLP.ModExp.Schedule.forward_correct
 #print axioms ShorECDLP.ModExp.Plan.program_tCount_eq_of_uniform
 #print axioms ShorECDLP.FermatInv.correct
+#print axioms ShorECDLP.Arithmetic.zeroFlag_correct
+#print axioms ShorECDLP.Arithmetic.zeroFlag_tCount
+#print axioms ShorECDLP.Arithmetic.equalFlag_correct
+#print axioms ShorECDLP.Arithmetic.equalFlag_tCount
 #print axioms ShorECDLP.Precompute.doublingTable_getElem
 #print axioms ShorECDLP.Precompute.doublingTable_adjacent
 #print axioms ShorECDLP.Secp256k1.encode_injective
@@ -58,8 +62,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 34 ]]; then
-  printf 'expected thirty-four #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 38 ]]; then
+  printf 'expected thirty-eight #print axioms results\n' >&2
   exit 1
 fi
 
