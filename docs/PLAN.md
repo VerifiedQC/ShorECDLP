@@ -6,10 +6,10 @@ submissions, together with **one super-naive Shor/ECDLP submission** that fills 
 Repo: https://github.com/VerifiedQC/ShorECDLP. Toolchain: `leanprover/lean4:v4.28.0`,
 Mathlib pinned. Curve: secp256k1 (Bitcoin).
 
-**Status snapshot.** This document reflects the root-reachable source in this tree. A `✓` below
-means the component is implemented, imported by `ShorECDLP.lean`, and covered by the repository
-verifier. “Planned” means that no implementation is present; a partial milestone lists its exact
-landed and open boundaries.
+**Status snapshot.** This document reflects the root-reachable source in this tree, refreshed
+against code baseline `main@47980fa`. A `✓` below means the component is implemented, imported by
+`ShorECDLP.lean`, and covered by the repository verifier. “Planned” means that no implementation
+is present; a partial milestone lists its exact landed and open boundaries.
 
 ---
 
@@ -66,7 +66,9 @@ Output: k.
         for i in 0..m-1:  if a_i : R ← R ⊞ [2^i]P
         for i in 0..m-1:  if b_i : R ← R ⊞ [2^i]Q
     → 2m conditional point additions (each = one Fermat inversion + modular muls).
-4.  Measure and discard R.
+4.  Leave R unobserved (equivalently, discard it after the oracle). The current theorem
+    marginalizes over R in the probability calculation; operational measurement/discard
+    semantics are still planned.
 5.  Inverse QFT over 2^m on a, and on b.
 6.  Measure a, b → (α, β); round each phase to the nearest numerator modulo the known n,
     then recover k = β·α⁻¹ (mod n).
@@ -108,11 +110,16 @@ Landed on the status baseline:
 
 Still open before the repository can claim the target end-to-end result:
 
-- a concrete point encoding, mixed point-addition circuit, scalar multiplication, and ECDLP
-  oracle, including a proved connection to the abstract oracle contract;
-- a primitive-gate implementation of the generic controlled-powers block, measurement/discard
-  and repetition semantics, and composition of the conditional two-register theorem with the
-  concrete oracle and algebraic reduction;
+- a generic circuit-to-`ECDLPOracleSpec` refinement lemma, a concrete point encoding, and actual
+  width-257 secp256k1 arithmetic plan instances (the current arithmetic constructors are proved
+  for every valid supplied plan, but no final Bitcoin wire allocation is assembled);
+- reversible modular subtraction and clean equality/zero flags, followed by a total affine
+  point-addition circuit covering infinity, inverse-pair, doubling, and generic cases;
+- controlled scalar addition over the verified doubling tables and one Bennett-clean ECDLP oracle
+  with an exact classical whole-state theorem, then refinement to `ECDLPOracleSpec` and
+  instantiation of the already-proved conditional `orderFinding_correct` theorem;
+- operational measurement/discard and repetition semantics for turning the existing marginal
+  probability statement into an executable sampling contract;
 - the generator-order certificate needed by the concrete secp256k1 specialization;
 - the same-program end-to-end correctness and T-count theorem, `Framework.Contract` instance,
   and checked secp256k1 reference number.
@@ -151,10 +158,14 @@ ShorECDLP/
       ModMul.lean                         # [M1.4 ✓] clean schoolbook modular multiplication
       ModExp.lean                         # [M1.5 ✓] clean square-and-multiply exponentiation
       FermatInv.lean                      # [M1.6 ✓] inversion from a ModExp contract
+      Secp256k1Instance.lean  (planned)    # concrete width-257 plans and wire allocation
+      ModSub.lean             (planned)    # clean modular subtraction
+      Predicates.lean         (planned)    # clean field equality/zero flags
     EllipticCurve/
       Secp256k1.lean                      # [M2 ✓] canonical curve, affine Point, and generator
       Precompute.lean                     # [M2 ✓] generic verified [2^i]base tables
       PointEncoding.lean      (planned)    # [M2] concrete injective point/register encoding
+      AffineFormula.lean      (planned)    # [M2] total circuit-free group-law decision tree
       PointAdd.lean           (planned)    # [M2] quantum point + classical constant
       ScalarMul.lean          (planned)    # [M3] controlled double-and-add
       ECDLPOracle.lean        (planned)    # [M3] concrete U_f
@@ -167,6 +178,7 @@ ShorECDLP/
         Count.lean                         # [M4 ✓] tCount, WF, normalization
     OrderFinding/
       OracleSpec.lean                      # [M4 ✓] abstract inner-product-preserving ECDLP oracle
+      OracleRefinement.lean   (planned)    # circuit/classical-action → ECDLPOracleSpec
       Defs.lean                            # [M4 ✓] two-register algorithm, postprocess, success mass
       Main.lean                            # [M4 ✓] conditional one-shot ECDLP success theorem
       Proofs/
@@ -183,7 +195,7 @@ ShorECDLP/
                                              # [M4 ✓] generic QPE proof chain
     Correctness/
       Reduction.lean                       # [M4 ✓] period invariance + exact recovery in ZMod order
-      EndToEnd.lean           (planned)    # [M4] concrete oracle-to-ECDLP composition
+      EndToEnd.lean           (planned)    # [M4] concrete-oracle instantiation and composition
     Instance.lean             (planned)    # [M5] fills Framework.Contract
     Reference.lean            (planned)    # [M5] checked secp256k1 resource number
 ```
@@ -205,15 +217,18 @@ a derived circuit. Measurement and ancilla live in `Framework/Quantum/`, never a
     - **M1.4 ✓** clean schoolbook modular multiplier + composable `HPFree` guard
     - **M1.5 ✓** clean modular exponentiation (square-and-multiply)
     - **M1.6 ✓** Fermat inversion from `ModExpContract`, discharged against `fermat_inv`
-- **M2 (partial)** — canonical curve/generator spec and generic precompute tables are complete;
-  concrete point encoding and the mixed point-addition circuit remain.
-- **M3 (open)** — scalar multiplication, the concrete oracle, and their end-to-end resource count
-  remain.
+- **M2 (partial)** — canonical curve/generator spec and generic precompute tables are complete.
+  Concrete point encoding, width-257 field instances/glue, a total affine formula, and the mixed
+  point-addition circuit remain.
+- **M3 (open)** — controlled scalar addition, the concrete clean oracle, its classical whole-state
+  theorem, and the aggregate resource count remain.
 - **M4 (partial)** — quantum semantics/bridge, unitarity, coherent QFT/IQFT, abstract oracle
   contract, generic exact/approximate phase estimation, algebraic reduction, and conditional
-  two-register ECDLP sampling/recovery are complete; controlled-power circuit refinement,
-  measurement/repetition, concrete-oracle realization, generator-order specialization, and
-  end-to-end same-program composition remain.
+  two-register ECDLP sampling/recovery are complete; the circuit-to-oracle refinement lemma,
+  concrete-oracle instantiation, measurement/repetition, generator-order specialization, and
+  end-to-end same-program composition remain. Refining generic QPE's supplied
+  `ControlledPowersOn` map is optional library work, not a dependency of the landed direct
+  two-register order-finding theorem.
 - **M5 (open)** — the framework contract instance and checked secp256k1 reference number remain.
 
 Each layer: `lake build` green, `#print axioms` free of `sorry` / `native_decide` / new
@@ -228,6 +243,10 @@ axioms, and `counted` bound to the same `program` term as `correct`.
   and the coherent-QFT count; future scalar-multiplication disclosures belong with that future
   circuit.
 - The register width `m` exceeds `⌈log₂ n⌉` by the phase-estimation precision padding.
+- The reviewed point-encoding design uses 513 public bits: `O ↦ 0` and finite `(x,y) ↦
+  1 + 2*x.val + 2^257*y.val`. It is not merged in this snapshot. When it lands, the point circuit
+  must explicitly pad each 256-bit coordinate into 257-bit arithmetic scratch, because the
+  current generic modular adder needs `2*p ≤ 2^width` and therefore uses `width = 257`.
 - Primality of `p` and, where recovery needs field inversion, of `order` are visible
   `[Fact (Nat.Prime ...)]` hypotheses, not axioms. The stronger claim that `G` has order `order`
   is not yet proved.
@@ -314,7 +333,95 @@ and its correctness goes through the quantum semantics, not the classical bridge
   marginalizes the unmeasured registers through `jointRegisterProbability`; it does not yet
   provide a measurement circuit, a concrete secp256k1 oracle, or the final resource theorem.
 
-**Remaining M4 integration.** Refine that supplied controlled-powers map to a concrete
-primitive-gate circuit; add computational-basis measurement/discard and repetition semantics;
-connect the concrete two-register ECDLP oracle to `ECDLPOracleSpec` and the conditional theorem
-to `Reduction`; then prove the final same-program correctness and resource theorem.
+**Remaining M4 integration.** The concrete ECDLP path no longer needs a new generic
+controlled-powers theorem: `orderFinding_correct` directly consumes one joint oracle. Build a
+classical reversible oracle circuit, refine it to `ECDLPOracleSpec` through the H/P-free
+classical-to-quantum bridge and the well-formedness/isometry theorem, instantiate the conditional
+two-register result, and then add computational-basis measurement/discard and repetition
+semantics plus the final same-program correctness/resource theorem.
+
+---
+
+## 8. Concrete oracle construction roadmap
+
+`orderFinding_correct` should remain unchanged. It already proves the difficult 2-D
+Fourier-sampling and recovery statement for any linear map satisfying `ECDLPOracleSpec`. The
+concrete side must supply a single exact classical action:
+
+```text
+regValue aReg s = a
+regValue bReg s = b
+regValue pointReg s = (enc.encode R).val
+Clean oracleWork s
+----------------------------------------------------------------
+Classical.run oracleCircuit s
+  = writeReg pointReg
+      (enc.encode (R + ecdlpFunction P Q a b)).val s
+```
+
+The whole-state equality is intentional: it preserves the exponent registers and every outside
+wire and restores `oracleWork` exactly, so no garbage remains entangled with the Fourier
+registers.
+
+### 8.1 Dependency order
+
+1. **Circuit-to-oracle refinement (small independent leaf).** Prove an
+   `ECDLPOracleSpec.ofCircuit`-style theorem from point width/global non-aliasing,
+   `Classical.HPFree oracleCircuit`, `CircuitWellFormed oracleCircuit`, and the classical equation
+   above. Its two substantive fields then follow from existing framework theorems:
+   `run_ket_agrees_classical` supplies `onKet`, while `run_preservesInner` supplies
+   `preservesInner`. This module stays independent of concrete arithmetic.
+
+2. **Point representation.** Land the previously reviewed 513-bit affine encoding with raw-code
+   validity and injectivity. Add register-slicing, `writeReg`, and
+   256-to-257 zero-padding lemmas needed by the arithmetic implementation. Until this file is
+   merged and root-reachable it remains planned, regardless of its earlier isolated review.
+
+3. **Concrete field leaves.** Allocate actual width-257 secp256k1 `ModAddWiring`, `ModMul.Plan`,
+   and `ModExp.Plan` values and prove their validity. Package Fermat inversion from the exact
+   instantiated exponentiation program. Add clean reversible modular subtraction and equality/
+   zero predicates; these are prerequisites for slope numerators, exceptional-case branching,
+   and the nonzero premise of `FermatInv.correct`.
+
+4. **Circuit-free total affine specification.** Prove that one explicit decision tree agrees
+   with Mathlib point addition for `R=O`, `C=O`, `R=-C`, `R=C` (doubling), and `x_R ≠ x_C`
+   (generic addition). Every branch that invokes inversion first proves its denominator nonzero.
+   Keeping this theorem free of wires separates elliptic-curve mathematics from reversible
+   layout bookkeeping.
+
+5. **Clean point translation.** First certify an out-of-place compute/XOR embedding for
+   `R + C`, including functional correctness, cleanup/locality, exact `tCount`, H/P-freedom, and
+   well-formedness on the same circuit. Then build the in-place and controlled translations by an
+   explicit inverse/Bennett construction. Do not control every gate directly: controlling `CCX`
+   would leave the primitive set. Compute the candidate and reuse the landed `selectBit`/
+   `selectPoint` primitives for reversible selection and history. Behavior on invalid point codes
+   may remain unspecified, but the gate circuit is a total permutation on all bit strings.
+
+6. **Scalar folds and the joint oracle.** Fold controlled translations over the little-endian
+   scalar bits and `Precompute.doublingTable`; prove by induction that the accumulator becomes
+   `R + [a]P`. Repeat for `b,Q`, uncompute the complete history, and expose the classical
+   whole-state oracle theorem displayed above together with exact cost, `HPFree`, and
+   well-formedness.
+
+7. **Refinement and Bitcoin specialization.** Apply step 1 to obtain
+   `ECDLPOracleSpec enc (Quantum.run oracleCircuit) ...`, then instantiate
+   `orderFinding_correct`; no new Fourier or success-bound proof is needed. A Bitcoin wrapper
+   additionally needs visible proofs or hypotheses for `Nat.Prime order` and
+   `addOrderOf Secp256k1.G = order`. Operational measurement/repetition and the final M5 resource
+   contract remain later layers and must not be implied by this conditional specialization.
+
+The critical path is therefore:
+
+```text
+width-257 field instances
+  → subtraction + equality/zero flags
+  → total affine formula + clean PointAdd
+  → controlled scalar folds
+  → classical ECDLP oracle equation
+  → ECDLPOracleSpec refinement
+  → instantiate orderFinding_correct
+```
+
+The generic refinement lemma and point encoding can land independently while the concrete field
+instances are being built. Each item remains a separate, reviewable PR with root reachability,
+warning-fatal build, targeted axiom disclosure, and exhaustive axiom audit.
