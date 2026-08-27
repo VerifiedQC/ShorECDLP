@@ -55,6 +55,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1Instance.secpProgram_correct
 #print axioms ShorECDLP.Secp256k1Instance.secpProgram_tCount
 #print axioms ShorECDLP.Secp256k1Instance.secp_fermat_inverse
+#print axioms ShorECDLP.Secp256k1.pointAdd_correct
 #print axioms ShorECDLP.Arithmetic.zeroFlag_correct
 #print axioms ShorECDLP.Arithmetic.zeroFlag_tCount
 #print axioms ShorECDLP.Arithmetic.equalFlag_correct
@@ -87,8 +88,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 63 ]]; then
-  printf 'expected sixty-three #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 64 ]]; then
+  printf 'expected sixty-four #print axioms results\n' >&2
   exit 1
 fi
 
