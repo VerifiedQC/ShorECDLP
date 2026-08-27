@@ -39,6 +39,70 @@ Both programs have exact T-count `14 * (width - 1)`: the only non-Clifford gates
 namespace ShorECDLP
 namespace Arithmetic
 
+open scoped ArithmeticNotation
+
+/-! ## Programs -/
+
+/-- Tail-first conjunction history. Its first history bit is the zero predicate. -/
+def zeroCompute : List Wire → List Wire → Circuit
+  | [x], h :: _ => circuit! {
+      gate! Gate.X h;
+      gate! Gate.CX x h
+    }
+  | x :: x' :: xs, h :: h' :: hs =>
+      circuit! {
+        zeroCompute (x' :: xs) (h' :: hs);
+        gate! Gate.X x;
+        gate! Gate.CCX h' x h;
+        gate! Gate.X x
+      }
+  | _, _ => circuit! {}
+
+/-- Full syntactic support of a clean zero flag. -/
+def zeroFlagWires (input : List Wire) (flag : Wire) (history : List Wire) : List Wire :=
+  input ++ flag :: history
+
+/-- Clean reversible zero flag with a Bennett-restored conjunction history. -/
+def zeroFlag : List Wire → Wire → List Wire → Circuit
+  | [], flag, _ => circuit! { gate! Gate.X flag }
+  | x :: xs, flag, h :: hs =>
+      let compute := zeroCompute (x :: xs) (h :: hs)
+      circuit! {
+        compute;
+        gate! Gate.CX h flag;
+        compute.reverse
+      }
+  | _, _, _ => circuit! {}
+
+/-- Forward equality computation: XOR both inputs into `difference`, then zero-test it. -/
+def equalCompute (lhs rhs difference history : List Wire) : Circuit :=
+  circuit! {
+    copyReg lhs difference;
+    copyReg rhs difference;
+    zeroCompute difference history
+  }
+
+/-- Active compute/uncompute wires of an equality flag, excluding its copied-out result bit. -/
+def equalComputeWires (lhs rhs difference history : List Wire) : List Wire :=
+  ((lhs ++ rhs) ++ difference) ++ history
+
+/-- Complete syntactic support of a clean equality flag. -/
+def equalFlagWires (lhs rhs : List Wire) (flag : Wire)
+    (difference history : List Wire) : List Wire :=
+  ((lhs ++ rhs) ++ difference) ++ flag :: history
+
+/-- Clean equality flag: compute XOR and zero history, copy the predicate, then uncompute. -/
+def equalFlag (lhs rhs : List Wire) (flag : Wire) : List Wire → List Wire → Circuit
+  | [], _ => circuit! { gate! Gate.X flag }
+  | d :: ds, h :: hs =>
+      let compute := equalCompute lhs rhs (d :: ds) (h :: hs)
+      circuit! {
+        compute;
+        gate! Gate.CX h flag;
+        compute.reverse
+      }
+  | _, _ => circuit! {}
+
 /-- Boolean recurrence for the zero predicate on an LSB-first register. -/
 theorem decide_regValue_cons_zero (x : Wire) (xs : List Wire) (st : BasisState) :
     decide (regValue (x :: xs) st = 0) =
@@ -225,14 +289,6 @@ theorem xorCopies_zero_iff (lhs rhs difference : List Wire) (st : BasisState)
   change regValue difference st₂ = 0 ↔ regValue lhs st = regValue rhs st
   rw [regValue_eq_zero_iff_clean, clean_iff_map_false, hdiffSt₂, hdlen,
     hxor, regValue_eq_iff_map_eq lhs rhs st hrlen]
-
-/-- Tail-first conjunction history. Its first history bit is the zero predicate. -/
-def zeroCompute : List Wire → List Wire → Circuit
-  | [x], h :: _ => [Gate.X h, Gate.CX x h]
-  | x :: x' :: xs, h :: h' :: hs =>
-      zeroCompute (x' :: xs) (h' :: hs) ++
-        [Gate.X x, Gate.CCX h' x h, Gate.X x]
-  | _, _ => []
 
 @[simp]
 theorem zeroCompute_HPFree (input history : List Wire) :
@@ -450,18 +506,6 @@ theorem bennett_cleanup_copyBit
   simp only [hprogramRun]
   exact ⟨hafterActive, hafterFlag⟩
 
-/-- Full syntactic support of a clean zero flag. -/
-def zeroFlagWires (input : List Wire) (flag : Wire) (history : List Wire) : List Wire :=
-  input ++ flag :: history
-
-/-- Clean reversible zero flag with a Bennett-restored conjunction history. -/
-def zeroFlag : List Wire → Wire → List Wire → Circuit
-  | [], flag, _ => [Gate.X flag]
-  | x :: xs, flag, h :: hs =>
-      let compute := zeroCompute (x :: xs) (h :: hs)
-      compute ++ [Gate.CX h flag] ++ compute.reverse
-  | _, _, _ => []
-
 @[simp]
 theorem zeroFlag_HPFree (input : List Wire) (flag : Wire) (history : List Wire) :
     Classical.HPFree (zeroFlag input flag history) := by
@@ -539,11 +583,11 @@ theorem zeroFlag_correct (input : List Wire) (flag : Wire) (history : List Wire)
     (st : BasisState)
     (hlen : history.length = input.length)
     (hnd : (zeroFlagWires input flag history).Nodup)
-    (hclean : Clean (flag :: history) st) :
+    (hclean : clean(flag :: history, st)) :
     let after := Classical.run (zeroFlag input flag history) st
     AgreesOn input st after ∧
-      after flag = decide (regValue input st = 0) ∧
-      Clean history after := by
+      after flag = decide (st⟦ᵣinput⟧ = 0) ∧
+      clean(history, after) := by
   cases input with
   | nil =>
       have : history = [] := List.length_eq_zero_iff.mp hlen
@@ -597,10 +641,6 @@ theorem zeroFlag_correct (input : List Wire) (flag : Wire) (history : List Wire)
 
 /-! ## Equality flag -/
 
-/-- Forward equality computation: XOR both inputs into `difference`, then zero-test it. -/
-def equalCompute (lhs rhs difference history : List Wire) : Circuit :=
-  copyReg lhs difference ++ copyReg rhs difference ++ zeroCompute difference history
-
 @[simp]
 theorem equalCompute_HPFree (lhs rhs difference history : List Wire) :
     Classical.HPFree (equalCompute lhs rhs difference history) := by
@@ -612,10 +652,6 @@ theorem equalCompute_tCount (lhs rhs difference history : List Wire)
   rw [equalCompute, tCount_append, tCount_append, copyReg_tCount, copyReg_tCount,
     zeroCompute_tCount _ _ hlen]
   omega
-
-/-- Active compute/uncompute wires of an equality flag, excluding its copied-out result bit. -/
-def equalComputeWires (lhs rhs difference history : List Wire) : List Wire :=
-  ((lhs ++ rhs) ++ difference) ++ history
 
 /-- The equality computation is confined to both inputs and its two scratch registers. -/
 theorem equalCompute_usesOnly (lhs rhs difference history : List Wire) :
@@ -699,19 +735,6 @@ theorem equalCompute_head_correct (lhs rhs : List Wire) (d : Wire)
   change Classical.run (zeroCompute (d :: ds) (h :: hs)) st₂ h = _
   rw [hzero']
   exact decide_eq_decide.mpr hxor'
-
-/-- Complete syntactic support of a clean equality flag. -/
-def equalFlagWires (lhs rhs : List Wire) (flag : Wire)
-    (difference history : List Wire) : List Wire :=
-  ((lhs ++ rhs) ++ difference) ++ flag :: history
-
-/-- Clean equality flag: compute XOR and zero history, copy the predicate, then uncompute. -/
-def equalFlag (lhs rhs : List Wire) (flag : Wire) : List Wire → List Wire → Circuit
-  | [], _ => [Gate.X flag]
-  | d :: ds, h :: hs =>
-      let compute := equalCompute lhs rhs (d :: ds) (h :: hs)
-      compute ++ [Gate.CX h flag] ++ compute.reverse
-  | _, _ => []
 
 @[simp]
 theorem equalFlag_HPFree (lhs rhs : List Wire) (flag : Wire)
@@ -799,12 +822,12 @@ theorem equalFlag_correct (lhs rhs : List Wire) (flag : Wire)
     (hdlen : difference.length = lhs.length)
     (hhlen : history.length = lhs.length)
     (hnd : (equalFlagWires lhs rhs flag difference history).Nodup)
-    (hclean : Clean (flag :: difference ++ history) st) :
+    (hclean : clean(flag :: difference ++ history, st)) :
     let after := Classical.run (equalFlag lhs rhs flag difference history) st
     AgreesOn lhs st after ∧
       AgreesOn rhs st after ∧
-      after flag = decide (regValue lhs st = regValue rhs st) ∧
-      Clean (difference ++ history) after := by
+      after flag = decide (st⟦ᵣlhs⟧ = st⟦ᵣrhs⟧) ∧
+      clean(difference ++ history, after) := by
   cases difference with
   | nil =>
       have hlhs : lhs = [] := List.length_eq_zero_iff.mp hdlen.symm

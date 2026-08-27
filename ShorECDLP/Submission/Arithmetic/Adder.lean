@@ -41,16 +41,22 @@ namespace ShorECDLP
 open Classical
 
 /-- A reversible full-adder cell over `{CCX, CX}`. `s` and `co` must be fresh wires. -/
-def fullAdder (a b cin s co : Nat) : Circuit :=
-  [Gate.CCX a b co, Gate.CCX a cin co, Gate.CCX b cin co,
-   Gate.CX a s, Gate.CX b s, Gate.CX cin s]
+def fullAdder (a b cin s co : Wire) : Circuit :=
+  circuit! {
+    gate! Gate.CCX a b co;
+    gate! Gate.CCX a cin co;
+    gate! Gate.CCX b cin co;
+    gate! Gate.CX a s;
+    gate! Gate.CX b s;
+    gate! Gate.CX cin s
+  }
 
 /-- The full-adder cell costs `3 · 7 = 21` T (three Toffolis; the CNOTs are free). -/
-theorem fullAdder_tCount (a b cin s co : Nat) : tCount (fullAdder a b cin s co) = 21 := rfl
+theorem fullAdder_tCount (a b cin s co : Wire) : tCount (fullAdder a b cin s co) = 21 := rfl
 
 /-- Sum wire: with the output wires `s, co` fresh and distinct from the inputs, the adder
 writes `a ⊕ b ⊕ cin` on `s`. -/
-theorem fullAdder_sum (a b cin s co : Nat) (st : BasisState) (hs : st s = false)
+theorem fullAdder_sum (a b cin s co : Wire) (st : BasisState) (hs : st s = false)
     (bs : b ≠ s) (cs : cin ≠ s)
     (ac : a ≠ co) (bc : b ≠ co) (cc : cin ≠ co) (sc : s ≠ co) :
     ⟪fullAdder a b cin s co⟫ st s
@@ -63,7 +69,7 @@ theorem fullAdder_sum (a b cin s co : Nat) (st : BasisState) (hs : st s = false)
 
 /-- Carry wire: with the output wires `s, co` fresh and distinct from the inputs, the adder
 writes `majority(a, b, cin) = (a∧b) ⊕ (a∧cin) ⊕ (b∧cin)` on `co`. -/
-theorem fullAdder_carry (a b cin s co : Nat) (st : BasisState) (hco : st co = false)
+theorem fullAdder_carry (a b cin s co : Wire) (st : BasisState) (hco : st co = false)
     (bs : b ≠ s) (cs : cin ≠ s)
     (ac : a ≠ co) (bc : b ≠ co) (cc : cin ≠ co) (sc : s ≠ co) :
     ⟪fullAdder a b cin s co⟫ st co

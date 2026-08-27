@@ -45,133 +45,7 @@ namespace ShorECDLP
 namespace Secp256k1Instance
 
 open Classical
-
-theorem wiresOK_of_footprint_nodup :
-    ∀ (cols : List (Wire × Wire × Wire)) (cin : Wire) (couts : List Wire),
-      couts.length = cols.length →
-      (ShorECDLP.ModAddSupport.rippleFootprint cols cin couts).Nodup →
-      wiresOK cols cin couts := by
-  intro cols
-  induction cols with
-  | nil =>
-      intro cin couts hlen _
-      obtain rfl : couts = [] := List.length_eq_zero_iff.mp hlen
-      trivial
-  | cons head rest ih =>
-      intro cin couts hlen hnd
-      obtain ⟨a, b, s⟩ := head
-      cases couts with
-      | nil => simp at hlen
-      | cons co cs =>
-          have hlen' : cs.length = rest.length := by simpa using hlen
-          simp only [ShorECDLP.ModAddSupport.rippleFootprint,
-            ShorECDLP.ModAddSupport.colsWires,
-            List.flatMap_cons] at hnd
-          have hrecursive :
-              (ModAddSupport.rippleFootprint rest co cs).Nodup := by
-            let flat := rest.flatMap (fun c => [c.1, c.2.1, c.2.2])
-            have hsub : (co :: cs ++ flat).Sublist
-                (cin :: (co :: cs ++ ([a, b, s] ++ flat))) := by
-              apply List.Sublist.cons cin
-              have h := List.Sublist.append (List.Sublist.refl (co :: cs))
-                (List.sublist_append_right [a, b, s] flat)
-              simpa [List.append_assoc] using h
-            apply List.Nodup.sublist hsub
-            simpa [flat, List.append_assoc] using hnd
-          have hrest := ih co cs hlen' hrecursive
-          let flat := rest.flatMap (fun c => [c.1, c.2.1, c.2.2])
-          have hshape :
-              (cin :: co :: (cs ++ ([a, b, s] ++ flat))).Nodup := by
-            simpa [flat, List.append_assoc] using hnd
-          obtain ⟨hcin, hafterCin⟩ := List.nodup_cons.mp hshape
-          obtain ⟨hco, hafterCo⟩ := List.nodup_cons.mp hafterCin
-          obtain ⟨hcs, htripleFlat, hcsTripleFlat⟩ :=
-            List.nodup_append.mp hafterCo
-          obtain ⟨htriple, hflat, htripleFlatCross⟩ :=
-            List.nodup_append.mp htripleFlat
-          have htriple' : a ≠ b ∧ a ≠ s ∧ b ≠ s := by
-            obtain ⟨ha, habs⟩ := List.nodup_cons.mp htriple
-            obtain ⟨hb, _⟩ := List.nodup_cons.mp habs
-            exact ⟨fun e => ha (by simp [e]), fun e => ha (by simp [e]),
-              fun e => hb (by simp [e])⟩
-          simp only [wiresOK]
-          refine ⟨?_, ?_, ?_, hrest⟩
-          · -- The five local wires are distinct because all occur once in the footprint.
-            refine ⟨htriple'.1, ?_, htriple'.2.1, ?_, ?_, htriple'.2.2, ?_, ?_, ?_, ?_⟩
-            · intro e; apply hcin; simp [e]
-            · intro e; apply hco; simp [e]
-            · intro e; apply hcin; simp [e]
-            · intro e; apply hco; simp [e]
-            · intro e; apply hcin; simp [e]
-            · intro e; apply hcin; simp [e]
-            · intro e; apply hco; simp [e]
-          · intro c hc
-            have hcmem : c.1 ∈ flat ∧ c.2.1 ∈ flat ∧ c.2.2 ∈ flat := by
-              simp only [flat, List.mem_flatMap]
-              exact ⟨⟨c, hc, by simp⟩, ⟨c, hc, by simp⟩, ⟨c, hc, by simp⟩⟩
-            exact ⟨⟨htripleFlatCross s (by simp) c.1 hcmem.1,
-              fun e => hco (by simp [e, hcmem.1])⟩,
-              ⟨htripleFlatCross s (by simp) c.2.1 hcmem.2.1,
-                fun e => hco (by simp [e, hcmem.2.1])⟩,
-              ⟨htripleFlatCross s (by simp) c.2.2 hcmem.2.2,
-                fun e => hco (by simp [e, hcmem.2.2])⟩⟩
-          · intro x hx
-            exact ⟨fun e => hcsTripleFlat x hx s (by simp) e.symm,
-              fun e => hco (by simp [hx, e])⟩
-
-theorem triple_interleave_perm {a b s : Wire} (as bs ss : List Wire) :
-    ([a, b, s] ++ (as ++ bs ++ ss)).Perm
-      ((a :: as) ++ (b :: bs) ++ (s :: ss)) := by
-  have p₁ := (List.perm_append_comm (l₁ := [b, s]) (l₂ := as)).append_right (bs ++ ss)
-  have p₂ := (List.perm_append_comm (l₁ := [s]) (l₂ := bs)).append_right ss
-  have p₂' := p₂.append_left (as ++ [b])
-  have p₂'' : (as ++ [b, s] ++ (bs ++ ss)).Perm
-      (as ++ [b] ++ (bs ++ [s] ++ ss)) := by
-    simpa [List.append_assoc] using p₂'
-  simpa [List.append_assoc] using (p₁.trans p₂'').cons a
-
-theorem selectorColumns_colsWires_perm :
-    ∀ (as bs ss : List Wire), as.length = bs.length → as.length = ss.length →
-      (ModAddSupport.colsWires (ModExp.selectorColumns as bs ss)).Perm (as ++ bs ++ ss) := by
-  intro as
-  induction as with
-  | nil =>
-      intro bs ss hab has
-      obtain rfl : bs = [] := List.length_eq_zero_iff.mp hab.symm
-      obtain rfl : ss = [] := List.length_eq_zero_iff.mp has.symm
-      simp [ModExp.selectorColumns, ModAddSupport.colsWires]
-  | cons a as ih =>
-      intro bs ss hab has
-      cases bs with
-      | nil => simp at hab
-      | cons b bs =>
-          cases ss with
-          | nil => simp at has
-          | cons s ss =>
-              have hab' : as.length = bs.length := by simpa using hab
-              have has' : as.length = ss.length := by simpa using has
-              have htail := ih bs ss hab' has'
-              have hfront := htail.append_left [a, b, s]
-              exact hfront.trans (triple_interleave_perm as bs ss)
-
-theorem wiresOK_selectorColumns_of_nodup (as bs ss : List Wire) (cin : Wire)
-    (couts : List Wire) (hab : as.length = bs.length) (has : as.length = ss.length)
-    (hcout : couts.length = as.length)
-    (hnd : (as ++ bs ++ ss ++ [cin] ++ couts).Nodup) :
-    wiresOK (ModExp.selectorColumns as bs ss) cin couts := by
-  apply wiresOK_of_footprint_nodup
-  · calc
-      couts.length = as.length := hcout
-      _ = (ModExp.selectorColumns as bs ss).length := by
-        have hm := congrArg List.length
-          (ModExp.selectorColumns_maps as bs ss hab has).1
-        simpa using hm.symm
-  · have hcols := selectorColumns_colsWires_perm as bs ss hab has
-    have hfront := List.perm_append_comm (l₁ := cin :: couts)
-      (l₂ := ModAddSupport.colsWires (ModExp.selectorColumns as bs ss))
-    have hback := hcols.append_right (cin :: couts)
-    apply (hfront.trans hback).symm.nodup
-    simpa [ModAddSupport.rippleFootprint, List.append_assoc] using hnd
+open scoped ArithmeticNotation
 
 def fieldWidth : Nat := 257
 
@@ -187,6 +61,38 @@ def wires (block : Block) : List Wire :=
 
 @[simp] theorem wires_length (block : Block) : block.wires.length = block.size := by
   simp [wires]
+
+end Block
+
+def regBlock (id : Nat) : Block := ⟨id, fieldWidth, le_rfl⟩
+
+def bitBlock (id : Nat) : Block := ⟨id, 1, by simp [fieldWidth]⟩
+
+def blocksWires (blocks : List Block) : List Wire := blocks.flatMap Block.wires
+
+def reg (id : Nat) : ModExp.Reg fieldWidth where
+  wires := (regBlock id).wires
+  length_eq := by simp [regBlock, fieldWidth]
+
+def bitWire (id : Nat) : Wire := fieldWidth * id
+
+def addScratchBlocks (start : Nat) : List Block :=
+  [regBlock start, regBlock (start + 1), regBlock (start + 2), bitBlock (start + 3),
+    regBlock (start + 4), bitBlock (start + 5), regBlock (start + 6)]
+
+def addWork (start : Nat) : List Wire := blocksWires (addScratchBlocks start)
+
+def addProgram (lhsId rhsId outId start : Nat) : Circuit :=
+  modAdd (reg lhsId).wires (reg rhsId).wires (reg outId).wires
+    (reg start).wires (reg (start + 1)).wires (reg (start + 2)).wires
+    (bitWire (start + 3)) (reg (start + 4)).wires
+    (bitWire (start + 5)) (reg (start + 6)).wires p
+
+def addCost : Nat := 91 * fieldWidth
+
+/-! ## Allocation and arithmetic facts -/
+
+namespace Block
 
 theorem wires_nodup (block : Block) : block.wires.Nodup := by
   exact List.nodup_range'
@@ -219,14 +125,8 @@ theorem disjoint_of_id_ne {left right : Block} (hne : left.id ≠ right.id) :
 
 end Block
 
-def regBlock (id : Nat) : Block := ⟨id, fieldWidth, le_rfl⟩
-
-def bitBlock (id : Nat) : Block := ⟨id, 1, by simp [fieldWidth]⟩
-
 @[simp] theorem regBlock_id (id : Nat) : (regBlock id).id = id := rfl
 @[simp] theorem bitBlock_id (id : Nat) : (bitBlock id).id = id := rfl
-
-def blocksWires (blocks : List Block) : List Wire := blocks.flatMap Block.wires
 
 theorem blocksWires_nodup (blocks : List Block) (hids : (blocks.map Block.id).Nodup) :
     (blocksWires blocks).Nodup := by
@@ -248,38 +148,10 @@ theorem blocksWires_nodup (blocks : List Block) (hids : (blocks.map Block.id).No
       subst y
       exact (List.disjoint_left.mp (block.disjoint_of_id_ne hne)) hx hy
 
-def reg (id : Nat) : ModExp.Reg fieldWidth where
-  wires := (regBlock id).wires
-  length_eq := by simp [regBlock, fieldWidth]
-
-def bitWire (id : Nat) : Wire := fieldWidth * id
-
 @[simp] theorem bitBlock_wires (id : Nat) : (bitBlock id).wires = [bitWire id] := by
   simp [Block.wires, bitBlock, bitWire]
 
 @[simp] theorem reg_wires (id : Nat) : (reg id).wires = (regBlock id).wires := rfl
-
-def addCols (lhsId rhsId start : Nat) : List (Wire × Wire × Wire) :=
-  (reg lhsId).selectorColumns (reg rhsId) (reg start)
-
-def redCols (start : Nat) : List (Wire × Wire × Wire) :=
-  (reg start).selectorColumns (reg (start + 1)) (reg (start + 2))
-
-def selectCols (outId start : Nat) : List (Wire × Wire × Wire) :=
-  (reg start).selectorColumns (reg (start + 2)) (reg outId)
-
-def addScratchBlocks (start : Nat) : List Block :=
-  [regBlock start, regBlock (start + 1), regBlock (start + 2), bitBlock (start + 3),
-    regBlock (start + 4), bitBlock (start + 5), regBlock (start + 6)]
-
-def addWork (start : Nat) : List Wire := blocksWires (addScratchBlocks start)
-
-def addProgram (lhsId rhsId outId start : Nat) : Circuit :=
-  modAdd (addCols lhsId rhsId start) (redCols start) (selectCols outId start)
-    (bitWire (start + 3)) (reg (start + 4)).wires
-    (bitWire (start + 5)) (reg (start + 6)).wires p
-
-def addCost : Nat := 91 * fieldWidth
 
 theorem p_pos : 0 < p := by norm_num [p]
 
@@ -307,24 +179,114 @@ theorem carryOut_mem_of_nonempty (cin : Wire) :
 
 theorem addWork_eq_layoutWork (lhsId rhsId outId start : Nat) :
     addWork start =
-      (modAddLayout (addCols lhsId rhsId start) (redCols start) (selectCols outId start)
+      (modAddLayout (reg lhsId).wires (reg rhsId).wires (reg outId).wires
+        (reg start).wires (reg (start + 1)).wires (reg (start + 2)).wires
         (bitWire (start + 3)) (reg (start + 4)).wires
         (bitWire (start + 5)) (reg (start + 6)).wires).work := by
-  have hadd := (reg lhsId).selectorColumns_maps (reg rhsId) (reg start)
-  have hred := (reg start).selectorColumns_maps (reg (start + 1)) (reg (start + 2))
-  simp [addWork, addScratchBlocks, blocksWires, modAddLayout, addCols, redCols,
-    selectCols, hadd.2.2, hred.2.1, hred.2.2, bitBlock_wires, List.append_assoc]
+  simp [addWork, addScratchBlocks, blocksWires, modAddLayout, bitBlock_wires,
+    List.append_assoc]
+
+/-- Equal-length, globally distinct register and carry wires satisfy the ripple wiring predicate. -/
+theorem wiresOK_of_nodup :
+    ∀ (a b sum : List Wire) (cin : Wire) (couts : List Wire),
+      b.length = a.length → sum.length = a.length → couts.length = a.length →
+      (a ++ b ++ sum ++ [cin] ++ couts).Nodup → wiresOK a b sum cin couts := by
+  intro a
+  induction a with
+  | nil =>
+      intro b sum cin couts hb hs hc _
+      obtain rfl : b = [] := List.length_eq_zero_iff.mp hb
+      obtain rfl : sum = [] := List.length_eq_zero_iff.mp hs
+      obtain rfl : couts = [] := List.length_eq_zero_iff.mp hc
+      trivial
+  | cons a as ih =>
+      intro b sum cin couts hb hs hc hnd
+      cases b with
+      | nil => simp at hb
+      | cons b bs =>
+          cases sum with
+          | nil => simp at hs
+          | cons s ss =>
+              cases couts with
+              | nil => simp at hc
+              | cons co cs =>
+                  have hb' : bs.length = as.length := by simpa using hb
+                  have hs' : ss.length = as.length := by simpa using hs
+                  have hc' : cs.length = as.length := by simpa using hc
+                  have hlocalSub : [a, b, s, cin, co].Sublist
+                      ((a :: as) ++ (b :: bs) ++ (s :: ss) ++ [cin] ++ (co :: cs)) := by
+                    have ha : [a].Sublist (a :: as) := by simp
+                    have hb : [b].Sublist (b :: bs) := by simp
+                    have hs : [s].Sublist (s :: ss) := by simp
+                    have hcin : [cin].Sublist [cin] := List.Sublist.refl _
+                    have hco : [co].Sublist (co :: cs) := by simp
+                    simpa [List.append_assoc] using
+                      ((((ha.append hb).append hs).append hcin).append hco)
+                  have hlocal := List.Nodup.sublist hlocalSub hnd
+                  have hab : a ≠ b := by intro e; subst b; simp at hlocal
+                  have hacin : a ≠ cin := by intro e; subst cin; simp at hlocal
+                  have has : a ≠ s := by intro e; subst s; simp at hlocal
+                  have haco : a ≠ co := by intro e; subst co; simp at hlocal
+                  have hbcin : b ≠ cin := by intro e; subst cin; simp at hlocal
+                  have hbs : b ≠ s := by intro e; subst s; simp at hlocal
+                  have hbco : b ≠ co := by intro e; subst co; simp at hlocal
+                  have hcins : cin ≠ s := by intro e; subst s; simp at hlocal
+                  have hcinco : cin ≠ co := by intro e; subst co; simp at hlocal
+                  have hsco : s ≠ co := by intro e; subst co; simp at hlocal
+                  have hselectedSub : (as ++ bs ++ (s :: ss) ++ (co :: cs)).Sublist
+                      ((a :: as) ++ (b :: bs) ++ (s :: ss) ++ [cin] ++ (co :: cs)) := by
+                    have ha : as.Sublist (a :: as) :=
+                      List.Sublist.cons a (List.Sublist.refl as)
+                    have hb : bs.Sublist (b :: bs) :=
+                      List.Sublist.cons b (List.Sublist.refl bs)
+                    have hcin : ([] : List Wire).Sublist [cin] := List.nil_sublist _
+                    simpa [List.append_assoc] using
+                      ((((ha.append hb).append (List.Sublist.refl (s :: ss))).append hcin).append
+                        (List.Sublist.refl (co :: cs)))
+                  have hselected := List.Nodup.sublist hselectedSub hnd
+                  have hshape : (as ++ (bs ++ ((s :: ss) ++ (co :: cs)))).Nodup := by
+                    simpa [List.append_assoc] using hselected
+                  obtain ⟨_, hrest, hAsRest⟩ := List.nodup_append.mp hshape
+                  obtain ⟨_, hSC, hBsRest⟩ := List.nodup_append.mp hrest
+                  obtain ⟨hS, hCo, hSCross⟩ := List.nodup_append.mp hSC
+                  have hAs : ∀ x ∈ as, s ≠ x ∧ co ≠ x := by
+                    intro x hx
+                    exact ⟨(hAsRest x hx s (by simp)).symm,
+                      (hAsRest x hx co (by simp)).symm⟩
+                  have hBs : ∀ x ∈ bs, s ≠ x ∧ co ≠ x := by
+                    intro x hx
+                    exact ⟨(hBsRest x hx s (by simp)).symm,
+                      (hBsRest x hx co (by simp)).symm⟩
+                  have hSs : ∀ x ∈ ss, s ≠ x ∧ co ≠ x := by
+                    intro x hx
+                    refine ⟨?_, (hSCross x (by simp [hx]) co (by simp)).symm⟩
+                    intro e; subst x; exact (List.nodup_cons.mp hS).1 hx
+                  have hCs : ∀ x ∈ cs, s ≠ x ∧ co ≠ x := by
+                    intro x hx
+                    refine ⟨hSCross s (by simp) x (by simp [hx]), ?_⟩
+                    intro e; subst x; exact (List.nodup_cons.mp hCo).1 hx
+                  have htailSub : (as ++ bs ++ ss ++ [co] ++ cs).Sublist
+                      (as ++ bs ++ (s :: ss) ++ (co :: cs)) := by
+                    simp [List.append_assoc]
+                  have htail := List.Nodup.sublist htailSub hselected
+                  simp only [wiresOK]
+                  exact ⟨⟨hab, hacin, has, haco, hbcin, hbs, hbco, hcins, hcinco, hsco⟩,
+                    hAs, hBs, hSs, hCs, ih bs ss co cs hb' hs' hc' htail⟩
 
 set_option maxRecDepth 10000 in
 theorem add_wiring (lhsId rhsId outId start : Nat)
     (hlhs : lhsId < start) (hrhs : rhsId < start) (hout : outId < start)
     (hlr : lhsId ≠ rhsId) :
-    ModAddWiring (addCols lhsId rhsId start) (redCols start) (selectCols outId start)
+    ModAddWiring (reg lhsId).wires (reg rhsId).wires (reg outId).wires
+      (reg start).wires (reg (start + 1)).wires (reg (start + 2)).wires
       (bitWire (start + 3)) (reg (start + 4)).wires
       (bitWire (start + 5)) (reg (start + 6)).wires p := by
-  let add := addCols lhsId rhsId start
-  let red := redCols start
-  let select := selectCols outId start
+  let lhs := (reg lhsId).wires
+  let rhs := (reg rhsId).wires
+  let out := (reg outId).wires
+  let sum := (reg start).wires
+  let constReg := (reg (start + 1)).wires
+  let candidate := (reg (start + 2)).wires
   let cin₁ := bitWire (start + 3)
   let couts₁ := (reg (start + 4)).wires
   let cin₂ := bitWire (start + 5)
@@ -375,67 +337,43 @@ theorem add_wiring (lhsId rhsId outId start : Nat)
     obtain ⟨hcoutNd, hbodyNd, hcross⟩ := List.nodup_append.mp (by
       simpa [List.append_assoc] using hSelectAll)
     exact List.nodup_cons.mpr ⟨fun hmem => hcross _ hcarryMem _ hmem rfl, hbodyNd⟩
-  have haddMaps := (reg lhsId).selectorColumns_maps (reg rhsId) (reg start)
-  have hredMaps := (reg start).selectorColumns_maps (reg (start + 1)) (reg (start + 2))
-  have hselectMaps := (reg start).selectorColumns_maps (reg (start + 2)) (reg outId)
-  have wiring : ModAddWiring add red select cin₁ couts₁ cin₂ couts₂ p := by
+  have wiring :
+      ModAddWiring lhs rhs out sum constReg candidate cin₁ couts₁ cin₂ couts₂ p := by
     refine {
-      addLen := by
-        change (reg (start + 4)).wires.length =
-          ((reg lhsId).selectorColumns (reg rhsId) (reg start)).length
-        rw [(reg (start + 4)).length_eq,
-          (reg lhsId).selectorColumns_length (reg rhsId) (reg start)]
-      redLen := by
-        change (reg (start + 6)).wires.length =
-          ((reg start).selectorColumns (reg (start + 1)) (reg (start + 2))).length
-        rw [(reg (start + 6)).length_eq,
-          (reg start).selectorColumns_length (reg (start + 1)) (reg (start + 2))]
-      width := by
-        change ((reg start).selectorColumns (reg (start + 1)) (reg (start + 2))).length =
-          ((reg lhsId).selectorColumns (reg rhsId) (reg start)).length
-        rw [(reg start).selectorColumns_length (reg (start + 1)) (reg (start + 2)),
-          (reg lhsId).selectorColumns_length (reg rhsId) (reg start)]
-      selectLen := by
-        change ((reg start).selectorColumns (reg (start + 2)) (reg outId)).length =
-          ((reg lhsId).selectorColumns (reg rhsId) (reg start)).length
-        rw [(reg start).selectorColumns_length (reg (start + 2)) (reg outId),
-          (reg lhsId).selectorColumns_length (reg rhsId) (reg start)]
+      rhsLen := (reg rhsId).length_eq.trans (reg lhsId).length_eq.symm
+      sumLen := (reg start).length_eq.trans (reg lhsId).length_eq.symm
+      addCarryLen := (reg (start + 4)).length_eq.trans (reg lhsId).length_eq.symm
+      constLen := (reg (start + 1)).length_eq.trans (reg start).length_eq.symm
+      candidateLen := (reg (start + 2)).length_eq.trans (reg start).length_eq.symm
+      redCarryLen := (reg (start + 6)).length_eq.trans (reg start).length_eq.symm
+      outLen := (reg outId).length_eq.trans (reg lhsId).length_eq.symm
       addOK := ?_
       redOK := ?_
       selectOK := ?_
-      redA := ?_
-      selectX := ?_
-      selectY := ?_
       modulusPos := p_pos
       fit := by
-        change 2 * p ≤
-          2 ^ ((reg lhsId).selectorColumns (reg rhsId) (reg start)).length
-        rw [(reg lhsId).selectorColumns_length (reg rhsId) (reg start)]
+        change 2 * p ≤ 2 ^ (reg lhsId).wires.length
+        rw [(reg lhsId).length_eq]
         exact p_fits
     }
-    · change wiresOK ((reg lhsId).selectorColumns (reg rhsId) (reg start)) cin₁ couts₁
-      apply wiresOK_selectorColumns_of_nodup
-      · exact (reg lhsId).length_eq.trans (reg rhsId).length_eq.symm
-      · exact (reg lhsId).length_eq.trans (reg start).length_eq.symm
+    · change wiresOK (reg lhsId).wires (reg rhsId).wires (reg start).wires cin₁ couts₁
+      apply wiresOK_of_nodup
+      · exact (reg rhsId).length_eq.trans (reg lhsId).length_eq.symm
+      · exact (reg start).length_eq.trans (reg lhsId).length_eq.symm
       · exact (reg (start + 4)).length_eq.trans (reg lhsId).length_eq.symm
       · exact hAddNodup
-    · change wiresOK ((reg start).selectorColumns (reg (start + 1)) (reg (start + 2)))
-        cin₂ couts₂
-      apply wiresOK_selectorColumns_of_nodup
-      · exact (reg start).length_eq.trans (reg (start + 1)).length_eq.symm
-      · exact (reg start).length_eq.trans (reg (start + 2)).length_eq.symm
+    · change wiresOK (reg start).wires (reg (start + 1)).wires
+        (reg (start + 2)).wires cin₂ couts₂
+      apply wiresOK_of_nodup
+      · exact (reg (start + 1)).length_eq.trans (reg start).length_eq.symm
+      · exact (reg (start + 2)).length_eq.trans (reg start).length_eq.symm
       · exact (reg (start + 6)).length_eq.trans (reg start).length_eq.symm
       · exact hRedNodup
-    · change selectOK (carryOut cin₂ couts₂)
-        ((reg start).selectorColumns (reg (start + 2)) (reg outId))
+    · change selectOK (carryOut cin₂ couts₂) (reg start).wires
+        (reg (start + 2)).wires (reg outId).wires
       exact ModExp.selectOK_of_nodup _ _ _ _ hselectNodup
-    · dsimp only [red, add, redCols, addCols]
-      exact hredMaps.1.trans haddMaps.2.2.symm
-    · dsimp only [select, add, selectCols, addCols]
-      exact hselectMaps.1.trans haddMaps.2.2.symm
-    · dsimp only [select, red, selectCols, redCols]
-      exact hselectMaps.2.1.trans hredMaps.2.2.symm
-  simpa [add, red, select, cin₁, couts₁, cin₂, couts₂] using wiring
+  simpa [lhs, rhs, out, sum, constReg, candidate, cin₁, couts₁, cin₂, couts₂]
+    using wiring
 
 set_option maxRecDepth 10000 in
 theorem add_contract (lhsId rhsId outId start : Nat)
@@ -445,10 +383,12 @@ theorem add_contract (lhsId rhsId outId start : Nat)
       { lhs := (reg lhsId).wires, rhs := (reg rhsId).wires,
         out := (reg outId).wires, work := addWork start }
       p addCost := by
-  have hcontract := modAdd_contract (addCols lhsId rhsId start) (redCols start)
-    (selectCols outId start) (bitWire (start + 3)) (reg (start + 4)).wires
+  have hcontract := modAdd_contract (reg lhsId).wires (reg rhsId).wires (reg outId).wires
+    (reg start).wires (reg (start + 1)).wires (reg (start + 2)).wires
+    (bitWire (start + 3)) (reg (start + 4)).wires
     (bitWire (start + 5)) (reg (start + 6)).wires p
     (add_wiring lhsId rhsId outId start hlhs hrhs hout hlr)
+  rw [(reg lhsId).length_eq] at hcontract
   simpa [addProgram, addCost, addWork_eq_layoutWork lhsId rhsId outId start] using hcontract
 
 def mulStageBlocks (start : Nat) : List Block :=
@@ -1087,8 +1027,9 @@ def mulStartId : Nat := mulAccId + 1
 /-- One fully instantiated width-257 modular-adder wiring.  The exponentiation schedule uses the
 same relative seven-block allocation at every modular-addition call. -/
 def secpAddWiring :
-    ModAddWiring (addCols baseId exponentId initialAccId)
-      (redCols initialAccId) (selectCols outId initialAccId)
+    ModAddWiring (reg baseId).wires (reg exponentId).wires (reg outId).wires
+      (reg initialAccId).wires (reg (initialAccId + 1)).wires
+      (reg (initialAccId + 2)).wires
       (bitWire (initialAccId + 3)) (reg (initialAccId + 4)).wires
       (bitWire (initialAccId + 5)) (reg (initialAccId + 6)).wires p :=
   add_wiring baseId exponentId outId initialAccId (by norm_num [baseId, initialAccId])
@@ -1318,16 +1259,16 @@ set_option maxRecDepth 10000 in
 field when its preserved exponent register contains `p - 2`.  This is a direct specialization of
 `FermatInv.correct`; it introduces no second circuit and no new field-theory argument. -/
 theorem secp_fermat_inverse [Fact (Nat.Prime p)] (st : BasisState)
-    (hbase : regValue secpLayout.lhs st < p)
-    (hexponent : regValue secpLayout.rhs st = p - 2)
-    (hclean : Clean (secpLayout.out ++ secpLayout.work) st)
-    (hnonzero : ((regValue secpLayout.lhs st : Nat) : Fp) ≠ 0) :
+    (hbase : st⟦ᵣsecpLayout.lhs⟧ < p)
+    (hexponent : st⟦ᵣsecpLayout.rhs⟧ = p - 2)
+    (hclean : clean(secpLayout.out ++ secpLayout.work, st))
+    (hnonzero : ((st⟦ᵣsecpLayout.lhs⟧ : Nat) : Fp) ≠ 0) :
     let after := run secpProgram st
     AgreesOn secpLayout.lhs st after ∧
       AgreesOn secpLayout.rhs st after ∧
-      ((regValue secpLayout.out after : Nat) : Fp) =
-        ((regValue secpLayout.lhs st : Nat) : Fp)⁻¹ ∧
-      Clean secpLayout.work after := by
+      ((after⟦ᵣsecpLayout.out⟧ : Nat) : Fp) =
+        ((st⟦ᵣsecpLayout.lhs⟧ : Nat) : Fp)⁻¹ ∧
+      clean(secpLayout.work, after) := by
   exact FermatInv.correct secp_modExp_contract st secpPlan_layout_valid hbase hexponent hclean
     hnonzero
 

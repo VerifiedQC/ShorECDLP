@@ -39,22 +39,23 @@ namespace ShorECDLP
 namespace FermatInv
 
 open Classical
+open scoped ArithmeticNotation
 
 /-- A correct modular-exponentiation circuit computes the secp256k1 field inverse when its
 exponent input is `p - 2`.  The base and exponent registers are preserved and private work is
 restored exactly as promised by the same `ModExpContract` term. -/
 theorem correct [Fact (Nat.Prime p)] {program : Circuit} {layout : RegisterLayout} {cost : Nat}
     (spec : ModExpContract program layout p cost) (st : BasisState)
-    (hlayout : layout.Valid) (hbase : regValue layout.lhs st < p)
-    (hexponent : regValue layout.rhs st = p - 2)
-    (hclean : Clean (layout.out ++ layout.work) st)
-    (hnonzero : ((regValue layout.lhs st : Nat) : Fp) ≠ 0) :
+    (hlayout : layout.Valid) (hbase : st⟦ᵣlayout.lhs⟧ < p)
+    (hexponent : st⟦ᵣlayout.rhs⟧ = p - 2)
+    (hclean : clean(layout.out ++ layout.work, st))
+    (hnonzero : ((st⟦ᵣlayout.lhs⟧ : Nat) : Fp) ≠ 0) :
     let after := run program st
     AgreesOn layout.lhs st after ∧
       AgreesOn layout.rhs st after ∧
-      ((regValue layout.out after : Nat) : Fp) =
-        ((regValue layout.lhs st : Nat) : Fp)⁻¹ ∧
-      Clean layout.work after := by
+      ((after⟦ᵣlayout.out⟧ : Nat) : Fp) =
+        ((st⟦ᵣlayout.lhs⟧ : Nat) : Fp)⁻¹ ∧
+      clean(layout.work, after) := by
   have hp2 : 2 ≤ p := (Fact.out (p := Nat.Prime p)).two_le
   have hexponentBound : regValue layout.rhs st < p := by
     rw [hexponent]

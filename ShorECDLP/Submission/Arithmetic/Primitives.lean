@@ -21,8 +21,8 @@ selectBit(flag, x, y; clean out):
   CX x out; CX x y; CCX flag y out; CX x y
   -- out = (flag ? y : x), while x and y are restored
 
-selectPoint(flag, columns):
-  for (x, y, out) in columns: selectBit(flag, x, y; out)
+selectPoint(flag, xs, ys, outs):
+  for aligned (x, y, out): selectBit(flag, x, y; out)
 
 copyReg(src; clean dst):
   for aligned (s, d): CX s d
@@ -35,7 +35,8 @@ circuit `c`.
 
 ```text
 ws.Nodup, clean ws, and c < 2^|ws| -> value(ws, run(loadConst(ws,c), st)) = c
-selectOK(flag, columns) and clean outputs -> selectPoint stores (flag ? y : x)
+selectOK(flag, xs, ys, outs) and clean outs
+  -> selectPoint stores (flag ? value(ys) : value(xs)) in outs
 equal-length disjoint src/dst and clean dst -> copyReg stores value(src) in dst
 HPFree(c) and CircuitWellFormed(c) -> run(c.reverse, run(c, st)) = st
 ```
@@ -48,18 +49,66 @@ support and cancellation proof tools are collected after the leaf programs.
 namespace ShorECDLP
 
 open Classical
+open scoped ArithmeticNotation
 
 /-! ## Constant loading -/
 
 /-- Load the constant `c` (LSB-first) into wires `ws`: X each wire whose corresponding bit of
 `c` is set. Self-inverse — running it again clears the register. -/
-def loadConst : List Nat → Nat → Circuit
-  | [],      _ => []
-  | w :: ws, c => (if c % 2 = 1 then [Gate.X w] else []) ++ loadConst ws (c / 2)
+def loadConst : List Wire → Nat → Circuit
+  | [],      _ => circuit! {}
+  | w :: ws, c => circuit! {
+      (if c % 2 = 1 then circuit! { gate! Gate.X w } else circuit! {});
+      loadConst ws (c / 2)
+    }
+
+/-- One bit of a reversible two-way selector. With a fresh output it writes `x` when `flag=0`
+and `y` when `flag=1`. -/
+def selectBit (flag x y out : Wire) : Circuit :=
+  circuit! {
+    gate! Gate.CX x out;
+    gate! Gate.CX x y;
+    gate! Gate.CCX flag y out;
+    gate! Gate.CX x y
+  }
+
+/-- Apply `selectBit` pointwise to three aligned, LSB-first registers. -/
+def selectPoint (flag : Wire) : List Wire → List Wire → List Wire → Circuit
+  | x :: xs, y :: ys, out :: outs =>
+      circuit! {
+        selectBit flag x y out;
+        selectPoint flag xs ys outs
+      }
+  | _, _, _ => circuit! {}
+
+/-- Wire conditions needed by the selector. The three lists are aligned registers; source and
+flag wires stay outside the duplicate-free output register, and the two sources in each bit
+position are distinct. -/
+def selectOK (flag : Wire) : List Wire → List Wire → List Wire → Prop
+  | [], [], [] => True
+  | x :: xs, y :: ys, out :: outs =>
+      x ≠ y ∧ x ≠ out ∧ y ≠ out ∧
+      flag ≠ x ∧ flag ≠ y ∧ flag ≠ out ∧
+      out ∉ outs ∧ x ∉ outs ∧ y ∉ outs ∧
+      (∀ x' ∈ xs, x' ≠ out) ∧ (∀ y' ∈ ys, y' ≠ out) ∧
+      selectOK flag xs ys outs
+  | _, _, _ => False
+
+namespace Arithmetic
+
+/-- CNOT-copy aligned source bits into a clean destination register. -/
+def copyReg : List Wire → List Wire → Circuit
+  | s :: src, d :: dst => circuit! {
+      gate! Gate.CX s d;
+      copyReg src dst
+    }
+  | _, _ => circuit! {}
+
+end Arithmetic
 
 /-- `loadConst` touches only its own wires: a wire outside `ws` is left unchanged. -/
-theorem loadConst_other (w : Nat) :
-    ∀ (ws : List Nat) (c : Nat) (st : BasisState), w ∉ ws →
+theorem loadConst_other (w : Wire) :
+    ∀ (ws : List Wire) (c : Nat) (st : BasisState), w ∉ ws →
       run (loadConst ws c) st w = st w := by
   intro ws
   induction ws with
@@ -75,9 +124,9 @@ theorem loadConst_other (w : Nat) :
 /-- **M1.3.0 — `loadConst` is correct.** Loading `c < 2ⁿ` into `n` distinct, initially-`false`
 wires makes the register hold exactly `c`. -/
 theorem loadConst_correct :
-    ∀ (ws : List Nat) (c : Nat) (st : BasisState),
+    ∀ (ws : List Wire) (c : Nat) (st : BasisState),
       ws.Nodup → (∀ w ∈ ws, st w = false) → c < 2 ^ ws.length →
-      regValue ws (run (loadConst ws c) st) = c := by
+      (⟪loadConst ws c⟫ st)⟦ᵣws⟧ = c := by
   intro ws
   induction ws with
   | nil =>
@@ -112,18 +161,18 @@ theorem loadConst_correct :
         simp; omega
 
 /-- `regValue` of wires disjoint from the loaded register is unchanged by `loadConst`. -/
-theorem loadConst_regValue (ws bs : List Nat) (c : Nat) (st : BasisState)
+theorem loadConst_regValue (ws bs : List Wire) (c : Nat) (st : BasisState)
     (h : ∀ w ∈ ws, w ∉ bs) :
-    regValue ws (run (loadConst bs c) st) = regValue ws st :=
+    (⟪loadConst bs c⟫ st)⟦ᵣws⟧ = st⟦ᵣws⟧ :=
   regValue_congr ws _ _ (fun w hw => loadConst_other w bs c st (h w hw))
 
 /-- A wire outside the loaded register keeps its value (bit form) under `loadConst`. -/
-theorem loadConst_false (w : Nat) (bs : List Nat) (c : Nat) (st : BasisState)
+theorem loadConst_false (w : Wire) (bs : List Wire) (c : Nat) (st : BasisState)
     (hw : w ∉ bs) (hf : st w = false) : run (loadConst bs c) st w = false := by
   rw [loadConst_other w bs c st hw, hf]
 
 /-- `loadConst` is X-only, so it is T-free. -/
-theorem loadConst_tCount (ws : List Nat) (c : Nat) : tCount (loadConst ws c) = 0 := by
+theorem loadConst_tCount (ws : List Wire) (c : Nat) : tCount (loadConst ws c) = 0 := by
   induction ws generalizing c with
   | nil => simp [loadConst]
   | cons w vs ih =>
@@ -149,12 +198,6 @@ theorem loadConst_wellFormed (ws : List Wire) (c : Nat) :
 
 /-! ## Reversible two-way selection -/
 
-/-- One bit of a reversible two-way selector.  With a fresh output it writes `x` when `flag=0`
-and `y` when `flag=1`.  The middle CNOTs temporarily form `x XOR y` on `y`, allowing the
-selection to use one Toffoli rather than two, and then restore `y`. -/
-def selectBit (flag x y out : Wire) : Circuit :=
-  [Gate.CX x out, Gate.CX x y, Gate.CCX flag y out, Gate.CX x y]
-
 /-- Exact state action of one selector cell.  Only `out` changes; the temporary XOR on `y`
 is uncomputed inside the cell. -/
 theorem run_selectBit (flag x y out : Wire) (st : BasisState)
@@ -174,173 +217,150 @@ theorem run_selectBit (flag x y out : Wire) (st : BasisState)
       simp [upd, hxy, hxo, hyo]
     · simp [upd, hwo, hwy]
 
-/-- Apply `selectBit` pointwise to aligned `(x,y,out)` columns. -/
-def selectPoint (flag : Wire) : List (Wire × Wire × Wire) → Circuit
-  | []          => []
-  | (x,y,o)::cs => selectBit flag x y o ++ selectPoint flag cs
-
-/-- Wire conditions needed by the selector.  Source/flag wires are outside the duplicate-free
-output register, and the flag is distinct from both sources in every column. -/
-def selectOK (flag : Wire) (cols : List (Wire × Wire × Wire)) : Prop :=
-  let outs := cols.map (fun c => c.2.2)
-  outs.Nodup ∧ flag ∉ outs ∧
-    (∀ c ∈ cols,
-      c.1 ∉ outs ∧ c.2.1 ∉ outs ∧ flag ≠ c.1 ∧ flag ≠ c.2.1 ∧ c.1 ≠ c.2.1)
-
 /-- The selector's net action changes only its output register. -/
 theorem selectPoint_other (flag w : Wire) :
-    ∀ (cols : List (Wire × Wire × Wire)) (st : BasisState),
-      selectOK flag cols → w ∉ cols.map (fun c => c.2.2) →
-      run (selectPoint flag cols) st w = st w := by
-  intro cols
-  induction cols with
-  | nil => intro st _ _; rfl
-  | cons c cs ih =>
-      intro st hok hw
-      obtain ⟨x,y,o⟩ := c
-      simp only [selectOK, List.map_cons, List.nodup_cons] at hok
-      obtain ⟨⟨ho, houts⟩, hfo, hall⟩ := hok
-      have hw' : w ≠ o ∧ w ∉ cs.map (fun d => d.2.2) := by
-        constructor
-        · intro e
-          apply hw
-          simp [e]
-        · intro hm
-          apply hw
-          exact List.mem_cons_of_mem o hm
-      have hhead := hall (x,y,o) (List.mem_cons_self ..)
-      have hflagout : flag ≠ o := fun e => hfo (e ▸ List.mem_cons_self ..)
-      have htail : selectOK flag cs := by
-        simp only [selectOK]
-        refine ⟨houts, ?_, ?_⟩
-        · exact fun hf => hfo (List.mem_cons_of_mem _ hf)
-        · intro d hd
-          have hd' := hall d (List.mem_cons_of_mem _ hd)
-          exact ⟨fun hm => hd'.1 (List.mem_cons_of_mem _ hm),
-            fun hm => hd'.2.1 (List.mem_cons_of_mem _ hm), hd'.2.2⟩
-      rw [selectPoint, run_append, ih _ htail hw'.2,
-        run_selectBit flag x y o st hhead.2.2.2.2
-          (Ne.symm (fun e => hhead.1 (e ▸ List.mem_cons_self ..)))
-          (Ne.symm (fun e => hhead.2.1 (e ▸ List.mem_cons_self ..)))
-          hhead.2.2.2.1 hflagout,
-        upd_other _ _ _ hw'.1]
+    ∀ (xs ys outs : List Wire) (st : BasisState),
+      selectOK flag xs ys outs → w ∉ outs →
+      run (selectPoint flag xs ys outs) st w = st w := by
+  intro xs
+  induction xs with
+  | nil =>
+      intro ys outs st hok _
+      cases ys <;> cases outs <;> simp [selectPoint, selectOK] at hok ⊢
+  | cons x xs ih =>
+      intro ys outs st hok hw
+      cases ys with
+      | nil => simp [selectOK] at hok
+      | cons y ys =>
+          cases outs with
+          | nil => simp [selectOK] at hok
+          | cons out outs =>
+              rcases hok with
+                ⟨hxy, hxo, hyo, _, hfy, hfo, _, _, _, _, _, htail⟩
+              have hwo : w ≠ out := by
+                intro h
+                exact hw (h ▸ List.mem_cons_self ..)
+              have hwouts : w ∉ outs := fun h => hw (List.mem_cons_of_mem _ h)
+              rw [selectPoint, run_append, ih ys outs _ htail hwouts,
+                run_selectBit flag x y out st hxy hxo hyo hfy hfo,
+                upd_other _ _ _ hwo]
 
-/-- With a fresh output register, the pointwise selector writes the `x` register when its
-flag is false and the `y` register when its flag is true. -/
+/-- With a fresh output register, the pointwise selector writes `xs` when its flag is false and
+`ys` when its flag is true. -/
 theorem selectPoint_correct (flag : Wire) :
-    ∀ (cols : List (Wire × Wire × Wire)) (st : BasisState),
-      selectOK flag cols → (∀ c ∈ cols, st c.2.2 = false) →
-      regValue (cols.map (fun c => c.2.2)) (run (selectPoint flag cols) st) =
-        if st flag then regValue (cols.map (fun c => c.2.1)) st
-        else regValue (cols.map (fun c => c.1)) st := by
-  intro cols
-  induction cols with
-  | nil => intro st _ _; simp [selectPoint]
-  | cons c cs ih =>
-      intro st hok hfree
-      obtain ⟨x,y,o⟩ := c
-      simp only [selectOK, List.map_cons, List.nodup_cons] at hok
-      obtain ⟨⟨ho, houts⟩, hfo, hall⟩ := hok
-      have hhead := hall (x,y,o) (List.mem_cons_self ..)
-      have hflagout : flag ≠ o := fun e => hfo (e ▸ List.mem_cons_self ..)
-      have htail : selectOK flag cs := by
-        simp only [selectOK]
-        refine ⟨houts, ?_, ?_⟩
-        · exact fun hf => hfo (List.mem_cons_of_mem _ hf)
-        · intro d hd
-          have hd' := hall d (List.mem_cons_of_mem _ hd)
-          exact ⟨fun hm => hd'.1 (List.mem_cons_of_mem _ hm),
-            fun hm => hd'.2.1 (List.mem_cons_of_mem _ hm), hd'.2.2⟩
-      have hcell := run_selectBit flag x y o st hhead.2.2.2.2
-        (Ne.symm (fun e => hhead.1 (e ▸ List.mem_cons_self ..)))
-        (Ne.symm (fun e => hhead.2.1 (e ▸ List.mem_cons_self ..)))
-        hhead.2.2.2.1 hflagout
-      have hotx : o ∉ cs.map (fun d => d.1) := by
-        intro hm
-        simp only [List.mem_map] at hm
-        obtain ⟨d, hd, he⟩ := hm
-        exact (hall d (List.mem_cons_of_mem _ hd)).1 (he ▸ List.mem_cons_self ..)
-      have hoty : o ∉ cs.map (fun d => d.2.1) := by
-        intro hm
-        simp only [List.mem_map] at hm
-        obtain ⟨d, hd, he⟩ := hm
-        exact (hall d (List.mem_cons_of_mem _ hd)).2.1 (he ▸ List.mem_cons_self ..)
-      have htailfree : ∀ d ∈ cs, run (selectBit flag x y o) st d.2.2 = false := by
-        intro d hd
-        rw [hcell, upd_other]
-        · exact hfree d (List.mem_cons_of_mem _ hd)
-        · intro he
-          exact ho (he ▸ List.mem_map_of_mem hd)
-      have hih := ih (run (selectBit flag x y o) st) htail htailfree
-      have htailx : regValue (cs.map (fun d => d.1)) (run (selectBit flag x y o) st) =
-          regValue (cs.map (fun d => d.1)) st := by
-        rw [hcell, regValue_upd_not_mem _ _ _ _ hotx]
-      have htaily : regValue (cs.map (fun d => d.2.1)) (run (selectBit flag x y o) st) =
-          regValue (cs.map (fun d => d.2.1)) st := by
-        rw [hcell, regValue_upd_not_mem _ _ _ _ hoty]
-      have hflagcell : run (selectBit flag x y o) st flag = st flag := by
-        rw [hcell, upd_other _ _ _ hflagout]
-      rw [htaily, htailx, hflagcell] at hih
-      have hout : run (selectPoint flag cs) (run (selectBit flag x y o) st) o =
-          if st flag then st y else st x := by
-        rw [selectPoint_other flag o cs _ htail ho, hcell, upd_same,
-          hfree (x,y,o) (List.mem_cons_self ..)]
-        simp
-      rw [selectPoint, run_append, List.map_cons, regValue_cons, hout, hih]
-      cases st flag <;> simp [regValue_cons]
+    ∀ (xs ys outs : List Wire) (st : BasisState),
+      selectOK flag xs ys outs → clean(outs, st) →
+      (⟪selectPoint flag xs ys outs⟫ st)⟦ᵣouts⟧ =
+        if st flag then st⟦ᵣys⟧ else st⟦ᵣxs⟧ := by
+  intro xs
+  induction xs with
+  | nil =>
+      intro ys outs st hok _
+      cases ys <;> cases outs <;> simp [selectPoint, selectOK] at hok ⊢
+  | cons x xs ih =>
+      intro ys outs st hok hclean
+      cases ys with
+      | nil => simp [selectOK] at hok
+      | cons y ys =>
+          cases outs with
+          | nil => simp [selectOK] at hok
+          | cons out outs =>
+              rcases hok with
+                ⟨hxy, hxo, hyo, _, hfy, hfo, hout, hxouts, hyouts,
+                  hxsout, hysout, htail⟩
+              have hcell := run_selectBit flag x y out st hxy hxo hyo hfy hfo
+              have houtxs : out ∉ xs := by
+                intro h
+                exact hxsout out h rfl
+              have houtys : out ∉ ys := by
+                intro h
+                exact hysout out h rfl
+              have htailclean : Clean outs (run (selectBit flag x y out) st) := by
+                intro w hw
+                rw [hcell, upd_other]
+                · exact hclean w (List.mem_cons_of_mem _ hw)
+                · intro h
+                  exact hout (h ▸ hw)
+              have hih := ih ys outs (run (selectBit flag x y out) st) htail htailclean
+              have htailx : regValue xs (run (selectBit flag x y out) st) =
+                  regValue xs st := by
+                rw [hcell, regValue_upd_not_mem _ _ _ _ houtxs]
+              have htaily : regValue ys (run (selectBit flag x y out) st) =
+                  regValue ys st := by
+                rw [hcell, regValue_upd_not_mem _ _ _ _ houtys]
+              have hflagcell : run (selectBit flag x y out) st flag = st flag := by
+                rw [hcell, upd_other _ _ _ hfo]
+              rw [htaily, htailx, hflagcell] at hih
+              have houtvalue :
+                  run (selectPoint flag xs ys outs) (run (selectBit flag x y out) st) out =
+                    if st flag then st y else st x := by
+                rw [selectPoint_other flag out xs ys outs _ htail hout,
+                  hcell, upd_same, hclean out (List.mem_cons_self ..)]
+                simp
+              rw [selectPoint, run_append, regValue_cons, houtvalue, hih]
+              cases st flag <;> simp [regValue_cons]
 
 /-- One selector cell has T-count `7` (one Toffoli). -/
 theorem selectBit_tCount (flag x y out : Wire) : tCount (selectBit flag x y out) = 7 := rfl
 
-/-- The selector costs `7` T per output bit. -/
-theorem selectPoint_tCount (flag : Wire) (cols : List (Wire × Wire × Wire)) :
-    tCount (selectPoint flag cols) = 7 * cols.length := by
-  induction cols with
-  | nil => simp [selectPoint]
-  | cons c cs ih =>
-      obtain ⟨x,y,o⟩ := c
-      rw [selectPoint, tCount_append, selectBit_tCount, ih]
-      simp [Nat.mul_succ, Nat.add_comm]
+/-- The selector costs `7` T per output bit whenever its three registers are aligned. -/
+theorem selectPoint_tCount (flag : Wire) :
+    ∀ (xs ys outs : List Wire), xs.length = ys.length → xs.length = outs.length →
+      tCount (selectPoint flag xs ys outs) = 7 * outs.length := by
+  intro xs
+  induction xs with
+  | nil =>
+      intro ys outs hxy hxo
+      cases ys <;> cases outs <;> simp [selectPoint] at hxy hxo ⊢
+  | cons x xs ih =>
+      intro ys outs hxy hxo
+      cases ys with
+      | nil => simp at hxy
+      | cons y ys =>
+          cases outs with
+          | nil => simp at hxo
+          | cons out outs =>
+              have hxy' : xs.length = ys.length := by simpa using hxy
+              have hxo' : xs.length = outs.length := by simpa using hxo
+              rw [selectPoint, tCount_append, selectBit_tCount,
+                ih ys outs hxy' hxo']
+              simp [Nat.mul_succ, Nat.add_comm]
 
 /-- The selector is an arithmetic circuit. -/
-theorem selectPoint_HPFree (flag : Wire) (cols : List (Wire × Wire × Wire)) :
-    HPFree (selectPoint flag cols) := by
-  induction cols with
-  | nil => simp [selectPoint]
-  | cons c cs ih =>
-      obtain ⟨x,y,o⟩ := c
-      rw [selectPoint, hpFree_append]
-      exact ⟨by simp [selectBit], ih⟩
+theorem selectPoint_HPFree (flag : Wire) :
+    ∀ (xs ys outs : List Wire), HPFree (selectPoint flag xs ys outs) := by
+  intro xs
+  induction xs with
+  | nil => intro ys outs; simp [selectPoint]
+  | cons x xs ih =>
+      intro ys outs
+      cases ys <;> cases outs <;> simp [selectPoint, selectBit, ih]
 
 /-- The selector is well-formed under `selectOK`. -/
-theorem selectPoint_wellFormed (flag : Wire) (cols : List (Wire × Wire × Wire))
-    (h : selectOK flag cols) : CircuitWellFormed (selectPoint flag cols) := by
-  induction cols with
-  | nil => simp [selectPoint]
-  | cons c cs ih =>
-      obtain ⟨x,y,o⟩ := c
-      simp only [selectOK, List.map_cons, List.nodup_cons] at h
-      obtain ⟨⟨ho, houts⟩, hfo, hall⟩ := h
-      have hhead := hall (x,y,o) (List.mem_cons_self ..)
-      have hflagout : flag ≠ o := fun e => hfo (e ▸ List.mem_cons_self ..)
-      have htail : selectOK flag cs := by
-        simp only [selectOK]
-        refine ⟨houts, ?_, ?_⟩
-        · exact fun hf => hfo (List.mem_cons_of_mem _ hf)
-        · intro d hd
-          have hd' := hall d (List.mem_cons_of_mem _ hd)
-          exact ⟨fun hm => hd'.1 (List.mem_cons_of_mem _ hm),
-            fun hm => hd'.2.1 (List.mem_cons_of_mem _ hm), hd'.2.2⟩
-      rw [selectPoint, circuitWellFormed_append]
-      constructor
-      · simp only [selectBit, circuitWellFormed_cons, circuitWellFormed_nil,
-          Gate.WellFormed, and_true]
-        exact ⟨Ne.symm (fun e => hhead.1 (e ▸ List.mem_cons_self ..)),
-          hhead.2.2.2.2,
-          ⟨hhead.2.2.2.1, hflagout,
-            Ne.symm (fun e => hhead.2.1 (e ▸ List.mem_cons_self ..))⟩,
-          hhead.2.2.2.2⟩
-      · exact ih htail
+theorem selectPoint_wellFormed (flag : Wire) :
+    ∀ (xs ys outs : List Wire), selectOK flag xs ys outs →
+      CircuitWellFormed (selectPoint flag xs ys outs) := by
+  intro xs
+  induction xs with
+  | nil =>
+      intro ys outs h
+      cases ys <;> cases outs <;> simp [selectPoint, selectOK] at h ⊢
+  | cons x xs ih =>
+      intro ys outs h
+      cases ys with
+      | nil => simp [selectOK] at h
+      | cons y ys =>
+          cases outs with
+          | nil => simp [selectOK] at h
+          | cons out outs =>
+              rcases h with
+                ⟨hxy, hxo, hyo, _, hfy, hfo, _, _, _, _, _, htail⟩
+              rw [selectPoint, circuitWellFormed_append]
+              constructor
+              · simp only [selectBit, circuitWellFormed_cons, circuitWellFormed_nil,
+                  Gate.WellFormed, and_true]
+                exact ⟨hxo, hxy, ⟨hfy, hfo, hyo⟩, hxy⟩
+              · exact ih ys outs htail
 
 /-! ## Register copying -/
 
@@ -363,11 +383,6 @@ theorem Clean.regValue_eq_zero {ws : List Wire} {st : BasisState} (h : Clean ws 
 theorem AgreesOn.regValue {ws : List Wire} {before after : BasisState}
     (h : AgreesOn ws before after) : regValue ws after = regValue ws before :=
   regValue_congr ws after before h
-
-/-- CNOT-copy aligned source bits into a clean destination register. -/
-def copyReg : List Wire → List Wire → Circuit
-  | s :: src, d :: dst => Gate.CX s d :: copyReg src dst
-  | _, _ => []
 
 @[simp]
 theorem copyReg_tCount (src dst : List Wire) : tCount (copyReg src dst) = 0 := by
@@ -425,8 +440,8 @@ theorem copyReg_other (w : Wire) :
 /-- CNOT-copy correctness on duplicate-free, disjoint aligned registers. -/
 theorem copyReg_correct :
     ∀ (src dst : List Wire) (st : BasisState),
-      dst.length = src.length → (src ++ dst).Nodup → Clean dst st →
-      regValue dst (run (copyReg src dst) st) = regValue src st := by
+      dst.length = src.length → (src ++ dst).Nodup → clean(dst, st) →
+      (⟪copyReg src dst⟫ st)⟦ᵣdst⟧ = st⟦ᵣsrc⟧ := by
   intro src
   induction src with
   | nil =>
@@ -526,38 +541,40 @@ theorem selectBit_usesOnly (flag x y out : Wire) :
   simp [CircuitUsesOnly, selectBit, Gate.UsesOnly]
 
 /-- Full syntactic footprint of a pointwise selector. -/
-def selectFootprint (flag : Wire) (cols : List (Wire × Wire × Wire)) : List Wire :=
-  flag :: cols.flatMap (fun c => [c.1, c.2.1, c.2.2])
+def selectFootprint (flag : Wire) (xs ys outs : List Wire) : List Wire :=
+  flag :: xs ++ ys ++ outs
 
 /-- A pointwise selector reads and writes only its declared footprint. -/
 theorem selectPoint_usesOnly (flag : Wire) :
-    ∀ cols : List (Wire × Wire × Wire),
-      CircuitUsesOnly (selectFootprint flag cols) (selectPoint flag cols) := by
-  intro cols
-  induction cols with
-  | nil => exact fun g hg => by simp [selectPoint] at hg
-  | cons head rest ih =>
-      obtain ⟨x,y,o⟩ := head
-      rw [selectPoint]
-      apply usesOnly_append
-      · apply usesOnly_mono (selectBit_usesOnly flag x y o)
-        intro w hw
-        simp only [List.mem_cons] at hw
-        simp only [selectFootprint, List.flatMap_cons, List.mem_cons, List.mem_append,
-          List.mem_flatMap]
-        rcases hw with rfl | rfl | rfl | rfl | hw
-        · simp
-        · simp
-        · simp
-        · simp
-        · contradiction
-      · apply usesOnly_mono ih
-        intro w hw
-        simp only [selectFootprint, List.flatMap_cons, List.mem_cons, List.mem_append,
-          List.mem_flatMap] at hw ⊢
-        rcases hw with rfl | hw
-        · simp
-        · exact Or.inr (Or.inr hw)
+    ∀ (xs ys outs : List Wire),
+      CircuitUsesOnly (selectFootprint flag xs ys outs) (selectPoint flag xs ys outs) := by
+  intro xs
+  induction xs with
+  | nil => intro ys outs g hg; simp [selectPoint] at hg
+  | cons x xs ih =>
+      intro ys outs
+      cases ys with
+      | nil => intro g hg; simp [selectPoint] at hg
+      | cons y ys =>
+          cases outs with
+          | nil => intro g hg; simp [selectPoint] at hg
+          | cons out outs =>
+              rw [selectPoint]
+              apply usesOnly_append
+              · apply usesOnly_mono (selectBit_usesOnly flag x y out)
+                intro w hw
+                simp only [List.mem_cons, List.not_mem_nil, or_false] at hw
+                simp only [selectFootprint, List.mem_cons, List.mem_append]
+                rcases hw with rfl | rfl | rfl | rfl <;> simp
+              · apply usesOnly_mono (ih ys outs)
+                intro w hw
+                simp only [selectFootprint, List.mem_cons, List.mem_append] at hw ⊢
+                rcases hw with ((hflag | hxs) | hys) | houts
+                · subst w
+                  simp
+                · exact Or.inl (Or.inl (Or.inr (Or.inr hxs)))
+                · exact Or.inl (Or.inr (Or.inr hys))
+                · exact Or.inr (Or.inr houts)
 
 theorem hpFree_reverse {c : Circuit} (h : HPFree c) : HPFree c.reverse := by
   intro g hg

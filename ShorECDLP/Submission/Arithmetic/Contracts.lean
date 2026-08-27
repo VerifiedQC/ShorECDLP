@@ -47,6 +47,9 @@ follow.
 
 namespace ShorECDLP
 
+open Classical
+open scoped ArithmeticNotation
+
 /-- Public input/output registers and private workspace for a binary arithmetic circuit.
 Registers are lists of wires in least-significant-first order. -/
 structure RegisterLayout where
@@ -97,7 +100,7 @@ This unconditional locality clause is what makes a contract composable inside a 
 arithmetic circuit: the caller may keep live controls and intermediate registers outside
 `ws` without importing the callee's private implementation. -/
 def PreservesOutside (ws : List Wire) (program : Circuit) : Prop :=
-  ∀ (st : BasisState) (w : Wire), w ∉ ws → Classical.run program st w = st w
+  ∀ (st : BasisState) (w : Wire), w ∉ ws → ⟪program⟫ st w = st w
 
 /-- A circuit confined to `ws` leaves every outside wire unchanged. -/
 theorem CircuitUsesOnly.preservesOutside {ws : List Wire} {program : Circuit}
@@ -130,14 +133,14 @@ structure CleanBinaryContract (program : Circuit) (layout : RegisterLayout)
     (modulus : Nat) (op : Nat → Nat → Nat) (cost : Nat) : Prop where
   correct : ∀ st : BasisState,
     layout.Valid →
-    regValue layout.lhs st < modulus →
-    regValue layout.rhs st < modulus →
-    Clean (layout.out ++ layout.work) st →
-    let after := Classical.run program st
+    st⟦ᵣlayout.lhs⟧ < modulus →
+    st⟦ᵣlayout.rhs⟧ < modulus →
+    clean(layout.out ++ layout.work, st) →
+    let after := ⟪program⟫ st
     AgreesOn layout.lhs st after ∧
       AgreesOn layout.rhs st after ∧
-      regValue layout.out after = op (regValue layout.lhs st) (regValue layout.rhs st) % modulus ∧
-      Clean layout.work after
+      after⟦ᵣlayout.out⟧ = op st⟦ᵣlayout.lhs⟧ st⟦ᵣlayout.rhs⟧ % modulus ∧
+      clean(layout.work, after)
   usesOnly : CircuitUsesOnly layout.allWires program
   counted : tCount program = cost
   hpFree : Classical.HPFree program
