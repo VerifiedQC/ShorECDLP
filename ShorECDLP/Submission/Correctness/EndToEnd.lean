@@ -1,5 +1,6 @@
 import ShorECDLP.Submission.EllipticCurve.ECDLPOracle
 import ShorECDLP.Submission.OrderFinding.Main
+import Mathlib.Analysis.Real.Pi.Bounds
 
 /-!
 # Conditional secp256k1 order-finding theorem
@@ -10,8 +11,9 @@ secp256k1 group facts visible: primality of `order` and the statement that the
 standard generator has that additive order.
 
 The exact single-trial circuit is named explicitly so its correctness and
-resource theorems refer to the same term.  Classical repetition to the final
-99% success target is deliberately left to the separate framework boundary.
+resource theorems refer to the same term.  The final theorem fills the
+Framework `ECDLPSubmission` contract: 26 independent measured trials reach
+99% success and charge 26 copies of that identical trial circuit.
 -/
 
 namespace ShorECDLP
@@ -103,6 +105,40 @@ private theorem hadamards_tCount (reg : List Wire) :
         simpa only [hadamards] using ih
       simpa only [tCost, zero_add] using ih'
 
+omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
+private theorem hadamards_wellFormed (reg : List Wire) :
+    CircuitWellFormed (hadamards reg) := by
+  simp [hadamards, CircuitWellFormed, Gate.WellFormed]
+
+omit [Fact (Nat.Prime order)] in
+/-- The exact trial is a well-formed unitary circuit on a valid layout. -/
+theorem ecdlpTrial_wellFormed
+    (Q : Point)
+    (aReg bReg pointReg : List Wire)
+    (workStart qftAncilla : Wire)
+    (s : BasisState)
+    (hpointLength : pointReg.length = pointWidth)
+    (hnodup :
+      (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
+    (hsetup :
+      Quantum.OrderFinding.OrderFindingSetup pointEncoding
+        aReg bReg pointReg (scalarMulWork workStart)
+        qftAncilla 256 s) :
+    CircuitWellFormed
+      (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q) := by
+  have habc := hnodup.of_append_left
+  have hab := habc.of_append_left
+  have haNodup : aReg.Nodup := hab.of_append_left
+  have hbNodup : bReg.Nodup := hab.of_append_right
+  have hfresh := hsetup.ancilla_fresh
+  simp only [List.mem_append, not_or] at hfresh
+  simp only [ecdlpTrial, circuitWellFormed_append]
+  exact ⟨⟨⟨hadamards_wellFormed (aReg ++ bReg),
+      ecdlpOracle_wellFormed aReg bReg pointReg workStart G Q
+        hpointLength hnodup⟩,
+      Quantum.iqft_wellFormed aReg qftAncilla hfresh.1.1.1 haNodup⟩,
+    Quantum.iqft_wellFormed bReg qftAncilla hfresh.1.1.2 hbNodup⟩
+
 /--
 The concrete secp256k1 oracle satisfies the conditional ECDLP order-finding
 success bound.  The generator-order equality and the relation `Q = d • G`
@@ -178,6 +214,109 @@ theorem ecdlpTrial_tCount
       aReg bReg pointReg workStart G Q hpointLength hGTable hQTable,
     Quantum.tCount_iqft, Quantum.tCount_iqft,
     haLength, hbLength]
+
+omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
+private theorem bitcoin_singleRun_lower :
+    (41 / 250 : Real) ≤
+      ((order - 1 : Real) / order) *
+        ((4 : Real) / Real.pi ^ 2) ^ 2 := by
+  have hpi : Real.pi < (3.1416 : Real) := Real.pi_lt_d4
+  have hpipos : 0 < Real.pi := Real.pi_pos
+  have hpi2 : Real.pi ^ 2 < (3.1416 : Real) ^ 2 := by
+    nlinarith
+  have hpi4 : Real.pi ^ 4 < (3.1416 : Real) ^ 4 := by
+    nlinarith [sq_nonneg (Real.pi ^ 2),
+      sq_nonneg ((3.1416 : Real) ^ 2)]
+  have horderpos : (0 : Real) < order := by
+    norm_num [order]
+  have hpine : Real.pi ≠ 0 := ne_of_gt hpipos
+  have hordne : (order : Real) ≠ 0 := ne_of_gt horderpos
+  field_simp [hpine, hordne]
+  norm_num [order] at hpi4 ⊢
+  nlinarith
+
+/--
+The public Bitcoin ECDLP submission theorem.
+
+The exact 256-bit `ecdlpTrial` is run and measured independently 26 times.
+Canonical postprocessing recovers `d` with probability at least 99%, and the
+same 26 trial circuits have exact aggregate T-count 21,888,426,033,809,920.
+-/
+theorem bitcoinECDLP_correct
+    {d : Nat} (Q : Point)
+    (aReg bReg pointReg : List Wire)
+    (workStart qftAncilla : Wire)
+    (s : BasisState)
+    (hpointLength : pointReg.length = pointWidth)
+    (hnodup :
+      (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
+    (horderG : addOrderOf G = order)
+    (hQ : Q = d • G)
+    (hQnonzero : Q ≠ 0)
+    (hsetup :
+      Quantum.OrderFinding.OrderFindingSetup pointEncoding
+        aReg bReg pointReg (scalarMulWork workStart)
+        qftAncilla 256 s) :
+    ECDLPSubmission
+      (trial := ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
+      (input := s)
+      (aReg := aReg)
+      (bReg := bReg)
+      (order := order)
+      (precision := 256)
+      (secret := d)
+      (primeOrder := (Fact.out : Nat.Prime order))
+      (trials := 26)
+      (targetSuccess := (99 / 100 : Real))
+      (exactTCount := 21888426033809920) := by
+  have hwf := ecdlpTrial_wellFormed
+    Q aReg bReg pointReg workStart qftAncilla s
+    hpointLength hnodup hsetup
+  have hnorm :
+      Quantum.normSq
+        (Quantum.run
+          (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
+          (Quantum.ket s)) = 1 :=
+    Quantum.normSq_run_ket _ hwf s
+  refine
+    { normalized := hnorm
+      successful := ?_
+      counted := ?_ }
+  · have hsingleExact := orderFinding_correct
+      Q aReg bReg pointReg workStart qftAncilla s
+      hpointLength hnodup horderG hQ hsetup (by norm_num [order])
+    have hsingle :
+        (41 / 250 : Real) ≤
+          Quantum.OrderFinding.orderFindingSuccessProbability
+            order 256 d (Fact.out : Nat.Prime order) aReg bReg
+            (Quantum.run
+              (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
+              (Quantum.ket s)) :=
+      bitcoin_singleRun_lower.trans hsingleExact
+    have hleNorm :=
+      Quantum.OrderFinding.orderFindingSuccessProbability_le_normSq
+        order 256 d (Fact.out : Nat.Prime order)
+        aReg bReg hsetup.a_width hsetup.b_width
+        (Quantum.run
+          (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
+          (Quantum.ket s))
+    have hsingleLeOne :
+        Quantum.OrderFinding.orderFindingSuccessProbability
+            order 256 d (Fact.out : Nat.Prime order) aReg bReg
+            (Quantum.run
+              (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
+              (Quantum.ket s)) ≤ 1 :=
+      hleNorm.trans_eq hnorm
+    have hamp := independentRetrySuccessProbability_mono
+      26 hsingleLeOne hsingle
+    have hnumeric :
+        (99 / 100 : Real) ≤
+          independentRetrySuccessProbability (41 / 250 : Real) 26 := by
+      norm_num [independentRetrySuccessProbability]
+    exact hnumeric.trans hamp
+  · unfold repeatedTCount
+    rw [ecdlpTrial_tCount Q aReg bReg pointReg workStart qftAncilla
+      hsetup.a_width hsetup.b_width hpointLength horderG hQ hQnonzero]
 
 end Secp256k1
 end ShorECDLP
