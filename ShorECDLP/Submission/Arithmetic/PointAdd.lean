@@ -1223,7 +1223,306 @@ theorem pointAddCopyX_correct
          pointAddFlagWork workStart ++
          pointAddBranchWork workStart)
         after := by
-  sorry
+  dsimp
+
+  have hlocalSizeEq : localWorkSize = 4112 := by
+    norm_num [localWorkSize, selectedOffset, candidateOffset, flagOffset,
+      yHistoryOffset, yDifferenceOffset, xHistoryOffset,
+      xDifferenceOffset, zeroHistoryOffset, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth, pointWidth]
+
+  have hlocalSize : 257 ≤ localWorkSize := by omega
+
+  have hdstEq :
+      (pointAddX workStart).take 256 =
+        List.range' workStart 256 := by
+    simp [pointAddX, fieldWidth, Secp256k1Instance.fieldWidth,
+      List.take_range'_of_length_ge]
+
+  have hdstWork :
+      ∀ w ∈ (pointAddX workStart).take 256,
+        w ∈ pointAddWork workStart := by
+    intro w hw
+    rw [hdstEq] at hw
+    have hbounds := List.mem_range'_1.mp hw
+    rw [pointAddWork]
+    apply List.mem_append_left
+    exact List.mem_range'_1.mpr ⟨hbounds.1, by omega⟩
+
+  have hsrcMem :
+      ∀ w ∈ PointRegister.x pointReg, w ∈ pointReg := by
+    intro w hw
+    change w ∈ (pointReg.drop 1).take 256 at hw
+    exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+
+  obtain ⟨hpublicNodup, _hworkNodup, hpublicWork⟩ :=
+    List.nodup_append.mp hnodup
+  obtain ⟨hpointNodup, _houtNodup, _hpointOut⟩ :=
+    List.nodup_append.mp hpublicNodup
+
+  have hsrcNodup : (PointRegister.x pointReg).Nodup := by
+    apply List.Nodup.sublist
+      ((List.take_sublist 256 (pointReg.drop 1)).trans
+        (List.drop_sublist 1 pointReg))
+    exact hpointNodup
+
+  have hdstNodup : ((pointAddX workStart).take 256).Nodup := by
+    rw [hdstEq]
+    exact List.nodup_range'
+
+  have hcopyNodup :
+      (PointRegister.x pointReg ++
+        (pointAddX workStart).take 256).Nodup := by
+    apply List.nodup_append.mpr
+    refine ⟨hsrcNodup, hdstNodup, ?_⟩
+    intro a ha b hb
+    exact hpublicWork a
+      (List.mem_append_left outReg (hsrcMem a ha))
+      b (hdstWork b hb)
+
+  have hdstClean :
+      Clean ((pointAddX workStart).take 256) st :=
+    Arithmetic.Clean.mono hclean hdstWork
+
+  have hcopyValue :
+      regValue ((pointAddX workStart).take 256)
+          (Classical.run (pointAddCopyX pointReg workStart) st) =
+        regValue (PointRegister.x pointReg) st := by
+    simpa only [pointAddCopyX] using
+      (Arithmetic.copyReg_correct
+        (PointRegister.x pointReg)
+        ((pointAddX workStart).take 256)
+        st
+        (by
+          rw [hdstEq]
+          simpa using
+            (PointRegister.x_length pointReg hpointLength).symm)
+        hcopyNodup hdstClean)
+
+  have hother (w : Wire)
+      (hw : w ∉ (pointAddX workStart).take 256) :
+      Classical.run (pointAddCopyX pointReg workStart) st w = st w := by
+    simpa only [pointAddCopyX] using
+      (Arithmetic.copyReg_other w
+        (PointRegister.x pointReg)
+        ((pointAddX workStart).take 256) st hw)
+
+  have hpointAgree :
+      AgreesOn pointReg st
+        (Classical.run (pointAddCopyX pointReg workStart) st) := by
+    intro w hw
+    apply hother
+    intro hdst
+    exact
+      (hpublicWork w (List.mem_append_left outReg hw)
+        w (hdstWork w hdst)) rfl
+
+  have hhighNotDst :
+      workStart + 256 ∉ (pointAddX workStart).take 256 := by
+    rw [hdstEq]
+    simp [List.mem_range'_1]
+
+  have hhighWork : workStart + 256 ∈ pointAddWork workStart := by
+    rw [pointAddWork]
+    apply List.mem_append_left
+    exact List.mem_range'_1.mpr ⟨by omega, by omega⟩
+
+  have hhighClean :
+      Clean [workStart + 256]
+        (Classical.run (pointAddCopyX pointReg workStart) st) := by
+    intro w hw
+    simp only [List.mem_singleton] at hw
+    subst w
+    rw [hother (workStart + 256) hhighNotDst]
+    exact hclean (workStart + 256) hhighWork
+
+  have hpointAddXShape :
+      pointAddX workStart =
+        PointRegister.padCoordinate
+          ((pointAddX workStart).take 256)
+          (workStart + 256) := by
+    rw [PointRegister.padCoordinate, hdstEq]
+    change
+      List.range' workStart 257 =
+        List.range' workStart 256 ++ [workStart + 256]
+    simpa using
+      (List.range'_concat (s := workStart) (n := 256) (step := 1))
+
+  have hxValue :
+      regValue (pointAddX workStart)
+          (Classical.run (pointAddCopyX pointReg workStart) st) =
+        regValue (PointRegister.x pointReg) st := by
+    rw [hpointAddXShape]
+    exact
+      (PointRegister.regValue_padCoordinate_of_clean
+        ((pointAddX workStart).take 256)
+        (workStart + 256)
+        (Classical.run (pointAddCopyX pointReg workStart) st)
+        hhighClean).trans hcopyValue
+
+  have rangeBounds
+      (offset len : Nat)
+      {w : Wire}
+      (hw : workStart + offset ≤ w ∧
+        w < workStart + offset + len)
+      (hmin : 257 ≤ offset)
+      (hmax : offset + len ≤ 4112) :
+      workStart + 257 ≤ w ∧ w < workStart + 4112 := by
+    constructor
+    · exact (Nat.add_le_add_left hmin workStart).trans hw.1
+    · apply hw.2.trans_le
+      simpa [Nat.add_assoc] using
+        (Nat.add_le_add_left hmax workStart)
+
+  have wireBounds
+      (offset : Nat)
+      {w : Wire}
+      (hw : w = workStart + offset)
+      (hmin : 257 ≤ offset)
+      (hmax : offset < 4112) :
+      workStart + 257 ≤ w ∧ w < workStart + 4112 := by
+    subst w
+    exact
+      ⟨Nat.add_le_add_left hmin workStart,
+        Nat.add_lt_add_left hmax workStart⟩
+
+  have hremainingFacts :
+      ∀ w ∈
+          (pointAddY workStart ++
+            pointAddFlagWork workStart ++
+            pointAddBranchWork workStart),
+        workStart + 257 ≤ w ∧ w ∈ pointAddWork workStart := by
+    intro w hw
+    rcases List.mem_append.mp hw with hyFlag | hbranch
+    · rcases List.mem_append.mp hyFlag with hy | hflag
+      · have hyRaw :
+            workStart + 257 ≤ w ∧ w < workStart + 257 + 257 := by
+          simpa [pointAddY, fieldWidth,
+            Secp256k1Instance.fieldWidth] using
+            (List.mem_range'_1.mp hy)
+        have hbounds :=
+          rangeBounds 257 257 hyRaw (by omega) (by omega)
+        have hge : workStart + 257 ≤ w := hbounds.1
+        have hupper : w < workStart + localWorkSize := by
+          rw [hlocalSizeEq]
+          exact hbounds.2
+        refine ⟨hge, ?_⟩
+        rw [pointAddWork]
+        apply List.mem_append_left
+        apply List.mem_range'_1.mpr
+        exact
+          ⟨(Nat.le_add_right workStart 257).trans hge,
+            hupper⟩
+      · have hbounds :
+            workStart + 257 ≤ w ∧ w < workStart + 4112 := by
+          simp only [pointAddFlagWork, pointAddConst,
+            pointAddZeroHistory, pointAddXDifference,
+            pointAddXHistory, pointAddYDifference,
+            pointAddYHistory, pointAddInfinityFlag,
+            pointAddXEqFlag, pointAddYNegFlag,
+            pointAddGenericFlag, pointAddPairFlag,
+            pointAddDoubleFlag, List.mem_append,
+            List.mem_cons,
+            List.mem_range'_1] at hflag
+          norm_num [localWorkSize, selectedOffset, candidateOffset,
+            flagOffset, yHistoryOffset, yDifferenceOffset,
+            xHistoryOffset, xDifferenceOffset, zeroHistoryOffset,
+            constOffset, fieldAreaSize, fieldWidth,
+            Secp256k1Instance.fieldWidth, pointWidth] at hflag
+          rcases hflag with
+              (((((h0 | h1) | h2) | h3) | h4) | h5) |
+                (h6 | h7 | h8 | h9 | h10 | h11)
+          · exact rangeBounds 1799 256 h0 (by omega) (by omega)
+          · exact wireBounds 2055 h1 (by omega) (by omega)
+          · exact rangeBounds 2056 256 h2 (by omega) (by omega)
+          · exact rangeBounds 2312 256 h3 (by omega) (by omega)
+          · exact rangeBounds 2568 256 h4 (by omega) (by omega)
+          · exact rangeBounds 2824 256 h5 (by omega) (by omega)
+          · exact wireBounds 3080 h6 (by omega) (by omega)
+          · exact wireBounds 3081 h7 (by omega) (by omega)
+          · exact wireBounds 3082 h8 (by omega) (by omega)
+          · exact wireBounds 3083 h9 (by omega) (by omega)
+          · exact wireBounds 3084 h10 (by omega) (by omega)
+          · exact wireBounds 3085 h11 (by omega) (by omega)
+        have hge : workStart + 257 ≤ w := hbounds.1
+        have hupper : w < workStart + localWorkSize := by
+          rw [hlocalSizeEq]
+          exact hbounds.2
+        refine ⟨hge, ?_⟩
+        rw [pointAddWork]
+        apply List.mem_append_left
+        apply List.mem_range'_1.mpr
+        exact
+          ⟨(Nat.le_add_right workStart 257).trans hge,
+            hupper⟩
+    · rcases List.mem_append.mp hbranch with hlocal | harithmetic
+      · have hbounds :
+            workStart + 257 ≤ w ∧ w < workStart + 4112 := by
+          simp only [pointAddT0, pointAddT1,
+            pointAddT2, pointAddT3, pointAddT4,
+            pointAddCandidate, pointAddSelected,
+            List.mem_append, List.mem_range'_1] at hlocal
+          norm_num [localWorkSize, selectedOffset, candidateOffset,
+            flagOffset, yHistoryOffset, yDifferenceOffset,
+            xHistoryOffset, xDifferenceOffset, zeroHistoryOffset,
+            constOffset, fieldAreaSize, fieldWidth,
+            Secp256k1Instance.fieldWidth, pointWidth] at hlocal
+          rcases hlocal with
+              (((((h0 | h1) | h2) | h3) | h4) | h5) | h6
+          · exact rangeBounds 514 257 h0 (by omega) (by omega)
+          · exact rangeBounds 771 257 h1 (by omega) (by omega)
+          · exact rangeBounds 1028 257 h2 (by omega) (by omega)
+          · exact rangeBounds 1285 257 h3 (by omega) (by omega)
+          · exact rangeBounds 1542 257 h4 (by omega) (by omega)
+          · exact rangeBounds 3086 513 h5 (by omega) (by omega)
+          · exact rangeBounds 3599 513 h6 (by omega) (by omega)
+        have hge : workStart + 257 ≤ w := hbounds.1
+        have hupper : w < workStart + localWorkSize := by
+          rw [hlocalSizeEq]
+          exact hbounds.2
+        refine ⟨hge, ?_⟩
+        rw [pointAddWork]
+        apply List.mem_append_left
+        apply List.mem_range'_1.mpr
+        exact
+          ⟨(Nat.le_add_right workStart 257).trans hge,
+            hupper⟩
+      · have hshifted :
+            ∃ a ∈ Secp256k1Instance.secpLayout.allWires,
+              pointAddArithmeticOffset workStart + a = w := by
+          simpa only [pointAddArithmeticWork, shiftWires,
+            List.mem_map] using harithmetic
+        rcases hshifted with ⟨a, ha, rfl⟩
+        refine ⟨?_, ?_⟩
+        · rw [pointAddArithmeticOffset]
+          exact
+            (Nat.add_le_add_left hlocalSize workStart).trans
+              (Nat.le_add_right (workStart + localWorkSize) a)
+        · rw [pointAddWork]
+          exact List.mem_append_right _ harithmetic
+
+  have hremainingClean :
+      Clean
+        (pointAddY workStart ++
+          pointAddFlagWork workStart ++
+          pointAddBranchWork workStart)
+        (Classical.run (pointAddCopyX pointReg workStart) st) := by
+    intro w hw
+    have hwFacts := hremainingFacts w hw
+    have hwGe : workStart + 257 ≤ w := hwFacts.1
+    have hwNotDst : w ∉ (pointAddX workStart).take 256 := by
+      intro hdst
+      rw [hdstEq] at hdst
+      have hbounds : workStart ≤ w ∧ w < workStart + 256 :=
+        List.mem_range'_1.mp hdst
+      have hwLt : w < workStart + 257 :=
+        hbounds.2.trans_le
+          (Nat.add_le_add_left (by omega : 256 ≤ 257) workStart)
+      exact (Nat.not_lt_of_ge hwGe) hwLt
+    rw [hother w hwNotDst]
+    exact hclean w hwFacts.2
+
+  exact ⟨hpointAgree, hxValue, hremainingClean⟩
 
 theorem pointAddCopyY_correct
     (pointReg outReg : List Wire)
