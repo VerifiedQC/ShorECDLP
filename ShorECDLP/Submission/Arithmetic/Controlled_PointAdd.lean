@@ -1880,5 +1880,94 @@ theorem controlledPointAdd_correct
   rw [hforward, hswap]
   exact huncompute
 
+/-! ## Public structural lemmas -/
+
+omit [Fact (Nat.Prime p)] in
+/-- Controlled point addition uses only classical reversible gates. -/
+theorem controlledPointAdd_HPFree
+    (control : Wire)
+    (pointReg : List Wire)
+    (workStart : Wire)
+    (C : Point) :
+    Classical.HPFree
+      (controlledPointAdd control pointReg workStart C) := by
+  let temp := controlledPointAddTemp workStart
+  let auxStart := controlledPointAddAuxStart workStart
+  let forward :=
+    controlledPointAddOut control pointReg temp auxStart C
+  let backward :=
+    controlledPointAddOut control pointReg temp auxStart (-C)
+
+  have hforward : Classical.HPFree forward := by
+    exact controlledPointAddOut_HPFree
+      control pointReg temp auxStart C
+  have hswap : Classical.HPFree (pointSwapReg pointReg temp) :=
+    pointSwapReg_HPFree pointReg temp
+  have hbackward : Classical.HPFree backward := by
+    exact controlledPointAddOut_HPFree
+      control pointReg temp auxStart (-C)
+
+  change Classical.HPFree
+    ((forward ++ pointSwapReg pointReg temp) ++ backward.reverse)
+  rw [Classical.hpFree_append, Classical.hpFree_append]
+  exact ⟨⟨hforward, hswap⟩, Arithmetic.hpFree_reverse hbackward⟩
+
+omit [Fact (Nat.Prime p)] in
+/--
+Controlled point addition is well formed whenever its control, point register,
+and declared workspace are pairwise disjoint and the point register has the
+canonical secp256k1 width.
+-/
+theorem controlledPointAdd_wellFormed
+    (control : Wire)
+    (pointReg : List Wire)
+    (workStart : Wire)
+    (C : Point)
+    (hpointLength : pointReg.length = pointWidth)
+    (hnodup :
+      ([control] ++ pointReg ++ controlledPointAddWork workStart).Nodup) :
+    CircuitWellFormed
+      (controlledPointAdd control pointReg workStart C) := by
+  let temp := controlledPointAddTemp workStart
+  let auxStart := controlledPointAddAuxStart workStart
+  let work := controlledPointAddOutWork auxStart
+  let forward :=
+    controlledPointAddOut control pointReg temp auxStart C
+  let backward :=
+    controlledPointAddOut control pointReg temp auxStart (-C)
+
+  have htempLength : temp.length = pointWidth := by
+    simp [temp, controlledPointAddTemp]
+
+  have houtNodup :
+      ([control] ++ pointReg ++ temp ++ work).Nodup := by
+    simpa [temp, auxStart, work, controlledPointAddWork,
+      controlledPointAddTemp, controlledPointAddAuxStart,
+      List.append_assoc] using hnodup
+
+  have hswapNodup : (pointReg ++ temp).Nodup := by
+    have htail : (pointReg ++ temp ++ work).Nodup := by
+      have h0 :
+          (control :: (pointReg ++ temp ++ work)).Nodup := by
+        simpa [List.append_assoc] using houtNodup
+      exact (List.nodup_cons.mp h0).2
+    exact (List.nodup_append.mp htail).1
+
+  have hforward : CircuitWellFormed forward := by
+    exact controlledPointAddOut_wellFormed
+      control pointReg temp auxStart C
+      hpointLength htempLength houtNodup
+  have hswap : CircuitWellFormed (pointSwapReg pointReg temp) :=
+    pointSwapReg_wellFormed pointReg temp hswapNodup
+  have hbackward : CircuitWellFormed backward := by
+    exact controlledPointAddOut_wellFormed
+      control pointReg temp auxStart (-C)
+      hpointLength htempLength houtNodup
+
+  change CircuitWellFormed
+    ((forward ++ pointSwapReg pointReg temp) ++ backward.reverse)
+  rw [circuitWellFormed_append, circuitWellFormed_append]
+  exact ⟨⟨hforward, hswap⟩, Arithmetic.wellFormed_reverse hbackward⟩
+
 end Secp256k1
 end ShorECDLP
