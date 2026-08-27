@@ -1922,6 +1922,333 @@ theorem pointAddCoordinateCopies_correct
   · exact hxKeep.trans hxValue
   · exact hyValue.trans hyPublic
 
+private theorem pointAddFlags_usesOnly
+    (pointReg : List Wire)
+    (workStart : Wire)
+    (xC yC : Fp) :
+    CircuitUsesOnly
+      (pointReg ++ pointAddFlagWork workStart)
+      (pointAddFlags pointReg workStart xC yC) := by
+  simp only [pointAddFlags]
+  have htag :
+      ∀ w ∈ PointRegister.tag pointReg,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    exact List.mem_append_left _ (List.mem_of_mem_take hw)
+  have hx :
+      ∀ w ∈ PointRegister.x pointReg,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    apply List.mem_append_left
+    exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+  have hy :
+      ∀ w ∈ PointRegister.y pointReg,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    apply List.mem_append_left
+    exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+  have hflag :
+      ∀ w ∈ pointAddFlagWork workStart,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    exact List.mem_append_right _ hw
+  have hconst :
+      ∀ w ∈ pointAddConst workStart,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    apply hflag
+    simp [pointAddFlagWork, hw]
+  have hzero :
+      ∀ w ∈ pointAddZeroHistory workStart,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    apply hflag
+    simp [pointAddFlagWork, hw]
+  have hxdifference :
+      ∀ w ∈ pointAddXDifference workStart,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    apply hflag
+    simp [pointAddFlagWork, hw]
+  have hxhistory :
+      ∀ w ∈ pointAddXHistory workStart,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    apply hflag
+    simp [pointAddFlagWork, hw]
+  have hydifference :
+      ∀ w ∈ pointAddYDifference workStart,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    apply hflag
+    simp [pointAddFlagWork, hw]
+  have hyhistory :
+      ∀ w ∈ pointAddYHistory workStart,
+        w ∈ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw
+    apply hflag
+    simp [pointAddFlagWork, hw]
+
+  have hzeroFlag :
+      CircuitUsesOnly
+        (pointReg ++ pointAddFlagWork workStart)
+        (zeroFlag
+          (PointRegister.tag pointReg)
+          (pointAddInfinityFlag workStart)
+          (pointAddZeroHistory workStart)) := by
+    apply usesOnly_mono (zeroFlag_usesOnly _ _ _)
+    intro w hw
+    simp only [zeroFlagWires, List.mem_append,
+      List.mem_cons] at hw
+    rcases hw with htagMem | hflagMem | hhistoryMem
+    · exact htag w htagMem
+    · subst w
+      apply hflag
+      simp [pointAddFlagWork]
+    · exact hzero w hhistoryMem
+
+  have hequalX :
+      CircuitUsesOnly
+        (pointReg ++ pointAddFlagWork workStart)
+        (equalFlag
+          (PointRegister.x pointReg)
+          (pointAddConst workStart)
+          (pointAddXEqFlag workStart)
+          (pointAddXDifference workStart)
+          (pointAddXHistory workStart)) := by
+    apply usesOnly_mono (equalFlag_usesOnly _ _ _ _ _)
+    intro w hw
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hw
+    rcases hw with ((hxMem | hconstMem) | hdiffMem) |
+        hflagMem | hhistoryMem
+    · exact hx w hxMem
+    · exact hconst w hconstMem
+    · exact hxdifference w hdiffMem
+    · subst w
+      apply hflag
+      simp [pointAddFlagWork]
+    · exact hxhistory w hhistoryMem
+
+  have hequalY :
+      CircuitUsesOnly
+        (pointReg ++ pointAddFlagWork workStart)
+        (equalFlag
+          (PointRegister.y pointReg)
+          (pointAddConst workStart)
+          (pointAddYNegFlag workStart)
+          (pointAddYDifference workStart)
+          (pointAddYHistory workStart)) := by
+    apply usesOnly_mono (equalFlag_usesOnly _ _ _ _ _)
+    intro w hw
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hw
+    rcases hw with ((hyMem | hconstMem) | hdiffMem) |
+        hflagMem | hhistoryMem
+    · exact hy w hyMem
+    · exact hconst w hconstMem
+    · exact hydifference w hdiffMem
+    · subst w
+      apply hflag
+      simp [pointAddFlagWork]
+    · exact hyhistory w hhistoryMem
+
+  have hloadX :
+      CircuitUsesOnly
+        (pointReg ++ pointAddFlagWork workStart)
+        (loadConst (pointAddConst workStart) xC.val) :=
+    usesOnly_mono (loadConst_usesOnly _ _) hconst
+
+  have hloadY :
+      CircuitUsesOnly
+        (pointReg ++ pointAddFlagWork workStart)
+        (loadConst (pointAddConst workStart) (-yC).val) :=
+    usesOnly_mono (loadConst_usesOnly _ _) hconst
+
+  have hgates :
+      CircuitUsesOnly
+        (pointReg ++ pointAddFlagWork workStart)
+        ([Gate.X (pointAddInfinityFlag workStart),
+          Gate.X (pointAddXEqFlag workStart),
+          Gate.CCX
+            (pointAddInfinityFlag workStart)
+            (pointAddXEqFlag workStart)
+            (pointAddGenericFlag workStart),
+          Gate.X (pointAddXEqFlag workStart),
+          Gate.X (pointAddInfinityFlag workStart),
+          Gate.X (pointAddYNegFlag workStart),
+          Gate.CCX
+            (pointAddXEqFlag workStart)
+            (pointAddYNegFlag workStart)
+            (pointAddPairFlag workStart),
+          Gate.X (pointAddYNegFlag workStart),
+          Gate.X (pointAddInfinityFlag workStart),
+          Gate.CCX
+            (pointAddInfinityFlag workStart)
+            (pointAddPairFlag workStart)
+            (pointAddDoubleFlag workStart),
+          Gate.X (pointAddInfinityFlag workStart)] : Circuit) := by
+    simp [CircuitUsesOnly, Gate.UsesOnly,
+      pointAddFlagWork]
+
+  have hprefix1 := usesOnly_append hzeroFlag hloadX
+  have hprefix2 := usesOnly_append hprefix1 hequalX
+  have hprefix3 := usesOnly_append hprefix2 hloadX
+  have hprefix4 := usesOnly_append hprefix3 hloadY
+  have hprefix5 := usesOnly_append hprefix4 hequalY
+  have hprefix6 := usesOnly_append hprefix5 hloadY
+  exact usesOnly_append hprefix6 hgates
+
+private theorem pointAddXEqualWork_nodup
+    (workStart : Wire) :
+    ((pointAddConst workStart ++
+        pointAddXDifference workStart) ++
+      pointAddXEqFlag workStart ::
+        pointAddXHistory workStart).Nodup := by
+  simp [pointAddConst, pointAddXDifference,
+    pointAddXEqFlag, pointAddXHistory,
+    List.nodup_append, List.nodup_range',
+    constOffset, xDifferenceOffset, xHistoryOffset,
+    zeroHistoryOffset, flagOffset, yHistoryOffset,
+    yDifferenceOffset, fieldAreaSize, fieldWidth,
+    Secp256k1Instance.fieldWidth]
+  constructor
+  · intro a haLower haUpper
+    constructor
+    · intro h
+      subst a
+      omega
+    · intro b hbLower hbUpper h
+      subst b
+      omega
+  · intro a haLower haUpper b hb
+    rcases hb with hb | hb | hb
+    · intro h
+      subst b
+      omega
+    · subst b
+      intro h
+      subst a
+      omega
+    · intro h
+      subst b
+      omega
+
+private theorem pointAddYEqualWork_nodup
+    (workStart : Wire) :
+    ((pointAddConst workStart ++
+        pointAddYDifference workStart) ++
+      pointAddYNegFlag workStart ::
+        pointAddYHistory workStart).Nodup := by
+  simp [pointAddConst, pointAddYDifference,
+    pointAddYNegFlag, pointAddYHistory,
+    List.nodup_append, List.nodup_range',
+    constOffset, yDifferenceOffset, yHistoryOffset,
+    xHistoryOffset, xDifferenceOffset, zeroHistoryOffset,
+    flagOffset, fieldAreaSize, fieldWidth,
+    Secp256k1Instance.fieldWidth]
+  constructor
+  · intro a haLower haUpper
+    constructor
+    · intro h
+      subst a
+      omega
+    · intro b hbLower hbUpper h
+      subst b
+      omega
+  · intro a haLower haUpper b hb
+    rcases hb with hb | hb | hb
+    · intro h
+      subst b
+      omega
+    · subst b
+      intro h
+      subst a
+      omega
+    · intro h
+      subst b
+      omega
+
+private theorem pointAddZeroFlagWork_nodup
+    (workStart : Wire) :
+    (pointAddInfinityFlag workStart ::
+      pointAddZeroHistory workStart).Nodup := by
+  simp [pointAddInfinityFlag, pointAddZeroHistory,
+    flagOffset, yHistoryOffset, yDifferenceOffset,
+    xHistoryOffset, xDifferenceOffset, zeroHistoryOffset,
+    constOffset, fieldAreaSize, fieldWidth,
+    Secp256k1Instance.fieldWidth]
+
+private theorem run_loadConst_twice
+    (ws : List Wire) (c : Nat) (st : BasisState)
+    (hnd : ws.Nodup) :
+    Classical.run (loadConst ws c)
+        (Classical.run (loadConst ws c) st) = st := by
+  induction ws generalizing c st with
+  | nil =>
+      simp [loadConst]
+  | cons w ws ih =>
+      obtain ⟨hw, hws⟩ := List.nodup_cons.mp hnd
+      rw [loadConst]
+      by_cases hc : c % 2 = 1
+      · rw [if_pos hc]
+        simp only [Classical.run_append,
+          Classical.run_cons, Classical.run_nil]
+        have hcomm (s : BasisState) :
+            Classical.applyGate (Gate.X w)
+                (Classical.run (loadConst ws (c / 2)) s) =
+              Classical.run (loadConst ws (c / 2))
+                (Classical.applyGate (Gate.X w) s) := by
+          funext v
+          by_cases hvw : v = w
+          · subst v
+            simp only [Classical.applyGate]
+            rw [loadConst_other w ws (c / 2) s hw,
+              loadConst_other w ws (c / 2)
+                (s[w ↦ !s w]) hw]
+            simp [upd]
+          · by_cases hv : v ∈ ws
+            · have hcongr :=
+                CircuitUsesOnly.run_congr
+                  (loadConst_usesOnly ws (c / 2))
+                  (st₁ := s)
+                  (st₂ := Classical.applyGate (Gate.X w) s)
+                  (by
+                    intro a ha
+                    simp only [Classical.applyGate]
+                    exact (upd_other s w (!s w)
+                      (fun e => hw (e ▸ ha))).symm)
+                  v hv
+              simp only [Classical.applyGate]
+              rw [upd_other _ _ _ hvw]
+              exact hcongr
+            · simp only [Classical.applyGate]
+              rw [upd_other _ _ _ hvw,
+                loadConst_other v ws (c / 2) s hv,
+                loadConst_other v ws (c / 2)
+                  (s[w ↦ !s w]) hv]
+              rw [upd_other _ _ _ hvw]
+        rw [hcomm]
+        rw [ih (c / 2) _ hws]
+        funext v
+        by_cases hv : v = w <;>
+          simp [Classical.applyGate, upd, hv]
+      · rw [if_neg hc]
+        simpa using ih (c / 2) st hws
+
+private theorem offset_lt_le_false
+    (start w leftEnd rightStart : Nat)
+    (hupper : w < start + leftEnd)
+    (hlower : start + rightStart ≤ w)
+    (hgap : leftEnd ≤ rightStart) : False := by
+  omega
+
+private theorem offset_ne
+    (start left right : Nat)
+    (hne : left ≠ right) :
+    start + left ≠ start + right := by
+  omega
+
 theorem pointAddFlags_semantics
     (pointReg outReg : List Wire)
     (workStart : Wire)
@@ -1955,7 +2282,1864 @@ theorem pointAddFlags_semantics
           regValue (PointRegister.x pointReg) st = xC.val ∧
           regValue (PointRegister.y pointReg) st ≠ (-yC).val) ∧
       Clean (pointAddBranchWork workStart) after := by
-  sorry
+  dsimp
+
+  have hlocalSizeEq : localWorkSize = 4112 := by
+    norm_num [localWorkSize, selectedOffset, candidateOffset,
+      flagOffset, yHistoryOffset, yDifferenceOffset,
+      xHistoryOffset, xDifferenceOffset, zeroHistoryOffset,
+      constOffset, fieldAreaSize, fieldWidth,
+      Secp256k1Instance.fieldWidth, pointWidth]
+
+  obtain ⟨hpublicNodup, _hworkNodup, hpublicWork⟩ :=
+    List.nodup_append.mp hnodup
+  obtain ⟨hpointNodup, _houtNodup, _hpointOut⟩ :=
+    List.nodup_append.mp hpublicNodup
+
+  have hpointWork :
+      ∀ a ∈ pointReg, ∀ b ∈ pointAddWork workStart,
+        a ≠ b := by
+    intro a ha b hb hEq
+    exact hpublicWork a
+      (List.mem_append_left outReg ha) b hb hEq
+
+  have hflagWorkSubset :
+      ∀ w ∈ pointAddFlagWork workStart,
+        w ∈ pointAddWork workStart := by
+    intro w hw
+    rw [pointAddWork]
+    apply List.mem_append_left
+    apply List.mem_range'_1.mpr
+    rw [hlocalSizeEq]
+    simp only [pointAddFlagWork, pointAddConst,
+      pointAddZeroHistory, pointAddXDifference,
+      pointAddXHistory, pointAddYDifference,
+      pointAddYHistory, pointAddInfinityFlag,
+      pointAddXEqFlag, pointAddYNegFlag,
+      pointAddGenericFlag, pointAddPairFlag,
+      pointAddDoubleFlag, List.mem_append,
+      List.mem_cons, List.mem_range'_1] at hw
+    norm_num [flagOffset, yHistoryOffset,
+      yDifferenceOffset, xHistoryOffset,
+      xDifferenceOffset, zeroHistoryOffset,
+      constOffset, fieldAreaSize, fieldWidth,
+      Secp256k1Instance.fieldWidth] at hw
+    rcases hw with
+        (((((h0 | h1) | h2) | h3) | h4) | h5) |
+          (h6 | h7 | h8 | h9 | h10 | h11)
+    · constructor <;> omega
+    · subst w
+      constructor <;> omega
+    · constructor <;> omega
+    · constructor <;> omega
+    · constructor <;> omega
+    · constructor <;> omega
+    · subst w
+      constructor <;> omega
+    · subst w
+      constructor <;> omega
+    · subst w
+      constructor <;> omega
+    · subst w
+      constructor <;> omega
+    · subst w
+      constructor <;> omega
+    · subst w
+      constructor <;> omega
+
+  have htagNodup :
+      (PointRegister.tag pointReg).Nodup := by
+    apply List.Nodup.sublist (List.take_sublist 1 pointReg)
+    exact hpointNodup
+  have hxNodup :
+      (PointRegister.x pointReg).Nodup := by
+    apply List.Nodup.sublist
+      ((List.take_sublist 256 (pointReg.drop 1)).trans
+        (List.drop_sublist 1 pointReg))
+    exact hpointNodup
+  have hyNodup :
+      (PointRegister.y pointReg).Nodup := by
+    apply List.Nodup.sublist
+      ((List.take_sublist 256 (pointReg.drop 257)).trans
+        (List.drop_sublist 257 pointReg))
+    exact hpointNodup
+
+  have hzeroNodup :
+      (zeroFlagWires
+        (PointRegister.tag pointReg)
+        (pointAddInfinityFlag workStart)
+        (pointAddZeroHistory workStart)).Nodup := by
+    rw [zeroFlagWires]
+    apply List.nodup_append.mpr
+    refine ⟨htagNodup,
+      pointAddZeroFlagWork_nodup workStart, ?_⟩
+    intro a ha b hb hEq
+    have hbFlagWork : b ∈ pointAddFlagWork workStart := by
+      simp only [List.mem_cons] at hb
+      rcases hb with rfl | hhistory
+      · simp [pointAddFlagWork]
+      · simp [pointAddFlagWork, hhistory]
+    exact hpointWork a (List.mem_of_mem_take ha) b
+      (hflagWorkSubset b hbFlagWork) hEq
+
+  have hxEqualNodup :
+      (equalFlagWires
+        (PointRegister.x pointReg)
+        (pointAddConst workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddXDifference workStart)
+        (pointAddXHistory workStart)).Nodup := by
+    have hwork := pointAddXEqualWork_nodup workStart
+    have hcombined :
+        (PointRegister.x pointReg ++
+          ((pointAddConst workStart ++
+              pointAddXDifference workStart) ++
+            pointAddXEqFlag workStart ::
+              pointAddXHistory workStart)).Nodup := by
+      apply List.nodup_append.mpr
+      refine ⟨hxNodup, hwork, ?_⟩
+      intro a ha b hb hEq
+      have hbFlagWork : b ∈ pointAddFlagWork workStart := by
+        simp only [List.mem_append, List.mem_cons] at hb
+        rcases hb with (hconst | hdiff) | hflag | hhistory
+        · simp [pointAddFlagWork, hconst]
+        · simp [pointAddFlagWork, hdiff]
+        · simp [pointAddFlagWork, hflag]
+        · simp [pointAddFlagWork, hhistory]
+      exact hpointWork a
+        (List.mem_of_mem_drop (List.mem_of_mem_take ha)) b
+        (hflagWorkSubset b hbFlagWork) hEq
+    simpa only [equalFlagWires, List.append_assoc] using hcombined
+
+  have hyEqualNodup :
+      (equalFlagWires
+        (PointRegister.y pointReg)
+        (pointAddConst workStart)
+        (pointAddYNegFlag workStart)
+        (pointAddYDifference workStart)
+        (pointAddYHistory workStart)).Nodup := by
+    have hwork := pointAddYEqualWork_nodup workStart
+    have hcombined :
+        (PointRegister.y pointReg ++
+          ((pointAddConst workStart ++
+              pointAddYDifference workStart) ++
+            pointAddYNegFlag workStart ::
+              pointAddYHistory workStart)).Nodup := by
+      apply List.nodup_append.mpr
+      refine ⟨hyNodup, hwork, ?_⟩
+      intro a ha b hb hEq
+      have hbFlagWork : b ∈ pointAddFlagWork workStart := by
+        simp only [List.mem_append, List.mem_cons] at hb
+        rcases hb with (hconst | hdiff) | hflag | hhistory
+        · simp [pointAddFlagWork, hconst]
+        · simp [pointAddFlagWork, hdiff]
+        · simp [pointAddFlagWork, hflag]
+        · simp [pointAddFlagWork, hhistory]
+      exact hpointWork a
+        (List.mem_of_mem_drop (List.mem_of_mem_take ha)) b
+        (hflagWorkSubset b hbFlagWork) hEq
+    simpa only [equalFlagWires, List.append_assoc] using hcombined
+
+  have hzeroClean :
+      Clean
+        (pointAddInfinityFlag workStart ::
+          pointAddZeroHistory workStart) st := by
+    intro w hw
+    apply hcleanFlags w
+    simp only [List.mem_cons] at hw
+    rcases hw with rfl | hw
+    · simp [pointAddFlagWork]
+    · simp [pointAddFlagWork, hw]
+
+  let afterInfinity :=
+    Classical.run
+      (zeroFlag
+        (PointRegister.tag pointReg)
+        (pointAddInfinityFlag workStart)
+        (pointAddZeroHistory workStart))
+      st
+
+  have hzeroCorrect :
+      AgreesOn (PointRegister.tag pointReg) st afterInfinity ∧
+        afterInfinity (pointAddInfinityFlag workStart) =
+          decide (regValue (PointRegister.tag pointReg) st = 0) ∧
+        Clean (pointAddZeroHistory workStart) afterInfinity := by
+    simpa [afterInfinity] using
+      (zeroFlag_correct
+        (PointRegister.tag pointReg)
+        (pointAddInfinityFlag workStart)
+        (pointAddZeroHistory workStart)
+        st
+        (by
+          simp [pointAddZeroHistory,
+            PointRegister.tag_length pointReg hpointLength])
+        hzeroNodup hzeroClean)
+
+  have hzeroOtherOfFlag
+      (w : Wire)
+      (hwFlag : w ∈ pointAddFlagWork workStart)
+      (hwInfinity : w ≠ pointAddInfinityFlag workStart)
+      (hwHistory : w ∉ pointAddZeroHistory workStart) :
+      afterInfinity w = st w := by
+    apply
+      (zeroFlag_usesOnly
+        (PointRegister.tag pointReg)
+        (pointAddInfinityFlag workStart)
+        (pointAddZeroHistory workStart)).preservesOutside
+    simp only [zeroFlagWires, List.mem_append,
+      List.mem_cons, not_or]
+    refine ⟨?_, hwInfinity, hwHistory⟩
+    intro htag
+    exact hpointWork w (List.mem_of_mem_take htag) w
+      (hflagWorkSubset w hwFlag) rfl
+
+  have hconstCleanAfterInfinity :
+      Clean (pointAddConst workStart) afterInfinity := by
+    intro w hw
+    have hwFlag : w ∈ pointAddFlagWork workStart := by
+      simp [pointAddFlagWork, hw]
+    rw [hzeroOtherOfFlag w hwFlag]
+    · exact hcleanFlags w hwFlag
+    · intro h
+      subst w
+      simp [pointAddConst, List.mem_range'_1,
+        pointAddInfinityFlag, flagOffset,
+        yHistoryOffset, yDifferenceOffset,
+        xHistoryOffset, xDifferenceOffset,
+        zeroHistoryOffset, constOffset, fieldAreaSize,
+        fieldWidth, Secp256k1Instance.fieldWidth] at hw ;
+        omega
+    · intro h
+      simp [pointAddZeroHistory] at h
+      subst w
+      simp [pointAddConst, List.mem_range'_1,
+        zeroHistoryOffset, constOffset, fieldAreaSize,
+        fieldWidth, Secp256k1Instance.fieldWidth] at hw
+
+  have hxScratchCleanAfterInfinity :
+      Clean
+        (pointAddXEqFlag workStart ::
+          pointAddXDifference workStart ++
+          pointAddXHistory workStart)
+        afterInfinity := by
+    intro w hw
+    have hwFlag : w ∈ pointAddFlagWork workStart := by
+      simp only [List.mem_cons, List.mem_append] at hw
+      rcases hw with hprefix | hhistory
+      · rcases hprefix with hflag | hdiff
+        · simp [pointAddFlagWork, hflag]
+        · simp [pointAddFlagWork, hdiff]
+      · simp [pointAddFlagWork, hhistory]
+    rw [hzeroOtherOfFlag w hwFlag]
+    · exact hcleanFlags w hwFlag
+    · intro h
+      subst w
+      simp only [List.mem_cons, List.mem_append] at hw
+      rcases hw with hprefix | hhistory
+      · rcases hprefix with hflag | hdiff
+        · simp [pointAddXEqFlag, pointAddInfinityFlag] at hflag
+        · simp [pointAddXDifference, List.mem_range'_1,
+            pointAddInfinityFlag, flagOffset,
+            yHistoryOffset, yDifferenceOffset,
+            xHistoryOffset, xDifferenceOffset,
+            zeroHistoryOffset, constOffset, fieldAreaSize,
+            fieldWidth, Secp256k1Instance.fieldWidth] at hdiff ;
+            omega
+      · simp [pointAddXHistory, List.mem_range'_1,
+          pointAddInfinityFlag, flagOffset,
+          yHistoryOffset, yDifferenceOffset,
+          xHistoryOffset, xDifferenceOffset,
+          zeroHistoryOffset, constOffset, fieldAreaSize,
+          fieldWidth, Secp256k1Instance.fieldWidth] at hhistory ;
+          omega
+    · intro h
+      simp [pointAddZeroHistory] at h
+      subst w
+      simp only [List.mem_cons, List.mem_append] at hw
+      rcases hw with hprefix | hhistory
+      · rcases hprefix with hflag | hdiff
+        · simp [pointAddXEqFlag, zeroHistoryOffset,
+            flagOffset, yHistoryOffset, yDifferenceOffset,
+            xHistoryOffset, xDifferenceOffset, constOffset,
+            fieldAreaSize, fieldWidth,
+            Secp256k1Instance.fieldWidth] at hflag
+        · simp [pointAddXDifference, List.mem_range'_1,
+            xDifferenceOffset, zeroHistoryOffset,
+            constOffset, fieldAreaSize, fieldWidth,
+            Secp256k1Instance.fieldWidth] at hdiff
+      · simp [pointAddXHistory, List.mem_range'_1,
+          xHistoryOffset, xDifferenceOffset,
+          zeroHistoryOffset, constOffset, fieldAreaSize,
+          fieldWidth, Secp256k1Instance.fieldWidth] at hhistory
+
+  have hconstLength :
+      (pointAddConst workStart).length = 256 := by
+    simp [pointAddConst]
+  have hconstNodup :
+      (pointAddConst workStart).Nodup := by
+    rw [pointAddConst]
+    exact List.nodup_range'
+
+  let afterLoadX :=
+    Classical.run
+      (loadConst (pointAddConst workStart) xC.val)
+      afterInfinity
+
+  have hconstValueAfterLoadX :
+      regValue (pointAddConst workStart) afterLoadX = xC.val := by
+    apply loadConst_correct
+    · exact hconstNodup
+    · exact hconstCleanAfterInfinity
+    · rw [hconstLength]
+      exact xC.val_lt.trans (by norm_num [p])
+
+  have hxScratchCleanAfterLoadX :
+      Clean
+        (pointAddXEqFlag workStart ::
+          pointAddXDifference workStart ++
+          pointAddXHistory workStart)
+        afterLoadX := by
+    intro w hw
+    change
+      Classical.run
+          (loadConst (pointAddConst workStart) xC.val)
+          afterInfinity w = false
+    rw [loadConst_other w (pointAddConst workStart)
+      xC.val afterInfinity]
+    · exact hxScratchCleanAfterInfinity w hw
+    · intro hconst
+      simp only [List.mem_cons, List.mem_append] at hw
+      rcases hw with hprefix | hhistory
+      · rcases hprefix with hflag | hdiff
+        · subst w
+          simp [pointAddConst, List.mem_range'_1,
+            pointAddXEqFlag, flagOffset,
+            yHistoryOffset, yDifferenceOffset,
+            xHistoryOffset, xDifferenceOffset,
+            zeroHistoryOffset, constOffset, fieldAreaSize,
+            fieldWidth, Secp256k1Instance.fieldWidth] at hconst
+        · have hconstBounds := List.mem_range'_1.mp hconst
+          have hdiffBounds := List.mem_range'_1.mp hdiff
+          norm_num [xDifferenceOffset, zeroHistoryOffset,
+            constOffset, fieldAreaSize, fieldWidth,
+            Secp256k1Instance.fieldWidth] at hconstBounds hdiffBounds
+          omega
+      · have hconstBounds := List.mem_range'_1.mp hconst
+        have hhistoryBounds := List.mem_range'_1.mp hhistory
+        norm_num [xHistoryOffset, xDifferenceOffset,
+          zeroHistoryOffset, constOffset, fieldAreaSize,
+          fieldWidth, Secp256k1Instance.fieldWidth]
+          at hconstBounds hhistoryBounds
+        omega
+
+  let afterXEq :=
+    Classical.run
+      (equalFlag
+        (PointRegister.x pointReg)
+        (pointAddConst workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddXDifference workStart)
+        (pointAddXHistory workStart))
+      afterLoadX
+
+  have hxEqualCorrect :
+      AgreesOn (PointRegister.x pointReg)
+          afterLoadX afterXEq ∧
+        AgreesOn (pointAddConst workStart)
+          afterLoadX afterXEq ∧
+        afterXEq (pointAddXEqFlag workStart) =
+          decide (
+            regValue (PointRegister.x pointReg) afterLoadX =
+              regValue (pointAddConst workStart) afterLoadX) ∧
+        Clean
+          (pointAddXDifference workStart ++
+            pointAddXHistory workStart)
+          afterXEq := by
+    simpa [afterXEq] using
+      (equalFlag_correct
+        (PointRegister.x pointReg)
+        (pointAddConst workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddXDifference workStart)
+        (pointAddXHistory workStart)
+        afterLoadX
+        (by
+          simp [pointAddConst,
+            PointRegister.x_length pointReg hpointLength])
+        (by
+          simp [pointAddXDifference,
+            PointRegister.x_length pointReg hpointLength])
+        (by
+          simp [pointAddXHistory,
+            PointRegister.x_length pointReg hpointLength])
+        hxEqualNodup hxScratchCleanAfterLoadX)
+
+  let afterUnloadX :=
+    Classical.run
+      (loadConst (pointAddConst workStart) xC.val)
+      afterXEq
+
+  have hconstCleanAfterUnloadX :
+      Clean (pointAddConst workStart) afterUnloadX := by
+    intro w hw
+    have hcongr :=
+      CircuitUsesOnly.run_congr
+        (loadConst_usesOnly (pointAddConst workStart) xC.val)
+        (st₁ := afterXEq)
+        (st₂ := afterLoadX)
+        (fun a ha => hxEqualCorrect.2.1 a ha)
+        w hw
+    change
+      Classical.run
+          (loadConst (pointAddConst workStart) xC.val)
+          afterXEq w = false
+    rw [hcongr]
+    have htwice :=
+      congrFun
+        (run_loadConst_twice
+          (pointAddConst workStart) xC.val
+          afterInfinity hconstNodup) w
+    change
+      Classical.run
+          (loadConst (pointAddConst workStart) xC.val)
+          afterLoadX w = false
+    rw [htwice]
+    exact hconstCleanAfterInfinity w hw
+
+  have hyScratchLocation
+      (w : Wire)
+      (hw :
+        w ∈ pointAddYNegFlag workStart ::
+          pointAddYDifference workStart ++
+          pointAddYHistory workStart) :
+      w = workStart + 3082 ∨
+        (workStart + 2568 ≤ w ∧
+          w < workStart + 2568 + 256) ∨
+        (workStart + 2824 ≤ w ∧
+          w < workStart + 2824 + 256) := by
+    simp only [List.mem_cons, List.mem_append] at hw
+    rcases hw with hprefix | hhistory
+    · rcases hprefix with hflag | hdiff
+      · left
+        simpa [pointAddYNegFlag, flagOffset,
+          yHistoryOffset, yDifferenceOffset,
+          xHistoryOffset, xDifferenceOffset,
+          zeroHistoryOffset, constOffset, fieldAreaSize,
+          fieldWidth, Secp256k1Instance.fieldWidth] using hflag
+      · right
+        left
+        simpa [pointAddYDifference, List.mem_range'_1,
+          yDifferenceOffset, xHistoryOffset,
+          xDifferenceOffset, zeroHistoryOffset,
+          constOffset, fieldAreaSize, fieldWidth,
+          Secp256k1Instance.fieldWidth] using
+          List.mem_range'_1.mp hdiff
+    · right
+      right
+      simpa [pointAddYHistory, List.mem_range'_1,
+        yHistoryOffset, yDifferenceOffset,
+        xHistoryOffset, xDifferenceOffset,
+        zeroHistoryOffset, constOffset, fieldAreaSize,
+        fieldWidth, Secp256k1Instance.fieldWidth] using
+        List.mem_range'_1.mp hhistory
+
+  have hyScratchFlagWork
+      (w : Wire)
+      (hw :
+        w ∈ pointAddYNegFlag workStart ::
+          pointAddYDifference workStart ++
+          pointAddYHistory workStart) :
+      w ∈ pointAddFlagWork workStart := by
+    simp only [List.mem_cons, List.mem_append] at hw
+    rcases hw with hprefix | hhistory
+    · rcases hprefix with hflag | hdiff
+      · simp [pointAddFlagWork, hflag]
+      · simp [pointAddFlagWork, hdiff]
+    · simp [pointAddFlagWork, hhistory]
+
+  have hyScratchNotConst
+      (w : Wire)
+      (hw :
+        w ∈ pointAddYNegFlag workStart ::
+          pointAddYDifference workStart ++
+          pointAddYHistory workStart) :
+      w ∉ pointAddConst workStart := by
+    intro hconst
+    have hconstBounds := List.mem_range'_1.mp hconst
+    have hloc := hyScratchLocation w hw
+    norm_num [pointAddConst, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth] at hconstBounds
+    have hconstUpper : w < workStart + 2055 := by
+      simpa [Nat.add_assoc] using hconstBounds.2
+    rcases hloc with hflagLoc | hrest
+    · exact offset_lt_le_false workStart w 2055 3082
+        hconstUpper hflagLoc.ge (by omega)
+    · rcases hrest with hdiffLoc | hhistoryLoc
+      · rcases hdiffLoc with ⟨hdiffLower, hdiffUpper⟩
+        exact offset_lt_le_false workStart w 2055 2568
+          hconstUpper hdiffLower (by omega)
+      · rcases hhistoryLoc with ⟨hhistoryLower, hhistoryUpper⟩
+        exact offset_lt_le_false workStart w 2055 2824
+          hconstUpper hhistoryLower (by omega)
+
+  have hyScratchOutsideXEqual
+      (w : Wire)
+      (hw :
+        w ∈ pointAddYNegFlag workStart ::
+          pointAddYDifference workStart ++
+          pointAddYHistory workStart) :
+      w ∉ equalFlagWires
+        (PointRegister.x pointReg)
+        (pointAddConst workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddXDifference workStart)
+        (pointAddXHistory workStart) := by
+    intro hin
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with hprefix | htail
+    · rcases hprefix with hlr | hdiff
+      · rcases hlr with hx | hconst
+        · exact hpointWork w
+            (List.mem_of_mem_drop (List.mem_of_mem_take hx)) w
+            (hflagWorkSubset w (hyScratchFlagWork w hw)) rfl
+        · exact hyScratchNotConst w hw hconst
+      · have hdiffBounds := List.mem_range'_1.mp hdiff
+        have hloc := hyScratchLocation w hw
+        norm_num [pointAddXDifference,
+          xDifferenceOffset, zeroHistoryOffset,
+          constOffset, fieldAreaSize, fieldWidth,
+          Secp256k1Instance.fieldWidth] at hdiffBounds
+        have hxDiffUpper : w < workStart + 2312 := by
+          simpa [Nat.add_assoc] using hdiffBounds.2
+        rcases hloc with hflagLoc | hrest
+        · exact offset_lt_le_false workStart w 2312 3082
+            hxDiffUpper hflagLoc.ge (by omega)
+        · rcases hrest with hdiffLoc | hhistoryLoc
+          · rcases hdiffLoc with ⟨hdiffLower, hdiffUpper⟩
+            exact offset_lt_le_false workStart w 2312 2568
+              hxDiffUpper hdiffLower (by omega)
+          · rcases hhistoryLoc with ⟨hhistoryLower, hhistoryUpper⟩
+            exact offset_lt_le_false workStart w 2312 2824
+              hxDiffUpper hhistoryLower (by omega)
+    · rcases htail with hflag | hhistory
+      · have hxEq : w = workStart + 3081 := by
+          simpa [pointAddXEqFlag, flagOffset,
+            yHistoryOffset, yDifferenceOffset,
+            xHistoryOffset, xDifferenceOffset,
+            zeroHistoryOffset, constOffset, fieldAreaSize,
+            fieldWidth, Secp256k1Instance.fieldWidth] using hflag
+        have hloc := hyScratchLocation w hw
+        rcases hloc with hflagLoc | hrest
+        · exact
+            (offset_ne workStart 3081 3082 (by omega))
+              (hxEq.symm.trans hflagLoc)
+        · rcases hrest with hdiffLoc | hhistoryLoc
+          · rcases hdiffLoc with ⟨hdiffLower, hdiffUpper⟩
+            have hyDiffUpper : w < workStart + 2824 := by
+              simpa [Nat.add_assoc] using hdiffUpper
+            exact offset_lt_le_false workStart w 2824 3081
+              hyDiffUpper hxEq.ge (by omega)
+          · rcases hhistoryLoc with ⟨hhistoryLower, hhistoryUpper⟩
+            have hyHistoryUpper : w < workStart + 3080 := by
+              simpa [Nat.add_assoc] using hhistoryUpper
+            exact offset_lt_le_false workStart w 3080 3081
+              hyHistoryUpper hxEq.ge (by omega)
+      · have hhistoryBounds := List.mem_range'_1.mp hhistory
+        have hloc := hyScratchLocation w hw
+        norm_num [pointAddXHistory, xHistoryOffset,
+          xDifferenceOffset, zeroHistoryOffset,
+          constOffset, fieldAreaSize, fieldWidth,
+          Secp256k1Instance.fieldWidth] at hhistoryBounds
+        have hxHistoryUpper : w < workStart + 2568 := by
+          simpa [Nat.add_assoc] using hhistoryBounds.2
+        rcases hloc with hflagLoc | hrest
+        · exact offset_lt_le_false workStart w 2568 3082
+            hxHistoryUpper hflagLoc.ge (by omega)
+        · rcases hrest with hdiffLoc | hhistoryLoc
+          · rcases hdiffLoc with ⟨hdiffLower, hdiffUpper⟩
+            exact offset_lt_le_false workStart w 2568 2568
+              hxHistoryUpper hdiffLower (by omega)
+          · rcases hhistoryLoc with ⟨hhistoryLower, hhistoryUpper⟩
+            exact offset_lt_le_false workStart w 2568 2824
+              hxHistoryUpper hhistoryLower (by omega)
+
+  have hyScratchCleanAfterUnloadX :
+      Clean
+        (pointAddYNegFlag workStart ::
+          pointAddYDifference workStart ++
+          pointAddYHistory workStart)
+        afterUnloadX := by
+    intro w hw
+    have hwFlag := hyScratchFlagWork w hw
+    have hwConst := hyScratchNotConst w hw
+    have hloc := hyScratchLocation w hw
+    have hwInfinity :
+        w ≠ pointAddInfinityFlag workStart := by
+      intro h
+      have hinfinity : w = workStart + 3080 := by
+        simpa [pointAddInfinityFlag, flagOffset,
+          yHistoryOffset, yDifferenceOffset,
+          xHistoryOffset, xDifferenceOffset,
+          zeroHistoryOffset, constOffset, fieldAreaSize,
+          fieldWidth, Secp256k1Instance.fieldWidth] using h
+      rcases hloc with hflagLoc | hrest
+      · exact
+          (offset_ne workStart 3080 3082 (by omega))
+            (hinfinity.symm.trans hflagLoc)
+      · rcases hrest with hdiffLoc | hhistoryLoc
+        · rcases hdiffLoc with ⟨hdiffLower, hdiffUpper⟩
+          have hyDiffUpper : w < workStart + 2824 := by
+            simpa [Nat.add_assoc] using hdiffUpper
+          exact offset_lt_le_false workStart w 2824 3080
+            hyDiffUpper hinfinity.ge (by omega)
+        · rcases hhistoryLoc with ⟨hhistoryLower, hhistoryUpper⟩
+          have hyHistoryUpper : w < workStart + 3080 := by
+            simpa [Nat.add_assoc] using hhistoryUpper
+          exact offset_lt_le_false workStart w 3080 3080
+            hyHistoryUpper hinfinity.ge (by omega)
+    have hwZeroHistory :
+        w ∉ pointAddZeroHistory workStart := by
+      intro h
+      have hzero : w = workStart + 2055 := by
+        simpa [pointAddZeroHistory,
+          zeroHistoryOffset, constOffset, fieldAreaSize,
+          fieldWidth, Secp256k1Instance.fieldWidth] using h
+      rcases hloc with hflagLoc | hrest
+      · exact
+          (offset_ne workStart 2055 3082 (by omega))
+            (hzero.symm.trans hflagLoc)
+      · rcases hrest with hdiffLoc | hhistoryLoc
+        · rcases hdiffLoc with ⟨hdiffLower, hdiffUpper⟩
+          have hzeroUpper : w < workStart + 2568 := by
+            rw [hzero]
+            exact Nat.add_lt_add_left (by omega) workStart
+          exact offset_lt_le_false workStart w 2568 2568
+            hzeroUpper hdiffLower (by omega)
+        · rcases hhistoryLoc with ⟨hhistoryLower, hhistoryUpper⟩
+          have hzeroUpper : w < workStart + 2824 := by
+            rw [hzero]
+            exact Nat.add_lt_add_left (by omega) workStart
+          exact offset_lt_le_false workStart w 2824 2824
+            hzeroUpper hhistoryLower (by omega)
+    change afterUnloadX w = false
+    calc
+      afterUnloadX w = afterXEq w := by
+        exact loadConst_other w (pointAddConst workStart)
+          xC.val afterXEq hwConst
+      _ = afterLoadX w := by
+        exact
+          (equalFlag_usesOnly
+            (PointRegister.x pointReg)
+            (pointAddConst workStart)
+            (pointAddXEqFlag workStart)
+            (pointAddXDifference workStart)
+            (pointAddXHistory workStart)).preservesOutside
+              afterLoadX w (hyScratchOutsideXEqual w hw)
+      _ = afterInfinity w := by
+        exact loadConst_other w (pointAddConst workStart)
+          xC.val afterInfinity hwConst
+      _ = st w :=
+        hzeroOtherOfFlag w hwFlag hwInfinity hwZeroHistory
+      _ = false := hcleanFlags w hwFlag
+
+  let afterLoadY :=
+    Classical.run
+      (loadConst (pointAddConst workStart) (-yC).val)
+      afterUnloadX
+
+  have hconstValueAfterLoadY :
+      regValue (pointAddConst workStart) afterLoadY =
+        (-yC).val := by
+    apply loadConst_correct
+    · exact hconstNodup
+    · exact hconstCleanAfterUnloadX
+    · rw [hconstLength]
+      exact (-yC).val_lt.trans (by norm_num [p])
+
+  have hyScratchCleanAfterLoadY :
+      Clean
+        (pointAddYNegFlag workStart ::
+          pointAddYDifference workStart ++
+          pointAddYHistory workStart)
+        afterLoadY := by
+    intro w hw
+    change
+      Classical.run
+          (loadConst (pointAddConst workStart) (-yC).val)
+          afterUnloadX w = false
+    rw [loadConst_other w (pointAddConst workStart)
+      (-yC).val afterUnloadX (hyScratchNotConst w hw)]
+    exact hyScratchCleanAfterUnloadX w hw
+
+  let afterYNeg :=
+    Classical.run
+      (equalFlag
+        (PointRegister.y pointReg)
+        (pointAddConst workStart)
+        (pointAddYNegFlag workStart)
+        (pointAddYDifference workStart)
+        (pointAddYHistory workStart))
+      afterLoadY
+
+  have hyEqualCorrect :
+      AgreesOn (PointRegister.y pointReg)
+          afterLoadY afterYNeg ∧
+        AgreesOn (pointAddConst workStart)
+          afterLoadY afterYNeg ∧
+        afterYNeg (pointAddYNegFlag workStart) =
+          decide (
+            regValue (PointRegister.y pointReg) afterLoadY =
+              regValue (pointAddConst workStart) afterLoadY) ∧
+        Clean
+          (pointAddYDifference workStart ++
+            pointAddYHistory workStart)
+          afterYNeg := by
+    simpa [afterYNeg] using
+      (equalFlag_correct
+        (PointRegister.y pointReg)
+        (pointAddConst workStart)
+        (pointAddYNegFlag workStart)
+        (pointAddYDifference workStart)
+        (pointAddYHistory workStart)
+        afterLoadY
+        (by
+          simp [pointAddConst,
+            PointRegister.y_length pointReg hpointLength])
+        (by
+          simp [pointAddYDifference,
+            PointRegister.y_length pointReg hpointLength])
+        (by
+          simp [pointAddYHistory,
+            PointRegister.y_length pointReg hpointLength])
+        hyEqualNodup hyScratchCleanAfterLoadY)
+
+  let beforeGates :=
+    Classical.run
+      (loadConst (pointAddConst workStart) (-yC).val)
+      afterYNeg
+
+  have hconstCleanBeforeGates :
+      Clean (pointAddConst workStart) beforeGates := by
+    intro w hw
+    have hcongr :=
+      CircuitUsesOnly.run_congr
+        (loadConst_usesOnly
+          (pointAddConst workStart) (-yC).val)
+        (st₁ := afterYNeg)
+        (st₂ := afterLoadY)
+        (fun a ha => hyEqualCorrect.2.1 a ha)
+        w hw
+    change
+      Classical.run
+          (loadConst (pointAddConst workStart) (-yC).val)
+          afterYNeg w = false
+    rw [hcongr]
+    have htwice :=
+      congrFun
+        (run_loadConst_twice
+          (pointAddConst workStart) (-yC).val
+          afterUnloadX hconstNodup) w
+    change
+      Classical.run
+          (loadConst (pointAddConst workStart) (-yC).val)
+          afterLoadY w = false
+    rw [htwice]
+    exact hconstCleanAfterUnloadX w hw
+
+  have hslicesNodup :=
+    PointRegister.tag_x_y_nodup
+      pointReg hpointLength hpointNodup
+  obtain ⟨htagXNodup, _hyNd, htagXY_Y⟩ :=
+    List.nodup_append.mp hslicesNodup
+  obtain ⟨_htagNd, _hxNd, htagX⟩ :=
+    List.nodup_append.mp htagXNodup
+
+  have hpublicNotConst
+      (w : Wire) (hw : w ∈ pointReg) :
+      w ∉ pointAddConst workStart := by
+    intro hconst
+    have hconstFlag :
+        w ∈ pointAddFlagWork workStart := by
+      simp [pointAddFlagWork, hconst]
+    exact hpointWork w hw w
+      (hflagWorkSubset w hconstFlag) rfl
+
+  have htagOutsideXEqual
+      (w : Wire) (hw : w ∈ PointRegister.tag pointReg) :
+      w ∉ equalFlagWires
+        (PointRegister.x pointReg)
+        (pointAddConst workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddXDifference workStart)
+        (pointAddXHistory workStart) := by
+    intro hin
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with hprefix | htail
+    · rcases hprefix with hlr | hdiff
+      · rcases hlr with hx | hconst
+        · exact htagX w hw w hx rfl
+        · exact hpublicNotConst w
+            (List.mem_of_mem_take hw) hconst
+      · have hdiffFlag :
+            w ∈ pointAddFlagWork workStart := by
+          simp [pointAddFlagWork, hdiff]
+        exact hpointWork w (List.mem_of_mem_take hw) w
+          (hflagWorkSubset w hdiffFlag) rfl
+    · have htailFlag :
+          w ∈ pointAddFlagWork workStart := by
+        rcases htail with hflag | hhistory
+        · simp [pointAddFlagWork, hflag]
+        · simp [pointAddFlagWork, hhistory]
+      exact hpointWork w (List.mem_of_mem_take hw) w
+        (hflagWorkSubset w htailFlag) rfl
+
+  have htagOutsideYEqual
+      (w : Wire) (hw : w ∈ PointRegister.tag pointReg) :
+      w ∉ equalFlagWires
+        (PointRegister.y pointReg)
+        (pointAddConst workStart)
+        (pointAddYNegFlag workStart)
+        (pointAddYDifference workStart)
+        (pointAddYHistory workStart) := by
+    intro hin
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with hprefix | htail
+    · rcases hprefix with hlr | hdiff
+      · rcases hlr with hy | hconst
+        · exact htagXY_Y w
+            (List.mem_append_left _ hw) w hy rfl
+        · exact hpublicNotConst w
+            (List.mem_of_mem_take hw) hconst
+      · have hdiffFlag :
+            w ∈ pointAddFlagWork workStart := by
+          simp [pointAddFlagWork, hdiff]
+        exact hpointWork w (List.mem_of_mem_take hw) w
+          (hflagWorkSubset w hdiffFlag) rfl
+    · have htailFlag :
+          w ∈ pointAddFlagWork workStart := by
+        rcases htail with hflag | hhistory
+        · simp [pointAddFlagWork, hflag]
+        · simp [pointAddFlagWork, hhistory]
+      exact hpointWork w (List.mem_of_mem_take hw) w
+        (hflagWorkSubset w htailFlag) rfl
+
+  have hxOutsideZero
+      (w : Wire) (hw : w ∈ PointRegister.x pointReg) :
+      w ∉ zeroFlagWires
+        (PointRegister.tag pointReg)
+        (pointAddInfinityFlag workStart)
+        (pointAddZeroHistory workStart) := by
+    intro hin
+    simp only [zeroFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with htag | hflag | hhistory
+    · exact htagX w htag w hw rfl
+    · have hflagWork :
+          w ∈ pointAddFlagWork workStart := by
+        simp [pointAddFlagWork, hflag]
+      exact hpointWork w
+        (List.mem_of_mem_drop (List.mem_of_mem_take hw)) w
+        (hflagWorkSubset w hflagWork) rfl
+    · have hhistoryWork :
+          w ∈ pointAddFlagWork workStart := by
+        simp [pointAddFlagWork, hhistory]
+      exact hpointWork w
+        (List.mem_of_mem_drop (List.mem_of_mem_take hw)) w
+        (hflagWorkSubset w hhistoryWork) rfl
+
+  have hyOutsideZero
+      (w : Wire) (hw : w ∈ PointRegister.y pointReg) :
+      w ∉ zeroFlagWires
+        (PointRegister.tag pointReg)
+        (pointAddInfinityFlag workStart)
+        (pointAddZeroHistory workStart) := by
+    intro hin
+    simp only [zeroFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with htag | hflag | hhistory
+    · exact htagXY_Y w
+        (List.mem_append_left _ htag) w hw rfl
+    · have hflagWork :
+          w ∈ pointAddFlagWork workStart := by
+        simp [pointAddFlagWork, hflag]
+      exact hpointWork w
+        (List.mem_of_mem_drop (List.mem_of_mem_take hw)) w
+        (hflagWorkSubset w hflagWork) rfl
+    · have hhistoryWork :
+          w ∈ pointAddFlagWork workStart := by
+        simp [pointAddFlagWork, hhistory]
+      exact hpointWork w
+        (List.mem_of_mem_drop (List.mem_of_mem_take hw)) w
+        (hflagWorkSubset w hhistoryWork) rfl
+
+  have hxOutsideYEqual
+      (w : Wire) (hw : w ∈ PointRegister.x pointReg) :
+      w ∉ equalFlagWires
+        (PointRegister.y pointReg)
+        (pointAddConst workStart)
+        (pointAddYNegFlag workStart)
+        (pointAddYDifference workStart)
+        (pointAddYHistory workStart) := by
+    intro hin
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with hprefix | htail
+    · rcases hprefix with hlr | hdiff
+      · rcases hlr with hy | hconst
+        · exact htagXY_Y w
+            (List.mem_append_right _ hw) w hy rfl
+        · exact hpublicNotConst w
+            (List.mem_of_mem_drop (List.mem_of_mem_take hw))
+            hconst
+      · have hdiffFlag :
+            w ∈ pointAddFlagWork workStart := by
+          simp [pointAddFlagWork, hdiff]
+        exact hpointWork w
+          (List.mem_of_mem_drop (List.mem_of_mem_take hw)) w
+          (hflagWorkSubset w hdiffFlag) rfl
+    · have htailFlag :
+          w ∈ pointAddFlagWork workStart := by
+        rcases htail with hflag | hhistory
+        · simp [pointAddFlagWork, hflag]
+        · simp [pointAddFlagWork, hhistory]
+      exact hpointWork w
+        (List.mem_of_mem_drop (List.mem_of_mem_take hw)) w
+        (hflagWorkSubset w htailFlag) rfl
+
+  have hyOutsideXEqual
+      (w : Wire) (hw : w ∈ PointRegister.y pointReg) :
+      w ∉ equalFlagWires
+        (PointRegister.x pointReg)
+        (pointAddConst workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddXDifference workStart)
+        (pointAddXHistory workStart) := by
+    intro hin
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with hprefix | htail
+    · rcases hprefix with hlr | hdiff
+      · rcases hlr with hx | hconst
+        · exact htagXY_Y w
+            (List.mem_append_right _ hx) w hw rfl
+        · exact hpublicNotConst w
+            (List.mem_of_mem_drop (List.mem_of_mem_take hw))
+            hconst
+      · have hdiffFlag :
+            w ∈ pointAddFlagWork workStart := by
+          simp [pointAddFlagWork, hdiff]
+        exact hpointWork w
+          (List.mem_of_mem_drop (List.mem_of_mem_take hw)) w
+          (hflagWorkSubset w hdiffFlag) rfl
+    · have htailFlag :
+          w ∈ pointAddFlagWork workStart := by
+        rcases htail with hflag | hhistory
+        · simp [pointAddFlagWork, hflag]
+        · simp [pointAddFlagWork, hhistory]
+      exact hpointWork w
+        (List.mem_of_mem_drop (List.mem_of_mem_take hw)) w
+        (hflagWorkSubset w htailFlag) rfl
+
+  have htagBeforeGates :
+      AgreesOn (PointRegister.tag pointReg) st beforeGates := by
+    intro w hw
+    have hwPoint := List.mem_of_mem_take hw
+    have hwConst := hpublicNotConst w hwPoint
+    calc
+      beforeGates w = afterYNeg w :=
+        loadConst_other w (pointAddConst workStart)
+          (-yC).val afterYNeg hwConst
+      _ = afterLoadY w :=
+        (equalFlag_usesOnly
+          (PointRegister.y pointReg)
+          (pointAddConst workStart)
+          (pointAddYNegFlag workStart)
+          (pointAddYDifference workStart)
+          (pointAddYHistory workStart)).preservesOutside
+            afterLoadY w (htagOutsideYEqual w hw)
+      _ = afterUnloadX w :=
+        loadConst_other w (pointAddConst workStart)
+          (-yC).val afterUnloadX hwConst
+      _ = afterXEq w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterXEq hwConst
+      _ = afterLoadX w :=
+        (equalFlag_usesOnly
+          (PointRegister.x pointReg)
+          (pointAddConst workStart)
+          (pointAddXEqFlag workStart)
+          (pointAddXDifference workStart)
+          (pointAddXHistory workStart)).preservesOutside
+            afterLoadX w (htagOutsideXEqual w hw)
+      _ = afterInfinity w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterInfinity hwConst
+      _ = st w := hzeroCorrect.1 w hw
+
+  have hxBeforeGates :
+      AgreesOn (PointRegister.x pointReg) st beforeGates := by
+    intro w hw
+    have hwPoint :=
+      List.mem_of_mem_drop (List.mem_of_mem_take hw)
+    have hwConst := hpublicNotConst w hwPoint
+    calc
+      beforeGates w = afterYNeg w :=
+        loadConst_other w (pointAddConst workStart)
+          (-yC).val afterYNeg hwConst
+      _ = afterLoadY w :=
+        (equalFlag_usesOnly
+          (PointRegister.y pointReg)
+          (pointAddConst workStart)
+          (pointAddYNegFlag workStart)
+          (pointAddYDifference workStart)
+          (pointAddYHistory workStart)).preservesOutside
+            afterLoadY w (hxOutsideYEqual w hw)
+      _ = afterUnloadX w :=
+        loadConst_other w (pointAddConst workStart)
+          (-yC).val afterUnloadX hwConst
+      _ = afterXEq w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterXEq hwConst
+      _ = afterLoadX w := hxEqualCorrect.1 w hw
+      _ = afterInfinity w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterInfinity hwConst
+      _ = st w :=
+        (zeroFlag_usesOnly
+          (PointRegister.tag pointReg)
+          (pointAddInfinityFlag workStart)
+          (pointAddZeroHistory workStart)).preservesOutside
+            st w (hxOutsideZero w hw)
+
+  have hyBeforeGates :
+      AgreesOn (PointRegister.y pointReg) st beforeGates := by
+    intro w hw
+    have hwPoint :=
+      List.mem_of_mem_drop (List.mem_of_mem_take hw)
+    have hwConst := hpublicNotConst w hwPoint
+    calc
+      beforeGates w = afterYNeg w :=
+        loadConst_other w (pointAddConst workStart)
+          (-yC).val afterYNeg hwConst
+      _ = afterLoadY w := hyEqualCorrect.1 w hw
+      _ = afterUnloadX w :=
+        loadConst_other w (pointAddConst workStart)
+          (-yC).val afterUnloadX hwConst
+      _ = afterXEq w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterXEq hwConst
+      _ = afterLoadX w :=
+        (equalFlag_usesOnly
+          (PointRegister.x pointReg)
+          (pointAddConst workStart)
+          (pointAddXEqFlag workStart)
+          (pointAddXDifference workStart)
+          (pointAddXHistory workStart)).preservesOutside
+            afterLoadX w (hyOutsideXEqual w hw)
+      _ = afterInfinity w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterInfinity hwConst
+      _ = st w :=
+        (zeroFlag_usesOnly
+          (PointRegister.tag pointReg)
+          (pointAddInfinityFlag workStart)
+          (pointAddZeroHistory workStart)).preservesOutside
+            st w (hyOutsideZero w hw)
+
+  have hhighFlagNotConst
+      (w : Wire)
+      (hlower : workStart + 3080 ≤ w) :
+      w ∉ pointAddConst workStart := by
+    intro hconst
+    have hbounds := List.mem_range'_1.mp hconst
+    norm_num [pointAddConst, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth] at hbounds
+    have hupper : w < workStart + 2055 := by
+      simpa [Nat.add_assoc] using hbounds.2
+    exact offset_lt_le_false workStart w 2055 3080
+      hupper hlower (by omega)
+
+  have hhighFlagOutsideXEqual
+      (w : Wire)
+      (hwFlag : w ∈ pointAddFlagWork workStart)
+      (hlower : workStart + 3080 ≤ w)
+      (hnotXEq : w ≠ pointAddXEqFlag workStart) :
+      w ∉ equalFlagWires
+        (PointRegister.x pointReg)
+        (pointAddConst workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddXDifference workStart)
+        (pointAddXHistory workStart) := by
+    intro hin
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with hprefix | htail
+    · rcases hprefix with hlr | hdiff
+      · rcases hlr with hx | hconst
+        · exact hpointWork w
+            (List.mem_of_mem_drop (List.mem_of_mem_take hx)) w
+            (hflagWorkSubset w hwFlag) rfl
+        · exact hhighFlagNotConst w hlower hconst
+      · have hbounds := List.mem_range'_1.mp hdiff
+        norm_num [pointAddXDifference,
+          xDifferenceOffset, zeroHistoryOffset,
+          constOffset, fieldAreaSize, fieldWidth,
+          Secp256k1Instance.fieldWidth] at hbounds
+        have hupper : w < workStart + 2312 := by
+          simpa [Nat.add_assoc] using hbounds.2
+        exact offset_lt_le_false workStart w 2312 3080
+          hupper hlower (by omega)
+    · rcases htail with hflag | hhistory
+      · exact hnotXEq hflag
+      · have hbounds := List.mem_range'_1.mp hhistory
+        norm_num [pointAddXHistory, xHistoryOffset,
+          xDifferenceOffset, zeroHistoryOffset,
+          constOffset, fieldAreaSize, fieldWidth,
+          Secp256k1Instance.fieldWidth] at hbounds
+        have hupper : w < workStart + 2568 := by
+          simpa [Nat.add_assoc] using hbounds.2
+        exact offset_lt_le_false workStart w 2568 3080
+          hupper hlower (by omega)
+
+  have hhighFlagOutsideYEqual
+      (w : Wire)
+      (hwFlag : w ∈ pointAddFlagWork workStart)
+      (hlower : workStart + 3080 ≤ w)
+      (hnotYNeg : w ≠ pointAddYNegFlag workStart) :
+      w ∉ equalFlagWires
+        (PointRegister.y pointReg)
+        (pointAddConst workStart)
+        (pointAddYNegFlag workStart)
+        (pointAddYDifference workStart)
+        (pointAddYHistory workStart) := by
+    intro hin
+    simp only [equalFlagWires, List.mem_append,
+      List.mem_cons] at hin
+    rcases hin with hprefix | htail
+    · rcases hprefix with hlr | hdiff
+      · rcases hlr with hy | hconst
+        · exact hpointWork w
+            (List.mem_of_mem_drop (List.mem_of_mem_take hy)) w
+            (hflagWorkSubset w hwFlag) rfl
+        · exact hhighFlagNotConst w hlower hconst
+      · have hbounds := List.mem_range'_1.mp hdiff
+        norm_num [pointAddYDifference,
+          yDifferenceOffset, xHistoryOffset,
+          xDifferenceOffset, zeroHistoryOffset,
+          constOffset, fieldAreaSize, fieldWidth,
+          Secp256k1Instance.fieldWidth] at hbounds
+        have hupper : w < workStart + 2824 := by
+          simpa [Nat.add_assoc] using hbounds.2
+        exact offset_lt_le_false workStart w 2824 3080
+          hupper hlower (by omega)
+    · rcases htail with hflag | hhistory
+      · exact hnotYNeg hflag
+      · have hbounds := List.mem_range'_1.mp hhistory
+        norm_num [pointAddYHistory, yHistoryOffset,
+          yDifferenceOffset, xHistoryOffset,
+          xDifferenceOffset, zeroHistoryOffset,
+          constOffset, fieldAreaSize, fieldWidth,
+          Secp256k1Instance.fieldWidth] at hbounds
+        have hupper : w < workStart + 3080 := by
+          simpa [Nat.add_assoc] using hbounds.2
+        exact offset_lt_le_false workStart w 3080 3080
+          hupper hlower (by omega)
+
+  have hprefixOtherHighFlag
+      (w : Wire)
+      (hwFlag : w ∈ pointAddFlagWork workStart)
+      (hlower : workStart + 3080 ≤ w)
+      (hwInfinity : w ≠ pointAddInfinityFlag workStart)
+      (hwXEq : w ≠ pointAddXEqFlag workStart)
+      (hwYNeg : w ≠ pointAddYNegFlag workStart) :
+      beforeGates w = st w := by
+    have hwConst := hhighFlagNotConst w hlower
+    have hwZeroHistory :
+        w ∉ pointAddZeroHistory workStart := by
+      intro hzero
+      have hzeroEq : w = workStart + 2055 := by
+        simpa [pointAddZeroHistory, zeroHistoryOffset,
+          constOffset, fieldAreaSize, fieldWidth,
+          Secp256k1Instance.fieldWidth] using hzero
+      have hupper : w < workStart + 3080 := by
+        rw [hzeroEq]
+        exact Nat.add_lt_add_left (by omega) workStart
+      exact offset_lt_le_false workStart w 3080 3080
+        hupper hlower (by omega)
+    calc
+      beforeGates w = afterYNeg w :=
+        loadConst_other w (pointAddConst workStart)
+          (-yC).val afterYNeg hwConst
+      _ = afterLoadY w :=
+        (equalFlag_usesOnly
+          (PointRegister.y pointReg)
+          (pointAddConst workStart)
+          (pointAddYNegFlag workStart)
+          (pointAddYDifference workStart)
+          (pointAddYHistory workStart)).preservesOutside
+            afterLoadY w
+              (hhighFlagOutsideYEqual w hwFlag hlower hwYNeg)
+      _ = afterUnloadX w :=
+        loadConst_other w (pointAddConst workStart)
+          (-yC).val afterUnloadX hwConst
+      _ = afterXEq w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterXEq hwConst
+      _ = afterLoadX w :=
+        (equalFlag_usesOnly
+          (PointRegister.x pointReg)
+          (pointAddConst workStart)
+          (pointAddXEqFlag workStart)
+          (pointAddXDifference workStart)
+          (pointAddXHistory workStart)).preservesOutside
+            afterLoadX w
+              (hhighFlagOutsideXEqual w hwFlag hlower hwXEq)
+      _ = afterInfinity w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterInfinity hwConst
+      _ = st w :=
+        hzeroOtherOfFlag w hwFlag hwInfinity hwZeroHistory
+
+  have hinfinityFlagMem :
+      pointAddInfinityFlag workStart ∈
+        pointAddFlagWork workStart := by
+    simp [pointAddFlagWork]
+
+  have hinfinityFlagLower :
+      workStart + 3080 ≤
+        pointAddInfinityFlag workStart := by
+    simp [pointAddInfinityFlag, flagOffset,
+      yHistoryOffset, yDifferenceOffset,
+      xHistoryOffset, xDifferenceOffset,
+      zeroHistoryOffset, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth]
+
+  have hxEqFlagMem :
+      pointAddXEqFlag workStart ∈
+        pointAddFlagWork workStart := by
+    simp [pointAddFlagWork]
+
+  have hxEqFlagLower :
+      workStart + 3080 ≤ pointAddXEqFlag workStart := by
+    simp [pointAddXEqFlag, flagOffset,
+      yHistoryOffset, yDifferenceOffset,
+      xHistoryOffset, xDifferenceOffset,
+      zeroHistoryOffset, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth]
+
+  have hyNegFlagMem :
+      pointAddYNegFlag workStart ∈
+        pointAddFlagWork workStart := by
+    simp [pointAddFlagWork]
+
+  have hyNegFlagLower :
+      workStart + 3080 ≤ pointAddYNegFlag workStart := by
+    simp [pointAddYNegFlag, flagOffset,
+      yHistoryOffset, yDifferenceOffset,
+      xHistoryOffset, xDifferenceOffset,
+      zeroHistoryOffset, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth]
+
+  have hinfinityNeXEq :
+      pointAddInfinityFlag workStart ≠
+        pointAddXEqFlag workStart := by
+    simp [pointAddInfinityFlag, pointAddXEqFlag]
+
+  have hinfinityNeYNeg :
+      pointAddInfinityFlag workStart ≠
+        pointAddYNegFlag workStart := by
+    simp [pointAddInfinityFlag, pointAddYNegFlag]
+
+  have hxEqNeYNeg :
+      pointAddXEqFlag workStart ≠
+        pointAddYNegFlag workStart := by
+    simp [pointAddXEqFlag, pointAddYNegFlag]
+
+  have hinfinityBeforeGates :
+      beforeGates (pointAddInfinityFlag workStart) =
+        decide (regValue (PointRegister.tag pointReg) st = 0) := by
+    have hnotConst :=
+      hhighFlagNotConst
+        (pointAddInfinityFlag workStart)
+        hinfinityFlagLower
+    calc
+      beforeGates (pointAddInfinityFlag workStart) =
+          afterYNeg (pointAddInfinityFlag workStart) :=
+        loadConst_other _ (pointAddConst workStart)
+          (-yC).val afterYNeg hnotConst
+      _ = afterLoadY (pointAddInfinityFlag workStart) :=
+        (equalFlag_usesOnly
+          (PointRegister.y pointReg)
+          (pointAddConst workStart)
+          (pointAddYNegFlag workStart)
+          (pointAddYDifference workStart)
+          (pointAddYHistory workStart)).preservesOutside
+            afterLoadY _
+              (hhighFlagOutsideYEqual _ hinfinityFlagMem
+                hinfinityFlagLower hinfinityNeYNeg)
+      _ = afterUnloadX (pointAddInfinityFlag workStart) :=
+        loadConst_other _ (pointAddConst workStart)
+          (-yC).val afterUnloadX hnotConst
+      _ = afterXEq (pointAddInfinityFlag workStart) :=
+        loadConst_other _ (pointAddConst workStart)
+          xC.val afterXEq hnotConst
+      _ = afterLoadX (pointAddInfinityFlag workStart) :=
+        (equalFlag_usesOnly
+          (PointRegister.x pointReg)
+          (pointAddConst workStart)
+          (pointAddXEqFlag workStart)
+          (pointAddXDifference workStart)
+          (pointAddXHistory workStart)).preservesOutside
+            afterLoadX _
+              (hhighFlagOutsideXEqual _ hinfinityFlagMem
+                hinfinityFlagLower hinfinityNeXEq)
+      _ = afterInfinity (pointAddInfinityFlag workStart) :=
+        loadConst_other _ (pointAddConst workStart)
+          xC.val afterInfinity hnotConst
+      _ = decide
+          (regValue (PointRegister.tag pointReg) st = 0) :=
+        hzeroCorrect.2.1
+
+  have hxAfterLoadX :
+      regValue (PointRegister.x pointReg) afterLoadX =
+        regValue (PointRegister.x pointReg) st := by
+    apply Arithmetic.AgreesOn.regValue
+    intro w hw
+    have hwPoint :=
+      List.mem_of_mem_drop (List.mem_of_mem_take hw)
+    calc
+      afterLoadX w = afterInfinity w :=
+        loadConst_other w (pointAddConst workStart)
+          xC.val afterInfinity (hpublicNotConst w hwPoint)
+      _ = st w :=
+        (zeroFlag_usesOnly
+          (PointRegister.tag pointReg)
+          (pointAddInfinityFlag workStart)
+          (pointAddZeroHistory workStart)).preservesOutside
+            st w (hxOutsideZero w hw)
+
+  have hxEqBeforeGates :
+      beforeGates (pointAddXEqFlag workStart) =
+        decide
+          (regValue (PointRegister.x pointReg) st = xC.val) := by
+    have hnotConst :=
+      hhighFlagNotConst
+        (pointAddXEqFlag workStart) hxEqFlagLower
+    calc
+      beforeGates (pointAddXEqFlag workStart) =
+          afterYNeg (pointAddXEqFlag workStart) :=
+        loadConst_other _ (pointAddConst workStart)
+          (-yC).val afterYNeg hnotConst
+      _ = afterLoadY (pointAddXEqFlag workStart) :=
+        (equalFlag_usesOnly
+          (PointRegister.y pointReg)
+          (pointAddConst workStart)
+          (pointAddYNegFlag workStart)
+          (pointAddYDifference workStart)
+          (pointAddYHistory workStart)).preservesOutside
+            afterLoadY _
+              (hhighFlagOutsideYEqual _ hxEqFlagMem
+                hxEqFlagLower hxEqNeYNeg)
+      _ = afterUnloadX (pointAddXEqFlag workStart) :=
+        loadConst_other _ (pointAddConst workStart)
+          (-yC).val afterUnloadX hnotConst
+      _ = afterXEq (pointAddXEqFlag workStart) :=
+        loadConst_other _ (pointAddConst workStart)
+          xC.val afterXEq hnotConst
+      _ = decide
+          (regValue (PointRegister.x pointReg) afterLoadX =
+            regValue (pointAddConst workStart) afterLoadX) :=
+        hxEqualCorrect.2.2.1
+      _ = decide
+          (regValue (PointRegister.x pointReg) st = xC.val) := by
+        rw [hxAfterLoadX, hconstValueAfterLoadX]
+
+  have hyAfterLoadY :
+      regValue (PointRegister.y pointReg) afterLoadY =
+        regValue (PointRegister.y pointReg) st := by
+    have hbeforeUnloadY :
+        AgreesOn (PointRegister.y pointReg)
+          afterYNeg beforeGates := by
+      intro w hw
+      exact loadConst_other w (pointAddConst workStart)
+        (-yC).val afterYNeg
+        (hpublicNotConst w
+          (List.mem_of_mem_drop (List.mem_of_mem_take hw)))
+    calc
+      regValue (PointRegister.y pointReg) afterLoadY =
+          regValue (PointRegister.y pointReg) afterYNeg :=
+        (Arithmetic.AgreesOn.regValue hyEqualCorrect.1).symm
+      _ = regValue (PointRegister.y pointReg) beforeGates :=
+        (Arithmetic.AgreesOn.regValue hbeforeUnloadY).symm
+      _ = regValue (PointRegister.y pointReg) st :=
+        Arithmetic.AgreesOn.regValue hyBeforeGates
+
+  have hyNegBeforeGates :
+      beforeGates (pointAddYNegFlag workStart) =
+        decide
+          (regValue (PointRegister.y pointReg) st = (-yC).val) := by
+    have hnotConst :=
+      hhighFlagNotConst
+        (pointAddYNegFlag workStart) hyNegFlagLower
+    calc
+      beforeGates (pointAddYNegFlag workStart) =
+          afterYNeg (pointAddYNegFlag workStart) :=
+        loadConst_other _ (pointAddConst workStart)
+          (-yC).val afterYNeg hnotConst
+      _ = decide
+          (regValue (PointRegister.y pointReg) afterLoadY =
+            regValue (pointAddConst workStart) afterLoadY) :=
+        hyEqualCorrect.2.2.1
+      _ = decide
+          (regValue (PointRegister.y pointReg) st = (-yC).val) := by
+        rw [hyAfterLoadY, hconstValueAfterLoadY]
+
+  have hgenericFlagMem :
+      pointAddGenericFlag workStart ∈
+        pointAddFlagWork workStart := by
+    simp [pointAddFlagWork]
+
+  have hgenericFlagLower :
+      workStart + 3080 ≤
+        pointAddGenericFlag workStart := by
+    simp [pointAddGenericFlag, flagOffset,
+      yHistoryOffset, yDifferenceOffset,
+      xHistoryOffset, xDifferenceOffset,
+      zeroHistoryOffset, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth]
+
+  have hgenericBeforeGates :
+      beforeGates (pointAddGenericFlag workStart) = false := by
+    rw [hprefixOtherHighFlag
+      (pointAddGenericFlag workStart)
+      hgenericFlagMem hgenericFlagLower]
+    · exact hcleanFlags _ hgenericFlagMem
+    · simp [pointAddGenericFlag, pointAddInfinityFlag]
+    · simp [pointAddGenericFlag, pointAddXEqFlag]
+    · simp [pointAddGenericFlag, pointAddYNegFlag]
+
+  have hpairFlagMem :
+      pointAddPairFlag workStart ∈
+        pointAddFlagWork workStart := by
+    simp [pointAddFlagWork]
+
+  have hpairFlagLower :
+      workStart + 3080 ≤ pointAddPairFlag workStart := by
+    simp [pointAddPairFlag, flagOffset,
+      yHistoryOffset, yDifferenceOffset,
+      xHistoryOffset, xDifferenceOffset,
+      zeroHistoryOffset, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth]
+
+  have hpairBeforeGates :
+      beforeGates (pointAddPairFlag workStart) = false := by
+    rw [hprefixOtherHighFlag
+      (pointAddPairFlag workStart)
+      hpairFlagMem hpairFlagLower]
+    · exact hcleanFlags _ hpairFlagMem
+    · simp [pointAddPairFlag, pointAddInfinityFlag]
+    · simp [pointAddPairFlag, pointAddXEqFlag]
+    · simp [pointAddPairFlag, pointAddYNegFlag]
+
+  have hdoubleFlagMem :
+      pointAddDoubleFlag workStart ∈
+        pointAddFlagWork workStart := by
+    simp [pointAddFlagWork]
+
+  have hdoubleFlagLower :
+      workStart + 3080 ≤
+        pointAddDoubleFlag workStart := by
+    simp [pointAddDoubleFlag, flagOffset,
+      yHistoryOffset, yDifferenceOffset,
+      xHistoryOffset, xDifferenceOffset,
+      zeroHistoryOffset, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth]
+
+  have hdoubleBeforeGates :
+      beforeGates (pointAddDoubleFlag workStart) = false := by
+    rw [hprefixOtherHighFlag
+      (pointAddDoubleFlag workStart)
+      hdoubleFlagMem hdoubleFlagLower]
+    · exact hcleanFlags _ hdoubleFlagMem
+    · simp [pointAddDoubleFlag, pointAddInfinityFlag]
+    · simp [pointAddDoubleFlag, pointAddXEqFlag]
+    · simp [pointAddDoubleFlag, pointAddYNegFlag]
+
+  let manualGates : Circuit :=
+    [Gate.X (pointAddInfinityFlag workStart),
+      Gate.X (pointAddXEqFlag workStart),
+      Gate.CCX
+        (pointAddInfinityFlag workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddGenericFlag workStart),
+      Gate.X (pointAddXEqFlag workStart),
+      Gate.X (pointAddInfinityFlag workStart),
+      Gate.X (pointAddYNegFlag workStart),
+      Gate.CCX
+        (pointAddXEqFlag workStart)
+        (pointAddYNegFlag workStart)
+        (pointAddPairFlag workStart),
+      Gate.X (pointAddYNegFlag workStart),
+      Gate.X (pointAddInfinityFlag workStart),
+      Gate.CCX
+        (pointAddInfinityFlag workStart)
+        (pointAddPairFlag workStart)
+        (pointAddDoubleFlag workStart),
+      Gate.X (pointAddInfinityFlag workStart)]
+
+  let after := Classical.run manualGates beforeGates
+
+  have hinfinityBeforeGates' :
+      beforeGates (workStart + flagOffset) =
+        decide (regValue (PointRegister.tag pointReg) st = 0) := by
+    simpa only [pointAddInfinityFlag] using
+      hinfinityBeforeGates
+  have hxEqBeforeGates' :
+      beforeGates (workStart + flagOffset + 1) =
+        decide
+          (regValue (PointRegister.x pointReg) st = xC.val) := by
+    simpa only [pointAddXEqFlag] using hxEqBeforeGates
+  have hyNegBeforeGates' :
+      beforeGates (workStart + flagOffset + 2) =
+        decide
+          (regValue (PointRegister.y pointReg) st = (-yC).val) := by
+    simpa only [pointAddYNegFlag] using hyNegBeforeGates
+  have hgenericBeforeGates' :
+      beforeGates (workStart + flagOffset + 3) = false := by
+    simpa only [pointAddGenericFlag] using hgenericBeforeGates
+  have hpairBeforeGates' :
+      beforeGates (workStart + flagOffset + 4) = false := by
+    simpa only [pointAddPairFlag] using hpairBeforeGates
+  have hdoubleBeforeGates' :
+      beforeGates (workStart + flagOffset + 5) = false := by
+    simpa only [pointAddDoubleFlag] using hdoubleBeforeGates
+
+  have hflagResults :
+      after (pointAddInfinityFlag workStart) =
+          decide (regValue (PointRegister.tag pointReg) st = 0) ∧
+        after (pointAddGenericFlag workStart) =
+          decide
+            (regValue (PointRegister.tag pointReg) st ≠ 0 ∧
+              regValue (PointRegister.x pointReg) st ≠ xC.val) ∧
+        after (pointAddDoubleFlag workStart) =
+          decide
+            (regValue (PointRegister.tag pointReg) st ≠ 0 ∧
+              regValue (PointRegister.x pointReg) st = xC.val ∧
+              regValue (PointRegister.y pointReg) st ≠ (-yC).val) := by
+    by_cases hinfinity :
+        regValue (PointRegister.tag pointReg) st = 0 <;>
+      by_cases hxEq :
+        regValue (PointRegister.x pointReg) st = xC.val <;>
+      by_cases hyNeg :
+        regValue (PointRegister.y pointReg) st = (-yC).val <;>
+      simp [after, manualGates, Classical.run,
+        Classical.applyGate, upd,
+        pointAddInfinityFlag, pointAddXEqFlag,
+        pointAddYNegFlag, pointAddGenericFlag,
+        pointAddPairFlag, pointAddDoubleFlag,
+        hinfinityBeforeGates', hxEqBeforeGates',
+        hyNegBeforeGates', hgenericBeforeGates',
+        hpairBeforeGates', hdoubleBeforeGates',
+        hinfinity, hxEq, hyNeg]
+
+  have hrun :
+      Classical.run
+          (pointAddFlags pointReg workStart xC yC) st =
+        after := by
+    simp [pointAddFlags, after, manualGates,
+      beforeGates, afterYNeg, afterLoadY,
+      afterUnloadX, afterXEq, afterLoadX,
+      afterInfinity, Classical.run_append]
+
+  have hmanualUses :
+      CircuitUsesOnly
+        (pointAddFlagWork workStart) manualGates := by
+    simp [manualGates, CircuitUsesOnly, Gate.UsesOnly,
+      pointAddFlagWork]
+
+  have hpointBeforeGates :
+      AgreesOn pointReg st beforeGates := by
+    intro w hw
+    have hwSlices :
+        w ∈
+          PointRegister.tag pointReg ++
+            PointRegister.x pointReg ++
+            PointRegister.y pointReg := by
+      rw [PointRegister.tag_x_y pointReg hpointLength]
+      exact hw
+    rcases List.mem_append.mp hwSlices with htagXMem | hy
+    · rcases List.mem_append.mp htagXMem with htag | hx
+      · exact htagBeforeGates w htag
+      · exact hxBeforeGates w hx
+    · exact hyBeforeGates w hy
+
+  have hpointAfter : AgreesOn pointReg st after := by
+    intro w hw
+    calc
+      after w = beforeGates w :=
+        hmanualUses.preservesOutside beforeGates w (by
+          intro hflag
+          exact hpointWork w hw w
+            (hflagWorkSubset w hflag) rfl)
+      _ = st w := hpointBeforeGates w hw
+
+  have rangeInFlagBounds
+      (offset len : Nat) {w : Wire}
+      (hw : workStart + offset ≤ w ∧
+        w < workStart + offset + len)
+      (hmin : 1799 ≤ offset)
+      (hmax : offset + len ≤ 3086) :
+      workStart + 1799 ≤ w ∧
+        w < workStart + 3086 := by
+    constructor
+    · exact (Nat.add_le_add_left hmin workStart).trans hw.1
+    · exact hw.2.trans_le (by
+        simpa [Nat.add_assoc] using
+          Nat.add_le_add_left hmax workStart)
+
+  have wireInFlagBounds
+      (offset : Nat) {w : Wire}
+      (hw : w = workStart + offset)
+      (hmin : 1799 ≤ offset)
+      (hmax : offset < 3086) :
+      workStart + 1799 ≤ w ∧
+        w < workStart + 3086 := by
+    subst w
+    exact ⟨Nat.add_le_add_left hmin workStart,
+      Nat.add_lt_add_left hmax workStart⟩
+
+  have hflagBounds :
+      ∀ w ∈ pointAddFlagWork workStart,
+        workStart + 1799 ≤ w ∧ w < workStart + 3086 := by
+    intro w hw
+    simp only [pointAddFlagWork, pointAddConst,
+      pointAddZeroHistory, pointAddXDifference,
+      pointAddXHistory, pointAddYDifference,
+      pointAddYHistory, pointAddInfinityFlag,
+      pointAddXEqFlag, pointAddYNegFlag,
+      pointAddGenericFlag, pointAddPairFlag,
+      pointAddDoubleFlag, List.mem_append,
+      List.mem_cons, List.mem_range'_1] at hw
+    norm_num [flagOffset, yHistoryOffset,
+      yDifferenceOffset, xHistoryOffset,
+      xDifferenceOffset, zeroHistoryOffset,
+      constOffset, fieldAreaSize, fieldWidth,
+      Secp256k1Instance.fieldWidth] at hw
+    rcases hw with
+        (((((h0 | h1) | h2) | h3) | h4) | h5) |
+          (h6 | h7 | h8 | h9 | h10 | h11)
+    · exact rangeInFlagBounds 1799 256 h0 (by omega) (by omega)
+    · exact wireInFlagBounds 2055 h1 (by omega) (by omega)
+    · exact rangeInFlagBounds 2056 256 h2 (by omega) (by omega)
+    · exact rangeInFlagBounds 2312 256 h3 (by omega) (by omega)
+    · exact rangeInFlagBounds 2568 256 h4 (by omega) (by omega)
+    · exact rangeInFlagBounds 2824 256 h5 (by omega) (by omega)
+    · exact wireInFlagBounds 3080 h6 (by omega) (by omega)
+    · exact wireInFlagBounds 3081 h7 (by omega) (by omega)
+    · exact wireInFlagBounds 3082 h8 (by omega) (by omega)
+    · exact wireInFlagBounds 3083 h9 (by omega) (by omega)
+    · exact wireInFlagBounds 3084 h10 (by omega) (by omega)
+    · exact wireInFlagBounds 3085 h11 (by omega) (by omega)
+
+  have hxWorkSubset :
+      ∀ w ∈ pointAddX workStart,
+        w ∈ pointAddWork workStart := by
+    intro w hw
+    have hbounds := List.mem_range'_1.mp hw
+    rw [pointAddWork]
+    apply List.mem_append_left
+    apply List.mem_range'_1.mpr
+    rw [hlocalSizeEq]
+    norm_num [pointAddX, fieldWidth,
+      Secp256k1Instance.fieldWidth] at hbounds
+    omega
+
+  have hyWorkSubset :
+      ∀ w ∈ pointAddY workStart,
+        w ∈ pointAddWork workStart := by
+    intro w hw
+    have hbounds := List.mem_range'_1.mp hw
+    rw [pointAddWork]
+    apply List.mem_append_left
+    apply List.mem_range'_1.mpr
+    rw [hlocalSizeEq]
+    norm_num [pointAddY, fieldWidth,
+      Secp256k1Instance.fieldWidth] at hbounds
+    omega
+
+  have hxOutsideFlagFootprint :
+      ∀ w ∈ pointAddX workStart,
+        w ∉ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw hin
+    rcases List.mem_append.mp hin with hpoint | hflag
+    · exact hpointWork w hpoint w (hxWorkSubset w hw) rfl
+    · have hxBounds := List.mem_range'_1.mp hw
+      have hflagLower := (hflagBounds w hflag).1
+      norm_num [pointAddX, fieldWidth,
+        Secp256k1Instance.fieldWidth] at hxBounds
+      have hxUpper : w < workStart + 257 := by
+        simpa [Nat.add_assoc] using hxBounds.2
+      exact offset_lt_le_false workStart w 257 1799
+        hxUpper hflagLower (by omega)
+
+  have hyOutsideFlagFootprint :
+      ∀ w ∈ pointAddY workStart,
+        w ∉ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw hin
+    rcases List.mem_append.mp hin with hpoint | hflag
+    · exact hpointWork w hpoint w (hyWorkSubset w hw) rfl
+    · have hyBounds := List.mem_range'_1.mp hw
+      have hflagLower := (hflagBounds w hflag).1
+      norm_num [pointAddY, fieldWidth,
+        Secp256k1Instance.fieldWidth] at hyBounds
+      have hyUpper : w < workStart + 514 := by
+        simpa [Nat.add_assoc] using hyBounds.2
+      exact offset_lt_le_false workStart w 514 1799
+        hyUpper hflagLower (by omega)
+
+  have hxAfter :
+      regValue (pointAddX workStart) after =
+        regValue (pointAddX workStart) st := by
+    rw [← hrun]
+    apply Arithmetic.AgreesOn.regValue
+    intro w hw
+    exact
+      (pointAddFlags_usesOnly pointReg workStart xC yC).preservesOutside
+        st w (hxOutsideFlagFootprint w hw)
+
+  have hyAfter :
+      regValue (pointAddY workStart) after =
+        regValue (pointAddY workStart) st := by
+    rw [← hrun]
+    apply Arithmetic.AgreesOn.regValue
+    intro w hw
+    exact
+      (pointAddFlags_usesOnly pointReg workStart xC yC).preservesOutside
+        st w (hyOutsideFlagFootprint w hw)
+
+  have localRangeMem
+      (offset len : Nat) {w : Wire}
+      (hw : workStart + offset ≤ w ∧
+        w < workStart + offset + len)
+      (hmax : offset + len ≤ 4112) :
+      w ∈ List.range' workStart localWorkSize := by
+    apply List.mem_range'_1.mpr
+    rw [hlocalSizeEq]
+    constructor
+    · exact (Nat.le_add_right workStart offset).trans hw.1
+    · exact hw.2.trans_le (by
+        simpa [Nat.add_assoc] using
+          Nat.add_le_add_left hmax workStart)
+
+  have hbranchWorkSubset :
+      ∀ w ∈ pointAddBranchWork workStart,
+        w ∈ pointAddWork workStart := by
+    intro w hw
+    rw [pointAddBranchWork] at hw
+    rcases List.mem_append.mp hw with hlocal | harithmetic
+    · rw [pointAddWork]
+      apply List.mem_append_left
+      simp only [pointAddT0, pointAddT1,
+        pointAddT2, pointAddT3, pointAddT4,
+        pointAddCandidate, pointAddSelected,
+        List.mem_append, List.mem_range'_1] at hlocal
+      norm_num [selectedOffset, candidateOffset,
+        flagOffset, yHistoryOffset, yDifferenceOffset,
+        xHistoryOffset, xDifferenceOffset,
+        zeroHistoryOffset, constOffset, fieldAreaSize,
+        fieldWidth, Secp256k1Instance.fieldWidth,
+        pointWidth] at hlocal
+      rcases hlocal with
+          (((((h0 | h1) | h2) | h3) | h4) | h5) | h6
+      · exact localRangeMem 514 257 h0 (by omega)
+      · exact localRangeMem 771 257 h1 (by omega)
+      · exact localRangeMem 1028 257 h2 (by omega)
+      · exact localRangeMem 1285 257 h3 (by omega)
+      · exact localRangeMem 1542 257 h4 (by omega)
+      · exact localRangeMem 3086 513 h5 (by omega)
+      · exact localRangeMem 3599 513 h6 (by omega)
+    · rw [pointAddWork]
+      exact List.mem_append_right _ harithmetic
+
+  have hbranchOutsideFlags :
+      ∀ w ∈ pointAddBranchWork workStart,
+        w ∉ pointAddFlagWork workStart := by
+    intro w hw hflag
+    have hflagRange := hflagBounds w hflag
+    rw [pointAddBranchWork] at hw
+    rcases List.mem_append.mp hw with hlocal | harithmetic
+    · simp only [pointAddT0, pointAddT1,
+        pointAddT2, pointAddT3, pointAddT4,
+        pointAddCandidate, pointAddSelected,
+        List.mem_append, List.mem_range'_1] at hlocal
+      norm_num [selectedOffset, candidateOffset,
+        flagOffset, yHistoryOffset, yDifferenceOffset,
+        xHistoryOffset, xDifferenceOffset,
+        zeroHistoryOffset, constOffset, fieldAreaSize,
+        fieldWidth, Secp256k1Instance.fieldWidth,
+        pointWidth] at hlocal
+      rcases hlocal with
+          (((((h0 | h1) | h2) | h3) | h4) | h5) | h6
+      · exact offset_lt_le_false workStart w 771 1799
+          (by simpa [Nat.add_assoc] using h0.2)
+          hflagRange.1 (by omega)
+      · exact offset_lt_le_false workStart w 1028 1799
+          (by simpa [Nat.add_assoc] using h1.2)
+          hflagRange.1 (by omega)
+      · exact offset_lt_le_false workStart w 1285 1799
+          (by simpa [Nat.add_assoc] using h2.2)
+          hflagRange.1 (by omega)
+      · exact offset_lt_le_false workStart w 1542 1799
+          (by simpa [Nat.add_assoc] using h3.2)
+          hflagRange.1 (by omega)
+      · exact offset_lt_le_false workStart w 1799 1799
+          (by simpa [Nat.add_assoc] using h4.2)
+          hflagRange.1 (by omega)
+      · exact offset_lt_le_false workStart w 3086 3086
+          hflagRange.2 h5.1 (by omega)
+      · exact offset_lt_le_false workStart w 3086 3599
+          hflagRange.2 h6.1 (by omega)
+    · have hshifted :
+          ∃ a ∈ Secp256k1Instance.secpLayout.allWires,
+            pointAddArithmeticOffset workStart + a = w := by
+        simpa only [pointAddArithmeticWork, shiftWires,
+          List.mem_map] using harithmetic
+      rcases hshifted with ⟨a, _ha, rfl⟩
+      have harithmeticLower :
+          workStart + 4112 ≤
+            pointAddArithmeticOffset workStart + a := by
+        rw [pointAddArithmeticOffset, hlocalSizeEq]
+        exact Nat.le_add_right (workStart + 4112) a
+      exact offset_lt_le_false workStart
+        (pointAddArithmeticOffset workStart + a)
+        3086 4112 hflagRange.2 harithmeticLower (by omega)
+
+  have hbranchOutsideFlagFootprint :
+      ∀ w ∈ pointAddBranchWork workStart,
+        w ∉ pointReg ++ pointAddFlagWork workStart := by
+    intro w hw hin
+    rcases List.mem_append.mp hin with hpoint | hflag
+    · exact hpointWork w hpoint w
+        (hbranchWorkSubset w hw) rfl
+    · exact hbranchOutsideFlags w hw hflag
+
+  have hbranchCleanAfter :
+      Clean (pointAddBranchWork workStart) after := by
+    intro w hw
+    rw [← hrun]
+    rw [(pointAddFlags_usesOnly
+      pointReg workStart xC yC).preservesOutside
+        st w (hbranchOutsideFlagFootprint w hw)]
+    exact hcleanBranch w hw
+
+  rw [hrun]
+  exact
+    ⟨hpointAfter, hxAfter, hyAfter,
+      hflagResults.1, hflagResults.2.1,
+      hflagResults.2.2, hbranchCleanAfter⟩
 
 /--
 If the input is O, setup detects exactly the infinity branch.
