@@ -57,13 +57,15 @@ The exact cost is `plan.cost = 2 * plan.schedule.forwardCost`. If every multipli
 2 * ((2 * width - 1) * mulCost + 7 * width^2).
 ```
 
-`Plan.modExp_contract` and `Plan.modExp_contract_uniform` package these specifications. Pure
-recurrence, schedule, locality, cost, and cleanup lemmas provide their proofs.
+`Plan.program_correct` and the two `Plan.program_tCount` theorems expose correctness and cost
+directly. `Plan.modExp_contract` and `Plan.modExp_contract_uniform` package the same facts for
+composition. Pure recurrence, schedule, locality, cost, and cleanup lemmas provide their proofs.
 -/
 
 namespace ShorECDLP
 namespace ModExp
 
+open Classical
 open Arithmetic
 open scoped ArithmeticNotation
 
@@ -903,8 +905,6 @@ theorem finalAcc_sublist_work {width modulus : Nat}
       have hpref := List.sublist_append_right
         (acc.wires ++ nextPower.wires ++ product.wires) (nextAcc.wires ++ tail.owned)
       simpa [owned, List.append_assoc] using ih.trans hpref
-
-open Classical
 
 theorem forward_correct :
     ∀ {width modulus : Nat} {mulWork : List Wire} {duplicate acc power : Reg width}
@@ -1952,6 +1952,25 @@ theorem modExp_contract_of_forward {width modulus : Nat} (plan : Plan width modu
 theorem modExp_contract {width modulus : Nat} (plan : Plan width modulus) :
     ModExpContract plan.program plan.layout modulus plan.cost :=
   modExp_contract_of_forward plan (Schedule.forward_correct plan.schedule)
+
+/-- Direct correctness theorem for the Bennett-clean modular-exponentiation program.
+
+This restates the semantic field of `modExp_contract` over `Plan.program` itself, exposing
+input preservation, the modular-power result, and clean workspace without a contract
+projection at the call site. -/
+theorem program_correct {width modulus : Nat} (plan : Plan width modulus)
+    (st : BasisState) (hlayout : plan.layout.Valid)
+    (hbaseBound : st⟦ᵣplan.base.wires⟧ < modulus)
+    (hexponentBound : st⟦ᵣplan.exponent.wires⟧ < modulus)
+    (hclean : clean(plan.out.wires ++ plan.layout.work, st)) :
+    let after := ⟪plan.program⟫ st
+    AgreesOn plan.base.wires st after ∧
+      AgreesOn plan.exponent.wires st after ∧
+      after⟦ᵣplan.out.wires⟧ =
+        st⟦ᵣplan.base.wires⟧ ^ st⟦ᵣplan.exponent.wires⟧ % modulus ∧
+      clean(plan.layout.work, after) := by
+  simpa [layout] using
+    (modExp_contract plan).correct st hlayout hbaseBound hexponentBound hclean
 
 /-- Uniform multiplier costs expose the same certified program under its symbolic cost. -/
 theorem modExp_contract_uniform {width modulus mulCost : Nat} (plan : Plan width modulus)
