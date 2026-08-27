@@ -22,6 +22,7 @@ import ShorECDLP.Submission.Arithmetic.Predicates
 import ShorECDLP.Submission.Arithmetic.Primitives
 import ShorECDLP.Submission.Arithmetic.RippleAdder
 import ShorECDLP.Submission.Arithmetic.Secp256k1Instance
+import ShorECDLP.Submission.EllipticCurve.AffineFormula
 import ShorECDLP.Submission.EllipticCurve.Precompute
 import ShorECDLP.Submission.EllipticCurve.PointEncoding
 import ShorECDLP.Submission.EllipticCurve.PointRegister
