@@ -11747,6 +11747,200 @@ theorem pointAddFiniteCompute_structural
   exact ⟨hfree, hwellFormed, huses,
     pointAddSelected_mem_work workStart⟩
 
+private theorem copyReg_eq_writeReg_of_value_disjoint
+    (src dst : List Wire)
+    (st : BasisState)
+    (value : Nat)
+    (hlen : dst.length = src.length)
+    (hdstNodup : dst.Nodup)
+    (hdisjoint : ModExp.Schedule.WireDisjoint src dst)
+    (hclean : Clean dst st)
+    (hvalue : regValue src st = value)
+    (_hbound : value < 2 ^ dst.length) :
+    Classical.run (Arithmetic.copyReg src dst) st =
+      writeReg dst value st := by
+  have aux :
+      ∀ (src dst : List Wire) (st : BasisState),
+        dst.length = src.length →
+        dst.Nodup →
+        ModExp.Schedule.WireDisjoint src dst →
+        Clean dst st →
+        Classical.run (Arithmetic.copyReg src dst) st =
+          writeReg dst (regValue src st) st := by
+    intro source
+    induction source with
+    | nil =>
+        intro destination state hlength _ _ _
+        have hdestination : destination = [] := by
+          apply List.length_eq_zero_iff.mp
+          simpa using hlength
+        subst destination
+        rfl
+    | cons sourceHead sourceTail ih =>
+        intro destination state hlength hdestinationNodup
+          hsourceDestination hdestinationClean
+        cases destination with
+        | nil =>
+            simp at hlength
+        | cons destinationHead destinationTail =>
+            have hlengthTail :
+                destinationTail.length = sourceTail.length := by
+              simpa using hlength
+            obtain ⟨hdestinationHead, hdestinationTailNodup⟩ :=
+              List.nodup_cons.mp hdestinationNodup
+            have htailDisjoint :
+                ModExp.Schedule.WireDisjoint
+                  sourceTail destinationTail := by
+              intro a ha b hb
+              exact hsourceDestination a
+                (List.mem_cons_of_mem sourceHead ha) b
+                (List.mem_cons_of_mem destinationHead hb)
+            have hdestinationNotSource :
+                destinationHead ∉ sourceTail := by
+              intro hmem
+              exact (hsourceDestination destinationHead
+                (List.mem_cons_of_mem sourceHead hmem)
+                destinationHead (List.mem_cons_self)) rfl
+            let nextState :=
+              Classical.applyGate
+                (Gate.CX sourceHead destinationHead) state
+            have hcleanTail : Clean destinationTail nextState := by
+              intro w hw
+              change
+                state[destinationHead ↦
+                  Bool.xor (state destinationHead)
+                    (state sourceHead)] w = false
+              have hne : w ≠ destinationHead := by
+                intro heq
+                subst w
+                exact hdestinationHead hw
+              rw [upd_other _ _ _ hne]
+              exact hdestinationClean w
+                (List.mem_cons_of_mem destinationHead hw)
+            have hsourceKeep :
+                regValue sourceTail nextState =
+                  regValue sourceTail state := by
+              change
+                regValue sourceTail
+                    (state[destinationHead ↦
+                      Bool.xor (state destinationHead)
+                        (state sourceHead)]) =
+                  regValue sourceTail state
+              exact regValue_upd_not_mem sourceTail state
+                destinationHead _ hdestinationNotSource
+            have hheadBit :
+                (regValue (sourceHead :: sourceTail) state).testBit 0 =
+                  state sourceHead := by
+              rw [regValue_cons, Nat.testBit_zero]
+              cases hsourceHead : state sourceHead <;>
+                simp [Nat.add_mod]
+            have htailValue :
+                regValue (sourceHead :: sourceTail) state / 2 =
+                  regValue sourceTail state := by
+              rw [regValue_cons]
+              cases hsourceHead : state sourceHead <;> simp ; omega
+            have hnextState :
+                nextState =
+                  state[destinationHead ↦
+                    (regValue
+                      (sourceHead :: sourceTail) state).testBit 0] := by
+              simp only [nextState, Classical.applyGate]
+              rw [hdestinationClean destinationHead
+                (List.mem_cons_self)]
+              simp [hheadBit]
+            have htailRun := ih destinationTail nextState
+              hlengthTail hdestinationTailNodup
+              htailDisjoint hcleanTail
+            rw [Arithmetic.copyReg, Classical.run_cons]
+            change
+              Classical.run
+                  (Arithmetic.copyReg sourceTail destinationTail)
+                  nextState =
+                writeReg (destinationHead :: destinationTail)
+                  (regValue (sourceHead :: sourceTail) state) state
+            rw [htailRun, hsourceKeep, writeReg,
+              htailValue, ← hnextState]
+  calc
+    Classical.run (Arithmetic.copyReg src dst) st =
+        writeReg dst (regValue src st) st :=
+      aux src dst st hlen hdstNodup hdisjoint hclean
+    _ = writeReg dst value st := by rw [hvalue]
+
+private theorem writeReg_other
+    (ws : List Wire) (value : Nat) (st : BasisState)
+    {w : Wire} (hw : w ∉ ws) :
+    writeReg ws value st w = st w := by
+  induction ws generalizing value st with
+  | nil => rfl
+  | cons head tail ih =>
+      simp only [List.mem_cons, not_or] at hw
+      simp only [writeReg]
+      rw [ih (value := value / 2)
+        (st := st[head ↦ value.testBit 0]) hw.2]
+      exact upd_other st head _ hw.1
+
+private theorem writeReg_agreesOn_register
+    (ws : List Wire) (value : Nat)
+    (left right : BasisState)
+    (hnodup : ws.Nodup) :
+    AgreesOn ws
+      (writeReg ws value left)
+      (writeReg ws value right) := by
+  induction ws generalizing value left right with
+  | nil =>
+      intro w hw
+      simp at hw
+  | cons head tail ih =>
+      obtain ⟨hhead, htail⟩ := List.nodup_cons.mp hnodup
+      intro w hw
+      simp only [writeReg]
+      rcases List.mem_cons.mp hw with hwh | hw
+      · subst w
+        rw [writeReg_other tail (value / 2)
+            (left[head ↦ value.testBit 0]) hhead,
+          writeReg_other tail (value / 2)
+            (right[head ↦ value.testBit 0]) hhead,
+          upd_same, upd_same]
+      · exact ih (value / 2)
+          (left[head ↦ value.testBit 0])
+          (right[head ↦ value.testBit 0])
+          htail w hw
+
+private theorem run_writeReg_commute
+    (circuit : Circuit)
+    (active out : List Wire)
+    (value : Nat) (st : BasisState)
+    (huses : CircuitUsesOnly active circuit)
+    (hdisjoint : ModExp.Schedule.WireDisjoint active out)
+    (houtNodup : out.Nodup) :
+    Classical.run circuit (writeReg out value st) =
+      writeReg out value (Classical.run circuit st) := by
+  have hwriteActive :
+      ∀ w ∈ active, writeReg out value st w = st w := by
+    intro w hw
+    apply writeReg_other
+    intro hout
+    exact (hdisjoint w hw w hout) rfl
+  have hrunActive :
+      ∀ w ∈ active,
+        Classical.run circuit (writeReg out value st) w =
+          Classical.run circuit st w :=
+    CircuitUsesOnly.run_congr huses hwriteActive
+  funext w
+  by_cases hactive : w ∈ active
+  · rw [hrunActive w hactive,
+      writeReg_other out value (Classical.run circuit st)]
+    intro hout
+    exact (hdisjoint w hactive w hout) rfl
+  · rw [huses.preservesOutside (writeReg out value st) w hactive]
+    by_cases hout : w ∈ out
+    · exact (writeReg_agreesOn_register out value st
+        (Classical.run circuit st) houtNodup w hout).symm
+    · rw [writeReg_other out value st hout,
+        writeReg_other out value
+          (Classical.run circuit st) hout,
+        huses.preservesOutside st w hactive]
+
 /--
 Generic Bennett copy-out lemma.
 
@@ -11803,7 +11997,54 @@ theorem bennett_copyReg_eq_writeReg
         })
         st =
       writeReg out value st := by
-  sorry
+  obtain ⟨hinputOutNodup, hworkNodup, hinputOutWork⟩ :=
+    List.nodup_append.mp hnodup
+  obtain ⟨_hinputNodup, houtNodup, hinputOut⟩ :=
+    List.nodup_append.mp hinputOutNodup
+  have hactiveOut : ModExp.Schedule.WireDisjoint
+      (input ++ work) out := by
+    intro active hactive output houtput
+    rcases List.mem_append.mp hactive with hinput | hwork
+    · exact hinputOut active hinput output houtput
+    · intro heq
+      exact hinputOutWork output
+        (List.mem_append_right input houtput)
+        active hwork heq.symm
+  have hsrcOut : ModExp.Schedule.WireDisjoint src out := by
+    intro source hsource output houtput
+    exact hactiveOut source
+      (List.mem_append_right input (hsrc source hsource))
+      output houtput
+  let mid := Classical.run compute st
+  have hcleanMid : Clean out mid := by
+    intro w hw
+    calc
+      mid w = st w := by
+        apply huses.preservesOutside
+        intro hactive
+        exact (hactiveOut w hactive w hw) rfl
+      _ = false := hclean w hw
+  have hcopy :
+      Classical.run (Arithmetic.copyReg src out) mid =
+        writeReg out value mid :=
+    copyReg_eq_writeReg_of_value_disjoint
+      src out mid value hlen houtNodup hsrcOut
+      hcleanMid hvalue hbound
+  have hreverseUses :
+      CircuitUsesOnly (input ++ work) compute.reverse :=
+    usesOnly_reverse huses
+  have hcommute :
+      Classical.run compute.reverse (writeReg out value mid) =
+        writeReg out value
+          (Classical.run compute.reverse mid) :=
+    run_writeReg_commute compute.reverse (input ++ work)
+      out value mid hreverseUses hactiveOut houtNodup
+  have hcancel :
+      Classical.run compute.reverse mid = st := by
+    simpa only [mid] using
+      run_reverse_cancel compute st hfree hwf
+  simp only [Classical.run_append]
+  rw [hcopy, hcommute, hcancel]
 
 /-! -------------------------------------------------------------------------
     Final PointAdd correctness
