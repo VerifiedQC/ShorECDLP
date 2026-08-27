@@ -5,19 +5,6 @@ namespace ShorECDLP.Quantum.OrderFinding
 
 open scoped BigOperators
 
-private theorem jointRegisterProbability_nonneg
-    (aReg bReg : List Wire)
-    (a b : ℕ)
-    (ψ : State) :
-    0 ≤ jointRegisterProbability aReg bReg a b ψ := by
-  classical
-  unfold jointRegisterProbability
-  apply Finset.sum_nonneg
-  intro s _
-  by_cases h : regValue aReg s = a ∧ regValue bReg s = b
-  · simp [h, Complex.normSq_nonneg]
-  · simp [h]
-
 theorem nonzero_character_peak_sum_le_success
     {r precision d : ℕ}
     (hr : Nat.Prime r)

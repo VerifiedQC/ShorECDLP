@@ -1,15 +1,6 @@
-import ShorECDLP.Framework.Quantum.InnerProduct
-import ShorECDLP.Framework.BasisState
+import ShorECDLP.Framework.Contract
 
 namespace ShorECDLP
-
-structure PointEncoding (G : Type*) (w : ℕ) where
-  encode : G → Fin (2 ^ w)
-  injective : Function.Injective encode
-
-def ecdlpFunction {G : Type*} [AddCommGroup G]
-    (P Q : G) (a b : ℕ) : G :=
-  a • P + b • Q
 
 structure ECDLPOracleSpec
     {G : Type*} [AddCommGroup G]
