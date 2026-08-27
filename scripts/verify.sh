@@ -55,14 +55,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1Instance.secpProgram_correct
 #print axioms ShorECDLP.Secp256k1Instance.secpProgram_tCount
 #print axioms ShorECDLP.Secp256k1Instance.secp_fermat_inverse
+#print axioms ShorECDLP.Secp256k1.pointAddFiniteCompute_tCount
+#print axioms ShorECDLP.Secp256k1.pointAdd_zero_tCount
+#print axioms ShorECDLP.Secp256k1.pointAdd_finite_tCount
 #print axioms ShorECDLP.Secp256k1.pointAdd_correct
 #print axioms ShorECDLP.Secp256k1.controlledPointAdd_correct
+#print axioms ShorECDLP.Secp256k1.controlledPointAdd_zero_tCount
+#print axioms ShorECDLP.Secp256k1.controlledPointAdd_tCount_of_ne_zero
 #print axioms ShorECDLP.Secp256k1.controlledPointAdd_HPFree
 #print axioms ShorECDLP.Secp256k1.controlledPointAdd_wellFormed
 #print axioms ShorECDLP.Secp256k1.scalarMul_correct
+#print axioms ShorECDLP.Secp256k1.scalarMul_tCount_of_table_ne_zero
 #print axioms ShorECDLP.Secp256k1.scalarMul_HPFree
 #print axioms ShorECDLP.Secp256k1.scalarMul_wellFormed
 #print axioms ShorECDLP.Secp256k1.ecdlpOracle_correct
+#print axioms ShorECDLP.Secp256k1.ecdlpOracle_tCount_of_tables_ne_zero
 #print axioms ShorECDLP.Secp256k1.ecdlpOracle_HPFree
 #print axioms ShorECDLP.Secp256k1.ecdlpOracle_wellFormed
 #print axioms ShorECDLP.Secp256k1.ecdlpOracle_spec
@@ -95,12 +102,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Quantum.PhaseEstimation.phaseEstimation_correct_approx
 #print axioms ShorECDLP.ECDLPOracleSpec.ofCircuit
 #print axioms ShorECDLP.Quantum.OrderFinding.orderFinding_correct
+#print axioms ShorECDLP.Secp256k1.ecdlpTrial_run
+#print axioms ShorECDLP.Secp256k1.ecdlpTrial_tCount
 #print axioms ShorECDLP.Secp256k1.orderFinding_correct
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 75 ]]; then
-  printf 'expected seventy-five #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 84 ]]; then
+  printf 'expected eighty-four #print axioms results\n' >&2
   exit 1
 fi
 

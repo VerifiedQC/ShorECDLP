@@ -633,6 +633,53 @@ theorem controlledPointSum_scalarMulTable
         rw [two_nsmul, nsmul_add, ← add_nsmul, Nat.two_mul]
         conv_rhs => rw [add_nsmul, one_nsmul]
 
+/-! ## Exact T-count -/
+
+private theorem scalarMulCore_tCount_of_all_ne_zero
+    (controls pointReg : List Wire)
+    (points : List Point)
+    (workStart : Wire)
+    (hpointLength : pointReg.length = pointWidth)
+    (hlength : points.length = controls.length)
+    (hnonzero : ∀ C ∈ points, C ≠ 0) :
+    tCount (scalarMulCore pointReg workStart controls points) =
+      1644262771060 * controls.length := by
+  induction controls generalizing points with
+  | nil =>
+      simp [scalarMulCore]
+  | cons control controls ih =>
+      cases points with
+      | nil => simp at hlength
+      | cons C points =>
+          have hC : C ≠ 0 := hnonzero C (by simp)
+          have htail : ∀ D ∈ points, D ≠ 0 := by
+            intro D hD
+            exact hnonzero D (by simp [hD])
+          have hlengthTail : points.length = controls.length := by
+            simpa using hlength
+          rw [scalarMulCore, tCount_append,
+            controlledPointAdd_tCount_of_ne_zero
+              control pointReg workStart C hC hpointLength,
+            ih points hlengthTail htail]
+          simp only [List.length_cons]
+          omega
+
+/--
+Exact T-count of scalar multiplication when every precomputed classical
+doubling-table entry is finite.
+-/
+theorem scalarMul_tCount_of_table_ne_zero
+    (scalarReg pointReg : List Wire)
+    (workStart : Wire)
+    (P : Point)
+    (hpointLength : pointReg.length = pointWidth)
+    (hnonzero : ∀ C ∈ scalarMulTable scalarReg P, C ≠ 0) :
+    tCount (scalarMul scalarReg pointReg workStart P) =
+      1644262771060 * scalarReg.length := by
+  exact scalarMulCore_tCount_of_all_ne_zero
+    scalarReg pointReg (scalarMulTable scalarReg P) workStart
+    hpointLength (by simp [scalarMulTable]) hnonzero
+
 /-! ## Structural lemmas -/
 
 omit [Fact (Nat.Prime p)] in

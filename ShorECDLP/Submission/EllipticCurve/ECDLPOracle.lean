@@ -33,6 +33,26 @@ def ecdlpOracle
   scalarMul aReg pointReg workStart P ++
     scalarMul bReg pointReg workStart Q
 
+/--
+Exact T-count of the two-scalar-multiplication oracle when both classical
+doubling tables contain only finite points.
+-/
+theorem ecdlpOracle_tCount_of_tables_ne_zero
+    (aReg bReg pointReg : List Wire)
+    (workStart : Wire)
+    (P Q : Point)
+    (hpointLength : pointReg.length = pointWidth)
+    (hP : ∀ C ∈ scalarMulTable aReg P, C ≠ 0)
+    (hQ : ∀ C ∈ scalarMulTable bReg Q, C ≠ 0) :
+    tCount (ecdlpOracle aReg bReg pointReg workStart P Q) =
+      1644262771060 * (aReg.length + bReg.length) := by
+  rw [ecdlpOracle, tCount_append,
+    scalarMul_tCount_of_table_ne_zero
+      aReg pointReg workStart P hpointLength hP,
+    scalarMul_tCount_of_table_ne_zero
+      bReg pointReg workStart Q hpointLength hQ]
+  omega
+
 omit [Fact (Nat.Prime p)] in
 private theorem writeReg_apply_not_mem
     (reg : List Wire) (value : Nat) (st : BasisState)
