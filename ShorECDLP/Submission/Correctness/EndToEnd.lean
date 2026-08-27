@@ -11,7 +11,7 @@ standard generator has that additive order.
 
 The exact single-trial circuit is named explicitly so its correctness and
 resource theorems refer to the same term.  Classical repetition to the final
-99% success target is packaged separately at the framework boundary.
+99% success target is deliberately left to the separate framework boundary.
 -/
 
 namespace ShorECDLP
