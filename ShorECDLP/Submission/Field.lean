@@ -22,15 +22,14 @@ theorems); a future optimized submission carries a different list against the sa
     **the modular reduction is the generic prime algorithm and does not exploit the
     pseudo-Mersenne structure of `p = 2^256 − 2^32 − 977`.** (Seeing the literal prime in
     the source must not be read as a pseudo-Mersenne speedup.)
-  - **Primality of `p`** is a standard published fact carried as a hypothesis
-    `[Fact (Nat.Prime p)]`, not machine-checked in this version (a Pratt/Lucas certificate
-    can discharge it later). A hypothesis, not an axiom — it appears in every theorem's
-    signature, so the trusted surface stays visible.
+  - **Primality of `p`** is a standard published fact carried in this base layer as a
+    visible `[Fact (Nat.Prime p)]` hypothesis, not an axiom. The concrete secp256k1
+    certificate layer later discharges that instance with a Lucas/Pratt-style certificate.
 
 Further items attach to the modules they describe as those land (Fermat inversion →
-`Arithmetic/ModExp`, un-windowed double-and-add → `EllipticCurve/ScalarMul`, coherent-QFT
-`+2n` qubits vs the semiclassical baseline → `Framework/Quantum/QFT` statement), and are
-consolidated into the submission's reading-guide at M5.
+`Arithmetic/ModExp`, un-windowed double-and-add → `Arithmetic/ScalarMul`, coherent-QFT
+`+2n` qubits vs the semiclassical baseline → `Submission/QFT`), and are consolidated into the
+submission's reading-guide at M5.
 -/
 
 namespace ShorECDLP

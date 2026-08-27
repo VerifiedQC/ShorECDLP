@@ -1,5 +1,6 @@
 import ShorECDLP.Framework.Contract
 import ShorECDLP.Framework.Repetition
+import ShorECDLP.Submission.EllipticCurve.GeneratorOrder
 import ShorECDLP.Submission.Correctness.Trial
 import ShorECDLP.Submission.OrderFinding.Main
 import Mathlib.Analysis.Real.Pi.Bounds
@@ -8,9 +9,9 @@ import Mathlib.Analysis.Real.Pi.Bounds
 # Conditional secp256k1 order-finding theorem
 
 This module applies the already-proved two-register order-finding theorem to
-the concrete two-ScalarMul ECDLP oracle.  The result keeps the two remaining
-secp256k1 group facts visible: primality of `order` and the statement that the
-standard generator has that additive order.
+the concrete two-ScalarMul ECDLP oracle.  Primality of `p` and `order`, and the
+statement that the standard generator has additive order `order`, are
+discharged by the certificate module.
 
 The exact single-trial circuit is named explicitly so its correctness and
 resource theorems refer to the same term.  The final declarations package the
@@ -21,8 +22,6 @@ the aggregate count is then derived from its two certified numeric fields.
 
 namespace ShorECDLP
 namespace Secp256k1
-
-variable [Fact (Nat.Prime p)] [Fact (Nat.Prime order)]
 
 open Quantum.PhaseEstimation
 
@@ -71,7 +70,6 @@ private theorem publicKey_order
     _ = addOrderOf G := hcoprimeG.addOrderOf_nsmul
     _ = order := horderG
 
-omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 private theorem hadamards_tCount (reg : List Wire) :
     tCount (hadamards reg) = 0 := by
   induction reg with
@@ -118,8 +116,8 @@ theorem ecdlpTrial_wellFormed
 
 /--
 The concrete secp256k1 oracle satisfies the conditional ECDLP order-finding
-success bound.  The generator-order equality and the relation `Q = d • G`
-remain explicit hypotheses.
+success bound.  The public-key relation `Q = d • G` remains an explicit
+hypothesis.
 -/
 theorem orderFinding_correct
     {d precision : Nat}
@@ -130,7 +128,6 @@ theorem orderFinding_correct
     (hpointLength : pointReg.length = pointWidth)
     (hnodup :
       (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
-    (horderG : addOrderOf G = order)
     (hQ : Q = d • G)
     (hsetup :
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
@@ -149,7 +146,7 @@ theorem orderFinding_correct
   let hsetting :
       Quantum.OrderFinding.ECDLPSetting G Q order d :=
     { prime_order := (Fact.out : Nat.Prime order)
-      order_P := horderG
+      order_P := generator_order
       Q_eq := hQ }
 
   have hspec := ecdlpOracle_spec
@@ -174,15 +171,14 @@ theorem ecdlpTrial_tCount
     (haLength : aReg.length = 256)
     (hbLength : bReg.length = 256)
     (hpointLength : pointReg.length = pointWidth)
-    (horderG : addOrderOf G = order)
     (hQ : Q = d • G)
     (hQnonzero : Q ≠ 0) :
     tCount (ecdlpTrial
       aReg bReg pointReg workStart qftAncilla Q) =
       841862539761920 := by
   have hGTable := scalarMulTable_ne_zero_of_order
-    aReg G haLength horderG
-  have horderQ := publicKey_order Q horderG hQ hQnonzero
+    aReg G haLength generator_order
+  have horderQ := publicKey_order Q generator_order hQ hQnonzero
   have hQTable := scalarMulTable_ne_zero_of_order
     bReg Q hbLength horderQ
   rw [ecdlpTrial, tCount_append, tCount_append, tCount_append,

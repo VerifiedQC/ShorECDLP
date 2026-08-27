@@ -86,6 +86,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1.curve_discriminant_ne_zero
 #print axioms ShorECDLP.Secp256k1.generator_equation
 #print axioms ShorECDLP.Secp256k1.G_ne_zero
+#print axioms ShorECDLP.Secp256k1.p_prime
+#print axioms ShorECDLP.Secp256k1.order_prime
+#print axioms ShorECDLP.Secp256k1.generator_nsmul_eq_zero
+#print axioms ShorECDLP.Secp256k1.generator_order
 #print axioms ShorECDLP.Reduction.oracleExponent_shiftBy
 #print axioms ShorECDLP.Reduction.annihilatesPeriod_iff
 #print axioms ShorECDLP.Reduction.recoverShift_correct
@@ -121,8 +125,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 97 ]]; then
-  printf 'expected ninety-seven #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 101 ]]; then
+  printf 'expected one hundred one #print axioms results\n' >&2
   exit 1
 fi
 

@@ -36,6 +36,7 @@ import ShorECDLP.Submission.EllipticCurve.Precompute
 import ShorECDLP.Submission.EllipticCurve.PointEncoding
 import ShorECDLP.Submission.EllipticCurve.PointRegister
 import ShorECDLP.Submission.EllipticCurve.Secp256k1
+import ShorECDLP.Submission.EllipticCurve.GeneratorOrder
 import ShorECDLP.Submission.Correctness.Trial
 import ShorECDLP.Submission.Submission
 import ShorECDLP.Submission.Correctness.Reduction
