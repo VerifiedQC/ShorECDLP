@@ -1,4 +1,5 @@
-import ShorECDLP.Submission.EllipticCurve.ECDLPOracle
+import ShorECDLP.Framework.Contract
+import ShorECDLP.Submission.Correctness.Trial
 import ShorECDLP.Submission.OrderFinding.Main
 import Mathlib.Analysis.Real.Pi.Bounds
 
@@ -11,8 +12,8 @@ secp256k1 group facts visible: primality of `order` and the statement that the
 standard generator has that additive order.
 
 The exact single-trial circuit is named explicitly so its correctness and
-resource theorems refer to the same term.  The final theorem fills the
-Framework `ECDLPSubmission` contract: 26 independent measured trials reach
+resource theorems refer to the same term.  The final theorem proves the closed
+Framework `BitcoinECDLPSubmission` claim: 26 independent measured trials reach
 99% success and charge 26 copies of that identical trial circuit.
 -/
 
@@ -22,32 +23,6 @@ namespace Secp256k1
 variable [Fact (Nat.Prime p)] [Fact (Nat.Prime order)]
 
 open Quantum.PhaseEstimation
-
-/-- One exact secp256k1 ECDLP order-finding trial. -/
-def ecdlpTrial
-    (aReg bReg pointReg : List Wire)
-    (workStart qftAncilla : Wire)
-    (Q : Point) : Circuit :=
-  hadamards (aReg ++ bReg) ++
-    ecdlpOracle aReg bReg pointReg workStart G Q ++
-    Quantum.iqft aReg qftAncilla ++
-    Quantum.iqft bReg qftAncilla
-
-omit [Fact (Nat.Prime order)] in
-/-- The named trial is definitionally the circuit form of `orderFinding`. -/
-theorem ecdlpTrial_run
-    (aReg bReg pointReg : List Wire)
-    (workStart qftAncilla : Wire)
-    (Q : Point) (s : BasisState) :
-    Quantum.run (ecdlpTrial
-        aReg bReg pointReg workStart qftAncilla Q) (Quantum.ket s) =
-      Quantum.OrderFinding.orderFinding
-        aReg bReg qftAncilla
-        (Quantum.run
-          (ecdlpOracle aReg bReg pointReg workStart G Q))
-        (Quantum.ket s) := by
-  simp [ecdlpTrial, Quantum.OrderFinding.orderFinding,
-    Quantum.run_append, LinearMap.comp_apply]
 
 omit [Fact (Nat.Prime order)] in
 private theorem scalarMulTable_ne_zero_of_order
@@ -235,6 +210,7 @@ private theorem bitcoin_singleRun_lower :
   norm_num [order] at hpi4 ⊢
   nlinarith
 
+omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 /--
 The public Bitcoin ECDLP submission theorem.
 
@@ -243,32 +219,10 @@ Canonical postprocessing recovers `d` with probability at least 99%, and the
 same 26 trial circuits have exact aggregate T-count 21,888,426,033,809,920.
 -/
 theorem bitcoinECDLP_correct
-    {d : Nat} (Q : Point)
-    (aReg bReg pointReg : List Wire)
-    (workStart qftAncilla : Wire)
-    (s : BasisState)
-    (hpointLength : pointReg.length = pointWidth)
-    (hnodup :
-      (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
-    (horderG : addOrderOf G = order)
-    (hQ : Q = d • G)
-    (hQnonzero : Q ≠ 0)
-    (hsetup :
-      Quantum.OrderFinding.OrderFindingSetup pointEncoding
-        aReg bReg pointReg (scalarMulWork workStart)
-        qftAncilla 256 s) :
-    ECDLPSubmission
-      (trial := ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
-      (input := s)
-      (aReg := aReg)
-      (bReg := bReg)
-      (order := order)
-      (precision := 256)
-      (secret := d)
-      (primeOrder := (Fact.out : Nat.Prime order))
-      (trials := 26)
-      (targetSuccess := (99 / 100 : Real))
-      (exactTCount := 21888426033809920) := by
+    : BitcoinECDLPSubmission := by
+  unfold BitcoinECDLPSubmission
+  intro _ _ d Q aReg bReg pointReg workStart qftAncilla s
+    hpointLength hnodup horderG hQ hQnonzero hsetup
   have hwf := ecdlpTrial_wellFormed
     Q aReg bReg pointReg workStart qftAncilla s
     hpointLength hnodup hsetup
@@ -278,10 +232,7 @@ theorem bitcoinECDLP_correct
           (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
           (Quantum.ket s)) = 1 :=
     Quantum.normSq_run_ket _ hwf s
-  refine
-    { normalized := hnorm
-      successful := ?_
-      counted := ?_ }
+  refine ⟨hnorm, ?_, ?_⟩
   · have hsingleExact := orderFinding_correct
       Q aReg bReg pointReg workStart qftAncilla s
       hpointLength hnodup horderG hQ hsetup (by norm_num [order])

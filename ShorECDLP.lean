@@ -7,9 +7,11 @@
 -- and the submission spec (M5).
 import ShorECDLP.Framework.InstructionSet
 import ShorECDLP.Framework.CostModel
-import ShorECDLP.Framework.Contract
 import ShorECDLP.Framework.BasisState
 import ShorECDLP.Framework.Classical.Semantics
+import ShorECDLP.Framework.Quantum.Measurement
+import ShorECDLP.Framework.Repetition
+import ShorECDLP.Framework.Contract
 import ShorECDLP.Submission.Field
 import ShorECDLP.Submission.QFT.Main
 import ShorECDLP.Submission.Arithmetic.Contracts
@@ -32,6 +34,7 @@ import ShorECDLP.Submission.EllipticCurve.Precompute
 import ShorECDLP.Submission.EllipticCurve.PointEncoding
 import ShorECDLP.Submission.EllipticCurve.PointRegister
 import ShorECDLP.Submission.EllipticCurve.Secp256k1
+import ShorECDLP.Submission.Correctness.Trial
 import ShorECDLP.Submission.Correctness.EndToEnd
 import ShorECDLP.Submission.Correctness.Reduction
 import ShorECDLP.Submission.OrderFinding.OracleSpec

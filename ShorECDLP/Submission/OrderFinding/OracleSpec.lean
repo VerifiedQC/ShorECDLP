@@ -1,6 +1,17 @@
-import ShorECDLP.Framework.Contract
+import ShorECDLP.Framework.Quantum.InnerProduct
+import ShorECDLP.Framework.BasisState
 
 namespace ShorECDLP
+
+/-- An injective fixed-width representation of mathematical group elements. -/
+structure PointEncoding (G : Type*) (w : Nat) where
+  encode : G → Fin (2 ^ w)
+  injective : Function.Injective encode
+
+/-- The classical ECDLP oracle function `(a,b,R) ↦ R + aP + bQ`. -/
+def ecdlpFunction {G : Type*} [AddCommGroup G]
+    (P Q : G) (a b : Nat) : G :=
+  a • P + b • Q
 
 structure ECDLPOracleSpec
     {G : Type*} [AddCommGroup G]

@@ -90,6 +90,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Reduction.annihilatesPeriod_iff
 #print axioms ShorECDLP.Reduction.recoverShift_correct
 #print axioms ShorECDLP.Quantum.OrderFinding.jointRegisterProbability_nonneg
+#print axioms ShorECDLP.Quantum.OrderFinding.jointRegisterProbability_sum_eq_normSq
 #print axioms ShorECDLP.Quantum.OrderFinding.orderFindingSuccessProbability_le_normSq
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
@@ -110,12 +111,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1.ecdlpTrial_tCount
 #print axioms ShorECDLP.Secp256k1.ecdlpTrial_wellFormed
 #print axioms ShorECDLP.Secp256k1.orderFinding_correct
+#print axioms ShorECDLP.Secp256k1.BitcoinECDLPSubmission
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLP_correct
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 90 ]]; then
-  printf 'expected ninety #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 92 ]]; then
+  printf 'expected ninety-two #print axioms results\n' >&2
   exit 1
 fi
 
