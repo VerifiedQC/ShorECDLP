@@ -55,8 +55,10 @@ HPFree(modAdd)
 CircuitWellFormed(modAdd)
 ```
 
-The public theorem `modAdd_contract` packages this complete specification for the exact
-`modAdd` term. Lower-level constant-addition and reduction lemmas provide its proof.
+`modAdd_program_correct` and `modAdd_tCount` expose the final correctness and exact cost
+directly for the same `modAdd` term. `modAdd_contract` packages those facts with locality and
+physical-validity obligations for composition. Lower-level constant-addition and reduction
+lemmas provide their proof.
 -/
 
 namespace ShorECDLP
@@ -1239,5 +1241,32 @@ theorem modAdd_contract
   · intro _
     exact modAdd_wellFormed lhs rhs out sum constReg candidate
       cin₁ couts₁ cin₂ couts₂ modulus wiring.addOK wiring.redOK wiring.selectOK
+
+/-- Final direct correctness theorem for the exact clean modular-addition program.
+
+The conclusion states input preservation, the modular sum, and restored workspace inline, so
+callers do not need to project the semantic field from `modAdd_contract`. -/
+theorem modAdd_program_correct
+    (lhs rhs out sum constReg candidate : List Wire)
+    (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
+    (modulus : Nat)
+    (wiring : ModAddWiring lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂ modulus)
+    (st : BasisState)
+    (hvalid : (modAddLayout lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂).Valid)
+    (ha : st⟦ᵣlhs⟧ < modulus)
+    (hb : st⟦ᵣrhs⟧ < modulus)
+    (hclean : clean(out ++ (modAddLayout lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂).work, st)) :
+    let after := ⟪modAdd lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂ modulus⟫ st
+    AgreesOn lhs st after ∧
+      AgreesOn rhs st after ∧
+      after⟦ᵣout⟧ = (st⟦ᵣlhs⟧ + st⟦ᵣrhs⟧) % modulus ∧
+      clean((modAddLayout lhs rhs out sum constReg candidate
+        cin₁ couts₁ cin₂ couts₂).work, after) := by
+  exact (modAdd_contract lhs rhs out sum constReg candidate
+    cin₁ couts₁ cin₂ couts₂ modulus wiring).correct st hvalid ha hb hclean
 
 end ShorECDLP

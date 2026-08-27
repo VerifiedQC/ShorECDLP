@@ -22,15 +22,21 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
 import ShorECDLP
 #print axioms ShorECDLP.modAdd_contract
+#print axioms ShorECDLP.modAdd_program_correct
+#print axioms ShorECDLP.modAdd_tCount
 #print axioms ShorECDLP.ModAddSupport.modAdd_usesOnly
 #print axioms ShorECDLP.ModAddSupport.modAddCompute_usesOnly
 #print axioms ShorECDLP.modSub_contract
+#print axioms ShorECDLP.modSub_program_correct
+#print axioms ShorECDLP.modSub_tCount
 #print axioms ShorECDLP.modSub_usesOnly
 #print axioms ShorECDLP.modSubCompute_usesOnly
 #print axioms ShorECDLP.ModMul.Plan.modMul_contract
 #print axioms ShorECDLP.ModMul.Plan.program_correct
+#print axioms ShorECDLP.ModMul.Plan.program_tCount
 #print axioms ShorECDLP.ModExp.Plan.modExp_contract
 #print axioms ShorECDLP.ModExp.Plan.program_correct
+#print axioms ShorECDLP.ModExp.Plan.program_tCount
 #print axioms ShorECDLP.ModExp.Plan.modExp_contract_uniform
 #print axioms ShorECDLP.ModExp.Schedule.forward_correct
 #print axioms ShorECDLP.ModExp.Plan.program_tCount_eq_of_uniform
@@ -81,8 +87,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 57 ]]; then
-  printf 'expected fifty-seven #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 63 ]]; then
+  printf 'expected sixty-three #print axioms results\n' >&2
   exit 1
 fi
 
