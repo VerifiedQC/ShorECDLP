@@ -18,6 +18,7 @@ import ShorECDLP.Submission.Arithmetic.ModAdd
 import ShorECDLP.Submission.Arithmetic.ModExp
 import ShorECDLP.Submission.Arithmetic.ModMul
 import ShorECDLP.Submission.Arithmetic.ModSub
+import ShorECDLP.Submission.Arithmetic.PointAdd
 import ShorECDLP.Submission.Arithmetic.Predicates
 import ShorECDLP.Submission.Arithmetic.Primitives
 import ShorECDLP.Submission.Arithmetic.RippleAdder
