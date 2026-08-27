@@ -135,6 +135,21 @@ A circuit is a straight-line list of primitive gates:
 abbrev Circuit := List Gate
 ```
 
+Composite definitions use `circuit! { ... }` as step-by-step syntax over that same list type:
+
+```lean
+def cleanedProgram (compute select : Circuit) : Circuit :=
+  circuit! {
+    compute;
+    select;
+    compute.reverse
+  }
+```
+
+Lines execute from top to bottom. An ordinary line is a nested `Circuit`; a `gate!` line embeds
+one primitive gate. The syntax is a term macro that emits only the existing list constructors
+and appends—there is no separate statement language, interpreter, or cost semantics.
+
 The primitive gate family is:
 
 | Gate | Informal action | Arithmetic role |
@@ -174,6 +189,11 @@ def regValue : List Wire -> BasisState -> Nat
   | [],      _ => 0
   | w :: ws, s => (if s w then 1 else 0) + 2 * regValue ws s
 ```
+
+After `open scoped ArithmeticNotation`, specifications write the same term as `st⟦ᵣws⟧`.
+Clean-register assertions use `clean(ws, st)`, and classical execution already has the notation
+`⟪c⟫ st`. Thus `(⟪c⟫ st)⟦ᵣout⟧` means the value of `out` after running `c`. These are parse-time
+notations only; they do not wrap or alter the stored propositions.
 
 For example, let `r = [10, 11, 12]`. If wires `10`, `11`, and `12` contain `true`, `false`, and `true`, then
 
@@ -530,8 +550,10 @@ The circuit is defined recursively:
 ripple([], [], [], cin, []) = []
 
 ripple(a_i :: as, b_i :: bs, sum_i :: sums, cin, co_i :: carries) =
-  fullAdder(a_i,b_i,cin; sum_i,co_i)
-  ++ ripple(as,bs,sums,co_i,carries)
+  circuit! {
+    fullAdder(a_i,b_i,cin; sum_i,co_i);
+    ripple(as,bs,sums,co_i,carries)
+  }
 ```
 
 The list order is LSB-first, so the recursive execution follows the direction in which carry information flows.

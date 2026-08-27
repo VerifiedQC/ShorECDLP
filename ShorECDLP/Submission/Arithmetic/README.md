@@ -15,6 +15,32 @@ Each Lean file starts with a self-contained module header in the same order: the
 syntax-sugared pseudocode, its public specification, and then the implementation and proof
 details. Interface-only files explicitly say that they introduce no concrete circuit.
 
+## Readable circuit and assertion syntax
+
+Concrete circuits use the `circuit!` term syntax from `Framework/InstructionSet.lean`.
+Semicolon-separated lines execute from top to bottom, `gate!` embeds a primitive gate, and any
+ordinary line may itself be a complete circuit. This makes certified subprograms nest without
+exposing `List` append plumbing:
+
+```lean
+def modAdd ... : Circuit :=
+  let compute := modAddCompute ...
+  circuit! {
+    compute;
+    selectPoint flag sum candidate out;
+    compute.reverse
+  }
+```
+
+This is a pure term macro: it expands to the existing `Circuit = List Gate` constructors and
+appends, with no second program AST or evaluator.
+
+Correctness statements can open `ArithmeticNotation` and write `st⟦ᵣws⟧` for
+`regValue ws st` and `clean(ws, st)` for `Clean ws st`. Together with the existing classical
+execution notation `⟪program⟫ st`, a post-state register read is
+`(⟪program⟫ st)⟦ᵣlayout.out⟧`. All three forms expand directly to the original terms, so the
+stored propositions are unchanged.
+
 For a bottom-up explanation of the construction and proofs, see
 [Verified Reversible Arithmetic for Shor ECDLP](../../../docs/ARITHMETIC.md).
 

@@ -64,22 +64,27 @@ namespace ShorECDLP
 open Classical
 
 open Arithmetic
+open scoped ArithmeticNotation
 
 /-- **M1.3.1 — constant adder.** Load `c` into `constReg`, add it to `a`, then
 unload it. The temporary constant register is restored by construction. -/
 def addConst (a constReg sum : List Wire) (cin : Wire) (couts : List Wire)
     (c : Nat) : Circuit :=
-  loadConst constReg c
-    ++ ripple a constReg sum cin couts
-    ++ loadConst constReg c
+  circuit! {
+    loadConst constReg c;
+    ripple a constReg sum cin couts;
+    loadConst constReg c
+  }
 
 /-- Forward computation of the unreduced sum and the one-subtraction candidate. The exact
 same `sum` register is the first ripple's output and the constant adder's input. -/
 def modAddCompute (lhs rhs sum constReg candidate : List Wire)
     (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
     (modulus : Nat) : Circuit :=
-  ripple lhs rhs sum cin₁ couts₁
-    ++ addConst sum constReg candidate cin₂ couts₂ (2 ^ sum.length - modulus)
+  circuit! {
+    ripple lhs rhs sum cin₁ couts₁;
+    addConst sum constReg candidate cin₂ couts₂ (2 ^ sum.length - modulus)
+  }
 
 /-- Clean modular adder: compute both candidates, select into `out`, then reverse only the
 candidate computation. The exact same `sum` and `candidate` registers feed the selector. -/
@@ -88,7 +93,11 @@ def modAdd (lhs rhs out sum constReg candidate : List Wire)
     (modulus : Nat) : Circuit :=
   let compute := modAddCompute lhs rhs sum constReg candidate
     cin₁ couts₁ cin₂ couts₂ modulus
-  compute ++ selectPoint (carryOut cin₂ couts₂) sum candidate out ++ compute.reverse
+  circuit! {
+    compute;
+    selectPoint (carryOut cin₂ couts₂) sum candidate out;
+    compute.reverse
+  }
 
 /-- The carry-out wire lies among `cin :: couts`, so it avoids any register disjoint from both. -/
 theorem carryOut_not_mem (bs : List Wire) :
@@ -115,10 +124,10 @@ theorem addConst_correct
     (hfb : ∀ w ∈ constReg, st w = false)
     (hfcin : st cin = false)
     (hc : c < 2 ^ a.length) :
-    regValue sum (run (addConst a constReg sum cin couts c) st)
-      + 2 ^ a.length * bit (run (addConst a constReg sum cin couts c) st)
+    (⟪addConst a constReg sum cin couts c⟫ st)⟦ᵣsum⟧
+      + 2 ^ a.length * bit (⟪addConst a constReg sum cin couts c⟫ st)
           (carryOut cin couts)
-      = regValue a st + c := by
+      = st⟦ᵣa⟧ + c := by
   have hcarryB : carryOut cin couts ∉ constReg :=
     carryOut_not_mem _ cin couts hcinB hcoutB
   rw [addConst, run_append, run_append]
@@ -390,8 +399,8 @@ theorem modAdd_correct
     (hselectOK : selectOK (carryOut cin₂ couts₂) sum candidate out)
     (hmod : 0 < modulus)
     (hfit : 2 * modulus ≤ 2 ^ lhs.length)
-    (ha : regValue lhs st < modulus)
-    (hb : regValue rhs st < modulus)
+    (ha : st⟦ᵣlhs⟧ < modulus)
+    (hb : st⟦ᵣrhs⟧ < modulus)
     (haddCarryFresh : ∀ w ∈ couts₁, st w = false)
     (haddSumFresh : ∀ w ∈ sum, st w = false)
     (hcin₁Fresh : st cin₁ = false)
@@ -414,10 +423,9 @@ theorem modAdd_correct
       st w = false ∧
         w ∉ (modAddCompute lhs rhs sum constReg candidate
           cin₁ couts₁ cin₂ couts₂ modulus).map gateTarget) :
-    regValue out
-        (run (modAdd lhs rhs out sum constReg candidate
-          cin₁ couts₁ cin₂ couts₂ modulus) st) =
-      (regValue lhs st + regValue rhs st) % modulus := by
+    (⟪modAdd lhs rhs out sum constReg candidate
+        cin₁ couts₁ cin₂ couts₂ modulus⟫ st)⟦ᵣout⟧ =
+      (st⟦ᵣlhs⟧ + st⟦ᵣrhs⟧) % modulus := by
   have hripple := ripple_correct lhs rhs sum cin₁ couts₁ st haddOK
     haddCarryFresh haddSumFresh
   have hcinbit : bit st cin₁ = 0 := by simp [bit, hcin₁Fresh]

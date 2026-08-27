@@ -39,15 +39,19 @@ the correctness and well-formedness proofs.
 namespace ShorECDLP
 
 open Classical
+open scoped ArithmeticNotation
 
 /-- Reversible ripple addition on three aligned LSB-first registers. Each recursive step
 consumes one input bit from `a` and `b`, one clean output bit from `sum`, and one clean
 carry-out wire. Recursion stops when the remaining list shapes no longer align. -/
 def ripple : List Wire → List Wire → List Wire → Wire → List Wire → Circuit
-  | [],      [],      [],      _,   []       => []
+  | [],      [],      [],      _,   []       => circuit! {}
   | a :: as, b :: bs, s :: ss, cin, co :: cs =>
-      fullAdder a b cin s co ++ ripple as bs ss co cs
-  | _,       _,       _,       _,   _        => []
+      circuit! {
+        fullAdder a b cin s co;
+        ripple as bs ss co cs
+      }
+  | _,       _,       _,       _,   _        => circuit! {}
 
 /-- `fullAdder` writes only to its two output wires `s` and `co`; every other wire is left
 unchanged. This is what lets the ripple carry preserve already-computed sum bits and the
@@ -166,9 +170,9 @@ theorem ripple_correct :
     ∀ (a b sum : List Wire) (cin : Wire) (couts : List Wire) (st : BasisState),
       wiresOK a b sum cin couts →
       (∀ x ∈ couts, st x = false) → (∀ x ∈ sum, st x = false) →
-      regValue sum (run (ripple a b sum cin couts) st)
-        + 2 ^ a.length * bit (run (ripple a b sum cin couts) st) (carryOut cin couts)
-        = regValue a st + regValue b st + bit st cin := by
+      (⟪ripple a b sum cin couts⟫ st)⟦ᵣsum⟧
+        + 2 ^ a.length * bit (⟪ripple a b sum cin couts⟫ st) (carryOut cin couts)
+        = st⟦ᵣa⟧ + st⟦ᵣb⟧ + bit st cin := by
   intro a
   induction a with
   | nil =>

@@ -39,15 +39,24 @@ Both programs have exact T-count `14 * (width - 1)`: the only non-Clifford gates
 namespace ShorECDLP
 namespace Arithmetic
 
+open scoped ArithmeticNotation
+
 /-! ## Programs -/
 
 /-- Tail-first conjunction history. Its first history bit is the zero predicate. -/
 def zeroCompute : List Wire → List Wire → Circuit
-  | [x], h :: _ => [Gate.X h, Gate.CX x h]
+  | [x], h :: _ => circuit! {
+      gate! Gate.X h;
+      gate! Gate.CX x h
+    }
   | x :: x' :: xs, h :: h' :: hs =>
-      zeroCompute (x' :: xs) (h' :: hs) ++
-        [Gate.X x, Gate.CCX h' x h, Gate.X x]
-  | _, _ => []
+      circuit! {
+        zeroCompute (x' :: xs) (h' :: hs);
+        gate! Gate.X x;
+        gate! Gate.CCX h' x h;
+        gate! Gate.X x
+      }
+  | _, _ => circuit! {}
 
 /-- Full syntactic support of a clean zero flag. -/
 def zeroFlagWires (input : List Wire) (flag : Wire) (history : List Wire) : List Wire :=
@@ -55,15 +64,23 @@ def zeroFlagWires (input : List Wire) (flag : Wire) (history : List Wire) : List
 
 /-- Clean reversible zero flag with a Bennett-restored conjunction history. -/
 def zeroFlag : List Wire → Wire → List Wire → Circuit
-  | [], flag, _ => [Gate.X flag]
+  | [], flag, _ => circuit! { gate! Gate.X flag }
   | x :: xs, flag, h :: hs =>
       let compute := zeroCompute (x :: xs) (h :: hs)
-      compute ++ [Gate.CX h flag] ++ compute.reverse
-  | _, _, _ => []
+      circuit! {
+        compute;
+        gate! Gate.CX h flag;
+        compute.reverse
+      }
+  | _, _, _ => circuit! {}
 
 /-- Forward equality computation: XOR both inputs into `difference`, then zero-test it. -/
 def equalCompute (lhs rhs difference history : List Wire) : Circuit :=
-  copyReg lhs difference ++ copyReg rhs difference ++ zeroCompute difference history
+  circuit! {
+    copyReg lhs difference;
+    copyReg rhs difference;
+    zeroCompute difference history
+  }
 
 /-- Active compute/uncompute wires of an equality flag, excluding its copied-out result bit. -/
 def equalComputeWires (lhs rhs difference history : List Wire) : List Wire :=
@@ -76,11 +93,15 @@ def equalFlagWires (lhs rhs : List Wire) (flag : Wire)
 
 /-- Clean equality flag: compute XOR and zero history, copy the predicate, then uncompute. -/
 def equalFlag (lhs rhs : List Wire) (flag : Wire) : List Wire → List Wire → Circuit
-  | [], _ => [Gate.X flag]
+  | [], _ => circuit! { gate! Gate.X flag }
   | d :: ds, h :: hs =>
       let compute := equalCompute lhs rhs (d :: ds) (h :: hs)
-      compute ++ [Gate.CX h flag] ++ compute.reverse
-  | _, _ => []
+      circuit! {
+        compute;
+        gate! Gate.CX h flag;
+        compute.reverse
+      }
+  | _, _ => circuit! {}
 
 /-- Boolean recurrence for the zero predicate on an LSB-first register. -/
 theorem decide_regValue_cons_zero (x : Wire) (xs : List Wire) (st : BasisState) :
@@ -562,11 +583,11 @@ theorem zeroFlag_correct (input : List Wire) (flag : Wire) (history : List Wire)
     (st : BasisState)
     (hlen : history.length = input.length)
     (hnd : (zeroFlagWires input flag history).Nodup)
-    (hclean : Clean (flag :: history) st) :
+    (hclean : clean(flag :: history, st)) :
     let after := Classical.run (zeroFlag input flag history) st
     AgreesOn input st after ∧
-      after flag = decide (regValue input st = 0) ∧
-      Clean history after := by
+      after flag = decide (st⟦ᵣinput⟧ = 0) ∧
+      clean(history, after) := by
   cases input with
   | nil =>
       have : history = [] := List.length_eq_zero_iff.mp hlen
@@ -801,12 +822,12 @@ theorem equalFlag_correct (lhs rhs : List Wire) (flag : Wire)
     (hdlen : difference.length = lhs.length)
     (hhlen : history.length = lhs.length)
     (hnd : (equalFlagWires lhs rhs flag difference history).Nodup)
-    (hclean : Clean (flag :: difference ++ history) st) :
+    (hclean : clean(flag :: difference ++ history, st)) :
     let after := Classical.run (equalFlag lhs rhs flag difference history) st
     AgreesOn lhs st after ∧
       AgreesOn rhs st after ∧
-      after flag = decide (regValue lhs st = regValue rhs st) ∧
-      Clean (difference ++ history) after := by
+      after flag = decide (st⟦ᵣlhs⟧ = st⟦ᵣrhs⟧) ∧
+      clean(difference ++ history, after) := by
   cases difference with
   | nil =>
       have hlhs : lhs = [] := List.length_eq_zero_iff.mp hdlen.symm

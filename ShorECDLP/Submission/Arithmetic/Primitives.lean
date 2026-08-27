@@ -49,25 +49,37 @@ support and cancellation proof tools are collected after the leaf programs.
 namespace ShorECDLP
 
 open Classical
+open scoped ArithmeticNotation
 
 /-! ## Constant loading -/
 
 /-- Load the constant `c` (LSB-first) into wires `ws`: X each wire whose corresponding bit of
 `c` is set. Self-inverse — running it again clears the register. -/
 def loadConst : List Wire → Nat → Circuit
-  | [],      _ => []
-  | w :: ws, c => (if c % 2 = 1 then [Gate.X w] else []) ++ loadConst ws (c / 2)
+  | [],      _ => circuit! {}
+  | w :: ws, c => circuit! {
+      (if c % 2 = 1 then circuit! { gate! Gate.X w } else circuit! {});
+      loadConst ws (c / 2)
+    }
 
 /-- One bit of a reversible two-way selector. With a fresh output it writes `x` when `flag=0`
 and `y` when `flag=1`. -/
 def selectBit (flag x y out : Wire) : Circuit :=
-  [Gate.CX x out, Gate.CX x y, Gate.CCX flag y out, Gate.CX x y]
+  circuit! {
+    gate! Gate.CX x out;
+    gate! Gate.CX x y;
+    gate! Gate.CCX flag y out;
+    gate! Gate.CX x y
+  }
 
 /-- Apply `selectBit` pointwise to three aligned, LSB-first registers. -/
 def selectPoint (flag : Wire) : List Wire → List Wire → List Wire → Circuit
   | x :: xs, y :: ys, out :: outs =>
-      selectBit flag x y out ++ selectPoint flag xs ys outs
-  | _, _, _ => []
+      circuit! {
+        selectBit flag x y out;
+        selectPoint flag xs ys outs
+      }
+  | _, _, _ => circuit! {}
 
 /-- Wire conditions needed by the selector. The three lists are aligned registers; source and
 flag wires stay outside the duplicate-free output register, and the two sources in each bit
@@ -86,8 +98,11 @@ namespace Arithmetic
 
 /-- CNOT-copy aligned source bits into a clean destination register. -/
 def copyReg : List Wire → List Wire → Circuit
-  | s :: src, d :: dst => Gate.CX s d :: copyReg src dst
-  | _, _ => []
+  | s :: src, d :: dst => circuit! {
+      gate! Gate.CX s d;
+      copyReg src dst
+    }
+  | _, _ => circuit! {}
 
 end Arithmetic
 
@@ -111,7 +126,7 @@ wires makes the register hold exactly `c`. -/
 theorem loadConst_correct :
     ∀ (ws : List Wire) (c : Nat) (st : BasisState),
       ws.Nodup → (∀ w ∈ ws, st w = false) → c < 2 ^ ws.length →
-      regValue ws (run (loadConst ws c) st) = c := by
+      (⟪loadConst ws c⟫ st)⟦ᵣws⟧ = c := by
   intro ws
   induction ws with
   | nil =>
@@ -148,7 +163,7 @@ theorem loadConst_correct :
 /-- `regValue` of wires disjoint from the loaded register is unchanged by `loadConst`. -/
 theorem loadConst_regValue (ws bs : List Wire) (c : Nat) (st : BasisState)
     (h : ∀ w ∈ ws, w ∉ bs) :
-    regValue ws (run (loadConst bs c) st) = regValue ws st :=
+    (⟪loadConst bs c⟫ st)⟦ᵣws⟧ = st⟦ᵣws⟧ :=
   regValue_congr ws _ _ (fun w hw => loadConst_other w bs c st (h w hw))
 
 /-- A wire outside the loaded register keeps its value (bit form) under `loadConst`. -/
@@ -234,9 +249,9 @@ theorem selectPoint_other (flag w : Wire) :
 `ys` when its flag is true. -/
 theorem selectPoint_correct (flag : Wire) :
     ∀ (xs ys outs : List Wire) (st : BasisState),
-      selectOK flag xs ys outs → Clean outs st →
-      regValue outs (run (selectPoint flag xs ys outs) st) =
-        if st flag then regValue ys st else regValue xs st := by
+      selectOK flag xs ys outs → clean(outs, st) →
+      (⟪selectPoint flag xs ys outs⟫ st)⟦ᵣouts⟧ =
+        if st flag then st⟦ᵣys⟧ else st⟦ᵣxs⟧ := by
   intro xs
   induction xs with
   | nil =>
@@ -425,8 +440,8 @@ theorem copyReg_other (w : Wire) :
 /-- CNOT-copy correctness on duplicate-free, disjoint aligned registers. -/
 theorem copyReg_correct :
     ∀ (src dst : List Wire) (st : BasisState),
-      dst.length = src.length → (src ++ dst).Nodup → Clean dst st →
-      regValue dst (run (copyReg src dst) st) = regValue src st := by
+      dst.length = src.length → (src ++ dst).Nodup → clean(dst, st) →
+      (⟪copyReg src dst⟫ st)⟦ᵣdst⟧ = st⟦ᵣsrc⟧ := by
   intro src
   induction src with
   | nil =>

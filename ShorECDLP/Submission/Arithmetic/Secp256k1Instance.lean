@@ -45,6 +45,7 @@ namespace ShorECDLP
 namespace Secp256k1Instance
 
 open Classical
+open scoped ArithmeticNotation
 
 def fieldWidth : Nat := 257
 
@@ -1258,16 +1259,16 @@ set_option maxRecDepth 10000 in
 field when its preserved exponent register contains `p - 2`.  This is a direct specialization of
 `FermatInv.correct`; it introduces no second circuit and no new field-theory argument. -/
 theorem secp_fermat_inverse [Fact (Nat.Prime p)] (st : BasisState)
-    (hbase : regValue secpLayout.lhs st < p)
-    (hexponent : regValue secpLayout.rhs st = p - 2)
-    (hclean : Clean (secpLayout.out ++ secpLayout.work) st)
-    (hnonzero : ((regValue secpLayout.lhs st : Nat) : Fp) ≠ 0) :
+    (hbase : st⟦ᵣsecpLayout.lhs⟧ < p)
+    (hexponent : st⟦ᵣsecpLayout.rhs⟧ = p - 2)
+    (hclean : clean(secpLayout.out ++ secpLayout.work, st))
+    (hnonzero : ((st⟦ᵣsecpLayout.lhs⟧ : Nat) : Fp) ≠ 0) :
     let after := run secpProgram st
     AgreesOn secpLayout.lhs st after ∧
       AgreesOn secpLayout.rhs st after ∧
-      ((regValue secpLayout.out after : Nat) : Fp) =
-        ((regValue secpLayout.lhs st : Nat) : Fp)⁻¹ ∧
-      Clean secpLayout.work after := by
+      ((after⟦ᵣsecpLayout.out⟧ : Nat) : Fp) =
+        ((st⟦ᵣsecpLayout.lhs⟧ : Nat) : Fp)⁻¹ ∧
+      clean(secpLayout.work, after) := by
   exact FermatInv.correct secp_modExp_contract st secpPlan_layout_valid hbase hexponent hclean
     hnonzero
 

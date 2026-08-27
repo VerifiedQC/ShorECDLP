@@ -46,22 +46,33 @@ namespace ShorECDLP
 
 open Classical
 open Arithmetic
+open scoped ArithmeticNotation
 
 /-! ## Bitwise complement and the raw two's-complement subtraction -/
 
 /-- Flip every bit of an LSB-first register. -/
 def complementReg : List Wire → Circuit
-  | [] => []
-  | w :: ws => Gate.X w :: complementReg ws
+  | [] => circuit! {}
+  | w :: ws => circuit! {
+      gate! Gate.X w;
+      complementReg ws
+    }
 
 /-- Prepare two's-complement subtraction by complementing `rhs` and setting the carry-in. -/
 def subPrepare (rhs : List Wire) (cin : Wire) : Circuit :=
-  complementReg rhs ++ [Gate.X cin]
+  circuit! {
+    complementReg rhs;
+    gate! Gate.X cin
+  }
 
 /-- Compute the width-bounded raw difference and a no-borrow carry, restoring `rhs` and `cin`. -/
 def subRaw (lhs rhs raw : List Wire) (cin : Wire) (couts : List Wire) : Circuit :=
   let prepare := subPrepare rhs cin
-  prepare ++ ripple lhs rhs raw cin couts ++ prepare.reverse
+  circuit! {
+    prepare;
+    ripple lhs rhs raw cin couts;
+    prepare.reverse
+  }
 
 /-- Complete syntactic footprint of raw subtraction. -/
 def subRawFootprint (lhs rhs raw : List Wire) (cin : Wire)
@@ -72,8 +83,10 @@ def subRawFootprint (lhs rhs raw : List Wire) (cin : Wire)
 def modSubCompute (lhs rhs raw constReg candidate : List Wire)
     (cinSub : Wire) (coutsSub : List Wire) (cinAdd : Wire) (coutsAdd : List Wire)
     (modulus : Nat) : Circuit :=
-  subRaw lhs rhs raw cinSub coutsSub ++
+  circuit! {
+    subRaw lhs rhs raw cinSub coutsSub;
     addConst raw constReg candidate cinAdd coutsAdd modulus
+  }
 
 /-- Clean modular subtractor: compute, select by no-borrow, then Bennett-uncompute. -/
 def modSub (lhs rhs out raw constReg candidate : List Wire)
@@ -81,7 +94,11 @@ def modSub (lhs rhs out raw constReg candidate : List Wire)
     (modulus : Nat) : Circuit :=
   let compute := modSubCompute lhs rhs raw constReg candidate
     cinSub coutsSub cinAdd coutsAdd modulus
-  compute ++ selectPoint (carryOut cinSub coutsSub) candidate raw out ++ compute.reverse
+  circuit! {
+    compute;
+    selectPoint (carryOut cinSub coutsSub) candidate raw out;
+    compute.reverse
+  }
 
 /-- Complementing changes no wire outside the register. -/
 theorem complementReg_other (w : Wire) :
@@ -592,17 +609,16 @@ theorem modSub_correct
     (st : BasisState)
     (hvalid : (modSubLayout lhs rhs out raw constReg candidate
       cinSub coutsSub cinAdd coutsAdd).Valid)
-    (ha : regValue lhs st < modulus)
-    (hb : regValue rhs st < modulus)
-    (hclean : Clean
+    (ha : st⟦ᵣlhs⟧ < modulus)
+    (hb : st⟦ᵣrhs⟧ < modulus)
+    (hclean : clean(
       ((modSubLayout lhs rhs out raw constReg candidate
         cinSub coutsSub cinAdd coutsAdd).out ++
        (modSubLayout lhs rhs out raw constReg candidate
-        cinSub coutsSub cinAdd coutsAdd).work) st) :
-    regValue out
-        (run (modSub lhs rhs out raw constReg candidate
-          cinSub coutsSub cinAdd coutsAdd modulus) st) =
-      (regValue lhs st + modulus - regValue rhs st) % modulus := by
+        cinSub coutsSub cinAdd coutsAdd).work), st)) :
+    (⟪modSub lhs rhs out raw constReg candidate
+        cinSub coutsSub cinAdd coutsAdd modulus⟫ st)⟦ᵣout⟧ =
+      (st⟦ᵣlhs⟧ + modulus - st⟦ᵣrhs⟧) % modulus := by
   let layout := modSubLayout lhs rhs out raw constReg candidate
     cinSub coutsSub cinAdd coutsAdd
   let A := lhs

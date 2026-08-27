@@ -74,6 +74,105 @@ theorem Gate.adjoint_adjoint (g : Gate) :
 /-- A circuit is a straight-line list of primitive gates. -/
 abbrev Circuit := List Gate
 
+/-! ## Step-by-step program syntax
+
+`circuit! { ... }` is term syntax for composing circuits in execution order.  Each
+ordinary step is already a `Circuit`, so a complete subprogram can be nested directly.  A
+`gate!` step embeds one primitive gate.  The term macro emits only the existing list constructors
+and left-associated appends; it introduces no second program representation.
+
+```lean
+circuit! {
+  gate! Gate.X flag;
+  prepare;
+  body;
+  prepare.reverse
+}
+```
+-/
+
+declare_syntax_cat circuitProgramStep
+syntax "gate!" term : circuitProgramStep
+syntax term : circuitProgramStep
+
+syntax (name := circuitProgramSeq)
+  "circuit!" "{" circuitProgramStep (";" circuitProgramStep)* "}" : term
+syntax (name := circuitProgramNil) "circuit!" "{" "}" : term
+
+namespace CircuitSyntax
+
+open Lean
+
+private abbrev ParsedStep := Bool × Term
+
+private meta def parseStep : TSyntax `circuitProgramStep → MacroM ParsedStep
+  | `(circuitProgramStep| gate! $g:term) => pure (true, g)
+  | `(circuitProgramStep| $nested:term) => pure (false, nested)
+  | _ => Macro.throwUnsupported
+
+private def takeGates : List ParsedStep → List Term × List ParsedStep
+  | (true, g) :: rest =>
+      let (gates, tail) := takeGates rest
+      (g :: gates, tail)
+  | rest => ([], rest)
+
+private meta def gatesTerm (gates : List Term) : MacroM Term := do
+  let gates := gates.toArray
+  `([$gates,*])
+
+private meta def consGates (gates : List Term) (tail : Term) : MacroM Term :=
+  match gates with
+  | [] => pure tail
+  | g :: gates => do
+      let rest ← consGates gates tail
+      `($g :: $rest)
+
+private partial def appendSteps (acc : Term) : List ParsedStep → MacroM Term
+  | [] => pure acc
+  | (false, nested) :: rest => do
+      let acc ← `($acc ++ $nested)
+      appendSteps acc rest
+  | steps@((true, _) :: _) => do
+      let (gates, rest) := takeGates steps
+      let gateBlock ← gatesTerm gates
+      let acc ← `($acc ++ $gateBlock)
+      appendSteps acc rest
+
+private meta def lowerSteps : List ParsedStep → MacroM Term
+  | [] => `([])
+  | steps@((true, _) :: _) => do
+      let (gates, rest) := takeGates steps
+      match rest with
+      | [] => gatesTerm gates
+      | (false, nested) :: rest => do
+          let acc ← consGates gates nested
+          appendSteps acc rest
+      | (true, _) :: _ => Macro.throwUnsupported
+  | (false, nested) :: rest => appendSteps nested rest
+
+end CircuitSyntax
+
+macro_rules
+  | `(circuit! { $head:circuitProgramStep $[; $tail:circuitProgramStep]* }) => do
+      let mut steps := #[← CircuitSyntax.parseStep head]
+      for step in tail do
+        steps := steps.push (← CircuitSyntax.parseStep step)
+      CircuitSyntax.lowerSteps steps.toList
+  | `(circuit! { }) => `([])
+
+example : (circuit! {}) = ([] : Circuit) := rfl
+
+example (g h : Gate) : (circuit! { gate! g; gate! h }) = [g, h] := rfl
+
+example (g : Gate) (nested : Circuit) :
+    (circuit! { gate! g; nested }) = g :: nested := rfl
+
+example (g h : Gate) :
+    (circuit! { circuit! { gate! g }; gate! h }) = [g, h] := rfl
+
+example (first middle last : Circuit) :
+    (circuit! { first; middle; last }) = (first ++ middle) ++ last := rfl
+
 /-- A primitive gate is physically well-formed when its distinct roles
 are assigned to distinct wires. -/
 def Gate.WellFormed : Gate → Prop

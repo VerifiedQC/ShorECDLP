@@ -65,6 +65,7 @@ namespace ShorECDLP
 namespace ModExp
 
 open Arithmetic
+open scoped ArithmeticNotation
 
 /-! ## Pure LSB-first arithmetic -/
 
@@ -180,14 +181,22 @@ namespace Schedule
 def forward {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
     (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Circuit :=
   match schedule with
-  | .nil _ _ => []
+  | .nil _ _ => circuit! {}
   | .last acc _ flag product nextAcc accMul _ _ _ _ =>
-      accMul.program ++ selectReg flag acc product nextAcc
+      circuit! {
+        accMul.program;
+        selectReg flag acc product nextAcc
+      }
   | .cons acc power flag _ _ _ product nextAcc _ accMul squareMul
       _ _ _ _ _ _ _ _ tail =>
-      accMul.program ++ selectReg flag acc product nextAcc ++
-        copyReg power.wires duplicate.wires ++ squareMul.program ++
-        (copyReg power.wires duplicate.wires).reverse ++ tail.forward
+      circuit! {
+        accMul.program;
+        selectReg flag acc product nextAcc;
+        copyReg power.wires duplicate.wires;
+        squareMul.program;
+        (copyReg power.wires duplicate.wires).reverse;
+        tail.forward
+      }
 
 /-- Registers and callee workspaces owned by a schedule, each listed exactly once. -/
 def owned {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
@@ -280,14 +289,14 @@ def ForwardCorrectStatement {width modulus : Nat}
     schedule.Valid →
     schedule.activeWires.Nodup →
     1 < modulus →
-    regValue acc.wires st < modulus →
-    regValue power.wires st < modulus →
-    Clean (schedule.owned ++ duplicate.wires ++ mulWork) st →
+    st⟦ᵣacc.wires⟧ < modulus →
+    st⟦ᵣpower.wires⟧ < modulus →
+    clean(schedule.owned ++ duplicate.wires ++ mulWork, st) →
     let after := Classical.run schedule.forward st
-    regValue finalAcc.wires after =
-        squareMultiplyAcc modulus (regValue acc.wires st)
-          (regValue power.wires st) (bits.map st) ∧
-      Clean (duplicate.wires ++ mulWork) after
+    after⟦ᵣfinalAcc.wires⟧ =
+        squareMultiplyAcc modulus st⟦ᵣacc.wires⟧
+          st⟦ᵣpower.wires⟧ (bits.map st) ∧
+      clean(duplicate.wires ++ mulWork, after)
 
 end Schedule
 
@@ -311,11 +320,18 @@ namespace Plan
 
 /-- Initialize one and execute the typed square-and-multiply history. -/
 def compute {width modulus : Nat} (plan : Plan width modulus) : Circuit :=
-  initOne plan.initialAcc ++ plan.schedule.forward
+  circuit! {
+    initOne plan.initialAcc;
+    plan.schedule.forward
+  }
 
 /-- Copy the final accumulator to the public output, then Bennett-uncompute the history. -/
 def program {width modulus : Nat} (plan : Plan width modulus) : Circuit :=
-  plan.compute ++ copyReg plan.finalAcc.wires plan.out.wires ++ plan.compute.reverse
+  circuit! {
+    plan.compute;
+    copyReg plan.finalAcc.wires plan.out.wires;
+    plan.compute.reverse
+  }
 
 /-- Public base/exponent/output followed by the accumulator and all scheduled history. -/
 def layout {width modulus : Nat} (plan : Plan width modulus) : RegisterLayout where
@@ -896,13 +912,13 @@ theorem forward_correct :
       (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc)
       (st : BasisState),
       schedule.Valid → schedule.activeWires.Nodup → 1 < modulus →
-      regValue acc.wires st < modulus → regValue power.wires st < modulus →
-      Clean (schedule.owned ++ duplicate.wires ++ mulWork) st →
+      st⟦ᵣacc.wires⟧ < modulus → st⟦ᵣpower.wires⟧ < modulus →
+      clean(schedule.owned ++ duplicate.wires ++ mulWork, st) →
       let after := run schedule.forward st
-      regValue finalAcc.wires after =
-          squareMultiplyAcc modulus (regValue acc.wires st) (regValue power.wires st)
+      after⟦ᵣfinalAcc.wires⟧ =
+          squareMultiplyAcc modulus st⟦ᵣacc.wires⟧ st⟦ᵣpower.wires⟧
             (bits.map st) ∧
-        Clean (duplicate.wires ++ mulWork) after := by
+        clean(duplicate.wires ++ mulWork, after) := by
   intro width modulus mulWork duplicate acc power bits finalAcc schedule
   induction schedule with
   | nil acc power =>

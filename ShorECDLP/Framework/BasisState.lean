@@ -13,7 +13,8 @@ restriction rather than a re-indexing.
 `upd` (wire update), `regValue` / `writeReg` (register read/write), and `Clean` (an all-zero
 register) live here because both layers use them: the quantum action of a classical gate on a
 basis ket is `|s⟩ ↦ |s[t ↦ …]⟩`, and register values and cleanliness are interpreted identically
-in either layer's correctness statements.
+in either layer's correctness statements.  Arithmetic proofs may display the same terms as
+`st⟦ᵣws⟧` and `clean(ws, st)` by opening the `ArithmeticNotation` scope.
 -/
 
 namespace ShorECDLP
@@ -41,6 +42,19 @@ theorem upd_other (s : BasisState) (i : Wire) (b : Bool) {j : Wire} (h : j ≠ i
 def regValue : List Wire → BasisState → Nat
   | [],      _ => 0
   | w :: ws, s => (if s w then 1 else 0) + 2 * regValue ws s
+
+/-! ## Register-assertion notation
+
+These notations are deliberately scoped and expand directly to the underlying definitions;
+they change only how arithmetic specifications are written, not the propositions they denote.
+-/
+
+namespace ArithmeticNotation
+
+@[inherit_doc] scoped notation:max st:max "⟦ᵣ" ws "⟧" => regValue ws st
+@[inherit_doc] scoped notation:max "clean(" ws ", " st ")" => Clean ws st
+
+end ArithmeticNotation
 
 /-- Write the low `ws.length` bits of `n` into `ws`, least-significant bit first. -/
 def writeReg : List Wire → Nat → BasisState → BasisState
