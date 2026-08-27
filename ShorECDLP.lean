@@ -12,6 +12,7 @@ import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Submission.Field
 import ShorECDLP.Submission.QFT.Main
 import ShorECDLP.Submission.Arithmetic.Contracts
+import ShorECDLP.Submission.Arithmetic.Controlled_PointAdd
 import ShorECDLP.Submission.Arithmetic.Adder
 import ShorECDLP.Submission.Arithmetic.FermatInv
 import ShorECDLP.Submission.Arithmetic.ModAdd
@@ -22,12 +23,15 @@ import ShorECDLP.Submission.Arithmetic.PointAdd
 import ShorECDLP.Submission.Arithmetic.Predicates
 import ShorECDLP.Submission.Arithmetic.Primitives
 import ShorECDLP.Submission.Arithmetic.RippleAdder
+import ShorECDLP.Submission.Arithmetic.ScalarMul
 import ShorECDLP.Submission.Arithmetic.Secp256k1Instance
 import ShorECDLP.Submission.EllipticCurve.AffineFormula
+import ShorECDLP.Submission.EllipticCurve.ECDLPOracle
 import ShorECDLP.Submission.EllipticCurve.Precompute
 import ShorECDLP.Submission.EllipticCurve.PointEncoding
 import ShorECDLP.Submission.EllipticCurve.PointRegister
 import ShorECDLP.Submission.EllipticCurve.Secp256k1
+import ShorECDLP.Submission.Correctness.EndToEnd
 import ShorECDLP.Submission.Correctness.Reduction
 import ShorECDLP.Submission.OrderFinding.OracleSpec
 import ShorECDLP.Submission.OrderFinding.OracleRefinement

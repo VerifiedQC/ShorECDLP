@@ -632,6 +632,106 @@ theorem controlledPointSum_scalarMulTable
       · simp only [↓reduceIte]
         rw [two_nsmul, nsmul_add, ← add_nsmul, Nat.two_mul]
         conv_rhs => rw [add_nsmul, one_nsmul]
+
+/-! ## Structural lemmas -/
+
+omit [Fact (Nat.Prime p)] in
+/-- Every generic scalar-fold circuit is H/P-free. -/
+private theorem scalarMulCore_HPFree
+    (controls pointReg : List Wire)
+    (points : List Point)
+    (workStart : Wire) :
+    Classical.HPFree
+      (scalarMulCore pointReg workStart controls points) := by
+  induction controls generalizing points with
+  | nil =>
+      cases points <;> simp [scalarMulCore]
+  | cons control controls ih =>
+      cases points with
+      | nil => simp [scalarMulCore]
+      | cons C points =>
+          simp [scalarMulCore, controlledPointAdd_HPFree, ih]
+
+omit [Fact (Nat.Prime p)] in
+/--
+Every generic scalar-fold circuit is well formed when all control wires, the
+point register, and the shared controlled-add workspace are disjoint.
+-/
+private theorem scalarMulCore_wellFormed
+    (controls pointReg : List Wire)
+    (points : List Point)
+    (workStart : Wire)
+    (hpointLength : pointReg.length = pointWidth)
+    (hnodup :
+      (controls ++ pointReg ++ scalarMulWork workStart).Nodup) :
+    CircuitWellFormed
+      (scalarMulCore pointReg workStart controls points) := by
+  induction controls generalizing points with
+  | nil =>
+      cases points <;> simp [scalarMulCore]
+  | cons control controls ih =>
+      cases points with
+      | nil => simp [scalarMulCore]
+      | cons C points =>
+          have h0 :
+              (control ::
+                (controls ++ pointReg ++ scalarMulWork workStart)).Nodup := by
+            simpa [List.append_assoc] using hnodup
+          have htail :
+              (controls ++ pointReg ++ scalarMulWork workStart).Nodup :=
+            (List.nodup_cons.mp h0).2
+          have hrest :
+              (pointReg ++ scalarMulWork workStart).Nodup := by
+            have hassoc :
+                (controls ++
+                  (pointReg ++ scalarMulWork workStart)).Nodup := by
+              simpa [List.append_assoc] using htail
+            exact (List.nodup_append.mp hassoc).2.1
+          have hcontrolNotRest :
+              control ∉ pointReg ++ scalarMulWork workStart := by
+            intro hw
+            apply (List.nodup_cons.mp h0).1
+            simpa [List.append_assoc] using
+              (List.mem_append_right controls hw)
+          have hhead :
+              ([control] ++ pointReg ++ scalarMulWork workStart).Nodup := by
+            have hc :
+                (control ::
+                  (pointReg ++ scalarMulWork workStart)).Nodup :=
+              List.nodup_cons.mpr ⟨hcontrolNotRest, hrest⟩
+            simpa [List.append_assoc] using hc
+          rw [scalarMulCore, circuitWellFormed_append]
+          exact ⟨controlledPointAdd_wellFormed
+              control pointReg workStart C hpointLength
+              (by simpa [scalarMulWork] using hhead),
+            ih points htail⟩
+
+/-- The concrete doubling-table scalar multiplication is H/P-free. -/
+theorem scalarMul_HPFree
+    (scalarReg pointReg : List Wire)
+    (workStart : Wire)
+    (P : Point) :
+    Classical.HPFree
+      (scalarMul scalarReg pointReg workStart P) := by
+  exact scalarMulCore_HPFree
+    scalarReg pointReg (scalarMulTable scalarReg P) workStart
+
+/--
+The concrete doubling-table scalar multiplication is well formed under the
+same register-layout hypothesis used by `scalarMul_correct`.
+-/
+theorem scalarMul_wellFormed
+    (scalarReg pointReg : List Wire)
+    (workStart : Wire)
+    (P : Point)
+    (hpointLength : pointReg.length = pointWidth)
+    (hnodup :
+      (scalarReg ++ pointReg ++ scalarMulWork workStart).Nodup) :
+    CircuitWellFormed
+      (scalarMul scalarReg pointReg workStart P) := by
+  exact scalarMulCore_wellFormed
+    scalarReg pointReg (scalarMulTable scalarReg P) workStart
+    hpointLength hnodup
 /-!
 ## Correctness theorem
 
