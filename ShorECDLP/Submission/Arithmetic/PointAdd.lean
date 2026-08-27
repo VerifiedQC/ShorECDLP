@@ -2884,6 +2884,205 @@ def pointAddFiniteCompute
     pointAddBranches workStart hC
 
 /-! -------------------------------------------------------------------------
+    Exact T-count
+------------------------------------------------------------------------- -/
+
+private theorem shiftGate_tCost (offset : Wire) (g : Gate) :
+    tCost (shiftGate offset g) = tCost g := by
+  cases g <;> rfl
+
+private theorem shiftCircuit_tCount (offset : Wire) (c : Circuit) :
+    tCount (shiftCircuit offset c) = tCount c := by
+  induction c with
+  | nil => rfl
+  | cons g c ih =>
+      rw [shiftCircuit, List.map_cons, tCount_cons, shiftGate_tCost]
+      have ih' : tCount (List.map (shiftGate offset) c) = tCount c := by
+        simpa only [shiftCircuit] using ih
+      rw [ih']
+      rfl
+
+private theorem controlledCopyReg_tCount (control : Wire) :
+    ∀ (src dst : List Wire), src.length = dst.length →
+      tCount (controlledCopyReg control src dst) = 7 * dst.length := by
+  intro src
+  induction src with
+  | nil =>
+      intro dst hlen
+      cases dst <;> simp [controlledCopyReg] at hlen ⊢
+  | cons s src ih =>
+      intro dst hlen
+      cases dst with
+      | nil => simp at hlen
+      | cons d dst =>
+          have htail : src.length = dst.length := by simpa using hlen
+          rw [controlledCopyReg, tCount_cons, ih dst htail]
+          simp only [tCost, List.length_cons]
+          omega
+
+private theorem packFinitePoint_tCount
+    (x y point : List Wire) :
+    tCount (packFinitePoint x y point) = 0 := by
+  simp [packFinitePoint, tCount_append, loadConst_tCount, copyReg_tCount]
+
+private theorem fieldSubCore_tCount : tCount fieldSubCore = 23387 := by
+  unfold fieldSubCore
+  have h := modSub_tCount
+    (Secp256k1Instance.reg 0).wires
+    (Secp256k1Instance.reg 1).wires
+    (Secp256k1Instance.reg 2).wires
+    (Secp256k1Instance.reg 3).wires
+    (Secp256k1Instance.reg 4).wires
+    (Secp256k1Instance.reg 5).wires
+    (Secp256k1Instance.bitWire 6)
+    (Secp256k1Instance.reg 7).wires
+    (Secp256k1Instance.bitWire 8)
+    (Secp256k1Instance.reg 9).wires
+    p (by simp [Secp256k1Instance.reg,
+      Secp256k1Instance.regBlock])
+    (by simp [Secp256k1Instance.reg,
+      Secp256k1Instance.regBlock])
+    (by simp [Secp256k1Instance.reg,
+      Secp256k1Instance.regBlock])
+    (by simp [Secp256k1Instance.reg,
+      Secp256k1Instance.regBlock])
+    (by simp [Secp256k1Instance.reg,
+      Secp256k1Instance.regBlock])
+    (by simp [Secp256k1Instance.reg,
+      Secp256k1Instance.regBlock])
+    (by simp [Secp256k1Instance.reg,
+      Secp256k1Instance.regBlock])
+  norm_num [Secp256k1Instance.reg,
+    Secp256k1Instance.fieldWidth] at h ⊢
+  exact h
+
+private theorem fieldAdd_tCount
+    (offset : Wire) (lhs rhs out : List Wire) :
+    tCount (fieldAdd offset lhs rhs out) = 46774 := by
+  simp [fieldAdd, tCount_append, copyReg_tCount, tCount_reverse,
+    shiftCircuit_tCount, Secp256k1Instance.secpAddProgram_tCount]
+
+private theorem fieldSub_tCount
+    (offset : Wire) (lhs rhs out : List Wire) :
+    tCount (fieldSub offset lhs rhs out) = 46774 := by
+  simp [fieldSub, tCount_append, copyReg_tCount, tCount_reverse,
+    shiftCircuit_tCount, fieldSubCore_tCount]
+
+private theorem fieldSubConst_tCount
+    (offset : Wire) (lhs : List Wire) (c : Nat) (out : List Wire) :
+    tCount (fieldSubConst offset lhs c out) = 46774 := by
+  simp [fieldSubConst, tCount_append, copyReg_tCount, loadConst_tCount,
+    tCount_reverse, shiftCircuit_tCount, fieldSubCore_tCount]
+
+private theorem fieldMul_tCount
+    (offset : Wire) (lhs rhs out : List Wire) :
+    tCount (fieldMul offset lhs rhs out) = 49933044 := by
+  simp [fieldMul, tCount_append, copyReg_tCount, tCount_reverse,
+    shiftCircuit_tCount, Secp256k1Instance.secpMulProgram_tCount]
+
+private theorem fieldInv_tCount
+    (offset : Wire) (input out : List Wire) :
+    tCount (fieldInv offset input out) = 51233152516 := by
+  simp [fieldInv, tCount_append, copyReg_tCount, loadConst_tCount,
+    tCount_reverse, shiftCircuit_tCount,
+    Secp256k1Instance.secpProgram_tCount]
+
+private theorem genericPointCompute_tCount
+    (workStart : Wire) (xC yC : Fp) :
+    tCount (genericPointCompute workStart xC yC) = 102666458174 := by
+  simp [genericPointCompute, tCount_append, tCount_reverse,
+    fieldSubConst_tCount, fieldInv_tCount, fieldMul_tCount,
+    fieldSub_tCount]
+
+private theorem threeXSquared_tCount
+    (offset : Wire) (x scratch₀ scratch₁ out : List Wire) :
+    tCount (threeXSquared offset x scratch₀ scratch₁ out) = 100006410 := by
+  simp [threeXSquared, tCount_append, tCount_reverse,
+    fieldMul_tCount, fieldAdd_tCount]
+
+private theorem doublePointCompute_tCount (workStart : Wire) :
+    tCount (doublePointCompute workStart) = 102866377446 := by
+  simp [doublePointCompute, tCount_append, tCount_reverse,
+    threeXSquared_tCount, fieldAdd_tCount, fieldInv_tCount,
+    fieldMul_tCount, fieldSub_tCount]
+
+private theorem pointAddFlags_tCount
+    (pointReg : List Wire) (workStart : Wire) (xC yC : Fp) :
+    tCount (pointAddFlags pointReg workStart xC yC) = 7161 := by
+  have hzero :
+      tCount (zeroFlag (PointRegister.tag pointReg)
+        (pointAddInfinityFlag workStart)
+        (pointAddZeroHistory workStart)) = 0 := by
+    cases pointReg <;>
+      simp [PointRegister.tag, pointAddZeroHistory, zeroFlag,
+        zeroCompute, tCount, tCost]
+  have hzero' :
+      tCount (zeroFlag (List.take 1 pointReg)
+        (pointAddInfinityFlag workStart)
+        ((workStart + zeroHistoryOffset) :: [])) = 0 := by
+    simpa only [PointRegister.tag, pointAddZeroHistory] using hzero
+  simp [pointAddFlags, tCount_append, loadConst_tCount, hzero',
+    equalFlag_tCount, PointRegister.tag,
+    PointRegister.x, PointRegister.y, pointAddZeroHistory,
+    pointAddXDifference, pointAddXHistory, pointAddYDifference,
+    pointAddYHistory, tCost]
+
+private theorem pointAddCoordinateCopies_tCount
+    (pointReg : List Wire) (workStart : Wire) :
+    tCount (pointAddCoordinateCopies pointReg workStart) = 0 := by
+  simp [pointAddCoordinateCopies, pointAddCopyX, pointAddCopyY,
+    tCount_append, copyReg_tCount]
+
+private theorem pointAddSetup_tCount
+    (pointReg : List Wire) (workStart : Wire) (xC yC : Fp) :
+    tCount (pointAddSetup pointReg workStart xC yC) = 7161 := by
+  simp [pointAddSetup, tCount_append, pointAddCoordinateCopies_tCount,
+    pointAddFlags_tCount]
+
+private theorem genericPointBranch_tCount
+    (workStart : Wire) (xC yC : Fp) :
+    tCount (genericPointBranch workStart xC yC) = 205332919939 := by
+  simp [genericPointBranch, tCount_append, tCount_reverse,
+    genericPointCompute_tCount, packFinitePoint_tCount,
+    controlledCopyReg_tCount, pointAddCandidate, pointAddSelected,
+    pointWidth]
+
+private theorem doublePointBranch_tCount (workStart : Wire) :
+    tCount (doublePointBranch workStart) = 205732758483 := by
+  simp [doublePointBranch, tCount_append, tCount_reverse,
+    doublePointCompute_tCount, packFinitePoint_tCount,
+    controlledCopyReg_tCount, pointAddCandidate, pointAddSelected,
+    pointWidth]
+
+private theorem infinityPointBranch_tCount
+    (workStart : Wire) (C : Point) :
+    tCount (infinityPointBranch workStart C) = 3591 := by
+  rw [infinityPointBranch, tCount_append, tCount_append,
+    loadConst_tCount,
+    controlledCopyReg_tCount
+      (pointAddInfinityFlag workStart)
+      (pointAddCandidate workStart)
+      (pointAddSelected workStart) (by
+        simp [pointAddCandidate, pointAddSelected])]
+  norm_num [pointAddSelected, pointWidth]
+
+private theorem pointAddBranches_tCount
+    (workStart : Wire) {xC yC : Fp}
+    (hC : curve.toAffine.Nonsingular xC yC) :
+    tCount (pointAddBranches workStart hC) = 411065682013 := by
+  simp [pointAddBranches, tCount_append, genericPointBranch_tCount,
+    doublePointBranch_tCount, infinityPointBranch_tCount]
+
+/-- Exact T-count of the finite-constant point-addition computation. -/
+theorem pointAddFiniteCompute_tCount
+    (pointReg : List Wire) (workStart : Wire)
+    {xC yC : Fp} (hC : curve.toAffine.Nonsingular xC yC) :
+    tCount (pointAddFiniteCompute pointReg workStart hC) =
+      411065689174 := by
+  simp [pointAddFiniteCompute, tCount_append, pointAddSetup_tCount,
+    pointAddBranches_tCount]
+
+/-! -------------------------------------------------------------------------
     HP-free structure
 ------------------------------------------------------------------------- -/
 
@@ -2993,6 +3192,23 @@ def pointAdd
 
         compute.reverse
       }
+
+/-- The point-at-infinity specialization is a Clifford-only register copy. -/
+theorem pointAdd_zero_tCount
+    (pointReg outReg : List Wire)
+    (workStart : Wire) :
+    tCount (pointAdd pointReg outReg workStart 0) = 0 := by
+  simp [pointAdd, copyReg_tCount]
+
+/-- Exact T-count of addition by a finite classical point. -/
+theorem pointAdd_finite_tCount
+    (pointReg outReg : List Wire)
+    (workStart : Wire)
+    {xC yC : Fp} (hC : curve.toAffine.Nonsingular xC yC) :
+    tCount (pointAdd pointReg outReg workStart (.some hC)) =
+      822131378348 := by
+  simp [pointAdd, tCount_append, tCount_reverse, copyReg_tCount,
+    pointAddFiniteCompute_tCount]
 
 /-! -------------------------------------------------------------------------
     Correctness proof decomposition

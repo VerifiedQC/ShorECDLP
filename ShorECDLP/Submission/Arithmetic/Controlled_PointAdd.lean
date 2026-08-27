@@ -111,6 +111,70 @@ def controlledPointAdd
     backward.reverse
   }
 
+/-! ## Exact T-count -/
+
+omit [Fact (Nat.Prime p)] in
+private theorem pointSwapReg_tCount :
+    ∀ (a b : List Wire), tCount (pointSwapReg a b) = 0 := by
+  intro a
+  induction a with
+  | nil => intro b; rfl
+  | cons x xs ih =>
+      intro b
+      cases b with
+      | nil => rfl
+      | cons y ys =>
+          simp [pointSwapReg, tCost, ih]
+
+omit [Fact (Nat.Prime p)] in
+private theorem controlledPointAddOut_zero_tCount
+    (control : Wire) (pointReg outReg : List Wire)
+    (workStart : Wire) :
+    tCount (controlledPointAddOut
+      control pointReg outReg workStart 0) = 0 := by
+  simp [controlledPointAddOut, copyReg_tCount]
+
+omit [Fact (Nat.Prime p)] in
+private theorem controlledPointAddOut_tCount_of_ne_zero
+    (control : Wire) (pointReg outReg : List Wire)
+    (workStart : Wire) (C : Point) (hC : C ≠ 0)
+    (hpointLength : pointReg.length = pointWidth) :
+    tCount (controlledPointAddOut
+      control pointReg outReg workStart C) = 822131385530 := by
+  cases C with
+  | zero => exact (hC rfl).elim
+  | @some xC yC hxy =>
+      have hselect := selectPoint_tCount control pointReg
+        (pointAddSelected (controlledPointAddPointWorkStart workStart))
+        (controlledPointAddChoice workStart)
+        (by simpa [pointAddSelected, controlledPointAddPointWorkStart,
+          pointWidth] using hpointLength)
+        (by simpa [controlledPointAddChoice, pointWidth] using hpointLength)
+      simp only [controlledPointAddOut, tCount_append, tCount_reverse,
+        pointAddFiniteCompute_tCount, hselect,
+        copyReg_tCount]
+      norm_num [controlledPointAddChoice, pointWidth]
+
+/-- A zero classical addend contributes no T gates. -/
+theorem controlledPointAdd_zero_tCount
+    (control : Wire) (pointReg : List Wire) (workStart : Wire) :
+    tCount (controlledPointAdd control pointReg workStart 0) = 0 := by
+  simp [controlledPointAdd, tCount_append, tCount_reverse,
+    controlledPointAddOut_zero_tCount, pointSwapReg_tCount]
+
+/-- Exact T-count of controlled addition by a finite classical point. -/
+theorem controlledPointAdd_tCount_of_ne_zero
+    (control : Wire) (pointReg : List Wire) (workStart : Wire)
+    (C : Point) (hC : C ≠ 0)
+    (hpointLength : pointReg.length = pointWidth) :
+    tCount (controlledPointAdd control pointReg workStart C) =
+      1644262771060 := by
+  have hneg : -C ≠ 0 := neg_ne_zero.mpr hC
+  simp [controlledPointAdd, tCount_append, tCount_reverse,
+    controlledPointAddOut_tCount_of_ne_zero _ _ _ _ _ hC hpointLength,
+    controlledPointAddOut_tCount_of_ne_zero _ _ _ _ _ hneg hpointLength,
+    pointSwapReg_tCount]
+
 theorem pointAddFiniteCompute_agrees_pointReg
     (pointReg outReg : List Wire)
     (workStart : Wire)
