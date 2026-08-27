@@ -949,9 +949,9 @@ def modAddLayout
 
 /-- The genuine construction parameters of one concrete modular-adder instance.
 
-All cross-register disjointness and stage-freshness facts are derived inside `modAdd_contract`
-from `RegisterLayout.Valid`; callers do not have to restate consequences of its global
-`Nodup` premise. -/
+All cross-register disjointness and stage-freshness facts are derived by
+`modAdd_program_correct` from `RegisterLayout.Valid`; callers do not have to restate
+consequences of its global `Nodup` premise. -/
 structure ModAddWiring
     (lhs rhs out sum constReg candidate : List Wire)
     (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
@@ -977,31 +977,35 @@ private theorem mem_circuitWires_of_mem_targets (c : Circuit) (w : Wire)
   simp only [circuitWires, List.mem_flatMap]
   exact ⟨g, hg, gateTarget_mem_gateWires g⟩
 
-/-- **M1.3.2 contract.** The exact `modAdd` term is correct, clean, confined to its declared
-registers, counted, H/P-free, and physically well-formed. -/
-theorem modAdd_contract
+/-- Final direct correctness theorem for the exact clean modular-addition program.
+
+This is the primary semantic theorem: it proves input preservation, the modular sum, and
+restored workspace directly from the wiring and layout hypotheses. -/
+theorem modAdd_program_correct
     (lhs rhs out sum constReg candidate : List Wire)
     (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
     (modulus : Nat)
     (wiring : ModAddWiring lhs rhs out sum constReg candidate
-      cin₁ couts₁ cin₂ couts₂ modulus) :
-    ModAddContract
-      (modAdd lhs rhs out sum constReg candidate cin₁ couts₁ cin₂ couts₂ modulus)
-      (modAddLayout lhs rhs out sum constReg candidate cin₁ couts₁ cin₂ couts₂)
-      modulus (91 * lhs.length) := by
+      cin₁ couts₁ cin₂ couts₂ modulus)
+    (st : BasisState)
+    (hvalid : (modAddLayout lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂).Valid)
+    (ha : st⟦ᵣlhs⟧ < modulus)
+    (hb : st⟦ᵣrhs⟧ < modulus)
+    (hclean : clean(out ++ (modAddLayout lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂).work, st)) :
+    let after := ⟪modAdd lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂ modulus⟫ st
+    AgreesOn lhs st after ∧
+      AgreesOn rhs st after ∧
+      after⟦ᵣout⟧ = (st⟦ᵣlhs⟧ + st⟦ᵣrhs⟧) % modulus ∧
+      clean((modAddLayout lhs rhs out sum constReg candidate
+        cin₁ couts₁ cin₂ couts₂).work, after) := by
   let layout := modAddLayout lhs rhs out sum constReg candidate
     cin₁ couts₁ cin₂ couts₂
   let program := modAdd lhs rhs out sum constReg candidate
     cin₁ couts₁ cin₂ couts₂ modulus
-  refine {
-    correct := ?_
-    usesOnly := ?_
-    counted := ?_
-    hpFree := ?_
-    wellFormed := ?_
-  }
-  · intro st hvalid ha hb hclean
-    dsimp only
+  · dsimp only
     let A := lhs
     let B := rhs
     let O := out
@@ -1225,48 +1229,38 @@ theorem modAdd_contract
 
     exact ⟨hlhs, hrhs, hresult, hworkAfter⟩
 
-  · simpa [layout, RegisterLayout.allWires, modAddLayout,
-      ModAddSupport.modAddAllWires] using
-      (ModAddSupport.modAdd_usesOnly lhs rhs out sum constReg candidate
-        cin₁ couts₁ cin₂ couts₂ modulus)
-
-  · exact modAdd_tCount lhs rhs out sum constReg candidate
-      cin₁ couts₁ cin₂ couts₂ modulus wiring.rhsLen wiring.sumLen
-      wiring.addCarryLen wiring.constLen wiring.candidateLen wiring.redCarryLen
-      wiring.outLen
-
-  · exact modAdd_HPFree lhs rhs out sum constReg candidate
-      cin₁ couts₁ cin₂ couts₂ modulus
-
-  · intro _
-    exact modAdd_wellFormed lhs rhs out sum constReg candidate
-      cin₁ couts₁ cin₂ couts₂ modulus wiring.addOK wiring.redOK wiring.selectOK
-
-/-- Final direct correctness theorem for the exact clean modular-addition program.
-
-The conclusion states input preservation, the modular sum, and restored workspace inline, so
-callers do not need to project the semantic field from `modAdd_contract`. -/
-theorem modAdd_program_correct
+/-- **M1.3.2 contract.** Package the direct correctness theorem together with locality, exact
+cost, H/P-freedom, and physical well-formedness for the same `modAdd` term. -/
+theorem modAdd_contract
     (lhs rhs out sum constReg candidate : List Wire)
     (cin₁ : Wire) (couts₁ : List Wire) (cin₂ : Wire) (couts₂ : List Wire)
     (modulus : Nat)
     (wiring : ModAddWiring lhs rhs out sum constReg candidate
-      cin₁ couts₁ cin₂ couts₂ modulus)
-    (st : BasisState)
-    (hvalid : (modAddLayout lhs rhs out sum constReg candidate
-      cin₁ couts₁ cin₂ couts₂).Valid)
-    (ha : st⟦ᵣlhs⟧ < modulus)
-    (hb : st⟦ᵣrhs⟧ < modulus)
-    (hclean : clean(out ++ (modAddLayout lhs rhs out sum constReg candidate
-      cin₁ couts₁ cin₂ couts₂).work, st)) :
-    let after := ⟪modAdd lhs rhs out sum constReg candidate
-      cin₁ couts₁ cin₂ couts₂ modulus⟫ st
-    AgreesOn lhs st after ∧
-      AgreesOn rhs st after ∧
-      after⟦ᵣout⟧ = (st⟦ᵣlhs⟧ + st⟦ᵣrhs⟧) % modulus ∧
-      clean((modAddLayout lhs rhs out sum constReg candidate
-        cin₁ couts₁ cin₂ couts₂).work, after) := by
-  exact (modAdd_contract lhs rhs out sum constReg candidate
-    cin₁ couts₁ cin₂ couts₂ modulus wiring).correct st hvalid ha hb hclean
+      cin₁ couts₁ cin₂ couts₂ modulus) :
+    ModAddContract
+      (modAdd lhs rhs out sum constReg candidate cin₁ couts₁ cin₂ couts₂ modulus)
+      (modAddLayout lhs rhs out sum constReg candidate cin₁ couts₁ cin₂ couts₂)
+      modulus (91 * lhs.length) := by
+  refine {
+    correct := modAdd_program_correct lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂ modulus wiring
+    usesOnly := ?_
+    counted := ?_
+    hpFree := ?_
+    wellFormed := ?_
+  }
+  · simpa [RegisterLayout.allWires, modAddLayout,
+      ModAddSupport.modAddAllWires] using
+      (ModAddSupport.modAdd_usesOnly lhs rhs out sum constReg candidate
+        cin₁ couts₁ cin₂ couts₂ modulus)
+  · exact modAdd_tCount lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂ modulus wiring.rhsLen wiring.sumLen
+      wiring.addCarryLen wiring.constLen wiring.candidateLen wiring.redCarryLen
+      wiring.outLen
+  · exact modAdd_HPFree lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂ modulus
+  · intro _
+    exact modAdd_wellFormed lhs rhs out sum constReg candidate
+      cin₁ couts₁ cin₂ couts₂ modulus wiring.addOK wiring.redOK wiring.selectOK
 
 end ShorECDLP
