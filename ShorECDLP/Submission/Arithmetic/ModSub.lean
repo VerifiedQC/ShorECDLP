@@ -490,8 +490,8 @@ def modSubAllWires
   lhs ++ (rhs ++ (out ++ (raw ++ (constReg ++ (candidate ++
     ([cinSub] ++ (coutsSub ++ ([cinAdd] ++ coutsAdd))))))))
 
-/-- Genuine wiring obligations for one modular-subtraction instance.  Cross-register freshness is
-derived from `modSubLayout.Valid` inside the contract rather than duplicated here. -/
+/-- Genuine wiring obligations for one modular-subtraction instance. Cross-register freshness is
+derived by `modSub_program_correct` from `modSubLayout.Valid` rather than duplicated here. -/
 structure ModSubWiring
     (lhs rhs out raw constReg candidate : List Wire)
     (cinSub : Wire) (coutsSub : List Wire) (cinAdd : Wire) (coutsAdd : List Wire)
@@ -1022,33 +1022,35 @@ theorem modSub_clean
           wiring.selectOK hwOut
       _ = st w := hcomputeUses.preservesOutside st w hwActive
 
-/-- **Clean modular-subtraction contract.** Correctness, exact cleanup, declared-wire locality,
-exact cost, H/P-freedom, and well-formedness all refer to the same `modSub` circuit term. -/
-theorem modSub_contract
+/-- Final direct correctness theorem for the exact clean modular-subtraction program.
+
+This is the primary semantic theorem: it proves input preservation, the canonical modular
+difference, and restored workspace directly from the wiring and layout hypotheses. -/
+theorem modSub_program_correct
     (lhs rhs out raw constReg candidate : List Wire)
     (cinSub : Wire) (coutsSub : List Wire) (cinAdd : Wire) (coutsAdd : List Wire)
     (modulus : Nat)
     (wiring : ModSubWiring lhs rhs out raw constReg candidate
-      cinSub coutsSub cinAdd coutsAdd modulus) :
-    ModSubContract
-      (modSub lhs rhs out raw constReg candidate
-        cinSub coutsSub cinAdd coutsAdd modulus)
-      (modSubLayout lhs rhs out raw constReg candidate
-        cinSub coutsSub cinAdd coutsAdd)
-      modulus (91 * lhs.length) := by
+      cinSub coutsSub cinAdd coutsAdd modulus)
+    (st : BasisState)
+    (hvalid : (modSubLayout lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd).Valid)
+    (ha : st⟦ᵣlhs⟧ < modulus)
+    (hb : st⟦ᵣrhs⟧ < modulus)
+    (hclean : clean(out ++ (modSubLayout lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd).work, st)) :
+    let after := ⟪modSub lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd modulus⟫ st
+    AgreesOn lhs st after ∧
+      AgreesOn rhs st after ∧
+      after⟦ᵣout⟧ = (st⟦ᵣlhs⟧ + modulus - st⟦ᵣrhs⟧) % modulus ∧
+      clean((modSubLayout lhs rhs out raw constReg candidate
+        cinSub coutsSub cinAdd coutsAdd).work, after) := by
   let layout := modSubLayout lhs rhs out raw constReg candidate
     cinSub coutsSub cinAdd coutsAdd
   let program := modSub lhs rhs out raw constReg candidate
     cinSub coutsSub cinAdd coutsAdd modulus
-  refine {
-    correct := ?_
-    usesOnly := ?_
-    counted := ?_
-    hpFree := ?_
-    wellFormed := ?_
-  }
-  · intro st hvalid ha hb hclean
-    dsimp only
+  · dsimp only
     have hresult := modSub_correct lhs rhs out raw constReg candidate
       cinSub coutsSub cinAdd coutsAdd modulus wiring st hvalid ha hb hclean
     have hrestore := modSub_clean lhs rhs out raw constReg candidate
@@ -1083,7 +1085,30 @@ theorem modSub_contract
       rw [hrestore w (hworkOut w hw)]
       exact hworkClean w hw
     exact ⟨hlhs, hrhs, hresult, hworkAfter⟩
-  · simpa [layout, RegisterLayout.allWires, modSubLayout, modSubAllWires,
+
+/-- **Clean modular-subtraction contract.** Package the direct correctness theorem together with
+declared-wire locality, exact cost, H/P-freedom, and well-formedness for the same `modSub` term. -/
+theorem modSub_contract
+    (lhs rhs out raw constReg candidate : List Wire)
+    (cinSub : Wire) (coutsSub : List Wire) (cinAdd : Wire) (coutsAdd : List Wire)
+    (modulus : Nat)
+    (wiring : ModSubWiring lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd modulus) :
+    ModSubContract
+      (modSub lhs rhs out raw constReg candidate
+        cinSub coutsSub cinAdd coutsAdd modulus)
+      (modSubLayout lhs rhs out raw constReg candidate
+        cinSub coutsSub cinAdd coutsAdd)
+      modulus (91 * lhs.length) := by
+  refine {
+    correct := modSub_program_correct lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd modulus wiring
+    usesOnly := ?_
+    counted := ?_
+    hpFree := ?_
+    wellFormed := ?_
+  }
+  · simpa [RegisterLayout.allWires, modSubLayout, modSubAllWires,
       List.append_assoc] using
       modSub_usesOnly lhs rhs out raw constReg candidate
         cinSub coutsSub cinAdd coutsAdd modulus
@@ -1095,32 +1120,5 @@ theorem modSub_contract
   · intro _
     exact modSub_wellFormed lhs rhs out raw constReg candidate
       cinSub coutsSub cinAdd coutsAdd modulus wiring.subOK wiring.addOK wiring.selectOK
-
-/-- Final direct correctness theorem for the exact clean modular-subtraction program.
-
-The conclusion states input preservation, the canonical modular difference, and restored
-workspace inline, so callers do not need to project the semantic field from `modSub_contract`. -/
-theorem modSub_program_correct
-    (lhs rhs out raw constReg candidate : List Wire)
-    (cinSub : Wire) (coutsSub : List Wire) (cinAdd : Wire) (coutsAdd : List Wire)
-    (modulus : Nat)
-    (wiring : ModSubWiring lhs rhs out raw constReg candidate
-      cinSub coutsSub cinAdd coutsAdd modulus)
-    (st : BasisState)
-    (hvalid : (modSubLayout lhs rhs out raw constReg candidate
-      cinSub coutsSub cinAdd coutsAdd).Valid)
-    (ha : st⟦ᵣlhs⟧ < modulus)
-    (hb : st⟦ᵣrhs⟧ < modulus)
-    (hclean : clean(out ++ (modSubLayout lhs rhs out raw constReg candidate
-      cinSub coutsSub cinAdd coutsAdd).work, st)) :
-    let after := ⟪modSub lhs rhs out raw constReg candidate
-      cinSub coutsSub cinAdd coutsAdd modulus⟫ st
-    AgreesOn lhs st after ∧
-      AgreesOn rhs st after ∧
-      after⟦ᵣout⟧ = (st⟦ᵣlhs⟧ + modulus - st⟦ᵣrhs⟧) % modulus ∧
-      clean((modSubLayout lhs rhs out raw constReg candidate
-        cinSub coutsSub cinAdd coutsAdd).work, after) := by
-  exact (modSub_contract lhs rhs out raw constReg candidate
-    cinSub coutsSub cinAdd coutsAdd modulus wiring).correct st hvalid ha hb hclean
 
 end ShorECDLP
