@@ -11051,6 +11051,596 @@ theorem pointAddFiniteCompute_correct
 
         exact hbranches
 
+private theorem pointAddFlagWork_mem_work
+    (workStart : Wire) :
+    ∀ w ∈ pointAddFlagWork workStart,
+      w ∈ pointAddWork workStart := by
+  intro w hw
+  rw [pointAddWork]
+  apply List.mem_append_left
+  apply List.mem_range'_1.mpr
+  simp only [pointAddFlagWork, pointAddConst,
+    pointAddZeroHistory, pointAddXDifference,
+    pointAddXHistory, pointAddYDifference,
+    pointAddYHistory, pointAddInfinityFlag,
+    pointAddXEqFlag, pointAddYNegFlag,
+    pointAddGenericFlag, pointAddPairFlag,
+    pointAddDoubleFlag, List.mem_append, List.mem_cons,
+    List.mem_range'_1] at hw
+  rw [localWorkSize_eq]
+  norm_num [constOffset, zeroHistoryOffset, xDifferenceOffset,
+    xHistoryOffset, yDifferenceOffset, yHistoryOffset,
+    flagOffset, fieldAreaSize, fieldWidth,
+    Secp256k1Instance.fieldWidth] at hw ⊢
+  rcases hw with
+      (((((h0 | h1) | h2) | h3) | h4) | h5) |
+        (h6 | h7 | h8 | h9 | h10 | h11)
+  · omega
+  · subst w; omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · subst w; omega
+  · subst w; omega
+  · subst w; omega
+  · subst w; omega
+  · subst w; omega
+  · subst w; omega
+
+private theorem pointAddSelected_mem_work
+    (workStart : Wire) :
+    ∀ w ∈ pointAddSelected workStart,
+      w ∈ pointAddWork workStart := by
+  intro w hw
+  rw [pointAddWork]
+  apply List.mem_append_left
+  apply List.mem_range'_1.mpr
+  have hbounds := List.mem_range'_1.mp hw
+  rw [localWorkSize_eq]
+  norm_num [pointAddSelected, selectedOffset, candidateOffset,
+    flagOffset, yHistoryOffset, yDifferenceOffset,
+    xHistoryOffset, xDifferenceOffset, zeroHistoryOffset,
+    constOffset, fieldAreaSize, fieldWidth,
+    Secp256k1Instance.fieldWidth, pointWidth] at hbounds ⊢
+  omega
+
+private theorem pointAddCoordinateCopies_wellFormed
+    (pointReg outReg : List Wire)
+    (workStart : Wire)
+    (hnodup :
+      (pointReg ++ outReg ++ pointAddWork workStart).Nodup) :
+    CircuitWellFormed
+      (pointAddCoordinateCopies pointReg workStart) := by
+  obtain ⟨hpublicNodup, _hworkNodup, hpublicWork⟩ :=
+    List.nodup_append.mp hnodup
+  obtain ⟨hpointNodup, _houtNodup, _hpointOut⟩ :=
+    List.nodup_append.mp hpublicNodup
+  have hxSourceNodup : (PointRegister.x pointReg).Nodup := by
+    apply List.Nodup.sublist
+      ((List.take_sublist 256 (pointReg.drop 1)).trans
+        (List.drop_sublist 1 pointReg))
+    exact hpointNodup
+  have hySourceNodup : (PointRegister.y pointReg).Nodup := by
+    apply List.Nodup.sublist
+      ((List.take_sublist 256 (pointReg.drop 257)).trans
+        (List.drop_sublist 257 pointReg))
+    exact hpointNodup
+  have hxDestinationNodup :
+      ((pointAddX workStart).take 256).Nodup := by
+    exact List.Nodup.sublist
+      (List.take_sublist 256 (pointAddX workStart))
+      (pointAddFieldRegister_nodup workStart _
+        (by simp [IsPointAddFieldRegister]))
+  have hyDestinationNodup :
+      ((pointAddY workStart).take 256).Nodup := by
+    exact List.Nodup.sublist
+      (List.take_sublist 256 (pointAddY workStart))
+      (pointAddFieldRegister_nodup workStart _
+        (by simp [IsPointAddFieldRegister]))
+  have hxDestinationWork :
+      ∀ w ∈ (pointAddX workStart).take 256,
+        w ∈ pointAddWork workStart := by
+    intro w hw
+    rw [pointAddWork]
+    apply List.mem_append_left
+    apply List.mem_range'_1.mpr
+    have hbounds := List.mem_range'_1.mp
+      (List.mem_of_mem_take hw)
+    simp only [fieldWidth,
+      Secp256k1Instance.fieldWidth] at hbounds
+    rw [localWorkSize_eq]
+    exact ⟨hbounds.1, hbounds.2.trans_le (by omega)⟩
+  have hyDestinationWork :
+      ∀ w ∈ (pointAddY workStart).take 256,
+        w ∈ pointAddWork workStart := by
+    intro w hw
+    rw [pointAddWork]
+    apply List.mem_append_left
+    apply List.mem_range'_1.mpr
+    have hbounds := List.mem_range'_1.mp
+      (List.mem_of_mem_take hw)
+    rw [localWorkSize_eq]
+    simp only [fieldWidth,
+      Secp256k1Instance.fieldWidth] at hbounds
+    exact ⟨(Nat.le_add_right workStart 257).trans hbounds.1,
+      hbounds.2.trans_le (by omega)⟩
+  have hxNodup :
+      (PointRegister.x pointReg ++
+        (pointAddX workStart).take 256).Nodup := by
+    apply List.nodup_append.mpr
+    refine ⟨hxSourceNodup, hxDestinationNodup, ?_⟩
+    intro a ha b hb
+    exact hpublicWork a
+      (List.mem_append_left outReg
+        (List.mem_of_mem_drop (List.mem_of_mem_take ha)))
+      b (hxDestinationWork b hb)
+  have hyNodup :
+      (PointRegister.y pointReg ++
+        (pointAddY workStart).take 256).Nodup := by
+    apply List.nodup_append.mpr
+    refine ⟨hySourceNodup, hyDestinationNodup, ?_⟩
+    intro a ha b hb
+    exact hpublicWork a
+      (List.mem_append_left outReg
+        (List.mem_of_mem_drop (List.mem_of_mem_take ha)))
+      b (hyDestinationWork b hb)
+  rw [pointAddCoordinateCopies, circuitWellFormed_append]
+  exact ⟨Arithmetic.copyReg_wellFormed _ _ hxNodup,
+    Arithmetic.copyReg_wellFormed _ _ hyNodup⟩
+
+private theorem pointAddFlags_wellFormed
+    (pointReg outReg : List Wire)
+    (workStart : Wire)
+    (xC yC : Fp)
+    (hnodup :
+      (pointReg ++ outReg ++ pointAddWork workStart).Nodup) :
+    CircuitWellFormed
+      (pointAddFlags pointReg workStart xC yC) := by
+  obtain ⟨hpublicNodup, _hworkNodup, hpublicWork⟩ :=
+    List.nodup_append.mp hnodup
+  obtain ⟨hpointNodup, _houtNodup, _hpointOut⟩ :=
+    List.nodup_append.mp hpublicNodup
+  have htagMem :
+      ∀ w ∈ PointRegister.tag pointReg, w ∈ pointReg := by
+    intro w hw
+    exact List.mem_of_mem_take hw
+  have hxMem :
+      ∀ w ∈ PointRegister.x pointReg, w ∈ pointReg := by
+    intro w hw
+    exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+  have hyMem :
+      ∀ w ∈ PointRegister.y pointReg, w ∈ pointReg := by
+    intro w hw
+    exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+  have htagNodup : (PointRegister.tag pointReg).Nodup := by
+    exact List.Nodup.sublist (List.take_sublist 1 pointReg)
+      hpointNodup
+  have hxNodup : (PointRegister.x pointReg).Nodup := by
+    exact List.Nodup.sublist
+      ((List.take_sublist 256 (pointReg.drop 1)).trans
+        (List.drop_sublist 1 pointReg)) hpointNodup
+  have hyNodup : (PointRegister.y pointReg).Nodup := by
+    exact List.Nodup.sublist
+      ((List.take_sublist 256 (pointReg.drop 257)).trans
+        (List.drop_sublist 257 pointReg)) hpointNodup
+  have hzeroInternalMem :
+      ∀ w ∈
+          (pointAddInfinityFlag workStart ::
+            pointAddZeroHistory workStart),
+        w ∈ pointAddFlagWork workStart := by
+    intro w hw
+    simp only [List.mem_cons] at hw
+    rcases hw with rfl | hw
+    · simp [pointAddFlagWork]
+    · simp [pointAddFlagWork, hw]
+  have hxInternalMem :
+      ∀ w ∈
+          ((pointAddConst workStart ++
+              pointAddXDifference workStart) ++
+            pointAddXEqFlag workStart ::
+              pointAddXHistory workStart),
+        w ∈ pointAddFlagWork workStart := by
+    intro w hw
+    simp only [List.mem_append, List.mem_cons] at hw
+    rcases hw with (hconst | hdifference) | hflag | hhistory
+    · simp [pointAddFlagWork, hconst]
+    · simp [pointAddFlagWork, hdifference]
+    · subst w; simp [pointAddFlagWork]
+    · simp [pointAddFlagWork, hhistory]
+  have hyInternalMem :
+      ∀ w ∈
+          ((pointAddConst workStart ++
+              pointAddYDifference workStart) ++
+            pointAddYNegFlag workStart ::
+              pointAddYHistory workStart),
+        w ∈ pointAddFlagWork workStart := by
+    intro w hw
+    simp only [List.mem_append, List.mem_cons] at hw
+    rcases hw with (hconst | hdifference) | hflag | hhistory
+    · simp [pointAddFlagWork, hconst]
+    · simp [pointAddFlagWork, hdifference]
+    · subst w; simp [pointAddFlagWork]
+    · simp [pointAddFlagWork, hhistory]
+  have hzeroNodup :
+      (zeroFlagWires
+        (PointRegister.tag pointReg)
+        (pointAddInfinityFlag workStart)
+        (pointAddZeroHistory workStart)).Nodup := by
+    rw [zeroFlagWires]
+    apply List.nodup_append.mpr
+    refine ⟨htagNodup, pointAddZeroFlagWork_nodup workStart, ?_⟩
+    intro a ha b hb
+    exact hpublicWork a
+      (List.mem_append_left outReg (htagMem a ha)) b
+      (pointAddFlagWork_mem_work workStart b
+        (hzeroInternalMem b hb))
+  have hxEqualNodup :
+      (equalFlagWires
+        (PointRegister.x pointReg)
+        (pointAddConst workStart)
+        (pointAddXEqFlag workStart)
+        (pointAddXDifference workStart)
+        (pointAddXHistory workStart)).Nodup := by
+    simp only [equalFlagWires, List.append_assoc]
+    apply List.nodup_append.mpr
+    refine ⟨hxNodup, ?_, ?_⟩
+    · simpa only [List.append_assoc] using
+        pointAddXEqualWork_nodup workStart
+    · intro a ha b hb
+      exact hpublicWork a
+        (List.mem_append_left outReg (hxMem a ha)) b
+        (pointAddFlagWork_mem_work workStart b
+          (hxInternalMem b (by
+            simpa only [List.append_assoc] using hb)))
+  have hyEqualNodup :
+      (equalFlagWires
+        (PointRegister.y pointReg)
+        (pointAddConst workStart)
+        (pointAddYNegFlag workStart)
+        (pointAddYDifference workStart)
+        (pointAddYHistory workStart)).Nodup := by
+    simp only [equalFlagWires, List.append_assoc]
+    apply List.nodup_append.mpr
+    refine ⟨hyNodup, ?_, ?_⟩
+    · simpa only [List.append_assoc] using
+        pointAddYEqualWork_nodup workStart
+    · intro a ha b hb
+      exact hpublicWork a
+        (List.mem_append_left outReg (hyMem a ha)) b
+        (pointAddFlagWork_mem_work workStart b
+          (hyInternalMem b (by
+            simpa only [List.append_assoc] using hb)))
+  have hzeroWellFormed := zeroFlag_wellFormed
+    (PointRegister.tag pointReg)
+    (pointAddInfinityFlag workStart)
+    (pointAddZeroHistory workStart) hzeroNodup
+  have hxWellFormed := equalFlag_wellFormed
+    (PointRegister.x pointReg)
+    (pointAddConst workStart)
+    (pointAddXEqFlag workStart)
+    (pointAddXDifference workStart)
+    (pointAddXHistory workStart) hxEqualNodup
+  have hyWellFormed := equalFlag_wellFormed
+    (PointRegister.y pointReg)
+    (pointAddConst workStart)
+    (pointAddYNegFlag workStart)
+    (pointAddYDifference workStart)
+    (pointAddYHistory workStart) hyEqualNodup
+  simp only [pointAddFlags, circuitWellFormed_append,
+    circuitWellFormed_cons, circuitWellFormed_nil,
+    hzeroWellFormed, hxWellFormed, hyWellFormed,
+    loadConst_wellFormed]
+  simp [Gate.WellFormed,
+    pointAddInfinityFlag, pointAddXEqFlag,
+    pointAddYNegFlag, pointAddGenericFlag,
+    pointAddPairFlag, pointAddDoubleFlag]
+
+private theorem genericPointBranch_wellFormed
+    (workStart : Wire) (xC yC : Fp) :
+    CircuitWellFormed
+      (genericPointBranch workStart xC yC) := by
+  have hcompute := genericPointCompute_wellFormed workStart xC yC
+  have hpack := packFinitePoint_wellFormed workStart
+  have hcopy : CircuitWellFormed
+      (controlledCopyReg
+        (pointAddGenericFlag workStart)
+        (pointAddCandidate workStart)
+        (pointAddSelected workStart)) := by
+    apply controlledCopyReg_wellFormed
+    simpa [pointAddGenericFlag, Nat.add_assoc] using
+      pointAddControl_candidateSelected_nodup
+        workStart 3 (by norm_num)
+  simp only [genericPointBranch, circuitWellFormed_append,
+    hcompute, hpack, hcopy, Arithmetic.wellFormed_reverse,
+    and_self]
+
+private theorem doublePointBranch_wellFormed
+    (workStart : Wire) :
+    CircuitWellFormed (doublePointBranch workStart) := by
+  have hcompute := doublePointCompute_wellFormed workStart
+  have hpack := packFinitePoint_wellFormed workStart
+  have hcopy : CircuitWellFormed
+      (controlledCopyReg
+        (pointAddDoubleFlag workStart)
+        (pointAddCandidate workStart)
+        (pointAddSelected workStart)) := by
+    apply controlledCopyReg_wellFormed
+    simpa [pointAddDoubleFlag, Nat.add_assoc] using
+      pointAddControl_candidateSelected_nodup
+        workStart 5 (by norm_num)
+  simp only [doublePointBranch, circuitWellFormed_append,
+    hcompute, hpack, hcopy, Arithmetic.wellFormed_reverse,
+    and_self]
+
+private theorem infinityPointBranch_wellFormed
+    (workStart : Wire) (C : Point) :
+    CircuitWellFormed (infinityPointBranch workStart C) := by
+  have hload := loadConst_wellFormed
+    (pointAddCandidate workStart) (encode C).val
+  have hcopy : CircuitWellFormed
+      (controlledCopyReg
+        (pointAddInfinityFlag workStart)
+        (pointAddCandidate workStart)
+        (pointAddSelected workStart)) := by
+    apply controlledCopyReg_wellFormed
+    simpa [pointAddInfinityFlag, Nat.add_assoc] using
+      pointAddControl_candidateSelected_nodup
+        workStart 0 (by norm_num)
+  simp only [infinityPointBranch, circuitWellFormed_append,
+    hload, hcopy, and_self]
+
+private theorem pointAddBranches_wellFormed
+    (workStart : Wire)
+    {xC yC : Fp}
+    (hC : curve.toAffine.Nonsingular xC yC) :
+    CircuitWellFormed (pointAddBranches workStart hC) := by
+  have hgeneric := genericPointBranch_wellFormed workStart xC yC
+  have hdouble := doublePointBranch_wellFormed workStart
+  have hinfinity := infinityPointBranch_wellFormed
+    workStart (.some hC)
+  simp only [pointAddBranches, circuitWellFormed_append,
+    hgeneric, hdouble, hinfinity, and_self]
+
+private theorem pointAddFieldRegister_mem_work
+    (workStart : Wire) (register : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register) :
+    ∀ w ∈ register, w ∈ pointAddWork workStart := by
+  intro w hw
+  rw [pointAddWork]
+  apply List.mem_append_left
+  apply List.mem_range'_1.mpr
+  rcases hregister with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    have hbounds := List.mem_range'_1.mp hw
+    rw [localWorkSize_eq]
+    norm_num [pointAddX, pointAddY, pointAddT0,
+      pointAddT1, pointAddT2, pointAddT3, pointAddT4,
+      fieldWidth, Secp256k1Instance.fieldWidth] at hbounds ⊢
+    omega
+
+private theorem pointAddCandidate_mem_work
+    (workStart : Wire) :
+    ∀ w ∈ pointAddCandidate workStart,
+      w ∈ pointAddWork workStart := by
+  intro w hw
+  rw [pointAddWork]
+  apply List.mem_append_left
+  apply List.mem_range'_1.mpr
+  have hbounds := List.mem_range'_1.mp hw
+  rw [localWorkSize_eq]
+  norm_num [pointAddCandidate, candidateOffset, flagOffset,
+    yHistoryOffset, yDifferenceOffset, xHistoryOffset,
+    xDifferenceOffset, zeroHistoryOffset, constOffset,
+    fieldAreaSize, fieldWidth, Secp256k1Instance.fieldWidth,
+    pointWidth] at hbounds ⊢
+  omega
+
+private theorem pointAddControl_mem_work
+    (workStart index : Wire) (hindex : index < 6) :
+    workStart + flagOffset + index ∈
+      pointAddWork workStart := by
+  apply pointAddFlagWork_mem_work workStart
+  interval_cases index <;>
+    simp [pointAddFlagWork, pointAddInfinityFlag, pointAddXEqFlag,
+    pointAddYNegFlag, pointAddGenericFlag,
+    pointAddPairFlag, pointAddDoubleFlag]
+
+private theorem pointAddBranchActiveSupport_mem_work
+    (workStart : Wire) :
+    ∀ w ∈ pointAddBranchActiveSupport workStart,
+      w ∈ pointAddWork workStart := by
+  intro w hw
+  simp only [pointAddBranchActiveSupport,
+    List.mem_append] at hw
+  rcases hw with hx | hy | ht0 | ht1 | ht2 | ht3 | ht4 |
+      hcandidate | hadd | hmul | hinv
+  · exact pointAddFieldRegister_mem_work workStart _
+      (by simp [IsPointAddFieldRegister]) w hx
+  · exact pointAddFieldRegister_mem_work workStart _
+      (by simp [IsPointAddFieldRegister]) w hy
+  · exact pointAddFieldRegister_mem_work workStart _
+      (by simp [IsPointAddFieldRegister]) w ht0
+  · exact pointAddFieldRegister_mem_work workStart _
+      (by simp [IsPointAddFieldRegister]) w ht1
+  · exact pointAddFieldRegister_mem_work workStart _
+      (by simp [IsPointAddFieldRegister]) w ht2
+  · exact pointAddFieldRegister_mem_work workStart _
+      (by simp [IsPointAddFieldRegister]) w ht3
+  · exact pointAddFieldRegister_mem_work workStart _
+      (by simp [IsPointAddFieldRegister]) w ht4
+  · exact pointAddCandidate_mem_work workStart w hcandidate
+  · rw [pointAddWork]
+    apply List.mem_append_right
+    simp only [pointAddArithmeticWork, List.mem_dedup,
+      List.mem_append]
+    exact Or.inl (Or.inl hadd)
+  · rw [pointAddWork]
+    apply List.mem_append_right
+    simp only [pointAddArithmeticWork, List.mem_dedup,
+      List.mem_append]
+    exact Or.inl (Or.inr hmul)
+  · rw [pointAddWork]
+    apply List.mem_append_right
+    simp only [pointAddArithmeticWork, List.mem_dedup,
+      List.mem_append]
+    exact Or.inr hinv
+
+private theorem genericPointBranch_usesOnly_work
+    (workStart : Wire) (xC yC : Fp) :
+    CircuitUsesOnly (pointAddWork workStart)
+      (genericPointBranch workStart xC yC) := by
+  have hactive :
+      ∀ w ∈ pointAddBranchActiveSupport workStart,
+        w ∈ pointAddWork workStart :=
+    pointAddBranchActiveSupport_mem_work workStart
+  have hcompute := usesOnly_mono
+    (genericPointCompute_usesOnly workStart xC yC) hactive
+  have hpack := usesOnly_mono
+    (packFinitePoint_usesOnly_pointAdd workStart) hactive
+  have hcopy : CircuitUsesOnly (pointAddWork workStart)
+      (controlledCopyReg
+        (pointAddGenericFlag workStart)
+        (pointAddCandidate workStart)
+        (pointAddSelected workStart)) := by
+    apply usesOnly_mono (controlledCopyReg_usesOnly _ _ _)
+    intro w hw
+    simp only [List.mem_cons, List.mem_append] at hw
+    rcases hw with (hcontrol | hcandidate) | hselected
+    · subst w
+      simpa [pointAddGenericFlag, Nat.add_assoc] using
+        pointAddControl_mem_work workStart 3 (by norm_num)
+    · exact pointAddCandidate_mem_work workStart w hcandidate
+    · exact pointAddSelected_mem_work workStart w hselected
+  simp only [genericPointBranch, circuitUsesOnly_append_iff,
+    circuitUsesOnly_reverse_iff]
+  exact ⟨⟨⟨⟨hcompute, hpack⟩, hcopy⟩, hpack⟩, hcompute⟩
+
+private theorem doublePointBranch_usesOnly_work
+    (workStart : Wire) :
+    CircuitUsesOnly (pointAddWork workStart)
+      (doublePointBranch workStart) := by
+  have hactive :
+      ∀ w ∈ pointAddBranchActiveSupport workStart,
+        w ∈ pointAddWork workStart :=
+    pointAddBranchActiveSupport_mem_work workStart
+  have hcompute := usesOnly_mono
+    (doublePointCompute_usesOnly workStart) hactive
+  have hpack := usesOnly_mono
+    (packFinitePoint_usesOnly_pointAdd workStart) hactive
+  have hcopy : CircuitUsesOnly (pointAddWork workStart)
+      (controlledCopyReg
+        (pointAddDoubleFlag workStart)
+        (pointAddCandidate workStart)
+        (pointAddSelected workStart)) := by
+    apply usesOnly_mono (controlledCopyReg_usesOnly _ _ _)
+    intro w hw
+    simp only [List.mem_cons, List.mem_append] at hw
+    rcases hw with (hcontrol | hcandidate) | hselected
+    · subst w
+      simpa [pointAddDoubleFlag, Nat.add_assoc] using
+        pointAddControl_mem_work workStart 5 (by norm_num)
+    · exact pointAddCandidate_mem_work workStart w hcandidate
+    · exact pointAddSelected_mem_work workStart w hselected
+  simp only [doublePointBranch, circuitUsesOnly_append_iff,
+    circuitUsesOnly_reverse_iff]
+  exact ⟨⟨⟨⟨hcompute, hpack⟩, hcopy⟩, hpack⟩, hcompute⟩
+
+private theorem infinityPointBranch_usesOnly_work
+    (workStart : Wire) (C : Point) :
+    CircuitUsesOnly (pointAddWork workStart)
+      (infinityPointBranch workStart C) := by
+  have hload : CircuitUsesOnly (pointAddWork workStart)
+      (loadConst (pointAddCandidate workStart) (encode C).val) := by
+    apply usesOnly_mono (loadConst_usesOnly _ _)
+    exact pointAddCandidate_mem_work workStart
+  have hcopy : CircuitUsesOnly (pointAddWork workStart)
+      (controlledCopyReg
+        (pointAddInfinityFlag workStart)
+        (pointAddCandidate workStart)
+        (pointAddSelected workStart)) := by
+    apply usesOnly_mono (controlledCopyReg_usesOnly _ _ _)
+    intro w hw
+    simp only [List.mem_cons, List.mem_append] at hw
+    rcases hw with (hcontrol | hcandidate) | hselected
+    · subst w
+      simpa [pointAddInfinityFlag] using
+        pointAddControl_mem_work workStart 0 (by norm_num)
+    · exact pointAddCandidate_mem_work workStart w hcandidate
+    · exact pointAddSelected_mem_work workStart w hselected
+  simp only [infinityPointBranch, circuitUsesOnly_append_iff]
+  exact ⟨⟨hload, hcopy⟩, hload⟩
+
+private theorem pointAddBranches_usesOnly_work
+    (workStart : Wire)
+    {xC yC : Fp}
+    (hC : curve.toAffine.Nonsingular xC yC) :
+    CircuitUsesOnly (pointAddWork workStart)
+      (pointAddBranches workStart hC) := by
+  have hgeneric := genericPointBranch_usesOnly_work
+    workStart xC yC
+  have hdouble := doublePointBranch_usesOnly_work workStart
+  have hinfinity := infinityPointBranch_usesOnly_work
+    workStart (.some hC)
+  simp only [pointAddBranches, circuitUsesOnly_append_iff]
+  exact ⟨⟨hgeneric, hdouble⟩, hinfinity⟩
+
+private theorem pointAddCoordinateCopies_usesOnly
+    (pointReg : List Wire) (workStart : Wire) :
+    CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddCoordinateCopies pointReg workStart) := by
+  have hx : CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddCopyX pointReg workStart) := by
+    rw [pointAddCopyX]
+    apply Arithmetic.copyReg_usesOnly
+    · intro w hw
+      apply List.mem_append_left
+      exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+    · intro w hw
+      apply List.mem_append_right
+      exact pointAddFieldRegister_mem_work workStart _
+        (by simp [IsPointAddFieldRegister]) w
+        (List.mem_of_mem_take hw)
+  have hy : CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddCopyY pointReg workStart) := by
+    rw [pointAddCopyY]
+    apply Arithmetic.copyReg_usesOnly
+    · intro w hw
+      apply List.mem_append_left
+      exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+    · intro w hw
+      apply List.mem_append_right
+      exact pointAddFieldRegister_mem_work workStart _
+        (by simp [IsPointAddFieldRegister]) w
+        (List.mem_of_mem_take hw)
+  rw [pointAddCoordinateCopies]
+  exact usesOnly_append hx hy
+
+private theorem pointAddSetup_usesOnly
+    (pointReg : List Wire) (workStart : Wire)
+    (xC yC : Fp) :
+    CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddSetup pointReg workStart xC yC) := by
+  have hcopies := pointAddCoordinateCopies_usesOnly
+    pointReg workStart
+  have hflags : CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddFlags pointReg workStart xC yC) := by
+    apply usesOnly_mono
+      (pointAddFlags_usesOnly pointReg workStart xC yC)
+    intro w hw
+    simp only [List.mem_append] at hw ⊢
+    rcases hw with hpoint | hflag
+    · exact Or.inl hpoint
+    · exact Or.inr
+        (pointAddFlagWork_mem_work workStart w hflag)
+  rw [pointAddSetup]
+  exact usesOnly_append hcopies hflags
+
 /--
 Structural facts needed to reverse `pointAddFiniteCompute`.
 
@@ -11087,7 +11677,75 @@ theorem pointAddFiniteCompute_structural
         compute ∧
       (∀ w ∈ pointAddSelected workStart,
         w ∈ pointAddWork workStart) := by
-  sorry
+  dsimp only
+  have hcopiesFree : Classical.HPFree
+      (pointAddCoordinateCopies pointReg workStart) := by
+    simp [pointAddCoordinateCopies, pointAddCopyX, pointAddCopyY,
+      Arithmetic.copyReg_HPFree]
+  have hflagsFree : Classical.HPFree
+      (pointAddFlags pointReg workStart xC yC) := by
+    simp [pointAddFlags, zeroFlag_HPFree, equalFlag_HPFree,
+      loadConst_HPFree]
+  have hsetupFree : Classical.HPFree
+      (pointAddSetup pointReg workStart xC yC) := by
+    rw [pointAddSetup, Classical.hpFree_append]
+    exact ⟨hcopiesFree, hflagsFree⟩
+  have hgenericFree : Classical.HPFree
+      (genericPointBranch workStart xC yC) := by
+    simp [genericPointBranch, genericPointCompute_HPFree,
+      packFinitePoint_HPFree, controlledCopyReg_HPFree,
+      Arithmetic.hpFree_reverse]
+  have hdoubleFree : Classical.HPFree
+      (doublePointBranch workStart) := by
+    simp [doublePointBranch, doublePointCompute_HPFree,
+      packFinitePoint_HPFree, controlledCopyReg_HPFree,
+      Arithmetic.hpFree_reverse]
+  have hinfinityFree : Classical.HPFree
+      (infinityPointBranch workStart (.some hC)) := by
+    rw [infinityPointBranch, Classical.hpFree_append,
+      Classical.hpFree_append]
+    exact ⟨⟨loadConst_HPFree _ _, controlledCopyReg_HPFree _ _ _⟩,
+      loadConst_HPFree _ _⟩
+  have hbranchesFree : Classical.HPFree
+      (pointAddBranches workStart hC) := by
+    simp only [pointAddBranches, Classical.hpFree_append]
+    exact ⟨⟨hgenericFree, hdoubleFree⟩, hinfinityFree⟩
+  have hfree : Classical.HPFree
+      (pointAddFiniteCompute pointReg workStart hC) := by
+    rw [pointAddFiniteCompute, Classical.hpFree_append]
+    exact ⟨hsetupFree, hbranchesFree⟩
+  have hsetupWellFormed : CircuitWellFormed
+      (pointAddSetup pointReg workStart xC yC) := by
+    rw [pointAddSetup, circuitWellFormed_append]
+    exact ⟨pointAddCoordinateCopies_wellFormed
+        pointReg outReg workStart hnodup,
+      pointAddFlags_wellFormed
+        pointReg outReg workStart xC yC hnodup⟩
+  have hbranchesWellFormed : CircuitWellFormed
+      (pointAddBranches workStart hC) :=
+    pointAddBranches_wellFormed workStart hC
+  have hwellFormed : CircuitWellFormed
+      (pointAddFiniteCompute pointReg workStart hC) := by
+    rw [pointAddFiniteCompute, circuitWellFormed_append]
+    exact ⟨hsetupWellFormed, hbranchesWellFormed⟩
+  have hsetupUses : CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddSetup pointReg workStart xC yC) :=
+    pointAddSetup_usesOnly pointReg workStart xC yC
+  have hbranchesUses : CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddBranches workStart hC) := by
+    apply usesOnly_mono
+      (pointAddBranches_usesOnly_work workStart hC)
+    intro w hw
+    exact List.mem_append_right pointReg hw
+  have huses : CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddFiniteCompute pointReg workStart hC) := by
+    rw [pointAddFiniteCompute]
+    exact usesOnly_append hsetupUses hbranchesUses
+  exact ⟨hfree, hwellFormed, huses,
+    pointAddSelected_mem_work workStart⟩
 
 /--
 Generic Bennett copy-out lemma.
