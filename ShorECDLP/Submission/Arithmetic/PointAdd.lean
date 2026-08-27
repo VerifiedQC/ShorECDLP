@@ -6191,6 +6191,35 @@ theorem pointAddBranches_infinity_correct
   exact infinityPointBranch_true_value
     workStart hC st hinfinity hclean
 
+private theorem infinityPointBranch_false
+    (workStart : Wire) (C : Point) (st : BasisState)
+    (hcontrol : st (pointAddInfinityFlag workStart) = false) :
+    Classical.run (infinityPointBranch workStart C) st = st := by
+  let candidate := pointAddCandidate workStart
+  let constant := (encode C).val
+  have hcontrolNotCandidate :
+      pointAddInfinityFlag workStart ∉ candidate := by
+    intro hw
+    exact pointAddInfinityFlag_not_mem_activeSupport workStart (by
+      simp [candidate, pointAddBranchActiveSupport, hw])
+  have hcontrolAfterLoad :
+      Classical.run (loadConst candidate constant) st
+          (pointAddInfinityFlag workStart) = false := by
+    rw [loadConst_other
+      (pointAddInfinityFlag workStart) candidate constant st
+      hcontrolNotCandidate]
+    exact hcontrol
+  have hcandidateNodup : candidate.Nodup := by
+    dsimp [candidate, pointAddCandidate]
+    exact List.nodup_range'
+  simp only [infinityPointBranch, Classical.run_append]
+  rw [run_controlledCopyReg_false
+    (pointAddInfinityFlag workStart) candidate
+    (pointAddSelected workStart)
+    (Classical.run (loadConst candidate constant) st)
+    hcontrolAfterLoad]
+  exact run_loadConst_twice candidate constant st hcandidateNodup
+
 /--
 When all three branch controls are false, nothing is XORed into `selected`.
 
@@ -6217,7 +6246,18 @@ theorem pointAddBranches_inverse_correct
           (pointAddBranches workStart hC)
           st) =
       encodeNat (0 : Point) := by
-  sorry
+  have hselectedClean :
+      Clean (pointAddSelected workStart) st := by
+    apply Arithmetic.Clean.mono hclean
+    intro w hw
+    simp [pointAddBranchWork, hw]
+  rw [pointAddBranches, Classical.run_append,
+    Classical.run_append,
+    genericPointBranch_false workStart xC yC st hgeneric,
+    doublePointBranch_false workStart st hdouble,
+    infinityPointBranch_false workStart (.some hC) st hinfinity]
+  simpa [encodeNat] using
+    Arithmetic.Clean.regValue_eq_zero hselectedClean
 
 /--
 When the generic flag is the unique active branch, the branch circuit
