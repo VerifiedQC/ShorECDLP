@@ -31,7 +31,7 @@ no-borrow branch, and otherwise keeps the low bits of `raw + modulus = a + modul
 The final reverse is Bennett cleanup: public inputs are restored, the answer remains in the
 fresh output, and every owned work wire returns to zero.
 
-For canonical inputs and `modulus < 2^width`, the public contract proves
+For canonical inputs and `modulus < 2^width`, `modSub_program_correct` proves directly
 
 ```text
 value(out, after) = (value(a) + modulus - value(b)) % modulus
@@ -39,7 +39,8 @@ tCount(modSub) = 91 * width
 ```
 
 along with declared-wire locality, H/P-freedom, physical well-formedness, input preservation,
-and exact work cleanup for the same circuit term.
+and exact work cleanup for the same circuit term. `modSub_tCount` is its direct exact cost theorem;
+`modSub_contract` packages the complete compositional interface.
 -/
 
 namespace ShorECDLP
@@ -1094,5 +1095,32 @@ theorem modSub_contract
   · intro _
     exact modSub_wellFormed lhs rhs out raw constReg candidate
       cinSub coutsSub cinAdd coutsAdd modulus wiring.subOK wiring.addOK wiring.selectOK
+
+/-- Final direct correctness theorem for the exact clean modular-subtraction program.
+
+The conclusion states input preservation, the canonical modular difference, and restored
+workspace inline, so callers do not need to project the semantic field from `modSub_contract`. -/
+theorem modSub_program_correct
+    (lhs rhs out raw constReg candidate : List Wire)
+    (cinSub : Wire) (coutsSub : List Wire) (cinAdd : Wire) (coutsAdd : List Wire)
+    (modulus : Nat)
+    (wiring : ModSubWiring lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd modulus)
+    (st : BasisState)
+    (hvalid : (modSubLayout lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd).Valid)
+    (ha : st⟦ᵣlhs⟧ < modulus)
+    (hb : st⟦ᵣrhs⟧ < modulus)
+    (hclean : clean(out ++ (modSubLayout lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd).work, st)) :
+    let after := ⟪modSub lhs rhs out raw constReg candidate
+      cinSub coutsSub cinAdd coutsAdd modulus⟫ st
+    AgreesOn lhs st after ∧
+      AgreesOn rhs st after ∧
+      after⟦ᵣout⟧ = (st⟦ᵣlhs⟧ + modulus - st⟦ᵣrhs⟧) % modulus ∧
+      clean((modSubLayout lhs rhs out raw constReg candidate
+        cinSub coutsSub cinAdd coutsAdd).work, after) := by
+  exact (modSub_contract lhs rhs out raw constReg candidate
+    cinSub coutsSub cinAdd coutsAdd modulus wiring).correct st hvalid ha hb hclean
 
 end ShorECDLP

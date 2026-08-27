@@ -35,10 +35,11 @@ owns 770 history registers and reuses the same 257-stage multiplier workspace at
 ## Specification
 
 `add_wiring`, `mul_contract`, and `secp_modExp_contract` certify the exact programs above against
-the existing `ModAddWiring`, `ModMulContract`, and `ModExpContract` interfaces.  Their instantiated
-costs are respectively `23,387`, `24,966,522`, and `25,616,576,258` T gates.  Finally,
-`secp_fermat_inverse` specializes `FermatInv.correct` to this same `secpProgram`; it introduces no
-second circuit or independent inversion claim.
+the existing `ModAddWiring`, `ModMulContract`, and `ModExpContract` interfaces. Direct
+`*Program_correct` and `*Program_tCount` theorems expose the same correctness and cost facts
+without a contract projection. Their instantiated costs are respectively `23,387`, `24,966,522`,
+and `25,616,576,258` T gates. Finally, `secp_fermat_inverse` specializes `FermatInv.correct` to
+this same `secpProgram`; it introduces no second circuit or independent inversion claim.
 -/
 
 namespace ShorECDLP
@@ -391,6 +392,45 @@ theorem add_contract (lhsId rhsId outId start : Nat)
   rw [(reg lhsId).length_eq] at hcontract
   simpa [addProgram, addCost, addWork_eq_layoutWork lhsId rhsId outId start] using hcontract
 
+set_option maxRecDepth 10000 in
+/-- Direct correctness theorem for a placed width-257 modular-addition program. -/
+theorem addProgram_correct (lhsId rhsId outId start : Nat)
+    (hlhs : lhsId < start) (hrhs : rhsId < start) (hout : outId < start)
+    (hlr : lhsId ≠ rhsId) (st : BasisState)
+    (hlayout :
+      ({ lhs := (reg lhsId).wires
+         rhs := (reg rhsId).wires
+         out := (reg outId).wires
+         work := addWork start } : RegisterLayout).Valid)
+    (hlhsBound : st⟦ᵣ(reg lhsId).wires⟧ < p)
+    (hrhsBound : st⟦ᵣ(reg rhsId).wires⟧ < p)
+    (hclean : clean((reg outId).wires ++ addWork start, st)) :
+    let after := ⟪addProgram lhsId rhsId outId start⟫ st
+    AgreesOn (reg lhsId).wires st after ∧
+      AgreesOn (reg rhsId).wires st after ∧
+      after⟦ᵣ(reg outId).wires⟧ =
+        (st⟦ᵣ(reg lhsId).wires⟧ + st⟦ᵣ(reg rhsId).wires⟧) % p ∧
+      clean(addWork start, after) := by
+  exact (add_contract lhsId rhsId outId start hlhs hrhs hout hlr).correct
+    st hlayout hlhsBound hrhsBound hclean
+
+set_option maxRecDepth 10000 in
+/-- Exact T-count for any placed width-257 modular-addition program. -/
+theorem addProgram_tCount (lhsId rhsId outId start : Nat) :
+    tCount (addProgram lhsId rhsId outId start) = addCost := by
+  simpa [addProgram, addCost] using
+    modAdd_tCount (reg lhsId).wires (reg rhsId).wires (reg outId).wires
+      (reg start).wires (reg (start + 1)).wires (reg (start + 2)).wires
+      (bitWire (start + 3)) (reg (start + 4)).wires
+      (bitWire (start + 5)) (reg (start + 6)).wires p
+      ((reg rhsId).length_eq.trans (reg lhsId).length_eq.symm)
+      ((reg start).length_eq.trans (reg lhsId).length_eq.symm)
+      ((reg (start + 4)).length_eq.trans (reg lhsId).length_eq.symm)
+      ((reg (start + 1)).length_eq.trans (reg start).length_eq.symm)
+      ((reg (start + 2)).length_eq.trans (reg start).length_eq.symm)
+      ((reg (start + 6)).length_eq.trans (reg start).length_eq.symm)
+      ((reg outId).length_eq.trans (reg lhsId).length_eq.symm)
+
 def mulStageBlocks (start : Nat) : List Block :=
   [regBlock start, regBlock (start + 1)] ++ addScratchBlocks (start + 2) ++
     [regBlock (start + 9), regBlock (start + 10)] ++ addScratchBlocks (start + 11)
@@ -626,6 +666,39 @@ theorem mul_contract (lhsId rhsId outId accId start : Nat)
   change ModMulContract (plan.program (reg outId).wires)
     (plan.layout (reg outId).wires) p mulCost
   exact hcontract
+
+set_option maxRecDepth 10000 in
+/-- Direct correctness theorem for a placed width-257 modular-multiplication program. -/
+theorem placedMulPlan_program_correct (lhsId rhsId outId accId start : Nat)
+    (hlhs : lhsId < start) (hrhs : rhsId < start) (hacc : accId < start)
+    (hlr : lhsId ≠ rhsId) (hla : lhsId ≠ accId) (hra : rhsId ≠ accId)
+    (st : BasisState)
+    (hlayout :
+      ({ lhs := (reg lhsId).wires
+         rhs := (reg rhsId).wires
+         out := (reg outId).wires
+         work := mulWork accId start } : RegisterLayout).Valid)
+    (hlhsBound : st⟦ᵣ(reg lhsId).wires⟧ < p)
+    (hrhsBound : st⟦ᵣ(reg rhsId).wires⟧ < p)
+    (hclean : clean((reg outId).wires ++ mulWork accId start, st)) :
+    let plan := placedMulPlan lhsId rhsId accId start hlhs hacc
+    let after := ⟪plan.program (reg outId).wires⟫ st
+    AgreesOn (reg lhsId).wires st after ∧
+      AgreesOn (reg rhsId).wires st after ∧
+      after⟦ᵣ(reg outId).wires⟧ =
+        st⟦ᵣ(reg lhsId).wires⟧ * st⟦ᵣ(reg rhsId).wires⟧ % p ∧
+      clean(mulWork accId start, after) := by
+  exact (mul_contract lhsId rhsId outId accId start hlhs hrhs hacc hlr hla hra).correct
+    st hlayout hlhsBound hrhsBound hclean
+
+set_option maxRecDepth 10000 in
+/-- Exact T-count for any placed width-257 modular-multiplication program. -/
+theorem placedMulPlan_program_tCount (lhsId rhsId outId accId start : Nat)
+    (hlhs : lhsId < start) (hrhs : rhsId < start) (hacc : accId < start)
+    (hlr : lhsId ≠ rhsId) (hla : lhsId ≠ accId) (hra : rhsId ≠ accId) :
+    let plan := placedMulPlan lhsId rhsId accId start hlhs hacc
+    tCount (plan.program (reg outId).wires) = mulCost :=
+  (mul_contract lhsId rhsId outId accId start hlhs hrhs hacc hlr hla hra).counted
 
 def mulCall (lhsId rhsId outId accId start : Nat)
     (hlhs : lhsId < start) (hrhs : rhsId < start) (hacc : accId < start)
@@ -1054,6 +1127,20 @@ theorem secp_modAdd_contract : ModAddContract secpAddProgram secpAddLayout p add
       (by norm_num [outId, initialAccId])
       (by norm_num [baseId, exponentId]))
 
+/-- Direct functional correctness of the fixed width-257 modular-addition program. -/
+theorem secpAddProgram_correct (st : BasisState)
+    (hlayout : secpAddLayout.Valid)
+    (hlhsBound : st⟦ᵣsecpAddLayout.lhs⟧ < p)
+    (hrhsBound : st⟦ᵣsecpAddLayout.rhs⟧ < p)
+    (hclean : clean(secpAddLayout.out ++ secpAddLayout.work, st)) :
+    let after := ⟪secpAddProgram⟫ st
+    AgreesOn secpAddLayout.lhs st after ∧
+      AgreesOn secpAddLayout.rhs st after ∧
+      after⟦ᵣsecpAddLayout.out⟧ =
+        (st⟦ᵣsecpAddLayout.lhs⟧ + st⟦ᵣsecpAddLayout.rhs⟧) % p ∧
+      clean(secpAddLayout.work, after) := by
+  exact secp_modAdd_contract.correct st hlayout hlhsBound hrhsBound hclean
+
 /-- One fully instantiated width-257 schoolbook multiplication plan.  It is also the relative
 plan used to build every certified multiplier call in `secpSchedule`. -/
 def secpMulPlan :
@@ -1093,6 +1180,20 @@ theorem secp_modMul_contract : ModMulContract secpMulProgram secpMulLayout p mul
       (by norm_num [baseId, exponentId])
       (by norm_num [baseId, initialAccId])
       (by norm_num [exponentId, initialAccId]))
+
+/-- Direct functional correctness of the fixed width-257 modular-multiplication program. -/
+theorem secpMulProgram_correct (st : BasisState)
+    (hlayout : secpMulLayout.Valid)
+    (hlhsBound : st⟦ᵣsecpMulLayout.lhs⟧ < p)
+    (hrhsBound : st⟦ᵣsecpMulLayout.rhs⟧ < p)
+    (hclean : clean(secpMulLayout.out ++ secpMulLayout.work, st)) :
+    let after := ⟪secpMulProgram⟫ st
+    AgreesOn secpMulLayout.lhs st after ∧
+      AgreesOn secpMulLayout.rhs st after ∧
+      after⟦ᵣsecpMulLayout.out⟧ =
+        st⟦ᵣsecpMulLayout.lhs⟧ * st⟦ᵣsecpMulLayout.rhs⟧ % p ∧
+      clean(secpMulLayout.work, after) := by
+  exact secp_modMul_contract.correct st hlayout hlhsBound hrhsBound hclean
 
 private theorem initial_budget :
     historyStartId + historyCount (reg exponentId).wires.length ≤ duplicateId := by
@@ -1221,6 +1322,20 @@ def secpLayout : RegisterLayout := secpPlan.layout
 set_option maxRecDepth 10000 in
 theorem secp_modExp_contract : ModExpContract secpProgram secpLayout p secpCost := by
   exact ModExp.Plan.modExp_contract_uniform secpPlan secpSchedule_uniform
+
+/-- Direct functional correctness of the concrete secp256k1-field exponentiation program. -/
+theorem secpProgram_correct (st : BasisState)
+    (hlayout : secpLayout.Valid)
+    (hbaseBound : st⟦ᵣsecpLayout.lhs⟧ < p)
+    (hexponentBound : st⟦ᵣsecpLayout.rhs⟧ < p)
+    (hclean : clean(secpLayout.out ++ secpLayout.work, st)) :
+    let after := ⟪secpProgram⟫ st
+    AgreesOn secpLayout.lhs st after ∧
+      AgreesOn secpLayout.rhs st after ∧
+      after⟦ᵣsecpLayout.out⟧ =
+        st⟦ᵣsecpLayout.lhs⟧ ^ st⟦ᵣsecpLayout.rhs⟧ % p ∧
+      clean(secpLayout.work, after) := by
+  exact secp_modExp_contract.correct st hlayout hbaseBound hexponentBound hclean
 
 /-- The instantiated 257-bit modular adder has this exact Clifford+T cost. -/
 theorem addCost_eq : addCost = 23387 := by

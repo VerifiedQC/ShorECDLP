@@ -48,9 +48,10 @@ HPFree(Plan.program)
 CircuitWellFormed(Plan.program)
 ```
 
-`Plan.modMul_contract` is the complete public statement for that exact program. The remaining
-schedule, support, arithmetic, and Bennett-cancellation lemmas establish the contract without
-importing a concrete modular-adder implementation.
+`Plan.program_correct` and `Plan.program_tCount` expose the final correctness and cost directly;
+`Plan.modMul_contract` bundles those facts with locality and physical-validity obligations for
+composition. The remaining schedule, support, arithmetic, and Bennett-cancellation lemmas
+establish this surface without importing a concrete modular-adder implementation.
 -/
 
 namespace ShorECDLP
@@ -1106,6 +1107,26 @@ theorem modMul_contract {controls power acc : List Wire}
       Clean (acc ++ plan.privateWires) (run (plan.program out) st)
   rw [hprogramRun]
   exact ⟨hpowerAgree, hcontrolsAgree, houtputValue, hworkCleanAfter⟩
+
+/-- Direct correctness theorem for the Bennett-clean modular-multiplication program.
+
+This is the semantic field of `modMul_contract` stated inline, so callers can use the
+program theorem without projecting through a contract structure. -/
+theorem program_correct {controls power acc : List Wire}
+    (plan : Plan modulus addCost controls power acc) (out : List Wire) (width : Nat)
+    (hvalid : plan.Valid width) (hmod : 0 < modulus) (st : BasisState)
+    (hlayout : (plan.layout out).Valid)
+    (hpowerBound : st⟦ᵣpower⟧ < modulus)
+    (hcontrolsBound : st⟦ᵣcontrols⟧ < modulus)
+    (hclean : clean(out ++ (acc ++ plan.privateWires), st)) :
+    let after := ⟪plan.program out⟫ st
+    AgreesOn power st after ∧
+      AgreesOn controls st after ∧
+      after⟦ᵣout⟧ = st⟦ᵣpower⟧ * st⟦ᵣcontrols⟧ % modulus ∧
+      clean(acc ++ plan.privateWires, after) := by
+  simpa [layout] using
+    (modMul_contract plan out width hvalid hmod).correct st hlayout
+      hpowerBound hcontrolsBound hclean
 
 end Plan
 

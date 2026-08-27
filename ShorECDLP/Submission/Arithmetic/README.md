@@ -119,12 +119,12 @@ flowchart LR
 | [`RippleAdder.lean`](RippleAdder.lean) | Chains full-adder cells into an n-bit ripple-carry adder. | `ripple`, `ripple_correct`, `ripple_tCount`, `ripple_HPFree`, `ripple_wellFormed` |
 | [`Primitives.lean`](Primitives.lean) | Reusable implementation-neutral leaves: constant loading, controlled selection, register copying, support lemmas, and reverse-circuit cancellation. | `loadConst`, `selectPoint`, `copyReg`, `Arithmetic.run_reverse_cancel` |
 | [`Predicates.lean`](Predicates.lean) | Bennett-clean reversible zero and equality flags over `X`, `CX`, and `CCX`. | `zeroFlag`, `zeroFlag_correct`, `equalFlag`, `equalFlag_correct` |
-| [`ModAdd.lean`](ModAdd.lean) | Adds two registers modulo an arbitrary positive modulus using ripple addition, one conditional reduction, and uncomputation. | `modAdd`, `modAdd_contract` with exact cost `91 * width` |
-| [`ModSub.lean`](ModSub.lean) | Subtracts two registers modulo an arbitrary positive modulus using two's-complement ripple subtraction, conditional correction, and uncomputation. | `modSub`, `modSub_contract` with exact cost `91 * width` |
-| [`ModMul.lean`](ModMul.lean) | Bennett-clean schoolbook modular multiplication built from certified modular-addition calls. | `ModMul.Plan.program`, `ModMul.Plan.modMul_contract` |
-| [`ModExp.lean`](ModExp.lean) | Bennett-clean, LSB-first square-and-multiply built from certified modular-multiplication calls. | `ModExp.Plan.program`, `ModExp.Plan.modExp_contract`, `ModExp.Plan.modExp_contract_uniform` |
+| [`ModAdd.lean`](ModAdd.lean) | Adds two registers modulo an arbitrary positive modulus using ripple addition, one conditional reduction, and uncomputation. | `modAdd`, `modAdd_program_correct`, `modAdd_tCount`, `modAdd_contract` |
+| [`ModSub.lean`](ModSub.lean) | Subtracts two registers modulo an arbitrary positive modulus using two's-complement ripple subtraction, conditional correction, and uncomputation. | `modSub`, `modSub_program_correct`, `modSub_tCount`, `modSub_contract` |
+| [`ModMul.lean`](ModMul.lean) | Bennett-clean schoolbook modular multiplication built from certified modular-addition calls. | `ModMul.Plan.program`, `ModMul.Plan.program_correct`, `ModMul.Plan.program_tCount`, `ModMul.Plan.modMul_contract` |
+| [`ModExp.lean`](ModExp.lean) | Bennett-clean, LSB-first square-and-multiply built from certified modular-multiplication calls. | `ModExp.Plan.program`, `ModExp.Plan.program_correct`, `ModExp.Plan.program_tCount`, `ModExp.Plan.program_tCount_eq_of_uniform`, `ModExp.Plan.modExp_contract` |
 | [`FermatInv.lean`](FermatInv.lean) | Thin field-specific correctness closure: exponentiation by `p - 2` computes inversion in `Fp`. It defines no second circuit. | `FermatInv.correct` |
-| [`Secp256k1Instance.lean`](Secp256k1Instance.lean) | Concrete block allocation for the width-257 secp256k1 modular adder, multiplier, exponentiator, and Fermat inversion specialization. | `Secp256k1Instance.secpAddWiring`, `secpMulPlan`, `secpPlan`, `secp_modExp_contract`, `secp_fermat_inverse` |
+| [`Secp256k1Instance.lean`](Secp256k1Instance.lean) | Concrete block allocation for the width-257 secp256k1 modular adder, multiplier, exponentiator, and Fermat inversion specialization. | `addProgram_correct`, `addProgram_tCount`, `placedMulPlan_program_correct`, `placedMulPlan_program_tCount`, `secpAddProgram_correct`, `secpAddProgram_tCount`, `secpMulProgram_correct`, `secpMulProgram_tCount`, `secpProgram_correct`, `secpProgram_tCount`, `secp_fermat_inverse` |
 
 ## Contract discipline
 
