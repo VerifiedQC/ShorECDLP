@@ -64,6 +64,73 @@ def maskReg (control : Wire) : List Wire → List Wire → Circuit
   | s :: src, d :: dst => Gate.CCX control s d :: maskReg control src dst
   | _, _ => []
 
+/-! ## Abstract schoolbook program -/
+
+/-- A schoolbook multiplication schedule. At each low-to-high multiplier bit, one abstract
+modular-add call doubles the current power and another adds a controlled mask into the
+accumulator. Every output is kept as history for the final Bennett reverse pass. -/
+inductive Plan (modulus addCost : Nat) : List Wire → List Wire → List Wire → Type where
+  | done (power acc : List Wire) : Plan modulus addCost (List.nil : List Wire) power acc
+  | step {control : Wire} {controls power acc : List Wire}
+      (duplicate nextPower mask nextAcc doubleWork accWork : List Wire)
+      (doubleProgram accProgram : Circuit)
+      (doubleSpec : ModAddContract doubleProgram
+        { lhs := power, rhs := duplicate, out := nextPower, work := doubleWork }
+        modulus addCost)
+      (accSpec : ModAddContract accProgram
+        { lhs := mask, rhs := acc, out := nextAcc, work := accWork }
+        modulus addCost)
+      (rest : Plan modulus addCost controls nextPower nextAcc) :
+      Plan modulus addCost (control :: controls) power acc
+
+/-- The four operations performed by one schoolbook schedule node. -/
+def stageProgram (control : Wire) (power duplicate mask : List Wire)
+    (doubleProgram accProgram : Circuit) : Circuit :=
+  copyReg power duplicate ++ doubleProgram ++ maskReg control power mask ++ accProgram
+
+namespace Plan
+
+/-- Wires allocated by the schedule, excluding its current power/accumulator inputs and
+remaining multiplier controls. -/
+def privateWires : {controls power acc : List Wire} →
+    Plan modulus addCost controls power acc → List Wire
+  | _, _, _, .done .. => []
+  | _, _, _, .step duplicate nextPower mask nextAcc doubleWork accWork _ _ _ _ rest =>
+      duplicate ++ nextPower ++ doubleWork ++ mask ++ nextAcc ++ accWork ++ rest.privateWires
+
+/-- The accumulator produced by the last schedule node. -/
+def finalAcc : {controls power acc : List Wire} →
+    Plan modulus addCost controls power acc → List Wire
+  | _, _, _, .done _ acc => acc
+  | _, _, _, .step _ _ _ _ _ _ _ _ _ _ rest => rest.finalAcc
+
+/-- Forward schoolbook history computation. -/
+def forward : {controls power acc : List Wire} →
+    Plan modulus addCost controls power acc → Circuit
+  | _, _, _, .done .. => []
+  | control :: _, power, _, .step duplicate _ mask _ _ _ doubleProgram accProgram _ _ rest =>
+      stageProgram control power duplicate mask doubleProgram accProgram ++ rest.forward
+
+/-- Public multiplier layout; the initial zero accumulator and all recorded history are work. -/
+def layout {controls power acc : List Wire}
+    (plan : Plan modulus addCost controls power acc) (out : List Wire) : RegisterLayout :=
+  { lhs := power
+    rhs := controls
+    out := out
+    work := acc ++ plan.privateWires }
+
+/-- Wires used by the forward history; the public copy-out register is deliberately absent. -/
+def activeWires {controls power acc : List Wire}
+    (plan : Plan modulus addCost controls power acc) : List Wire :=
+  power ++ controls ++ acc ++ plan.privateWires
+
+/-- Bennett-clean modular multiplication built from a forward history, copy-out, and reverse. -/
+def program {controls power acc : List Wire}
+    (plan : Plan modulus addCost controls power acc) (out : List Wire) : Circuit :=
+  plan.forward ++ copyReg plan.finalAcc out ++ plan.forward.reverse
+
+end Plan
+
 theorem maskReg_tCount (control : Wire) (src dst : List Wire)
     (hlen : dst.length = src.length) :
     tCount (maskReg control src dst) = 7 * src.length := by
@@ -226,70 +293,7 @@ theorem maskReg_wellFormed (control : Wire) :
           exact ⟨⟨hcs, hcd, hcross s (List.mem_cons_self ..) d (List.mem_cons_self ..)⟩,
             ih dst htailNd⟩
 
-/-! ## Abstract schoolbook schedule -/
-
-/-- A schoolbook multiplication schedule.  At each low-to-high multiplier bit, one abstract
-modular-add call doubles the current power and another adds a controlled mask into the
-accumulator.  Every output is kept as history for the final Bennett reverse pass. -/
-inductive Plan (modulus addCost : Nat) : List Wire → List Wire → List Wire → Type where
-  | done (power acc : List Wire) : Plan modulus addCost (List.nil : List Wire) power acc
-  | step {control : Wire} {controls power acc : List Wire}
-      (duplicate nextPower mask nextAcc doubleWork accWork : List Wire)
-      (doubleProgram accProgram : Circuit)
-      (doubleSpec : ModAddContract doubleProgram
-        { lhs := power, rhs := duplicate, out := nextPower, work := doubleWork }
-        modulus addCost)
-      (accSpec : ModAddContract accProgram
-        { lhs := mask, rhs := acc, out := nextAcc, work := accWork }
-        modulus addCost)
-      (rest : Plan modulus addCost controls nextPower nextAcc) :
-      Plan modulus addCost (control :: controls) power acc
-
-/-- The four operations performed by one schoolbook schedule node. -/
-def stageProgram (control : Wire) (power duplicate mask : List Wire)
-    (doubleProgram accProgram : Circuit) : Circuit :=
-  copyReg power duplicate ++ doubleProgram ++ maskReg control power mask ++ accProgram
-
 namespace Plan
-
-/-- Wires allocated by the schedule, excluding its current power/accumulator inputs and
-remaining multiplier controls. -/
-def privateWires : {controls power acc : List Wire} →
-    Plan modulus addCost controls power acc → List Wire
-  | _, _, _, .done .. => []
-  | _, _, _, .step duplicate nextPower mask nextAcc doubleWork accWork _ _ _ _ rest =>
-      duplicate ++ nextPower ++ doubleWork ++ mask ++ nextAcc ++ accWork ++ rest.privateWires
-
-/-- The accumulator produced by the last schedule node. -/
-def finalAcc : {controls power acc : List Wire} →
-    Plan modulus addCost controls power acc → List Wire
-  | _, _, _, .done _ acc => acc
-  | _, _, _, .step _ _ _ _ _ _ _ _ _ _ rest => rest.finalAcc
-
-/-- Forward schoolbook history computation. -/
-def forward : {controls power acc : List Wire} →
-    Plan modulus addCost controls power acc → Circuit
-  | _, _, _, .done .. => []
-  | control :: _, power, _, .step duplicate _ mask _ _ _ doubleProgram accProgram _ _ rest =>
-      stageProgram control power duplicate mask doubleProgram accProgram ++ rest.forward
-
-/-- Public multiplier layout; the initial zero accumulator and all recorded history are work. -/
-def layout {controls power acc : List Wire}
-    (plan : Plan modulus addCost controls power acc) (out : List Wire) : RegisterLayout :=
-  { lhs := power
-    rhs := controls
-    out := out
-    work := acc ++ plan.privateWires }
-
-/-- Wires used by the forward history; the public copy-out register is deliberately absent. -/
-def activeWires {controls power acc : List Wire}
-    (plan : Plan modulus addCost controls power acc) : List Wire :=
-  power ++ controls ++ acc ++ plan.privateWires
-
-/-- Bennett-clean modular multiplication built from a forward history, copy-out, and reverse. -/
-def program {controls power acc : List Wire}
-    (plan : Plan modulus addCost controls power acc) (out : List Wire) : Circuit :=
-  plan.forward ++ copyReg plan.finalAcc out ++ plan.forward.reverse
 
 /-- The final accumulator is one of the registers reserved in the multiplier workspace. -/
 theorem finalAcc_sublist_work :

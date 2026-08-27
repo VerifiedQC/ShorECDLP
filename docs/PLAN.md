@@ -33,7 +33,7 @@ M5 item:
   family) together with a proof that it is `correct` and a proof of its `counted` T-count bound —
   both stated about the *same* `program` term.
 - **The semantics `correct` is stated against.** A layer-neutral basis-state type
-  `BasisState := Nat → Bool` with a *classical* action (`Classical.run`, gates as basis-state
+  `BasisState := Wire → Bool` with a *classical* action (`Classical.run`, gates as basis-state
   permutations) for the reversible arithmetic (M1–M3), and — added at M4 — a *separate*
   Hilbert-space layer over `BasisState →₀ ℂ` for the QFT, bridged to the classical one by an
   agreement lemma so arithmetic correctness lifts to the quantum layer for free (see §5).

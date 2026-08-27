@@ -73,6 +73,271 @@ def bitsValue : List Bool → Nat
   | [] => 0
   | b :: bs => (if b then 1 else 0) + 2 * bitsValue bs
 
+/-- The product candidate computed on every iteration, independently of the exponent bit. -/
+def productCandidate (modulus acc power : Nat) : Nat :=
+  acc * power % modulus
+
+/-- Keep the old accumulator for bit zero and choose the product candidate for bit one. -/
+def selectAccumulator (bit : Bool) (acc candidate : Nat) : Nat :=
+  if bit then candidate else acc
+
+/-- One unconditional-product-plus-selector accumulator step. -/
+def mulSelectStep (modulus acc power : Nat) (bit : Bool) : Nat :=
+  selectAccumulator bit acc (productCandidate modulus acc power)
+
+/--
+The exact forward recurrence implemented by the circuit.  A product candidate is computed on
+every exponent bit, while the final unused square is deliberately omitted.
+-/
+def squareMultiplyAcc (modulus : Nat) : Nat → Nat → List Bool → Nat
+  | acc, _, [] => acc
+  | acc, power, [bit] => mulSelectStep modulus acc power bit
+  | acc, power, bit :: nextBit :: bits =>
+      squareMultiplyAcc modulus
+        (mulSelectStep modulus acc power bit)
+        ((power * power) % modulus)
+        (nextBit :: bits)
+
+/-! ## Certified multiplication schedule -/
+
+/-- An LSB-first register whose width is recorded in its type. -/
+structure Reg (width : Nat) where
+  wires : List Wire
+  length_eq : wires.length = width
+
+/-! ## Executable selector and initialization -/
+
+/-- M1.3.2's reversible point selector specialized to width-indexed registers. -/
+def selectReg {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width) : Circuit :=
+  selectPoint flag ifFalse.wires ifTrue.wires out.wires
+
+/-- Load the literal one into a clean accumulator using the existing X-only constant loader. -/
+def initOne {width : Nat} (acc : Reg width) : Circuit :=
+  loadConst acc.wires 1
+
+/-- Public ports and private workspace of one placed modular-multiplication call. -/
+structure MulPorts (width : Nat) where
+  lhs : Reg width
+  rhs : Reg width
+  out : Reg width
+  work : List Wire
+
+namespace MulPorts
+
+/-- Forget the width indices to obtain the shared arithmetic-contract layout. -/
+def layout {width : Nat} (ports : MulPorts width) : RegisterLayout where
+  lhs := ports.lhs.wires
+  rhs := ports.rhs.wires
+  out := ports.out.wires
+  work := ports.work
+
+end MulPorts
+
+/-- One exact program, cost, placement, and M1.4 certificate. -/
+structure MulCall (width modulus : Nat) where
+  ports : MulPorts width
+  program : Circuit
+  cost : Nat
+  certified : ModMulContract program ports.layout modulus cost
+
+/--
+A typed LSB-first execution schedule.
+
+`last` deliberately has no squaring call.  A `cons` step has another bit to process, so it
+copies the current power into a distinct register and certifies a separate square.  The
+indices enforce accumulator/power continuity and bind the scheduled bits to the public
+exponent register without propositional list equalities.
+-/
+inductive Schedule (width modulus : Nat) (mulWork : List Wire) (duplicate : Reg width) :
+    Reg width → Reg width → List Wire → Reg width → Type where
+  | nil (acc power : Reg width) :
+      Schedule width modulus mulWork duplicate acc power List.nil acc
+  | last (acc power : Reg width) (bit : Wire)
+      (product nextAcc : Reg width) (accMul : MulCall width modulus)
+      (accLhs : accMul.ports.lhs = power)
+      (accRhs : accMul.ports.rhs = acc)
+      (accOut : accMul.ports.out = product)
+      (accWork : accMul.ports.work = mulWork) :
+      Schedule width modulus mulWork duplicate acc power (bit :: List.nil) nextAcc
+  | cons (acc power : Reg width) (bit nextBit : Wire) (bits : List Wire)
+      (nextPower product nextAcc finalAcc : Reg width)
+      (accMul squareMul : MulCall width modulus)
+      (accLhs : accMul.ports.lhs = power)
+      (accRhs : accMul.ports.rhs = acc)
+      (accOut : accMul.ports.out = product)
+      (accWork : accMul.ports.work = mulWork)
+      (squareLhs : squareMul.ports.lhs = power)
+      (squareRhs : squareMul.ports.rhs = duplicate)
+      (squareOut : squareMul.ports.out = nextPower)
+      (squareWork : squareMul.ports.work = mulWork)
+      (tail : Schedule width modulus mulWork duplicate nextAcc nextPower
+        (nextBit :: bits) finalAcc) :
+      Schedule width modulus mulWork duplicate acc power (bit :: nextBit :: bits) finalAcc
+
+namespace Schedule
+
+/-- Forward history computation in exact execution order. -/
+def forward {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
+    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Circuit :=
+  match schedule with
+  | .nil _ _ => []
+  | .last acc _ flag product nextAcc accMul _ _ _ _ =>
+      accMul.program ++ selectReg flag acc product nextAcc
+  | .cons acc power flag _ _ _ product nextAcc _ accMul squareMul
+      _ _ _ _ _ _ _ _ tail =>
+      accMul.program ++ selectReg flag acc product nextAcc ++
+        copyReg power.wires duplicate.wires ++ squareMul.program ++
+        (copyReg power.wires duplicate.wires).reverse ++ tail.forward
+
+/-- Registers and callee workspaces owned by a schedule, each listed exactly once. -/
+def owned {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
+    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : List Wire :=
+  match schedule with
+  | .nil _ _ => []
+  | .last _ _ _ product nextAcc _ _ _ _ _ =>
+      product.wires ++ nextAcc.wires
+  | .cons _ _ _ _ _ nextPower product nextAcc _ _ _
+      _ _ _ _ _ _ _ _ tail =>
+      nextPower.wires ++ product.wires ++ nextAcc.wires ++ tail.owned
+
+/-- Exact T-count of the forward history-building pass, assuming one Toffoli selector per bit. -/
+def forwardCost {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
+    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Nat :=
+  match schedule with
+  | .nil _ _ => 0
+  | .last _ _ _ _ _ accMul _ _ _ _ => accMul.cost + 7 * width
+  | .cons _ _ _ _ _ _ _ _ _ accMul squareMul _ _ _ _ _ _ _ _ tail =>
+      accMul.cost + squareMul.cost + 7 * width + tail.forwardCost
+
+/-- Complete support of a final multiply/select step. -/
+def lastSupport {width : Nat} (flag : Wire) (power acc product nextAcc : Reg width)
+    (mulWork : List Wire) : List Wire :=
+  flag :: (power.wires ++ acc.wires ++ product.wires ++ nextAcc.wires ++ mulWork)
+
+/-- Complete support of a non-final multiply/select/copy/square step. -/
+def consSupport {width : Nat} (flag : Wire) (power acc product nextAcc : Reg width)
+    (duplicate nextPower : Reg width) (mulWork : List Wire) : List Wire :=
+  flag :: (power.wires ++ acc.wires ++ product.wires ++ nextAcc.wires ++
+    duplicate.wires ++ nextPower.wires ++ mulWork)
+
+/-- Pairwise cross-list wire distinctness. -/
+def WireDisjoint (xs ys : List Wire) : Prop :=
+  ∀ x ∈ xs, ∀ y ∈ ys, x ≠ y
+
+/--
+Static validity of a typed schedule.  Each local step support is duplicate-free, and the
+step is disjoint from still-fresh exponent/history owners.  The intentionally shared
+`duplicate` and `mulWork` registers are excluded from the future set: each step restores them
+clean before recursion.
+-/
+def Valid {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
+    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Prop :=
+  match schedule with
+  | .nil _ _ => True
+  | .last _ power flag product nextAcc _ _ _ _ _ =>
+      (lastSupport flag power acc product nextAcc mulWork).Nodup
+  | .cons _ power flag nextBit bits nextPower product nextAcc _ _ _
+      _ _ _ _ _ _ _ _ tail =>
+      (consSupport flag power acc product nextAcc duplicate nextPower mulWork).Nodup ∧
+        WireDisjoint
+          (consSupport flag power acc product nextAcc duplicate nextPower mulWork)
+          ((nextBit :: bits) ++ tail.owned) ∧
+        tail.Valid
+
+/-- Every wire read or written by the forward computation. -/
+def activeWires {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
+    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : List Wire :=
+  bits ++ power.wires ++ acc.wires ++ schedule.owned ++ duplicate.wires ++ mulWork
+
+/-- Number of certified multiplier executions in the forward pass. -/
+def multiplierCalls {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
+    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Nat :=
+  match schedule with
+  | .nil _ _ => 0
+  | .last .. => 1
+  | .cons _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ tail => 2 + tail.multiplierCalls
+
+/-- Every certified modular-multiplication call in a schedule has one common exact cost. -/
+def UniformMulCost (mulCost : Nat) :
+    {width modulus : Nat} → {mulWork : List Wire} → {duplicate acc power : Reg width} →
+      {bits : List Wire} → {finalAcc : Reg width} →
+      Schedule width modulus mulWork duplicate acc power bits finalAcc → Prop
+  | _, _, _, _, _, _, _, _, .nil .. => True
+  | _, _, _, _, _, _, _, _, .last _ _ _ _ _ accMul _ _ _ _ =>
+      accMul.cost = mulCost
+  | _, _, _, _, _, _, _, _,
+      .cons _ _ _ _ _ _ _ _ _ accMul squareMul _ _ _ _ _ _ _ _ tail =>
+      accMul.cost = mulCost ∧ squareMul.cost = mulCost ∧ tail.UniformMulCost mulCost
+
+/--
+Semantic interface of the forward schedule.  Besides the accumulator recurrence it records
+that the two deliberately shared scratch regions are clean at the recursive handoff.
+-/
+def ForwardCorrectStatement {width modulus : Nat}
+    {mulWork duplicate acc power bits finalAcc}
+    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Prop :=
+  ∀ st : BasisState,
+    schedule.Valid →
+    schedule.activeWires.Nodup →
+    1 < modulus →
+    regValue acc.wires st < modulus →
+    regValue power.wires st < modulus →
+    Clean (schedule.owned ++ duplicate.wires ++ mulWork) st →
+    let after := Classical.run schedule.forward st
+    regValue finalAcc.wires after =
+        squareMultiplyAcc modulus (regValue acc.wires st)
+          (regValue power.wires st) (bits.map st) ∧
+      Clean (duplicate.wires ++ mulWork) after
+
+end Schedule
+
+/-! ## Complete executable plan -/
+
+/-- Complete placement and arithmetic hypotheses for one modular-exponentiation circuit. -/
+structure Plan (width modulus : Nat) where
+  base : Reg width
+  exponent : Reg width
+  out : Reg width
+  initialAcc : Reg width
+  finalAcc : Reg width
+  mulWork : List Wire
+  duplicate : Reg width
+  schedule : Schedule width modulus mulWork duplicate initialAcc base exponent.wires finalAcc
+  valid : schedule.Valid
+  widthPos : 0 < width
+  modulusLarge : 1 < modulus
+
+namespace Plan
+
+/-- Initialize one and execute the typed square-and-multiply history. -/
+def compute {width modulus : Nat} (plan : Plan width modulus) : Circuit :=
+  initOne plan.initialAcc ++ plan.schedule.forward
+
+/-- Copy the final accumulator to the public output, then Bennett-uncompute the history. -/
+def program {width modulus : Nat} (plan : Plan width modulus) : Circuit :=
+  plan.compute ++ copyReg plan.finalAcc.wires plan.out.wires ++ plan.compute.reverse
+
+/-- Public base/exponent/output followed by the accumulator and all scheduled history. -/
+def layout {width modulus : Nat} (plan : Plan width modulus) : RegisterLayout where
+  lhs := plan.base.wires
+  rhs := plan.exponent.wires
+  out := plan.out.wires
+  work := plan.initialAcc.wires ++ plan.schedule.owned ++ plan.duplicate.wires ++ plan.mulWork
+
+/-- Forward read/write support; the public output is deliberately absent. -/
+def activeWires {width modulus : Nat} (plan : Plan width modulus) : List Wire :=
+  plan.schedule.activeWires
+
+/-- Bennett doubles the exact cost of the forward pass; initialization and copies are Clifford. -/
+def cost {width modulus : Nat} (plan : Plan width modulus) : Nat :=
+  2 * plan.schedule.forwardCost
+
+end Plan
+
+/-! ## Proof suites -/
+
+/-! ### Arithmetic proofs -/
+
 /-- `bitsValue` uses exactly the same little-endian convention as `regValue`. -/
 theorem bitsValue_map_eq_regValue (ws : List Wire) (st : BasisState) :
     bitsValue (ws.map st) = regValue ws st := by
@@ -89,18 +354,6 @@ theorem bitsValue_lt_two_pow (bs : List Bool) :
       cases b <;> simp only [bitsValue, List.length_cons, Bool.false_eq_true,
         ↓reduceIte, Nat.zero_add, Nat.pow_succ] <;> omega
 
-/-- The product candidate computed on every iteration, independently of the exponent bit. -/
-def productCandidate (modulus acc power : Nat) : Nat :=
-  acc * power % modulus
-
-/-- Keep the old accumulator for bit zero and choose the product candidate for bit one. -/
-def selectAccumulator (bit : Bool) (acc candidate : Nat) : Nat :=
-  if bit then candidate else acc
-
-/-- One unconditional-product-plus-selector accumulator step. -/
-def mulSelectStep (modulus acc power : Nat) (bit : Bool) : Nat :=
-  selectAccumulator bit acc (productCandidate modulus acc power)
-
 theorem mulSelectStep_eq (modulus acc power : Nat) (bit : Bool) :
     mulSelectStep modulus acc power bit =
       if bit then acc * power % modulus else acc := by
@@ -112,19 +365,6 @@ theorem mulSelectStep_lt {modulus acc power : Nat} (hmod : 0 < modulus)
   cases bit
   · exact hacc
   · exact Nat.mod_lt _ hmod
-
-/--
-The exact forward recurrence implemented by the circuit.  A product candidate is computed on
-every exponent bit, while the final unused square is deliberately omitted.
--/
-def squareMultiplyAcc (modulus : Nat) : Nat → Nat → List Bool → Nat
-  | acc, _, [] => acc
-  | acc, power, [bit] => mulSelectStep modulus acc power bit
-  | acc, power, bit :: nextBit :: bits =>
-      squareMultiplyAcc modulus
-        (mulSelectStep modulus acc power bit)
-        ((power * power) % modulus)
-        (nextBit :: bits)
 
 /-- Canonical inputs produce a canonical accumulator at every iteration. -/
 theorem squareMultiplyAcc_lt {modulus acc power : Nat} (hmod : 0 < modulus)
@@ -197,174 +437,104 @@ theorem squareMultiplyAcc_register_correct {modulus power : Nat} (hmod : 1 < mod
       power ^ regValue ws st % modulus := by
   rw [squareMultiplyAcc_one_correct hmod, bitsValue_map_eq_regValue]
 
-/-! ## Certified multiplication schedule -/
-
-/-- An LSB-first register whose width is recorded in its type. -/
-structure Reg (width : Nat) where
-  wires : List Wire
-  length_eq : wires.length = width
-
-/-! ## Reused reversible selector -/
-
-/-- Align three equally wide registers into the column format consumed by M1.3.2's selector. -/
-def selectorColumns : List Wire → List Wire → List Wire → List (Wire × Wire × Wire)
-  | x :: xs, y :: ys, o :: os => (x, y, o) :: selectorColumns xs ys os
-  | _, _, _ => []
-
-/-- Aligned columns project back to all three source lists. -/
-theorem selectorColumns_maps (xs ys os : List Wire)
-    (hxy : xs.length = ys.length) (hxo : xs.length = os.length) :
-    (selectorColumns xs ys os).map (fun c => c.1) = xs ∧
-      (selectorColumns xs ys os).map (fun c => c.2.1) = ys ∧
-      (selectorColumns xs ys os).map (fun c => c.2.2) = os := by
-  induction xs generalizing ys os with
-  | nil =>
-      cases ys with
-      | nil =>
-          cases os with
-          | nil => simp [selectorColumns]
-          | cons o os => simp at hxo
-      | cons y ys => simp at hxy
-  | cons x xs ih =>
-      cases ys with
-      | nil => simp at hxy
-      | cons y ys =>
-          cases os with
-          | nil => simp at hxo
-          | cons o os =>
-              have hxy' : xs.length = ys.length := by simpa using hxy
-              have hxo' : xs.length = os.length := by simpa using hxo
-              obtain ⟨hleft, hright, hout⟩ := ih ys os hxy' hxo'
-              simp [selectorColumns, hleft, hright, hout]
-
-/-- Selector columns for width-indexed registers. -/
-def Reg.selectorColumns {width : Nat} (x y out : Reg width) :
-    List (Wire × Wire × Wire) :=
-  ShorECDLP.ModExp.selectorColumns x.wires y.wires out.wires
-
-theorem Reg.selectorColumns_maps {width : Nat} (x y out : Reg width) :
-    (x.selectorColumns y out).map (fun c => c.1) = x.wires ∧
-      (x.selectorColumns y out).map (fun c => c.2.1) = y.wires ∧
-      (x.selectorColumns y out).map (fun c => c.2.2) = out.wires := by
-  apply ShorECDLP.ModExp.selectorColumns_maps
-  · rw [x.length_eq, y.length_eq]
-  · rw [x.length_eq, out.length_eq]
-
-theorem Reg.selectorColumns_length {width : Nat} (x y out : Reg width) :
-    (x.selectorColumns y out).length = width := by
-  have h := (x.selectorColumns_maps y out).1
-  have := congrArg List.length h
-  simpa [x.length_eq] using this
-
-/-- M1.3.2's reversible point selector specialized to width-indexed registers. -/
-def selectReg {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width) : Circuit :=
-  selectPoint flag (ifFalse.selectorColumns ifTrue out)
+/-! ### Selector proofs -/
 
 /-- The specialized selector writes exactly the chosen source value into a clean output. -/
 theorem selectReg_correct {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width)
-    (st : BasisState) (hok : selectOK flag (ifFalse.selectorColumns ifTrue out))
+    (st : BasisState) (hok : selectOK flag ifFalse.wires ifTrue.wires out.wires)
     (hclean : Clean out.wires st) :
     regValue out.wires (Classical.run (selectReg flag ifFalse ifTrue out) st) =
       if st flag then regValue ifTrue.wires st else regValue ifFalse.wires st := by
-  have hcols := ifFalse.selectorColumns_maps ifTrue out
-  have hfresh : ∀ c ∈ ifFalse.selectorColumns ifTrue out, st c.2.2 = false := by
-    intro c hc
-    apply hclean c.2.2
-    rw [← hcols.2.2]
-    exact List.mem_map_of_mem hc
-  simpa [selectReg, hcols.1, hcols.2.1, hcols.2.2] using
-    selectPoint_correct flag (ifFalse.selectorColumns ifTrue out) st hok hfresh
+  exact selectPoint_correct flag ifFalse.wires ifTrue.wires out.wires st hok hclean
 
 /-- The selector changes no wire outside its output register. -/
 theorem selectReg_other {width : Nat} (flag w : Wire) (ifFalse ifTrue out : Reg width)
-    (st : BasisState) (hok : selectOK flag (ifFalse.selectorColumns ifTrue out))
+    (st : BasisState) (hok : selectOK flag ifFalse.wires ifTrue.wires out.wires)
     (hw : w ∉ out.wires) :
     Classical.run (selectReg flag ifFalse ifTrue out) st w = st w := by
-  apply selectPoint_other flag w (ifFalse.selectorColumns ifTrue out) st hok
-  simpa [(ifFalse.selectorColumns_maps ifTrue out).2.2] using hw
+  exact selectPoint_other flag w ifFalse.wires ifTrue.wires out.wires st hok hw
 
 /-- One Toffoli per output bit gives exact selector cost `7 * width`. -/
 theorem selectReg_tCount {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width) :
     tCount (selectReg flag ifFalse ifTrue out) = 7 * width := by
-  rw [selectReg, selectPoint_tCount, ifFalse.selectorColumns_length ifTrue out]
+  have h := selectPoint_tCount flag ifFalse.wires ifTrue.wires out.wires
+    (by rw [ifFalse.length_eq, ifTrue.length_eq])
+    (by rw [ifFalse.length_eq, out.length_eq])
+  simpa [selectReg, out.length_eq] using h
 
 theorem selectReg_HPFree {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width) :
     Classical.HPFree (selectReg flag ifFalse ifTrue out) := by
-  exact selectPoint_HPFree flag (ifFalse.selectorColumns ifTrue out)
+  exact selectPoint_HPFree flag ifFalse.wires ifTrue.wires out.wires
 
 theorem selectReg_wellFormed {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width)
-    (hok : selectOK flag (ifFalse.selectorColumns ifTrue out)) :
+    (hok : selectOK flag ifFalse.wires ifTrue.wires out.wires) :
     CircuitWellFormed (selectReg flag ifFalse ifTrue out) := by
-  exact selectPoint_wellFormed flag (ifFalse.selectorColumns ifTrue out) hok
+  exact selectPoint_wellFormed flag ifFalse.wires ifTrue.wires out.wires hok
+
+private theorem selectOK_of_nodup_lists (flag : Wire) :
+    ∀ (xs ys outs : List Wire), xs.length = ys.length → xs.length = outs.length →
+      (flag :: (xs ++ ys ++ outs)).Nodup → selectOK flag xs ys outs := by
+  intro xs
+  induction xs with
+  | nil =>
+      intro ys outs hxy hxo _
+      cases ys <;> cases outs <;> simp [selectOK] at hxy hxo ⊢
+  | cons x xs ih =>
+      intro ys outs hxy hxo hnodup
+      cases ys with
+      | nil => simp at hxy
+      | cons y ys =>
+          cases outs with
+          | nil => simp at hxo
+          | cons out outs =>
+              have hxy' : xs.length = ys.length := by simpa using hxy
+              have hxo' : xs.length = outs.length := by simpa using hxo
+              obtain ⟨hflag, hbody⟩ := List.nodup_cons.mp hnodup
+              have hshape : ((x :: xs) ++ ((y :: ys) ++ (out :: outs))).Nodup := by
+                simpa [List.append_assoc] using hbody
+              obtain ⟨hfalseNd, htailNd, hfalseTail⟩ := List.nodup_append.mp hshape
+              obtain ⟨htrueNd, houtNd, htrueOut⟩ := List.nodup_append.mp htailNd
+              have htailNodup : (flag :: (xs ++ ys ++ outs)).Nodup := by
+                apply List.Nodup.sublist _ hnodup
+                apply List.Sublist.cons₂
+                have hxs : xs.Sublist (x :: xs) :=
+                  List.Sublist.cons x (List.Sublist.refl xs)
+                have hys : ys.Sublist (y :: ys) :=
+                  List.Sublist.cons y (List.Sublist.refl ys)
+                have houts : outs.Sublist (out :: outs) :=
+                  List.Sublist.cons out (List.Sublist.refl outs)
+                exact (hxs.append hys).append houts
+              simp only [selectOK]
+              refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+                ih ys outs hxy' hxo' htailNodup⟩
+              · exact hfalseTail x (by simp) y (by simp)
+              · exact hfalseTail x (by simp) out (by simp)
+              · exact htrueOut y (by simp) out (by simp)
+              · intro h; apply hflag; simp [h]
+              · intro h; apply hflag; simp [h]
+              · intro h; apply hflag; simp [h]
+              · exact (List.nodup_cons.mp houtNd).1
+              · intro hx; exact hfalseTail x (by simp) x (by simp [hx]) rfl
+              · intro hy; exact htrueOut y (by simp) y (by simp [hy]) rfl
+              · intro x' hx'; exact hfalseTail x' (by simp [hx']) out (by simp)
+              · intro y' hy'; exact htrueOut y' (by simp [hy']) out (by simp)
 
 /-- Global duplicate-freedom of the selector roles discharges M1.3.2's local `selectOK`. -/
 theorem selectOK_of_nodup {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width)
     (hnodup : (flag :: (ifFalse.wires ++ ifTrue.wires ++ out.wires)).Nodup) :
-    selectOK flag (ifFalse.selectorColumns ifTrue out) := by
-  have hmaps := ifFalse.selectorColumns_maps ifTrue out
-  obtain ⟨hflag, hbody⟩ := List.nodup_cons.mp hnodup
-  have hshape : (ifFalse.wires ++ (ifTrue.wires ++ out.wires)).Nodup := by
-    simpa [List.append_assoc] using hbody
-  obtain ⟨hfalseNd, htailNd, hfalseTail⟩ := List.nodup_append.mp hshape
-  obtain ⟨htrueNd, houtNd, htrueOut⟩ := List.nodup_append.mp htailNd
-  simp only [selectOK]
-  rw [hmaps.2.2]
-  refine ⟨houtNd, ?_, ?_⟩
-  · intro hf
-    apply hflag
-    simp [hf]
-  · intro c hc
-    have hcFalse : c.1 ∈ ifFalse.wires := by
-      rw [← hmaps.1]
-      exact List.mem_map_of_mem hc
-    have hcTrue : c.2.1 ∈ ifTrue.wires := by
-      rw [← hmaps.2.1]
-      exact List.mem_map_of_mem hc
-    refine ⟨?_, ?_, ?_, ?_, ?_⟩
-    · intro ho
-      exact hfalseTail c.1 hcFalse c.1 (by simp [ho]) rfl
-    · intro ho
-      exact htrueOut c.2.1 hcTrue c.2.1 ho rfl
-    · intro heq
-      apply hflag
-      simp [heq, hcFalse]
-    · intro heq
-      apply hflag
-      simp [heq, hcTrue]
-    · exact hfalseTail c.1 hcFalse c.2.1 (by simp [hcTrue])
+    selectOK flag ifFalse.wires ifTrue.wires out.wires := by
+  exact selectOK_of_nodup_lists flag ifFalse.wires ifTrue.wires out.wires
+    (by rw [ifFalse.length_eq, ifTrue.length_eq])
+    (by rw [ifFalse.length_eq, out.length_eq]) hnodup
 
 /-- The specialized selector reads and writes only its flag and three declared registers. -/
 theorem selectReg_usesOnly {width : Nat} (flag : Wire) (ifFalse ifTrue out : Reg width) :
     CircuitUsesOnly (flag :: (ifFalse.wires ++ ifTrue.wires ++ out.wires))
       (selectReg flag ifFalse ifTrue out) := by
-  apply usesOnly_mono (selectPoint_usesOnly flag (ifFalse.selectorColumns ifTrue out))
-  intro w hw
-  simp only [selectFootprint, List.mem_cons] at hw ⊢
-  rcases hw with rfl | hw
-  · exact Or.inl rfl
-  · simp only [List.mem_flatMap] at hw
-    obtain ⟨c, hc, hwc⟩ := hw
-    have hmaps := ifFalse.selectorColumns_maps ifTrue out
-    have hx : c.1 ∈ ifFalse.wires := by
-      rw [← hmaps.1]
-      exact List.mem_map_of_mem hc
-    have hy : c.2.1 ∈ ifTrue.wires := by
-      rw [← hmaps.2.1]
-      exact List.mem_map_of_mem hc
-    have ho : c.2.2 ∈ out.wires := by
-      rw [← hmaps.2.2]
-      exact List.mem_map_of_mem hc
-    have hw' : w = c.1 ∨ w = c.2.1 ∨ w = c.2.2 := by simpa using hwc
-    rcases hw' with rfl | rfl | rfl
-    · simp [hx]
-    · simp [hy]
-    · simp [ho]
+  simpa [selectReg, selectFootprint] using
+    selectPoint_usesOnly flag ifFalse.wires ifTrue.wires out.wires
 
-/-! ## Multiplicative-identity initialization -/
-
-/-- Load the literal one into a clean accumulator using the existing X-only constant loader. -/
-def initOne {width : Nat} (acc : Reg width) : Circuit :=
-  loadConst acc.wires 1
+/-! ### Initialization proofs -/
 
 theorem initOne_correct {width : Nat} (acc : Reg width) (st : BasisState)
     (hnodup : acc.wires.Nodup) (hclean : Clean acc.wires st) (hwidth : 0 < width) :
@@ -394,32 +564,9 @@ theorem initOne_wellFormed {width : Nat} (acc : Reg width) :
     CircuitWellFormed (initOne acc) :=
   loadConst_wellFormed acc.wires 1
 
-/-- Public ports and private workspace of one placed modular-multiplication call. -/
-structure MulPorts (width : Nat) where
-  lhs : Reg width
-  rhs : Reg width
-  out : Reg width
-  work : List Wire
-
-namespace MulPorts
-
-/-- Forget the width indices to obtain the shared arithmetic-contract layout. -/
-def layout {width : Nat} (ports : MulPorts width) : RegisterLayout where
-  lhs := ports.lhs.wires
-  rhs := ports.rhs.wires
-  out := ports.out.wires
-  work := ports.work
-
-end MulPorts
-
-/-- One exact program, cost, placement, and M1.4 certificate. -/
-structure MulCall (width modulus : Nat) where
-  ports : MulPorts width
-  program : Circuit
-  cost : Nat
-  certified : ModMulContract program ports.layout modulus cost
-
 namespace MulCall
+
+/-! ### Multiplication-call proofs -/
 
 /-- Enlarge the certified call's four declared register roles into a caller support. -/
 theorem usesOnly {width modulus : Nat} (call : MulCall width modulus) (ws : List Wire)
@@ -446,122 +593,9 @@ theorem layoutValid_of_nodup {width modulus : Nat} (call : MulCall width modulus
 
 end MulCall
 
-/--
-A typed LSB-first execution schedule.
-
-`last` deliberately has no squaring call.  A `cons` step has another bit to process, so it
-copies the current power into a distinct register and certifies a separate square.  The
-indices enforce accumulator/power continuity and bind the scheduled bits to the public
-exponent register without propositional list equalities.
--/
-inductive Schedule (width modulus : Nat) (mulWork : List Wire) (duplicate : Reg width) :
-    Reg width → Reg width → List Wire → Reg width → Type where
-  | nil (acc power : Reg width) :
-      Schedule width modulus mulWork duplicate acc power List.nil acc
-  | last (acc power : Reg width) (bit : Wire)
-      (product nextAcc : Reg width) (accMul : MulCall width modulus)
-      (accLhs : accMul.ports.lhs = power)
-      (accRhs : accMul.ports.rhs = acc)
-      (accOut : accMul.ports.out = product)
-      (accWork : accMul.ports.work = mulWork) :
-      Schedule width modulus mulWork duplicate acc power (bit :: List.nil) nextAcc
-  | cons (acc power : Reg width) (bit nextBit : Wire) (bits : List Wire)
-      (nextPower product nextAcc finalAcc : Reg width)
-      (accMul squareMul : MulCall width modulus)
-      (accLhs : accMul.ports.lhs = power)
-      (accRhs : accMul.ports.rhs = acc)
-      (accOut : accMul.ports.out = product)
-      (accWork : accMul.ports.work = mulWork)
-      (squareLhs : squareMul.ports.lhs = power)
-      (squareRhs : squareMul.ports.rhs = duplicate)
-      (squareOut : squareMul.ports.out = nextPower)
-      (squareWork : squareMul.ports.work = mulWork)
-      (tail : Schedule width modulus mulWork duplicate nextAcc nextPower
-        (nextBit :: bits) finalAcc) :
-      Schedule width modulus mulWork duplicate acc power (bit :: nextBit :: bits) finalAcc
-
 namespace Schedule
 
-/-- Registers and callee workspaces owned by a schedule, each listed exactly once. -/
-def owned {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
-    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : List Wire :=
-  match schedule with
-  | .nil _ _ => []
-  | .last _ _ _ product nextAcc _ _ _ _ _ =>
-      product.wires ++ nextAcc.wires
-  | .cons _ _ _ _ _ nextPower product nextAcc _ _ _
-      _ _ _ _ _ _ _ _ tail =>
-      nextPower.wires ++ product.wires ++ nextAcc.wires ++ tail.owned
-
-/-- Exact T-count of the forward history-building pass, assuming one Toffoli selector per bit. -/
-def forwardCost {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
-    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Nat :=
-  match schedule with
-  | .nil _ _ => 0
-  | .last _ _ _ _ _ accMul _ _ _ _ => accMul.cost + 7 * width
-  | .cons _ _ _ _ _ _ _ _ _ accMul squareMul _ _ _ _ _ _ _ _ tail =>
-      accMul.cost + squareMul.cost + 7 * width + tail.forwardCost
-
-/-- Complete support of a final multiply/select step. -/
-def lastSupport {width : Nat} (flag : Wire) (power acc product nextAcc : Reg width)
-    (mulWork : List Wire) : List Wire :=
-  flag :: (power.wires ++ acc.wires ++ product.wires ++ nextAcc.wires ++ mulWork)
-
-/-- Complete support of a non-final multiply/select/copy/square step. -/
-def consSupport {width : Nat} (flag : Wire) (power acc product nextAcc : Reg width)
-    (duplicate nextPower : Reg width) (mulWork : List Wire) : List Wire :=
-  flag :: (power.wires ++ acc.wires ++ product.wires ++ nextAcc.wires ++
-    duplicate.wires ++ nextPower.wires ++ mulWork)
-
-/-- Pairwise cross-list wire distinctness. -/
-def WireDisjoint (xs ys : List Wire) : Prop :=
-  ∀ x ∈ xs, ∀ y ∈ ys, x ≠ y
-
-/--
-Static validity of a typed schedule.  Each local step support is duplicate-free, and the
-step is disjoint from still-fresh exponent/history owners.  The intentionally shared
-`duplicate` and `mulWork` registers are excluded from the future set: each step restores them
-clean before recursion.
--/
-def Valid {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
-    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Prop :=
-  match schedule with
-  | .nil _ _ => True
-  | .last _ power flag product nextAcc _ _ _ _ _ =>
-      (lastSupport flag power acc product nextAcc mulWork).Nodup
-  | .cons _ power flag nextBit bits nextPower product nextAcc _ _ _
-      _ _ _ _ _ _ _ _ tail =>
-      (consSupport flag power acc product nextAcc duplicate nextPower mulWork).Nodup ∧
-        WireDisjoint
-          (consSupport flag power acc product nextAcc duplicate nextPower mulWork)
-          ((nextBit :: bits) ++ tail.owned) ∧
-        tail.Valid
-
-/-- Forward history computation in exact execution order. -/
-def forward {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
-    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Circuit :=
-  match schedule with
-  | .nil _ _ => []
-  | .last acc _ flag product nextAcc accMul _ _ _ _ =>
-      accMul.program ++ selectReg flag acc product nextAcc
-  | .cons acc power flag _ _ _ product nextAcc _ accMul squareMul
-      _ _ _ _ _ _ _ _ tail =>
-      accMul.program ++ selectReg flag acc product nextAcc ++
-        copyReg power.wires duplicate.wires ++ squareMul.program ++
-        (copyReg power.wires duplicate.wires).reverse ++ tail.forward
-
-/-- Every wire read or written by the forward computation. -/
-def activeWires {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
-    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : List Wire :=
-  bits ++ power.wires ++ acc.wires ++ schedule.owned ++ duplicate.wires ++ mulWork
-
-/-- Number of certified multiplier executions in the forward pass. -/
-def multiplierCalls {width modulus : Nat} {mulWork duplicate acc power bits finalAcc}
-    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Nat :=
-  match schedule with
-  | .nil _ _ => 0
-  | .last .. => 1
-  | .cons _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ tail => 2 + tail.multiplierCalls
+/-! ### Schedule proofs -/
 
 /-- Omitting the final square gives `2*n - 1` calls for a nonempty `n`-bit schedule. -/
 theorem multiplierCalls_eq {width modulus : Nat}
@@ -578,18 +612,6 @@ theorem multiplierCalls_eq {width modulus : Nat}
       rw [ih]
       simp only [List.length_cons]
       omega
-
-/-- Every certified modular-multiplication call in a schedule has one common exact cost. -/
-def UniformMulCost (mulCost : Nat) :
-    {width modulus : Nat} → {mulWork : List Wire} → {duplicate acc power : Reg width} →
-      {bits : List Wire} → {finalAcc : Reg width} →
-      Schedule width modulus mulWork duplicate acc power bits finalAcc → Prop
-  | _, _, _, _, _, _, _, _, .nil .. => True
-  | _, _, _, _, _, _, _, _, .last _ _ _ _ _ accMul _ _ _ _ =>
-      accMul.cost = mulCost
-  | _, _, _, _, _, _, _, _,
-      .cons _ _ _ _ _ _ _ _ _ accMul squareMul _ _ _ _ _ _ _ _ tail =>
-      accMul.cost = mulCost ∧ squareMul.cost = mulCost ∧ tail.UniformMulCost mulCost
 
 /-- A uniform-cost schedule charges one multiplier cost per structural call and one selector
 cost per exponent bit. -/
@@ -865,26 +887,6 @@ theorem finalAcc_sublist_work {width modulus : Nat}
       have hpref := List.sublist_append_right
         (acc.wires ++ nextPower.wires ++ product.wires) (nextAcc.wires ++ tail.owned)
       simpa [owned, List.append_assoc] using ih.trans hpref
-
-/--
-Semantic interface of the forward schedule.  Besides the accumulator recurrence it records
-that the two deliberately shared scratch regions are clean at the recursive handoff.
--/
-def ForwardCorrectStatement {width modulus : Nat}
-    {mulWork duplicate acc power bits finalAcc}
-    (schedule : Schedule width modulus mulWork duplicate acc power bits finalAcc) : Prop :=
-  ∀ st : BasisState,
-    schedule.Valid →
-    schedule.activeWires.Nodup →
-    1 < modulus →
-    regValue acc.wires st < modulus →
-    regValue power.wires st < modulus →
-    Clean (schedule.owned ++ duplicate.wires ++ mulWork) st →
-    let after := Classical.run schedule.forward st
-    regValue finalAcc.wires after =
-        squareMultiplyAcc modulus (regValue acc.wires st)
-          (regValue power.wires st) (bits.map st) ∧
-      Clean (duplicate.wires ++ mulWork) after
 
 open Classical
 
@@ -1604,44 +1606,9 @@ theorem bennett_cleanup_copyOut
   simp only [hprogramRun]
   exact ⟨hafterActive, hafterOutValue.trans hcopyValue⟩
 
-/-- Complete placement and arithmetic hypotheses for one modular-exponentiation circuit. -/
-structure Plan (width modulus : Nat) where
-  base : Reg width
-  exponent : Reg width
-  out : Reg width
-  initialAcc : Reg width
-  finalAcc : Reg width
-  mulWork : List Wire
-  duplicate : Reg width
-  schedule : Schedule width modulus mulWork duplicate initialAcc base exponent.wires finalAcc
-  valid : schedule.Valid
-  widthPos : 0 < width
-  modulusLarge : 1 < modulus
-
 namespace Plan
 
-/-- Public base/exponent/output followed by the accumulator and all scheduled history. -/
-def layout {width modulus : Nat} (plan : Plan width modulus) : RegisterLayout where
-  lhs := plan.base.wires
-  rhs := plan.exponent.wires
-  out := plan.out.wires
-  work := plan.initialAcc.wires ++ plan.schedule.owned ++ plan.duplicate.wires ++ plan.mulWork
-
-/-- Initialize one and execute the typed square-and-multiply history. -/
-def compute {width modulus : Nat} (plan : Plan width modulus) : Circuit :=
-  initOne plan.initialAcc ++ plan.schedule.forward
-
-/-- Copy the final accumulator to the public output, then Bennett-uncompute the history. -/
-def program {width modulus : Nat} (plan : Plan width modulus) : Circuit :=
-  plan.compute ++ copyReg plan.finalAcc.wires plan.out.wires ++ plan.compute.reverse
-
-/-- Forward read/write support; the public output is deliberately absent. -/
-def activeWires {width modulus : Nat} (plan : Plan width modulus) : List Wire :=
-  plan.schedule.activeWires
-
-/-- Bennett doubles the exact cost of the forward pass; initialization and copies are Clifford. -/
-def cost {width modulus : Nat} (plan : Plan width modulus) : Nat :=
-  2 * plan.schedule.forwardCost
+/-! ## Plan proofs -/
 
 /-- The schedule's active support is exactly the two public inputs plus contract work. -/
 theorem activeWires_eq {width modulus : Nat} (plan : Plan width modulus) :

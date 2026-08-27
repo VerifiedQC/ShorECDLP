@@ -1,9 +1,11 @@
 # Arithmetic
 
 This directory contains the verified reversible field-arithmetic stack used by the
-secp256k1 submission. Registers are lists of wire indices in least-significant-bit-first
-order. The arithmetic circuits are deliberately textbook and generic in the modulus;
-`Secp256k1Instance.lean` supplies their concrete 257-bit allocation at the field prime `p`.
+secp256k1 submission. Registers are `List Wire` values in least-significant-bit-first
+order. Multi-register programs take those lists as separate arguments rather than packing
+bit positions into tuples. The arithmetic circuits are deliberately textbook and generic
+in the modulus; `Secp256k1Instance.lean` supplies their concrete 257-bit allocation at the
+field prime `p`.
 
 Every composite operation is proved against the classical basis-state semantics and
 packages correctness, locality, T-count, H/P-freedom, and gate well-formedness for the

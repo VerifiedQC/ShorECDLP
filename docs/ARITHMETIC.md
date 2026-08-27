@@ -152,7 +152,7 @@ All arithmetic circuits use only `X`, `CX`, and `CCX`.
 A computational basis state assigns one Boolean to every wire:
 
 ```lean
-abbrev BasisState := Nat -> Bool
+abbrev BasisState := Wire -> Bool
 ```
 
 Only finitely many wires are touched by a finite circuit, but the total function makes it easy to discuss a circuit placed inside a larger machine.
@@ -170,7 +170,7 @@ means: return the same state as `s`, except wire `i` now contains `b`.
 A register is represented by a list of wire indices. The first wire is the least-significant bit. Its value is:
 
 ```lean
-def regValue : List Nat -> BasisState -> Nat
+def regValue : List Wire -> BasisState -> Nat
   | [],      _ => 0
   | w :: ws, s => (if s w then 1 else 0) + 2 * regValue ws s
 ```
@@ -512,24 +512,26 @@ $$
 
 Source: `ShorECDLP/Submission/Arithmetic/RippleAdder.lean`.
 
-### 5.1 Lining up binary columns
+### 5.1 Lining up binary registers
 
-For an `n`-bit addition, the source represents each little-endian column by a triple
+For an `n`-bit addition, the source passes the three little-endian registers separately:
 
 ```text
-(a_i, b_i, sum_i).
+a    = [a_0, a_1, ..., a_(n-1)]
+b    = [b_0, b_1, ..., b_(n-1)]
+sum  = [sum_0, sum_1, ..., sum_(n-1)]
 ```
 
-A separate list supplies fresh carry-out wires `co_i`. The carry-out of column `i` becomes the carry-in of column `i+1`.
+A fourth list supplies fresh carry-out wires `co_i`. The carry-out of bit position `i` becomes the carry-in of bit position `i+1`. Keeping the roles as separate `List Wire` arguments makes the Lean program match the register-level pseudocode directly; no list of tuple-packed columns is constructed.
 
 The circuit is defined recursively:
 
 ```text
-ripple([], cin, []) = []
+ripple([], [], [], cin, []) = []
 
-ripple((a_i,b_i,sum_i) :: rest, cin, co_i :: carries) =
+ripple(a_i :: as, b_i :: bs, sum_i :: sums, cin, co_i :: carries) =
   fullAdder(a_i,b_i,cin; sum_i,co_i)
-  ++ ripple(rest,co_i,carries)
+  ++ ripple(as,bs,sums,co_i,carries)
 ```
 
 The list order is LSB-first, so the recursive execution follows the direction in which carry information flows.
@@ -578,10 +580,10 @@ The Lean proof additionally tracks that the first cell leaves all later input an
 
 ### 5.4 Wire validity
 
-`wiresOK cols cin couts` records the distinctness conditions required by the chain:
+`wiresOK a b sum cin couts` records alignment and the distinctness conditions required by the chain:
 
 - the five roles in each full-adder cell are distinct;
-- a cell's new sum/carry outputs do not alias later columns;
+- a cell's new sum/carry outputs do not alias later register positions;
 - carry wires are placed consistently;
 - later cells cannot overwrite earlier results.
 
@@ -599,7 +601,7 @@ The public arithmetic and structural results include:
 - `ripple_HPFree`
 - `ripple_wellFormed`
 
-For `n = cols.length` and a matching carry list:
+For `n = a.length` and matching `b`, `sum`, and carry lists:
 
 $$
 T_{ripple}(n) = 21n.
@@ -668,7 +670,7 @@ The T-count is zero.
 
 ### 6.3 Reversible selection
 
-Under `selectOK flag cols` and a clean output register, the selector chooses `x` or `y` into that output without changing either input. The `selectOK` predicate makes output wires duplicate-free and separates the flag, both sources, and outputs in every gate role:
+Under `selectOK flag xs ys outs` and a clean output register `outs`, the selector chooses `xs` or `ys` into that output without changing either input. The predicate also records register alignment, makes output wires duplicate-free, and separates the flag, both sources, and outputs in every gate role:
 
 ```text
 selectBit(flag, x, y; clean out):
@@ -683,7 +685,7 @@ Trace the two cases.
 - If `flag=0`, the `CCX` does nothing. The first `CX` leaves `out=x`, and the final `CX` restores `y`.
 - If `flag=1`, the middle value is `y xor x`, so the Toffoli toggles `out` from `x` to `x xor (y xor x) = y`; the final CNOT again restores `y`.
 
-`selectPoint` maps this bit selector over aligned columns. It costs one Toffoli per selected bit:
+`selectPoint flag xs ys outs` maps this bit selector directly over the three aligned registers. It costs one Toffoli per selected bit:
 
 $$
 T_{select}(w) = 7w.
@@ -1782,7 +1784,7 @@ The formulas teach three architectural facts.
 | classical-to-quantum ket bridge | **proved** | requires `HPFree` |
 | inner-product preservation | **proved** | requires `CircuitWellFormed` |
 | full adder | **constructed and proved** | parameterized wire indices |
-| ripple adder | **constructed and proved** | valid aligned columns and clean outputs |
+| ripple adder | **constructed and proved** | valid aligned registers and clean outputs |
 | modular adder | **constructed and proved parametrically** | supplied wire lists plus `ModAddWiring` |
 | modular multiplier | **verified typed constructor/API** | consumes supplied `ModAddContract`s |
 | modular exponentiator | **verified typed constructor/API** | consumes supplied `ModMulContract`s |
