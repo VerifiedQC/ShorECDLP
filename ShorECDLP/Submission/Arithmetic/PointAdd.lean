@@ -2884,6 +2884,77 @@ def pointAddFiniteCompute
     pointAddBranches workStart hC
 
 /-! -------------------------------------------------------------------------
+    HP-free structure
+------------------------------------------------------------------------- -/
+
+theorem pointAddFlags_HPFree
+    (pointReg : List Wire)
+    (workStart : Wire)
+    (xC yC : Fp) :
+    Classical.HPFree (pointAddFlags pointReg workStart xC yC) := by
+  simp [pointAddFlags, zeroFlag_HPFree, equalFlag_HPFree,
+    loadConst_HPFree]
+
+theorem pointAddCoordinateCopies_HPFree
+    (pointReg : List Wire)
+    (workStart : Wire) :
+    Classical.HPFree (pointAddCoordinateCopies pointReg workStart) := by
+  simp [pointAddCoordinateCopies, pointAddCopyX, pointAddCopyY,
+    Arithmetic.copyReg_HPFree]
+
+theorem pointAddSetup_HPFree
+    (pointReg : List Wire)
+    (workStart : Wire)
+    (xC yC : Fp) :
+    Classical.HPFree (pointAddSetup pointReg workStart xC yC) := by
+  simp [pointAddSetup, pointAddCoordinateCopies_HPFree,
+    pointAddFlags_HPFree]
+
+theorem genericPointBranch_HPFree
+    (workStart : Wire)
+    (xC yC : Fp) :
+    Classical.HPFree (genericPointBranch workStart xC yC) := by
+  simp [genericPointBranch, genericPointCompute_HPFree,
+    packFinitePoint_HPFree, controlledCopyReg_HPFree,
+    Arithmetic.hpFree_reverse]
+
+theorem doublePointBranch_HPFree
+    (workStart : Wire) :
+    Classical.HPFree (doublePointBranch workStart) := by
+  simp [doublePointBranch, doublePointCompute_HPFree,
+    packFinitePoint_HPFree, controlledCopyReg_HPFree,
+    Arithmetic.hpFree_reverse]
+
+theorem infinityPointBranch_HPFree
+    (workStart : Wire)
+    (C : Point) :
+    Classical.HPFree (infinityPointBranch workStart C) := by
+  rw [infinityPointBranch]
+  simp only [Classical.hpFree_append]
+  exact
+    ⟨⟨loadConst_HPFree _ _,
+      controlledCopyReg_HPFree _ _ _⟩,
+      loadConst_HPFree _ _⟩
+
+theorem pointAddBranches_HPFree
+    (workStart : Wire)
+    {xC yC : Fp}
+    (hC : curve.toAffine.Nonsingular xC yC) :
+    Classical.HPFree (pointAddBranches workStart hC) := by
+  simp [pointAddBranches, genericPointBranch_HPFree,
+    doublePointBranch_HPFree, infinityPointBranch_HPFree]
+
+theorem pointAddFiniteCompute_HPFree
+    (pointReg : List Wire)
+    (workStart : Wire)
+    {xC yC : Fp}
+    (hC : curve.toAffine.Nonsingular xC yC) :
+    Classical.HPFree
+      (pointAddFiniteCompute pointReg workStart hC) := by
+  simp [pointAddFiniteCompute, pointAddSetup_HPFree,
+    pointAddBranches_HPFree]
+
+/-! -------------------------------------------------------------------------
     Public PointAdd operation
 ------------------------------------------------------------------------- -/
 
@@ -12045,6 +12116,113 @@ theorem bennett_copyReg_eq_writeReg
       run_reverse_cancel compute st hfree hwf
   simp only [Classical.run_append]
   rw [hcopy, hcommute, hcancel]
+
+theorem pointAddFiniteCompute_agrees_pointReg_core
+    [Fact (Nat.Prime p)]
+    (pointReg outReg : List Wire)
+    (workStart : Wire)
+    {xC yC : Fp}
+    (hC : curve.toAffine.Nonsingular xC yC)
+    (st : BasisState)
+    (hpointLength : pointReg.length = pointWidth)
+    (hnodup :
+      (pointReg ++ outReg ++ pointAddWork workStart).Nodup)
+    (hclean : Clean (pointAddWork workStart) st) :
+      AgreesOn pointReg st
+        (Classical.run
+          (pointAddFiniteCompute pointReg workStart hC) st) := by
+  let copied :=
+    Classical.run
+      (pointAddCoordinateCopies pointReg workStart) st
+
+  have hcopies :=
+    pointAddCoordinateCopies_correct
+      pointReg outReg workStart st
+      hpointLength hnodup hclean
+
+  change
+    AgreesOn pointReg st copied ∧
+      regValue (pointAddX workStart) copied =
+        regValue (PointRegister.x pointReg) st ∧
+      regValue (pointAddY workStart) copied =
+        regValue (PointRegister.y pointReg) st ∧
+      Clean (pointAddFlagWork workStart) copied ∧
+      Clean (pointAddBranchWork workStart) copied
+    at hcopies
+
+  have hflags :=
+    pointAddFlags_semantics
+      pointReg outReg workStart
+      (xC := xC) (yC := yC)
+      copied
+      hpointLength hnodup
+      hcopies.2.2.2.1
+      hcopies.2.2.2.2
+
+  let setup :=
+    Classical.run
+      (pointAddFlags pointReg workStart xC yC) copied
+
+  change
+    AgreesOn pointReg copied setup ∧
+      regValue (pointAddX workStart) setup =
+        regValue (pointAddX workStart) copied ∧
+      regValue (pointAddY workStart) setup =
+        regValue (pointAddY workStart) copied ∧
+      setup (pointAddInfinityFlag workStart) =
+        decide (regValue (PointRegister.tag pointReg) copied = 0) ∧
+      setup (pointAddGenericFlag workStart) =
+        decide (
+          regValue (PointRegister.tag pointReg) copied ≠ 0 ∧
+          regValue (PointRegister.x pointReg) copied ≠ xC.val) ∧
+      setup (pointAddDoubleFlag workStart) =
+        decide (
+          regValue (PointRegister.tag pointReg) copied ≠ 0 ∧
+          regValue (PointRegister.x pointReg) copied = xC.val ∧
+          regValue (PointRegister.y pointReg) copied ≠ (-yC).val) ∧
+      Clean (pointAddBranchWork workStart) setup
+    at hflags
+
+  have hsetupAgree : AgreesOn pointReg st setup := by
+    intro w hw
+    exact (hflags.1 w hw).trans (hcopies.1 w hw)
+
+  have hbranchUses :
+      CircuitUsesOnly
+        (pointAddWork workStart)
+        (pointAddBranches workStart hC) :=
+    pointAddBranches_usesOnly_work workStart hC
+
+  have hpointWork :
+      ∀ w ∈ pointReg, w ∉ pointAddWork workStart := by
+    obtain ⟨_, _, hcross⟩ :=
+      List.nodup_append.mp hnodup
+    intro w hw hww
+    exact
+      (hcross
+        w
+        (List.mem_append_left outReg hw)
+        w
+        hww) rfl
+
+  rw [pointAddFiniteCompute, Classical.run_append]
+  intro w hw
+  calc
+    Classical.run
+        (pointAddBranches workStart hC)
+        (Classical.run
+          (pointAddSetup pointReg workStart xC yC) st) w =
+      Classical.run
+        (pointAddSetup pointReg workStart xC yC) st w := by
+        exact
+          hbranchUses.preservesOutside
+            (Classical.run
+              (pointAddSetup pointReg workStart xC yC) st)
+            w
+            (hpointWork w hw)
+    _ = setup w := by
+      simp [pointAddSetup, Classical.run_append, setup, copied]
+    _ = st w := hsetupAgree w hw
 
 /-! -------------------------------------------------------------------------
     Final PointAdd correctness
