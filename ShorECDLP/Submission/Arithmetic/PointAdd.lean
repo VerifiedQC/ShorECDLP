@@ -79,6 +79,121 @@ def shiftCircuit (offset : Wire) (c : Circuit) : Circuit :=
 def shiftWires (offset : Wire) (ws : List Wire) : List Wire :=
   ws.map fun w => offset + w
 
+private theorem shiftGate_isClassical
+    (offset : Wire) (g : Gate)
+    (h : Classical.IsClassicalGate g) :
+    Classical.IsClassicalGate (shiftGate offset g) := by
+  cases g <;> simp_all [shiftGate]
+
+private theorem shiftCircuit_HPFree
+    (offset : Wire) (c : Circuit)
+    (h : Classical.HPFree c) :
+    Classical.HPFree (shiftCircuit offset c) := by
+  intro g hg
+  simp only [shiftCircuit, List.mem_map] at hg
+  obtain ⟨source, hsource, rfl⟩ := hg
+  exact shiftGate_isClassical offset source (h source hsource)
+
+private theorem shiftGate_wellFormed
+    (offset : Wire) (g : Gate)
+    (h : g.WellFormed) :
+    (shiftGate offset g).WellFormed := by
+  cases g with
+  | X _ => trivial
+  | H _ => trivial
+  | CX _ _ =>
+      simp only [Gate.WellFormed, shiftGate] at h ⊢
+      intro heq
+      exact h (Nat.add_left_cancel heq)
+  | CCX _ _ _ =>
+      simp only [Gate.WellFormed, shiftGate] at h ⊢
+      exact
+        ⟨fun heq => h.1 (Nat.add_left_cancel heq),
+          fun heq => h.2.1 (Nat.add_left_cancel heq),
+          fun heq => h.2.2 (Nat.add_left_cancel heq)⟩
+  | P _ _ _ => trivial
+
+private theorem shiftCircuit_wellFormed
+    (offset : Wire) (c : Circuit)
+    (h : CircuitWellFormed c) :
+    CircuitWellFormed (shiftCircuit offset c) := by
+  intro g hg
+  simp only [shiftCircuit, List.mem_map] at hg
+  obtain ⟨source, hsource, rfl⟩ := hg
+  exact shiftGate_wellFormed offset source (h source hsource)
+
+private theorem shiftGate_usesOnly
+    (offset : Wire) (ws : List Wire) (g : Gate)
+    (h : g.UsesOnly ws) :
+    (shiftGate offset g).UsesOnly (shiftWires offset ws) := by
+  cases g <;>
+    simp only [Gate.UsesOnly, shiftGate, shiftWires,
+      List.mem_map] at h ⊢ <;>
+    aesop
+
+private theorem shiftCircuit_usesOnly
+    (offset : Wire) (ws : List Wire) (c : Circuit)
+    (h : CircuitUsesOnly ws c) :
+    CircuitUsesOnly
+      (shiftWires offset ws)
+      (shiftCircuit offset c) := by
+  intro g hg
+  simp only [shiftCircuit, List.mem_map] at hg
+  obtain ⟨source, hsource, rfl⟩ := hg
+  exact shiftGate_usesOnly offset ws source (h source hsource)
+
+private theorem shiftWires_nodup
+    (offset : Wire) (ws : List Wire)
+    (h : ws.Nodup) :
+    (shiftWires offset ws).Nodup := by
+  apply h.map
+  intro a b hab
+  exact Nat.add_left_cancel hab
+
+private theorem shiftWires_lower
+    (offset : Wire) (ws : List Wire) :
+    ∀ w ∈ shiftWires offset ws, offset ≤ w := by
+  intro w hw
+  simp only [shiftWires, List.mem_map] at hw
+  obtain ⟨source, _, rfl⟩ := hw
+  exact Nat.le_add_right offset source
+
+private theorem shiftWires_mono
+    (offset : Wire) {xs ys : List Wire}
+    (hsub : ∀ w ∈ xs, w ∈ ys) :
+    ∀ w ∈ shiftWires offset xs,
+      w ∈ shiftWires offset ys := by
+  intro w hw
+  simp only [shiftWires, List.mem_map] at hw ⊢
+  obtain ⟨source, hsource, rfl⟩ := hw
+  exact ⟨source, hsub source hsource, rfl⟩
+
+private theorem append_nodup_of_lt_of_le
+    (left right : List Wire) (boundary : Wire)
+    (hleftNodup : left.Nodup)
+    (hrightNodup : right.Nodup)
+    (hleft : ∀ w ∈ left, w < boundary)
+    (hright : ∀ w ∈ right, boundary ≤ w) :
+    (left ++ right).Nodup := by
+  rw [List.nodup_append]
+  refine ⟨hleftNodup, hrightNodup, ?_⟩
+  intro a ha b hb hab
+  subst b
+  exact (Nat.not_lt_of_ge (hright a hb)) (hleft a ha)
+
+private theorem range'_append_nodup_of_le
+    (start₁ length₁ start₂ length₂ : Nat)
+    (hseparated : start₁ + length₁ ≤ start₂) :
+    (List.range' start₁ length₁ ++
+      List.range' start₂ length₂).Nodup := by
+  apply append_nodup_of_lt_of_le _ _ start₂
+  · exact List.nodup_range'
+  · exact List.nodup_range'
+  · intro w hw
+    exact (List.mem_range'_1.mp hw).2.trans_le hseparated
+  · intro w hw
+    exact (List.mem_range'_1.mp hw).1
+
 /-! -------------------------------------------------------------------------
     Local PointAdd workspace
 
@@ -290,6 +405,145 @@ def controlledCopyReg (control : Wire) :
         controlledCopyReg control src dst
       }
   | _, _ => circuit! {}
+
+private theorem controlledCopyReg_HPFree
+    (control : Wire) :
+    ∀ (src dst : List Wire),
+      Classical.HPFree (controlledCopyReg control src dst) := by
+  intro src
+  induction src with
+  | nil => intro dst; simp [controlledCopyReg]
+  | cons s src ih =>
+      intro dst
+      cases dst with
+      | nil => simp [controlledCopyReg]
+      | cons d dst => simp [controlledCopyReg, ih dst]
+
+private theorem controlledCopyReg_usesOnly
+    (control : Wire) :
+    ∀ (src dst : List Wire),
+      CircuitUsesOnly (control :: src ++ dst)
+        (controlledCopyReg control src dst) := by
+  intro src
+  induction src with
+  | nil =>
+      intro dst
+      simp [controlledCopyReg, CircuitUsesOnly]
+  | cons s src ih =>
+      intro dst
+      cases dst with
+      | nil => simp [controlledCopyReg, CircuitUsesOnly]
+      | cons d dst =>
+          rw [controlledCopyReg]
+          intro g hg
+          simp only [List.mem_cons] at hg
+          rcases hg with rfl | hg
+          · simp [Gate.UsesOnly]
+          · apply (usesOnly_mono (ih dst) ?_) g hg
+            intro w hw
+            simp only [List.mem_cons, List.mem_append] at hw ⊢
+            tauto
+
+private theorem controlledCopyReg_wellFormed
+    (control : Wire) :
+    ∀ (src dst : List Wire),
+      (control :: src ++ dst).Nodup →
+      CircuitWellFormed (controlledCopyReg control src dst) := by
+  intro src
+  induction src with
+  | nil => intro dst _; simp [controlledCopyReg]
+  | cons s src ih =>
+      intro dst hnodup
+      cases dst with
+      | nil => simp [controlledCopyReg]
+      | cons d dst =>
+          have htail : (control :: src ++ dst).Nodup := by
+            apply List.Nodup.sublist _ hnodup
+            apply List.Sublist.cons₂
+            exact (List.Sublist.cons s (List.Sublist.refl src)).append
+              (List.Sublist.cons d (List.Sublist.refl dst))
+          have hgate : (Gate.CCX control s d).WellFormed := by
+            have hsub : [control, s, d].Sublist
+                (control :: (s :: src) ++ (d :: dst)) := by
+              simp
+            have hnd : [control, s, d].Nodup :=
+              List.Nodup.sublist hsub hnodup
+            simp only [List.nodup_cons, List.mem_cons,
+              List.not_mem_nil, or_false, not_or] at hnd
+            exact ⟨hnd.1.1, hnd.1.2, hnd.2.1⟩
+          rw [controlledCopyReg, circuitWellFormed_cons]
+          exact ⟨hgate, ih dst htail⟩
+
+private theorem run_controlledCopyReg_false
+    (control : Wire) :
+    ∀ (src dst : List Wire) (st : BasisState),
+      st control = false →
+      Classical.run (controlledCopyReg control src dst) st = st := by
+  intro src
+  induction src with
+  | nil => intro dst st _; simp [controlledCopyReg]
+  | cons s src ih =>
+      intro dst st hcontrol
+      cases dst with
+      | nil => simp [controlledCopyReg]
+      | cons d dst =>
+          have hgate :
+              Classical.applyGate (Gate.CCX control s d) st = st := by
+            funext w
+            by_cases hwd : w = d
+            · subst w
+              simp [Classical.applyGate, hcontrol]
+            · exact upd_other st d _ hwd
+          rw [controlledCopyReg, Classical.run_cons, hgate]
+          exact ih dst st hcontrol
+
+private theorem run_controlledCopyReg_true
+    (control : Wire) :
+    ∀ (src dst : List Wire) (st : BasisState),
+      (control :: src ++ dst).Nodup →
+      st control = true →
+      Classical.run (controlledCopyReg control src dst) st =
+        Classical.run (Arithmetic.copyReg src dst) st := by
+  intro src
+  induction src with
+  | nil =>
+      intro dst st _ _
+      simp [controlledCopyReg, Arithmetic.copyReg]
+  | cons s src ih =>
+      intro dst st hnodup hcontrol
+      cases dst with
+      | nil => simp [controlledCopyReg, Arithmetic.copyReg]
+      | cons d dst =>
+          have htail : (control :: src ++ dst).Nodup := by
+            apply List.Nodup.sublist _ hnodup
+            apply List.Sublist.cons₂
+            exact (List.Sublist.cons s (List.Sublist.refl src)).append
+              (List.Sublist.cons d (List.Sublist.refl dst))
+          have hcontrolD : control ≠ d := by
+            intro heq
+            subst d
+            simp at hnodup
+          let next :=
+            Classical.applyGate (Gate.CCX control s d) st
+          have hnextControl : next control = true := by
+            change
+              st[d ↦ Bool.xor (st d) (st control && st s)] control =
+                true
+            rw [upd_other _ _ _ hcontrolD]
+            exact hcontrol
+          have hgate :
+              Classical.applyGate (Gate.CCX control s d) st =
+                Classical.applyGate (Gate.CX s d) st := by
+            funext w
+            simp [Classical.applyGate, hcontrol]
+          rw [controlledCopyReg, Arithmetic.copyReg]
+          simp only [Classical.run_cons]
+          rw [hgate]
+          exact
+            ih dst (Classical.applyGate (Gate.CX s d) st)
+              htail (by
+                rw [← hgate]
+                exact hnextControl)
 
 /--
 Pack two 257-bit field values into the 513-bit finite-point representation.
@@ -521,6 +775,759 @@ def fieldInv
   }
 
 /-! -------------------------------------------------------------------------
+    Structural facts for placed field operations
+
+These lemmas isolate the wire-translation and layout reasoning used by all
+three point branches.  The branch correctness proofs can consequently reason
+about compute/copy/uncompute at the circuit level without reopening the
+concrete modular-arithmetic implementations.
+------------------------------------------------------------------------- -/
+
+private theorem localWorkSize_eq : localWorkSize = 4112 := by
+  norm_num [localWorkSize, selectedOffset, candidateOffset, flagOffset,
+    yHistoryOffset, yDifferenceOffset, xHistoryOffset,
+    xDifferenceOffset, zeroHistoryOffset, constOffset, fieldAreaSize,
+    fieldWidth, Secp256k1Instance.fieldWidth, pointWidth]
+
+private def IsPointAddFieldRegister
+    (workStart : Wire) (register : List Wire) : Prop :=
+  register = pointAddX workStart ∨
+  register = pointAddY workStart ∨
+  register = pointAddT0 workStart ∨
+  register = pointAddT1 workStart ∨
+  register = pointAddT2 workStart ∨
+  register = pointAddT3 workStart ∨
+  register = pointAddT4 workStart
+
+private theorem pointAddFieldRegister_nodup
+    (workStart : Wire) (register : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register) :
+    register.Nodup := by
+  rcases hregister with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    exact List.nodup_range'
+
+private theorem pointAddFieldRegister_belowArithmetic
+    (workStart : Wire) (register : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register) :
+    ∀ w ∈ register, w < pointAddArithmeticOffset workStart := by
+  intro w hw
+  rw [pointAddArithmeticOffset, localWorkSize_eq]
+  rcases hregister with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    have hbounds := List.mem_range'_1.mp hw
+    apply hbounds.2.trans_le
+    norm_num [pointAddX, pointAddY, pointAddT0, pointAddT1,
+      pointAddT2, pointAddT3, pointAddT4, fieldWidth,
+      Secp256k1Instance.fieldWidth]
+
+private theorem pointAddField_shifted_nodup
+    (workStart : Wire) (register engineRegister : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register)
+    (hengine : engineRegister.Nodup) :
+    (register ++
+      shiftWires (pointAddArithmeticOffset workStart) engineRegister).Nodup := by
+  exact append_nodup_of_lt_of_le _ _
+    (pointAddArithmeticOffset workStart)
+    (pointAddFieldRegister_nodup workStart register hregister)
+    (shiftWires_nodup _ _ hengine)
+    (pointAddFieldRegister_belowArithmetic workStart register hregister)
+    (shiftWires_lower _ _)
+
+private theorem shifted_pointAddField_nodup
+    (workStart : Wire) (engineRegister register : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register)
+    (hengine : engineRegister.Nodup) :
+    (shiftWires (pointAddArithmeticOffset workStart) engineRegister ++
+      register).Nodup := by
+  rw [List.nodup_append_comm]
+  exact pointAddField_shifted_nodup
+    workStart register engineRegister hregister hengine
+
+private theorem copyReg_pointAdd_to_shifted_wellFormed
+    (workStart : Wire) (register engineRegister : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register)
+    (hengine : engineRegister.Nodup) :
+    CircuitWellFormed
+      (Arithmetic.copyReg register
+        (shiftWires (pointAddArithmeticOffset workStart) engineRegister)) :=
+  Arithmetic.copyReg_wellFormed _ _
+    (pointAddField_shifted_nodup
+      workStart register engineRegister hregister hengine)
+
+private theorem copyReg_shifted_to_pointAdd_wellFormed
+    (workStart : Wire) (engineRegister register : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register)
+    (hengine : engineRegister.Nodup) :
+    CircuitWellFormed
+      (Arithmetic.copyReg
+        (shiftWires (pointAddArithmeticOffset workStart) engineRegister)
+        register) :=
+  Arithmetic.copyReg_wellFormed _ _
+    (shifted_pointAddField_nodup
+      workStart engineRegister register hregister hengine)
+
+private theorem secpMulLayout_valid :
+    Secp256k1Instance.secpMulLayout.Valid := by
+  refine ⟨?_, ?_, ?_⟩
+  · simp [Secp256k1Instance.secpMulLayout,
+      Secp256k1Instance.reg, Secp256k1Instance.regBlock,
+      Secp256k1Instance.fieldWidth]
+  · simp [Secp256k1Instance.secpMulLayout,
+      Secp256k1Instance.reg, Secp256k1Instance.regBlock,
+      Secp256k1Instance.fieldWidth]
+  · have hids :
+        (([Secp256k1Instance.regBlock Secp256k1Instance.baseId,
+            Secp256k1Instance.regBlock Secp256k1Instance.exponentId,
+            Secp256k1Instance.regBlock Secp256k1Instance.outId] ++
+          Secp256k1Instance.mulWorkBlocks
+            Secp256k1Instance.initialAccId
+            Secp256k1Instance.historyStartId).map
+          Secp256k1Instance.Block.id).Nodup := by
+        apply Secp256k1Instance.append_mulWorkBlocks_ids_nodup
+        · norm_num [Secp256k1Instance.baseId,
+            Secp256k1Instance.exponentId,
+            Secp256k1Instance.outId]
+        · intro id hid
+          simp only [List.map_cons, List.map_nil, List.mem_cons,
+            List.not_mem_nil, or_false,
+            Secp256k1Instance.regBlock_id] at hid
+          rcases hid with rfl | rfl | rfl <;>
+            norm_num [Secp256k1Instance.baseId,
+              Secp256k1Instance.exponentId,
+              Secp256k1Instance.outId,
+              Secp256k1Instance.initialAccId]
+        · norm_num [Secp256k1Instance.initialAccId,
+            Secp256k1Instance.historyStartId]
+    have hnd :=
+      Secp256k1Instance.blocksWires_nodup
+        ([Secp256k1Instance.regBlock Secp256k1Instance.baseId,
+            Secp256k1Instance.regBlock Secp256k1Instance.exponentId,
+            Secp256k1Instance.regBlock Secp256k1Instance.outId] ++
+          Secp256k1Instance.mulWorkBlocks
+            Secp256k1Instance.initialAccId
+            Secp256k1Instance.historyStartId)
+        hids
+    simpa [Secp256k1Instance.secpMulLayout,
+      RegisterLayout.allWires,
+      Secp256k1Instance.mulWork_eq_blocksWires,
+      Secp256k1Instance.blocksWires] using hnd
+
+private theorem secpAddProgram_wellFormed :
+    CircuitWellFormed Secp256k1Instance.secpAddProgram := by
+  unfold Secp256k1Instance.secpAddProgram
+    Secp256k1Instance.addProgram
+  exact modAdd_wellFormed _ _ _ _ _ _ _ _ _ _ _
+    Secp256k1Instance.secpAddWiring.addOK
+    Secp256k1Instance.secpAddWiring.redOK
+    Secp256k1Instance.secpAddWiring.selectOK
+
+private theorem fieldSubCore_HPFree :
+    Classical.HPFree fieldSubCore := by
+  unfold fieldSubCore
+  exact modSub_HPFree _ _ _ _ _ _ _ _ _ _ _
+
+private theorem fieldSubCore_wellFormed :
+    CircuitWellFormed fieldSubCore := by
+  unfold fieldSubCore
+  apply modSub_wellFormed
+  · exact Secp256k1Instance.secpAddWiring.addOK
+  · exact Secp256k1Instance.secpAddWiring.redOK
+  · apply ModExp.selectOK_of_nodup
+    have hall := Secp256k1Instance.blocksWires_nodup
+      [Secp256k1Instance.regBlock 7,
+        Secp256k1Instance.regBlock 5,
+        Secp256k1Instance.regBlock 3,
+        Secp256k1Instance.regBlock 2]
+      (by norm_num)
+    have hshape :
+        ((Secp256k1Instance.reg 7).wires ++
+          ((Secp256k1Instance.reg 5).wires ++
+            (Secp256k1Instance.reg 3).wires ++
+            (Secp256k1Instance.reg 2).wires)).Nodup := by
+      simpa [Secp256k1Instance.blocksWires,
+        List.append_assoc] using hall
+    obtain ⟨_, hbody, hcross⟩ :=
+      List.nodup_append.mp hshape
+    apply List.nodup_cons.mpr
+    refine ⟨?_, hbody⟩
+    intro hmem
+    exact hcross _
+      (Secp256k1Instance.carryOut_mem_of_nonempty
+        (Secp256k1Instance.bitWire 6)
+        (Secp256k1Instance.reg 7).wires
+        (by
+          simp [Secp256k1Instance.reg,
+            Secp256k1Instance.regBlock,
+            Secp256k1Instance.Block.wires,
+            Secp256k1Instance.fieldWidth]))
+      _ hmem rfl
+
+private theorem fieldSubCore_usesOnly :
+    CircuitUsesOnly
+      Secp256k1Instance.secpAddLayout.allWires
+      fieldSubCore := by
+  simpa [fieldSubCore, Secp256k1Instance.secpAddLayout,
+    RegisterLayout.allWires, Secp256k1Instance.addWork,
+    Secp256k1Instance.addScratchBlocks,
+    Secp256k1Instance.blocksWires,
+    Secp256k1Instance.bitBlock_wires,
+    List.append_assoc] using
+    (modSub_usesOnly
+      (Secp256k1Instance.reg 0).wires
+      (Secp256k1Instance.reg 1).wires
+      (Secp256k1Instance.reg 2).wires
+      (Secp256k1Instance.reg 3).wires
+      (Secp256k1Instance.reg 4).wires
+      (Secp256k1Instance.reg 5).wires
+      (Secp256k1Instance.bitWire 6)
+      (Secp256k1Instance.reg 7).wires
+      (Secp256k1Instance.bitWire 8)
+      (Secp256k1Instance.reg 9).wires p)
+
+private theorem secpMulProgram_wellFormed :
+    CircuitWellFormed Secp256k1Instance.secpMulProgram :=
+  Secp256k1Instance.secp_modMul_contract.wellFormed
+    secpMulLayout_valid
+
+private theorem secpProgram_wellFormed :
+    CircuitWellFormed Secp256k1Instance.secpProgram :=
+  Secp256k1Instance.secp_modExp_contract.wellFormed
+    Secp256k1Instance.secpPlan_layout_valid
+
+private theorem fieldAdd_HPFree
+    (offset : Wire) (lhs rhs out : List Wire) :
+    Classical.HPFree (fieldAdd offset lhs rhs out) := by
+  have hcore :
+      Classical.HPFree
+        (shiftCircuit offset Secp256k1Instance.secpAddProgram) :=
+    shiftCircuit_HPFree _ _
+      Secp256k1Instance.secp_modAdd_contract.hpFree
+  simp [fieldAdd, hcore, Arithmetic.hpFree_reverse hcore]
+
+private theorem fieldAdd_wellFormed
+    (workStart : Wire) (lhs rhs out : List Wire)
+    (hlhs : IsPointAddFieldRegister workStart lhs)
+    (hrhs : IsPointAddFieldRegister workStart rhs)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitWellFormed
+      (fieldAdd (pointAddArithmeticOffset workStart) lhs rhs out) := by
+  let offset := pointAddArithmeticOffset workStart
+  let a := engineAddLhs offset
+  let b := engineAddRhs offset
+  let r := engineAddOut offset
+  let core := shiftCircuit offset Secp256k1Instance.secpAddProgram
+  have haNodup :
+      (lhs ++ a).Nodup := by
+    simpa [a, offset, engineAddLhs,
+      Secp256k1Instance.secpAddLayout,
+      Secp256k1Instance.baseId] using
+      (pointAddField_shifted_nodup workStart lhs
+        (Secp256k1Instance.reg Secp256k1Instance.baseId).wires
+        hlhs
+        (Secp256k1Instance.regBlock
+          Secp256k1Instance.baseId).wires_nodup)
+  have hbNodup :
+      (rhs ++ b).Nodup := by
+    simpa [b, offset, engineAddRhs,
+      Secp256k1Instance.secpAddLayout,
+      Secp256k1Instance.exponentId] using
+      (pointAddField_shifted_nodup workStart rhs
+        (Secp256k1Instance.reg Secp256k1Instance.exponentId).wires
+        hrhs
+        (Secp256k1Instance.regBlock
+          Secp256k1Instance.exponentId).wires_nodup)
+  have hrNodup :
+      (r ++ out).Nodup := by
+    simpa [r, offset, engineAddOut,
+      Secp256k1Instance.secpAddLayout,
+      Secp256k1Instance.outId] using
+      (shifted_pointAddField_nodup workStart
+        (Secp256k1Instance.reg Secp256k1Instance.outId).wires
+        out hout
+        (Secp256k1Instance.regBlock
+          Secp256k1Instance.outId).wires_nodup)
+  have hcopyA :
+      CircuitWellFormed (Arithmetic.copyReg lhs a) :=
+    Arithmetic.copyReg_wellFormed _ _ haNodup
+  have hcopyB :
+      CircuitWellFormed (Arithmetic.copyReg rhs b) :=
+    Arithmetic.copyReg_wellFormed _ _ hbNodup
+  have hcopyOut :
+      CircuitWellFormed (Arithmetic.copyReg r out) :=
+    Arithmetic.copyReg_wellFormed _ _ hrNodup
+  have hcore : CircuitWellFormed core :=
+    shiftCircuit_wellFormed _ _ secpAddProgram_wellFormed
+  simp [fieldAdd, a, b, r, core, offset, hcopyA, hcopyB,
+    hcopyOut, hcore, Arithmetic.wellFormed_reverse hcore]
+
+private theorem fieldSub_HPFree
+    (offset : Wire) (lhs rhs out : List Wire) :
+    Classical.HPFree (fieldSub offset lhs rhs out) := by
+  have hcore :
+      Classical.HPFree (shiftCircuit offset fieldSubCore) :=
+    shiftCircuit_HPFree _ _ fieldSubCore_HPFree
+  simp [fieldSub, hcore, Arithmetic.hpFree_reverse hcore]
+
+private theorem fieldSub_wellFormed
+    (workStart : Wire) (lhs rhs out : List Wire)
+    (hlhs : IsPointAddFieldRegister workStart lhs)
+    (hrhs : IsPointAddFieldRegister workStart rhs)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitWellFormed
+      (fieldSub (pointAddArithmeticOffset workStart) lhs rhs out) := by
+  let offset := pointAddArithmeticOffset workStart
+  let a := engineSubLhs offset
+  let b := engineSubRhs offset
+  let r := engineSubOut offset
+  let core := shiftCircuit offset fieldSubCore
+  have hcopyA : CircuitWellFormed (Arithmetic.copyReg lhs a) := by
+    simpa [a, offset, engineSubLhs] using
+      (copyReg_pointAdd_to_shifted_wellFormed workStart lhs
+        (Secp256k1Instance.reg 0).wires hlhs
+        (Secp256k1Instance.regBlock 0).wires_nodup)
+  have hcopyB : CircuitWellFormed (Arithmetic.copyReg rhs b) := by
+    simpa [b, offset, engineSubRhs] using
+      (copyReg_pointAdd_to_shifted_wellFormed workStart rhs
+        (Secp256k1Instance.reg 1).wires hrhs
+        (Secp256k1Instance.regBlock 1).wires_nodup)
+  have hcopyOut : CircuitWellFormed (Arithmetic.copyReg r out) := by
+    simpa [r, offset, engineSubOut] using
+      (copyReg_shifted_to_pointAdd_wellFormed workStart
+        (Secp256k1Instance.reg 2).wires out hout
+        (Secp256k1Instance.regBlock 2).wires_nodup)
+  have hcore : CircuitWellFormed core :=
+    shiftCircuit_wellFormed _ _ fieldSubCore_wellFormed
+  simp [fieldSub, a, b, r, core, offset, hcopyA, hcopyB,
+    hcopyOut, hcore, Arithmetic.wellFormed_reverse hcore]
+
+private theorem fieldSubConst_HPFree
+    (offset : Wire) (lhs : List Wire) (c : Nat) (out : List Wire) :
+    Classical.HPFree (fieldSubConst offset lhs c out) := by
+  have hcore :
+      Classical.HPFree (shiftCircuit offset fieldSubCore) :=
+    shiftCircuit_HPFree _ _ fieldSubCore_HPFree
+  simp [fieldSubConst, hcore, Arithmetic.hpFree_reverse hcore,
+    loadConst_HPFree]
+
+private theorem fieldSubConst_wellFormed
+    (workStart : Wire) (lhs : List Wire) (c : Nat) (out : List Wire)
+    (hlhs : IsPointAddFieldRegister workStart lhs)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitWellFormed
+      (fieldSubConst
+        (pointAddArithmeticOffset workStart) lhs c out) := by
+  let offset := pointAddArithmeticOffset workStart
+  let a := engineSubLhs offset
+  let b := engineSubRhs offset
+  let r := engineSubOut offset
+  let core := shiftCircuit offset fieldSubCore
+  have hcopyA : CircuitWellFormed (Arithmetic.copyReg lhs a) := by
+    simpa [a, offset, engineSubLhs] using
+      (copyReg_pointAdd_to_shifted_wellFormed workStart lhs
+        (Secp256k1Instance.reg 0).wires hlhs
+        (Secp256k1Instance.regBlock 0).wires_nodup)
+  have hloadB : CircuitWellFormed (loadConst b c) :=
+    loadConst_wellFormed _ _
+  have hcopyOut : CircuitWellFormed (Arithmetic.copyReg r out) := by
+    simpa [r, offset, engineSubOut] using
+      (copyReg_shifted_to_pointAdd_wellFormed workStart
+        (Secp256k1Instance.reg 2).wires out hout
+        (Secp256k1Instance.regBlock 2).wires_nodup)
+  have hcore : CircuitWellFormed core :=
+    shiftCircuit_wellFormed _ _ fieldSubCore_wellFormed
+  simp [fieldSubConst, a, b, r, core, offset, hcopyA, hloadB,
+    hcopyOut, hcore, Arithmetic.wellFormed_reverse hcore]
+
+private theorem fieldMul_HPFree
+    (offset : Wire) (lhs rhs out : List Wire) :
+    Classical.HPFree (fieldMul offset lhs rhs out) := by
+  have hcore :
+      Classical.HPFree
+        (shiftCircuit offset Secp256k1Instance.secpMulProgram) :=
+    shiftCircuit_HPFree _ _
+      Secp256k1Instance.secp_modMul_contract.hpFree
+  simp [fieldMul, hcore, Arithmetic.hpFree_reverse hcore]
+
+private theorem fieldMul_wellFormed
+    (workStart : Wire) (lhs rhs out : List Wire)
+    (hlhs : IsPointAddFieldRegister workStart lhs)
+    (hrhs : IsPointAddFieldRegister workStart rhs)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitWellFormed
+      (fieldMul (pointAddArithmeticOffset workStart) lhs rhs out) := by
+  let offset := pointAddArithmeticOffset workStart
+  let a := engineMulLhs offset
+  let b := engineMulRhs offset
+  let r := engineMulOut offset
+  let core := shiftCircuit offset Secp256k1Instance.secpMulProgram
+  have hcopyA : CircuitWellFormed (Arithmetic.copyReg lhs a) := by
+    simpa [a, offset, engineMulLhs,
+      Secp256k1Instance.secpMulLayout,
+      Secp256k1Instance.baseId] using
+      (copyReg_pointAdd_to_shifted_wellFormed workStart lhs
+        (Secp256k1Instance.reg Secp256k1Instance.baseId).wires
+        hlhs
+        (Secp256k1Instance.regBlock
+          Secp256k1Instance.baseId).wires_nodup)
+  have hcopyB : CircuitWellFormed (Arithmetic.copyReg rhs b) := by
+    simpa [b, offset, engineMulRhs,
+      Secp256k1Instance.secpMulLayout,
+      Secp256k1Instance.exponentId] using
+      (copyReg_pointAdd_to_shifted_wellFormed workStart rhs
+        (Secp256k1Instance.reg Secp256k1Instance.exponentId).wires
+        hrhs
+        (Secp256k1Instance.regBlock
+          Secp256k1Instance.exponentId).wires_nodup)
+  have hcopyOut : CircuitWellFormed (Arithmetic.copyReg r out) := by
+    simpa [r, offset, engineMulOut,
+      Secp256k1Instance.secpMulLayout,
+      Secp256k1Instance.outId] using
+      (copyReg_shifted_to_pointAdd_wellFormed workStart
+        (Secp256k1Instance.reg Secp256k1Instance.outId).wires
+        out hout
+        (Secp256k1Instance.regBlock
+          Secp256k1Instance.outId).wires_nodup)
+  have hcore : CircuitWellFormed core :=
+    shiftCircuit_wellFormed _ _ secpMulProgram_wellFormed
+  simp [fieldMul, a, b, r, core, offset, hcopyA, hcopyB,
+    hcopyOut, hcore, Arithmetic.wellFormed_reverse hcore]
+
+private theorem fieldInv_HPFree
+    (offset : Wire) (input out : List Wire) :
+    Classical.HPFree (fieldInv offset input out) := by
+  have hcore :
+      Classical.HPFree
+        (shiftCircuit offset Secp256k1Instance.secpProgram) :=
+    shiftCircuit_HPFree _ _
+      Secp256k1Instance.secp_modExp_contract.hpFree
+  simp [fieldInv, hcore, Arithmetic.hpFree_reverse hcore,
+    loadConst_HPFree]
+
+private theorem fieldInv_wellFormed
+    (workStart : Wire) (input out : List Wire)
+    (hinput : IsPointAddFieldRegister workStart input)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitWellFormed
+      (fieldInv (pointAddArithmeticOffset workStart) input out) := by
+  let offset := pointAddArithmeticOffset workStart
+  let base := engineInvBase offset
+  let exponent := engineInvExponent offset
+  let result := engineInvOut offset
+  let core := shiftCircuit offset Secp256k1Instance.secpProgram
+  have hbaseNodup : Secp256k1Instance.secpLayout.lhs.Nodup := by
+    change
+      (Secp256k1Instance.reg Secp256k1Instance.baseId).wires.Nodup
+    exact
+      (Secp256k1Instance.regBlock
+        Secp256k1Instance.baseId).wires_nodup
+  have hexponentNodup :
+      Secp256k1Instance.secpLayout.rhs.Nodup := by
+    change
+      (Secp256k1Instance.reg Secp256k1Instance.exponentId).wires.Nodup
+    exact
+      (Secp256k1Instance.regBlock
+        Secp256k1Instance.exponentId).wires_nodup
+  have hresultNodup : Secp256k1Instance.secpLayout.out.Nodup := by
+    change
+      (Secp256k1Instance.reg Secp256k1Instance.outId).wires.Nodup
+    exact
+      (Secp256k1Instance.regBlock
+        Secp256k1Instance.outId).wires_nodup
+  have hcopyBase :
+      CircuitWellFormed (Arithmetic.copyReg input base) := by
+    simpa [base, offset, engineInvBase] using
+      (copyReg_pointAdd_to_shifted_wellFormed workStart input
+        Secp256k1Instance.secpLayout.lhs hinput hbaseNodup)
+  have hloadExponent :
+      CircuitWellFormed (loadConst exponent (p - 2)) :=
+    loadConst_wellFormed _ _
+  have hcopyResult :
+      CircuitWellFormed (Arithmetic.copyReg result out) := by
+    simpa [result, offset, engineInvOut] using
+      (copyReg_shifted_to_pointAdd_wellFormed workStart
+        Secp256k1Instance.secpLayout.out out hout hresultNodup)
+  have hcore : CircuitWellFormed core :=
+    shiftCircuit_wellFormed _ _ secpProgram_wellFormed
+  simp [fieldInv, base, exponent, result, core, offset,
+    hcopyBase, hloadExponent, hcopyResult, hcore,
+    Arithmetic.wellFormed_reverse hcore]
+
+private theorem binaryFieldWrapper_usesOnly
+    (lhs rhs out a b r engineWires : List Wire)
+    (core : Circuit)
+    (ha : ∀ w ∈ a, w ∈ engineWires)
+    (hb : ∀ w ∈ b, w ∈ engineWires)
+    (hr : ∀ w ∈ r, w ∈ engineWires)
+    (hcore : CircuitUsesOnly engineWires core) :
+    CircuitUsesOnly
+      (lhs ++ rhs ++ out ++ engineWires)
+      (circuit! {
+        Arithmetic.copyReg lhs a;
+        Arithmetic.copyReg rhs b;
+        core;
+        Arithmetic.copyReg r out;
+        core.reverse;
+        Arithmetic.copyReg rhs b;
+        Arithmetic.copyReg lhs a
+      }) := by
+  let support := lhs ++ rhs ++ out ++ engineWires
+  have hlhs : ∀ w ∈ lhs, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hrhs : ∀ w ∈ rhs, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hout : ∀ w ∈ out, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hengine : ∀ w ∈ engineWires, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hcopyA := Arithmetic.copyReg_usesOnly lhs a support
+    hlhs (fun w hw => hengine w (ha w hw))
+  have hcopyB := Arithmetic.copyReg_usesOnly rhs b support
+    hrhs (fun w hw => hengine w (hb w hw))
+  have hcopyOut := Arithmetic.copyReg_usesOnly r out support
+    (fun w hw => hengine w (hr w hw)) hout
+  have hcore' := usesOnly_mono hcore hengine
+  have hall :=
+    usesOnly_append
+      (usesOnly_append
+        (usesOnly_append
+          (usesOnly_append
+            (usesOnly_append
+              (usesOnly_append hcopyA hcopyB) hcore') hcopyOut)
+            (usesOnly_reverse hcore')) hcopyB) hcopyA
+  simpa [support, List.append_assoc] using hall
+
+private theorem unaryConstFieldWrapper_usesOnly
+    (input out a b r engineWires : List Wire)
+    (constant : Nat) (core : Circuit)
+    (ha : ∀ w ∈ a, w ∈ engineWires)
+    (hb : ∀ w ∈ b, w ∈ engineWires)
+    (hr : ∀ w ∈ r, w ∈ engineWires)
+    (hcore : CircuitUsesOnly engineWires core) :
+    CircuitUsesOnly
+      (input ++ out ++ engineWires)
+      (circuit! {
+        Arithmetic.copyReg input a;
+        loadConst b constant;
+        core;
+        Arithmetic.copyReg r out;
+        core.reverse;
+        loadConst b constant;
+        Arithmetic.copyReg input a
+      }) := by
+  let support := input ++ out ++ engineWires
+  have hinput : ∀ w ∈ input, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hout : ∀ w ∈ out, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hengine : ∀ w ∈ engineWires, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hcopyA := Arithmetic.copyReg_usesOnly input a support
+    hinput (fun w hw => hengine w (ha w hw))
+  have hloadB := usesOnly_mono (loadConst_usesOnly b constant)
+    (fun w hw => hengine w (hb w hw))
+  have hcopyOut := Arithmetic.copyReg_usesOnly r out support
+    (fun w hw => hengine w (hr w hw)) hout
+  have hcore' := usesOnly_mono hcore hengine
+  have hall :=
+    usesOnly_append
+      (usesOnly_append
+        (usesOnly_append
+          (usesOnly_append
+            (usesOnly_append
+              (usesOnly_append hcopyA hloadB) hcore') hcopyOut)
+            (usesOnly_reverse hcore')) hloadB) hcopyA
+  simpa [support, List.append_assoc] using hall
+
+private theorem fieldAdd_usesOnly
+    (offset : Wire) (lhs rhs out : List Wire) :
+    CircuitUsesOnly
+      (lhs ++ rhs ++ out ++
+        shiftWires offset
+          Secp256k1Instance.secpAddLayout.allWires)
+      (fieldAdd offset lhs rhs out) := by
+  let engineWires :=
+    shiftWires offset Secp256k1Instance.secpAddLayout.allWires
+  have ha : ∀ w ∈ engineAddLhs offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hb : ∀ w ∈ engineAddRhs offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hr : ∀ w ∈ engineAddOut offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hcore :
+      CircuitUsesOnly engineWires
+        (shiftCircuit offset Secp256k1Instance.secpAddProgram) :=
+    shiftCircuit_usesOnly _ _ _
+      Secp256k1Instance.secp_modAdd_contract.usesOnly
+  simpa [fieldAdd, engineWires] using
+    (binaryFieldWrapper_usesOnly lhs rhs out
+      (engineAddLhs offset) (engineAddRhs offset)
+      (engineAddOut offset) engineWires
+      (shiftCircuit offset Secp256k1Instance.secpAddProgram)
+      ha hb hr hcore)
+
+private theorem fieldSub_usesOnly
+    (offset : Wire) (lhs rhs out : List Wire) :
+    CircuitUsesOnly
+      (lhs ++ rhs ++ out ++
+        shiftWires offset
+          Secp256k1Instance.secpAddLayout.allWires)
+      (fieldSub offset lhs rhs out) := by
+  let engineWires :=
+    shiftWires offset Secp256k1Instance.secpAddLayout.allWires
+  have ha : ∀ w ∈ engineSubLhs offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    unfold Secp256k1Instance.secpAddLayout RegisterLayout.allWires
+    simp only [List.mem_append]
+    exact Or.inl (Or.inl (Or.inl (by
+      simpa [Secp256k1Instance.baseId] using hw)))
+  have hb : ∀ w ∈ engineSubRhs offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    unfold Secp256k1Instance.secpAddLayout RegisterLayout.allWires
+    simp only [List.mem_append]
+    exact Or.inl (Or.inl (Or.inr (by
+      simpa [Secp256k1Instance.exponentId] using hw)))
+  have hr : ∀ w ∈ engineSubOut offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    unfold Secp256k1Instance.secpAddLayout RegisterLayout.allWires
+    simp only [List.mem_append]
+    exact Or.inl (Or.inr (by
+      simpa [Secp256k1Instance.outId] using hw))
+  have hcore :
+      CircuitUsesOnly engineWires
+        (shiftCircuit offset fieldSubCore) :=
+    shiftCircuit_usesOnly _ _ _ fieldSubCore_usesOnly
+  simpa [fieldSub, engineWires] using
+    (binaryFieldWrapper_usesOnly lhs rhs out
+      (engineSubLhs offset) (engineSubRhs offset)
+      (engineSubOut offset) engineWires
+      (shiftCircuit offset fieldSubCore)
+      ha hb hr hcore)
+
+private theorem fieldSubConst_usesOnly
+    (offset : Wire) (lhs : List Wire) (constant : Nat)
+    (out : List Wire) :
+    CircuitUsesOnly
+      (lhs ++ out ++
+        shiftWires offset
+          Secp256k1Instance.secpAddLayout.allWires)
+      (fieldSubConst offset lhs constant out) := by
+  let engineWires :=
+    shiftWires offset Secp256k1Instance.secpAddLayout.allWires
+  have ha : ∀ w ∈ engineSubLhs offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    unfold Secp256k1Instance.secpAddLayout RegisterLayout.allWires
+    simp only [List.mem_append]
+    exact Or.inl (Or.inl (Or.inl (by
+      simpa [Secp256k1Instance.baseId] using hw)))
+  have hb : ∀ w ∈ engineSubRhs offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    unfold Secp256k1Instance.secpAddLayout RegisterLayout.allWires
+    simp only [List.mem_append]
+    exact Or.inl (Or.inl (Or.inr (by
+      simpa [Secp256k1Instance.exponentId] using hw)))
+  have hr : ∀ w ∈ engineSubOut offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    unfold Secp256k1Instance.secpAddLayout RegisterLayout.allWires
+    simp only [List.mem_append]
+    exact Or.inl (Or.inr (by
+      simpa [Secp256k1Instance.outId] using hw))
+  have hcore :
+      CircuitUsesOnly engineWires
+        (shiftCircuit offset fieldSubCore) :=
+    shiftCircuit_usesOnly _ _ _ fieldSubCore_usesOnly
+  simpa [fieldSubConst, engineWires] using
+    (unaryConstFieldWrapper_usesOnly lhs out
+      (engineSubLhs offset) (engineSubRhs offset)
+      (engineSubOut offset) engineWires constant
+      (shiftCircuit offset fieldSubCore)
+      ha hb hr hcore)
+
+private theorem fieldMul_usesOnly
+    (offset : Wire) (lhs rhs out : List Wire) :
+    CircuitUsesOnly
+      (lhs ++ rhs ++ out ++
+        shiftWires offset
+          Secp256k1Instance.secpMulLayout.allWires)
+      (fieldMul offset lhs rhs out) := by
+  let engineWires :=
+    shiftWires offset Secp256k1Instance.secpMulLayout.allWires
+  have ha : ∀ w ∈ engineMulLhs offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hb : ∀ w ∈ engineMulRhs offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hr : ∀ w ∈ engineMulOut offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hcore :
+      CircuitUsesOnly engineWires
+        (shiftCircuit offset Secp256k1Instance.secpMulProgram) :=
+    shiftCircuit_usesOnly _ _ _
+      Secp256k1Instance.secp_modMul_contract.usesOnly
+  simpa [fieldMul, engineWires] using
+    (binaryFieldWrapper_usesOnly lhs rhs out
+      (engineMulLhs offset) (engineMulRhs offset)
+      (engineMulOut offset) engineWires
+      (shiftCircuit offset Secp256k1Instance.secpMulProgram)
+      ha hb hr hcore)
+
+private theorem fieldInv_usesOnly
+    (offset : Wire) (input out : List Wire) :
+    CircuitUsesOnly
+      (input ++ out ++
+        shiftWires offset Secp256k1Instance.secpLayout.allWires)
+      (fieldInv offset input out) := by
+  let engineWires :=
+    shiftWires offset Secp256k1Instance.secpLayout.allWires
+  have ha : ∀ w ∈ engineInvBase offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hb :
+      ∀ w ∈ engineInvExponent offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hr : ∀ w ∈ engineInvOut offset, w ∈ engineWires := by
+    apply shiftWires_mono
+    intro w hw
+    simp [RegisterLayout.allWires, hw]
+  have hcore :
+      CircuitUsesOnly engineWires
+        (shiftCircuit offset Secp256k1Instance.secpProgram) :=
+    shiftCircuit_usesOnly _ _ _
+      Secp256k1Instance.secp_modExp_contract.usesOnly
+  simpa [fieldInv, engineWires] using
+    (unaryConstFieldWrapper_usesOnly input out
+      (engineInvBase offset) (engineInvExponent offset)
+      (engineInvOut offset) engineWires (p - 2)
+      (shiftCircuit offset Secp256k1Instance.secpProgram)
+      ha hb hr hcore)
+
+/-! -------------------------------------------------------------------------
     Generic affine addition
 ------------------------------------------------------------------------- -/
 
@@ -735,6 +1742,106 @@ def doublePointCompute
     yProduct;
     yOut
   }
+
+private theorem genericPointCompute_HPFree
+    (workStart : Wire) (xC yC : Fp) :
+    Classical.HPFree (genericPointCompute workStart xC yC) := by
+  simp [genericPointCompute, fieldSubConst_HPFree, fieldInv_HPFree,
+    fieldMul_HPFree, fieldSub_HPFree, Arithmetic.hpFree_reverse]
+
+private theorem genericPointCompute_wellFormed
+    (workStart : Wire) (xC yC : Fp) :
+    CircuitWellFormed (genericPointCompute workStart xC yC) := by
+  simp [genericPointCompute, fieldSubConst_wellFormed,
+    fieldInv_wellFormed, fieldMul_wellFormed,
+    fieldSub_wellFormed, IsPointAddFieldRegister,
+    Arithmetic.wellFormed_reverse]
+
+private theorem threeXSquared_HPFree
+    (offset : Wire)
+    (x scratch₀ scratch₁ out : List Wire) :
+    Classical.HPFree
+      (threeXSquared offset x scratch₀ scratch₁ out) := by
+  simp [threeXSquared, fieldMul_HPFree, fieldAdd_HPFree,
+    Arithmetic.hpFree_reverse]
+
+private theorem threeXSquared_wellFormed
+    (workStart : Wire)
+    (x scratch₀ scratch₁ out : List Wire)
+    (hx : IsPointAddFieldRegister workStart x)
+    (hscratch₀ : IsPointAddFieldRegister workStart scratch₀)
+    (hscratch₁ : IsPointAddFieldRegister workStart scratch₁)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitWellFormed
+      (threeXSquared (pointAddArithmeticOffset workStart)
+        x scratch₀ scratch₁ out) := by
+  simp [threeXSquared, fieldMul_wellFormed,
+    fieldAdd_wellFormed, hx, hscratch₀, hscratch₁, hout,
+    Arithmetic.wellFormed_reverse]
+
+private theorem doublePointCompute_HPFree
+    (workStart : Wire) :
+    Classical.HPFree (doublePointCompute workStart) := by
+  simp [doublePointCompute, threeXSquared_HPFree,
+    fieldAdd_HPFree, fieldInv_HPFree, fieldMul_HPFree,
+    fieldSub_HPFree, Arithmetic.hpFree_reverse]
+
+private theorem doublePointCompute_wellFormed
+    (workStart : Wire) :
+    CircuitWellFormed (doublePointCompute workStart) := by
+  simp [doublePointCompute, threeXSquared_wellFormed,
+    fieldAdd_wellFormed, fieldInv_wellFormed,
+    fieldMul_wellFormed, fieldSub_wellFormed,
+    IsPointAddFieldRegister, Arithmetic.wellFormed_reverse]
+
+private theorem packFinitePoint_HPFree
+    (x y point : List Wire) :
+    Classical.HPFree (packFinitePoint x y point) := by
+  simp [packFinitePoint, loadConst_HPFree]
+
+set_option maxRecDepth 10000 in
+private theorem packFinitePoint_wellFormed
+    (workStart : Wire) :
+    CircuitWellFormed
+      (packFinitePoint
+        (pointAddT2 workStart)
+        (pointAddT4 workStart)
+        (pointAddCandidate workStart)) := by
+  have hxNodup :
+      ((pointAddT2 workStart).take 256 ++
+        PointRegister.x (pointAddCandidate workStart)).Nodup := by
+    have h := range'_append_nodup_of_le
+      (workStart + 4 * 257) 256
+      (workStart + 3086 + 1) 256 (by omega)
+    simpa [pointAddT2, pointAddCandidate, PointRegister.x,
+      fieldWidth, Secp256k1Instance.fieldWidth, candidateOffset,
+      flagOffset, yHistoryOffset, yDifferenceOffset, xHistoryOffset,
+      xDifferenceOffset, zeroHistoryOffset, constOffset, fieldAreaSize,
+      List.take_range'_of_length_ge, List.drop_range'] using h
+  have hyNodup :
+      ((pointAddT4 workStart).take 256 ++
+        PointRegister.y (pointAddCandidate workStart)).Nodup := by
+    have h := range'_append_nodup_of_le
+      (workStart + 6 * 257) 256
+      (workStart + 3086 + 257) 256 (by omega)
+    simpa [pointAddT4, pointAddCandidate, PointRegister.y,
+      fieldWidth, Secp256k1Instance.fieldWidth, candidateOffset,
+      flagOffset, yHistoryOffset, yDifferenceOffset, xHistoryOffset,
+      xDifferenceOffset, zeroHistoryOffset, constOffset, fieldAreaSize,
+      List.take_range'_of_length_ge, List.drop_range'] using h
+  have hxCopy :
+      CircuitWellFormed
+        (Arithmetic.copyReg
+          ((pointAddT2 workStart).take 256)
+          (PointRegister.x (pointAddCandidate workStart))) :=
+    Arithmetic.copyReg_wellFormed _ _ hxNodup
+  have hyCopy :
+      CircuitWellFormed
+        (Arithmetic.copyReg
+          ((pointAddT4 workStart).take 256)
+          (PointRegister.y (pointAddCandidate workStart))) :=
+    Arithmetic.copyReg_wellFormed _ _ hyNodup
+  simp [packFinitePoint, loadConst_wellFormed, hxCopy, hyCopy]
 
 /-! -------------------------------------------------------------------------
     Exceptional-case flags
@@ -981,6 +2088,623 @@ def pointAddBranchWork (workStart : Wire) : List Wire :=
   pointAddCandidate workStart ++
   pointAddSelected workStart ++
   pointAddArithmeticWork workStart
+
+/-!
+The active support of the generic and doubling Bennett branches.  The three
+branch-control wires are deliberately absent.  Keeping this support explicit
+lets the inactive-branch proofs show that the forward compute cannot change
+its own control before the controlled copy is reached.
+-/
+private def pointAddBranchActiveSupport
+    (workStart : Wire) : List Wire :=
+  pointAddX workStart ++
+    (pointAddY workStart ++
+      (pointAddT0 workStart ++
+        (pointAddT1 workStart ++
+          (pointAddT2 workStart ++
+            (pointAddT3 workStart ++
+              (pointAddT4 workStart ++
+                (pointAddCandidate workStart ++
+                  (pointAddSelected workStart ++
+                    (shiftWires (pointAddArithmeticOffset workStart)
+                        Secp256k1Instance.secpAddLayout.allWires ++
+                      (shiftWires (pointAddArithmeticOffset workStart)
+                          Secp256k1Instance.secpMulLayout.allWires ++
+                        shiftWires (pointAddArithmeticOffset workStart)
+                          Secp256k1Instance.secpLayout.allWires))))))))))
+
+private theorem pointAddFieldRegister_mem_activeSupport
+    (workStart : Wire) (register : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register) :
+    ∀ w ∈ register, w ∈ pointAddBranchActiveSupport workStart := by
+  rcases hregister with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    intro w hw
+    simp [pointAddBranchActiveSupport, hw]
+
+private theorem pointAddAddEngine_mem_activeSupport
+    (workStart : Wire) :
+    ∀ w ∈ shiftWires (pointAddArithmeticOffset workStart)
+        Secp256k1Instance.secpAddLayout.allWires,
+      w ∈ pointAddBranchActiveSupport workStart := by
+  intro w hw
+  simp [pointAddBranchActiveSupport, hw]
+
+private theorem pointAddMulEngine_mem_activeSupport
+    (workStart : Wire) :
+    ∀ w ∈ shiftWires (pointAddArithmeticOffset workStart)
+        Secp256k1Instance.secpMulLayout.allWires,
+      w ∈ pointAddBranchActiveSupport workStart := by
+  intro w hw
+  simp [pointAddBranchActiveSupport, hw]
+
+private theorem pointAddInvEngine_mem_activeSupport
+    (workStart : Wire) :
+    ∀ w ∈ shiftWires (pointAddArithmeticOffset workStart)
+        Secp256k1Instance.secpLayout.allWires,
+      w ∈ pointAddBranchActiveSupport workStart := by
+  intro w hw
+  simp [pointAddBranchActiveSupport, hw]
+
+private theorem fieldAdd_usesOnly_pointAdd
+    (workStart : Wire) (lhs rhs out : List Wire)
+    (hlhs : IsPointAddFieldRegister workStart lhs)
+    (hrhs : IsPointAddFieldRegister workStart rhs)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (fieldAdd (pointAddArithmeticOffset workStart) lhs rhs out) := by
+  apply usesOnly_mono (fieldAdd_usesOnly _ lhs rhs out)
+  intro w hw
+  simp only [List.mem_append] at hw
+  rcases hw with ((hlhs' | hrhs') | hout') | hengine
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart lhs hlhs w hlhs'
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart rhs hrhs w hrhs'
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart out hout w hout'
+  · exact pointAddAddEngine_mem_activeSupport workStart w hengine
+
+private theorem fieldSub_usesOnly_pointAdd
+    (workStart : Wire) (lhs rhs out : List Wire)
+    (hlhs : IsPointAddFieldRegister workStart lhs)
+    (hrhs : IsPointAddFieldRegister workStart rhs)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (fieldSub (pointAddArithmeticOffset workStart) lhs rhs out) := by
+  apply usesOnly_mono (fieldSub_usesOnly _ lhs rhs out)
+  intro w hw
+  simp only [List.mem_append] at hw
+  rcases hw with ((hlhs' | hrhs') | hout') | hengine
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart lhs hlhs w hlhs'
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart rhs hrhs w hrhs'
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart out hout w hout'
+  · exact pointAddAddEngine_mem_activeSupport workStart w hengine
+
+private theorem fieldSubConst_usesOnly_pointAdd
+    (workStart : Wire) (lhs : List Wire) (constant : Nat)
+    (out : List Wire)
+    (hlhs : IsPointAddFieldRegister workStart lhs)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (fieldSubConst (pointAddArithmeticOffset workStart)
+        lhs constant out) := by
+  apply usesOnly_mono (fieldSubConst_usesOnly _ lhs constant out)
+  intro w hw
+  simp only [List.mem_append] at hw
+  rcases hw with (hlhs' | hout') | hengine
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart lhs hlhs w hlhs'
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart out hout w hout'
+  · exact pointAddAddEngine_mem_activeSupport workStart w hengine
+
+private theorem fieldMul_usesOnly_pointAdd
+    (workStart : Wire) (lhs rhs out : List Wire)
+    (hlhs : IsPointAddFieldRegister workStart lhs)
+    (hrhs : IsPointAddFieldRegister workStart rhs)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (fieldMul (pointAddArithmeticOffset workStart) lhs rhs out) := by
+  apply usesOnly_mono (fieldMul_usesOnly _ lhs rhs out)
+  intro w hw
+  simp only [List.mem_append] at hw
+  rcases hw with ((hlhs' | hrhs') | hout') | hengine
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart lhs hlhs w hlhs'
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart rhs hrhs w hrhs'
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart out hout w hout'
+  · exact pointAddMulEngine_mem_activeSupport workStart w hengine
+
+private theorem fieldInv_usesOnly_pointAdd
+    (workStart : Wire) (input out : List Wire)
+    (hinput : IsPointAddFieldRegister workStart input)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (fieldInv (pointAddArithmeticOffset workStart) input out) := by
+  apply usesOnly_mono (fieldInv_usesOnly _ input out)
+  intro w hw
+  simp only [List.mem_append] at hw
+  rcases hw with (hinput' | hout') | hengine
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart input hinput w hinput'
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart out hout w hout'
+  · exact pointAddInvEngine_mem_activeSupport workStart w hengine
+
+private theorem circuitUsesOnly_append_iff
+    {support : List Wire} {left right : Circuit} :
+    CircuitUsesOnly support (left ++ right) ↔
+      CircuitUsesOnly support left ∧
+        CircuitUsesOnly support right := by
+  constructor
+  · intro h
+    constructor
+    · intro g hg
+      exact h g (List.mem_append.mpr (Or.inl hg))
+    · intro g hg
+      exact h g (List.mem_append.mpr (Or.inr hg))
+  · rintro ⟨hleft, hright⟩
+    exact usesOnly_append hleft hright
+
+private theorem circuitUsesOnly_reverse_iff
+    {support : List Wire} {circuit : Circuit} :
+    CircuitUsesOnly support circuit.reverse ↔
+      CircuitUsesOnly support circuit := by
+  constructor
+  · intro h
+    have hreverse := usesOnly_reverse h
+    simpa using hreverse
+  · exact usesOnly_reverse
+
+private theorem packFinitePoint_usesOnly
+    (x y point : List Wire) :
+    CircuitUsesOnly (x ++ y ++ point)
+      (packFinitePoint x y point) := by
+  let support := x ++ y ++ point
+  have hx : ∀ w ∈ x, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hy : ∀ w ∈ y, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have hpoint : ∀ w ∈ point, w ∈ support := by
+    intro w hw
+    simp [support, hw]
+  have htag :
+      ∀ w ∈ PointRegister.tag point, w ∈ support := by
+    intro w hw
+    exact hpoint w (List.mem_of_mem_take hw)
+  have hxTake : ∀ w ∈ x.take 256, w ∈ support := by
+    intro w hw
+    exact hx w (List.mem_of_mem_take hw)
+  have hyTake : ∀ w ∈ y.take 256, w ∈ support := by
+    intro w hw
+    exact hy w (List.mem_of_mem_take hw)
+  have hpointX :
+      ∀ w ∈ PointRegister.x point, w ∈ support := by
+    intro w hw
+    apply hpoint w
+    exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+  have hpointY :
+      ∀ w ∈ PointRegister.y point, w ∈ support := by
+    intro w hw
+    apply hpoint w
+    exact List.mem_of_mem_drop (List.mem_of_mem_take hw)
+  have hload := usesOnly_mono
+    (loadConst_usesOnly (PointRegister.tag point) 1) htag
+  have hcopyX := Arithmetic.copyReg_usesOnly
+    (x.take 256) (PointRegister.x point) support
+    hxTake hpointX
+  have hcopyY := Arithmetic.copyReg_usesOnly
+    (y.take 256) (PointRegister.y point) support
+    hyTake hpointY
+  simpa [packFinitePoint, support] using
+    usesOnly_append (usesOnly_append hload hcopyX) hcopyY
+
+private theorem packFinitePoint_usesOnly_pointAdd
+    (workStart : Wire) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (packFinitePoint
+        (pointAddT2 workStart)
+        (pointAddT4 workStart)
+        (pointAddCandidate workStart)) := by
+  apply usesOnly_mono (packFinitePoint_usesOnly
+    (pointAddT2 workStart)
+    (pointAddT4 workStart)
+    (pointAddCandidate workStart))
+  intro w hw
+  simp only [List.mem_append] at hw
+  rcases hw with (ht2 | ht4) | hcandidate
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart (pointAddT2 workStart)
+      (by simp [IsPointAddFieldRegister]) w ht2
+  · exact pointAddFieldRegister_mem_activeSupport
+      workStart (pointAddT4 workStart)
+      (by simp [IsPointAddFieldRegister]) w ht4
+  · simp [pointAddBranchActiveSupport, hcandidate]
+
+private theorem genericPointCompute_usesOnly
+    (workStart : Wire) (xC yC : Fp) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (genericPointCompute workStart xC yC) := by
+  simp [genericPointCompute, circuitUsesOnly_append_iff,
+    circuitUsesOnly_reverse_iff,
+    fieldSubConst_usesOnly_pointAdd,
+    fieldInv_usesOnly_pointAdd,
+    fieldMul_usesOnly_pointAdd,
+    fieldSub_usesOnly_pointAdd,
+    IsPointAddFieldRegister]
+
+private theorem threeXSquared_usesOnly_pointAdd
+    (workStart : Wire)
+    (x scratch₀ scratch₁ out : List Wire)
+    (hx : IsPointAddFieldRegister workStart x)
+    (hscratch₀ : IsPointAddFieldRegister workStart scratch₀)
+    (hscratch₁ : IsPointAddFieldRegister workStart scratch₁)
+    (hout : IsPointAddFieldRegister workStart out) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (threeXSquared (pointAddArithmeticOffset workStart)
+        x scratch₀ scratch₁ out) := by
+  simp [threeXSquared, circuitUsesOnly_append_iff,
+    circuitUsesOnly_reverse_iff, fieldMul_usesOnly_pointAdd,
+    fieldAdd_usesOnly_pointAdd, hx, hscratch₀, hscratch₁, hout]
+
+private theorem doublePointCompute_usesOnly
+    (workStart : Wire) :
+    CircuitUsesOnly (pointAddBranchActiveSupport workStart)
+      (doublePointCompute workStart) := by
+  simp [doublePointCompute, circuitUsesOnly_append_iff,
+    circuitUsesOnly_reverse_iff, threeXSquared_usesOnly_pointAdd,
+    fieldAdd_usesOnly_pointAdd, fieldInv_usesOnly_pointAdd,
+    fieldMul_usesOnly_pointAdd, fieldSub_usesOnly_pointAdd,
+    IsPointAddFieldRegister]
+
+private theorem pointAddFieldRegister_belowFlagArea
+    (workStart : Wire) (register : List Wire)
+    (hregister : IsPointAddFieldRegister workStart register) :
+    ∀ w ∈ register, w < workStart + flagOffset := by
+  intro w hw
+  rcases hregister with rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    have hbounds := List.mem_range'_1.mp hw
+    apply hbounds.2.trans_le
+    norm_num [pointAddX, pointAddY, pointAddT0, pointAddT1,
+      pointAddT2, pointAddT3, pointAddT4, flagOffset,
+      yHistoryOffset, yDifferenceOffset, xHistoryOffset,
+      xDifferenceOffset, zeroHistoryOffset, constOffset, fieldAreaSize,
+      fieldWidth, Secp256k1Instance.fieldWidth]
+
+private theorem pointAddControl_not_mem_activeSupport
+    (workStart index : Wire) (hindex : index < 6) :
+    workStart + flagOffset + index ∉
+      pointAddBranchActiveSupport workStart := by
+  intro hmem
+  have hcontrolLower :
+      workStart + flagOffset ≤ workStart + flagOffset + index := by
+    exact Nat.le_add_right (workStart + flagOffset) index
+  have hcontrolUpper :
+      workStart + flagOffset + index <
+        workStart + candidateOffset := by
+    simpa [candidateOffset, Nat.add_assoc] using
+      Nat.add_lt_add_left hindex (workStart + flagOffset)
+  simp only [pointAddBranchActiveSupport, List.mem_append] at hmem
+  rcases hmem with hx | hy | ht0 | ht1 | ht2 | ht3 | ht4 |
+      hcandidate | hselected | hadd | hmul | hinv
+  · exact (Nat.not_lt_of_ge hcontrolLower)
+      (pointAddFieldRegister_belowFlagArea workStart
+        (pointAddX workStart)
+        (by simp [IsPointAddFieldRegister]) _ hx)
+  · exact (Nat.not_lt_of_ge hcontrolLower)
+      (pointAddFieldRegister_belowFlagArea workStart
+        (pointAddY workStart)
+        (by simp [IsPointAddFieldRegister]) _ hy)
+  · exact (Nat.not_lt_of_ge hcontrolLower)
+      (pointAddFieldRegister_belowFlagArea workStart
+        (pointAddT0 workStart)
+        (by simp [IsPointAddFieldRegister]) _ ht0)
+  · exact (Nat.not_lt_of_ge hcontrolLower)
+      (pointAddFieldRegister_belowFlagArea workStart
+        (pointAddT1 workStart)
+        (by simp [IsPointAddFieldRegister]) _ ht1)
+  · exact (Nat.not_lt_of_ge hcontrolLower)
+      (pointAddFieldRegister_belowFlagArea workStart
+        (pointAddT2 workStart)
+        (by simp [IsPointAddFieldRegister]) _ ht2)
+  · exact (Nat.not_lt_of_ge hcontrolLower)
+      (pointAddFieldRegister_belowFlagArea workStart
+        (pointAddT3 workStart)
+        (by simp [IsPointAddFieldRegister]) _ ht3)
+  · exact (Nat.not_lt_of_ge hcontrolLower)
+      (pointAddFieldRegister_belowFlagArea workStart
+        (pointAddT4 workStart)
+        (by simp [IsPointAddFieldRegister]) _ ht4)
+  · have hbounds := List.mem_range'_1.mp hcandidate
+    exact (Nat.not_le_of_gt hcontrolUpper) hbounds.1
+  · have hbounds := List.mem_range'_1.mp hselected
+    have hcandidateBeforeSelected :
+        workStart + candidateOffset ≤
+          workStart + selectedOffset := by
+      norm_num [selectedOffset, candidateOffset, pointWidth]
+    exact (Nat.not_le_of_gt hcontrolUpper)
+      (hcandidateBeforeSelected.trans hbounds.1)
+  · have hlower := shiftWires_lower
+        (pointAddArithmeticOffset workStart)
+        Secp256k1Instance.secpAddLayout.allWires _ hadd
+    have hcandidateBeforeArithmetic :
+        workStart + candidateOffset ≤
+          pointAddArithmeticOffset workStart := by
+      rw [pointAddArithmeticOffset, localWorkSize_eq]
+      norm_num [candidateOffset, flagOffset, yHistoryOffset,
+        yDifferenceOffset, xHistoryOffset, xDifferenceOffset,
+        zeroHistoryOffset, constOffset, fieldAreaSize,
+        fieldWidth, Secp256k1Instance.fieldWidth]
+    exact (Nat.not_le_of_gt hcontrolUpper)
+      (hcandidateBeforeArithmetic.trans hlower)
+  · have hlower := shiftWires_lower
+        (pointAddArithmeticOffset workStart)
+        Secp256k1Instance.secpMulLayout.allWires _ hmul
+    have hcandidateBeforeArithmetic :
+        workStart + candidateOffset ≤
+          pointAddArithmeticOffset workStart := by
+      rw [pointAddArithmeticOffset, localWorkSize_eq]
+      norm_num [candidateOffset, flagOffset, yHistoryOffset,
+        yDifferenceOffset, xHistoryOffset, xDifferenceOffset,
+        zeroHistoryOffset, constOffset, fieldAreaSize,
+        fieldWidth, Secp256k1Instance.fieldWidth]
+    exact (Nat.not_le_of_gt hcontrolUpper)
+      (hcandidateBeforeArithmetic.trans hlower)
+  · have hlower := shiftWires_lower
+        (pointAddArithmeticOffset workStart)
+        Secp256k1Instance.secpLayout.allWires _ hinv
+    have hcandidateBeforeArithmetic :
+        workStart + candidateOffset ≤
+          pointAddArithmeticOffset workStart := by
+      rw [pointAddArithmeticOffset, localWorkSize_eq]
+      norm_num [candidateOffset, flagOffset, yHistoryOffset,
+        yDifferenceOffset, xHistoryOffset, xDifferenceOffset,
+        zeroHistoryOffset, constOffset, fieldAreaSize,
+        fieldWidth, Secp256k1Instance.fieldWidth]
+    exact (Nat.not_le_of_gt hcontrolUpper)
+      (hcandidateBeforeArithmetic.trans hlower)
+
+private theorem pointAddInfinityFlag_not_mem_activeSupport
+    (workStart : Wire) :
+    pointAddInfinityFlag workStart ∉
+      pointAddBranchActiveSupport workStart := by
+  simpa [pointAddInfinityFlag] using
+    pointAddControl_not_mem_activeSupport workStart 0 (by norm_num)
+
+private theorem pointAddGenericFlag_not_mem_activeSupport
+    (workStart : Wire) :
+    pointAddGenericFlag workStart ∉
+      pointAddBranchActiveSupport workStart := by
+  simpa [pointAddGenericFlag, Nat.add_assoc] using
+    pointAddControl_not_mem_activeSupport workStart 3 (by norm_num)
+
+private theorem pointAddDoubleFlag_not_mem_activeSupport
+    (workStart : Wire) :
+    pointAddDoubleFlag workStart ∉
+      pointAddBranchActiveSupport workStart := by
+  simpa [pointAddDoubleFlag, Nat.add_assoc] using
+    pointAddControl_not_mem_activeSupport workStart 5 (by norm_num)
+
+private theorem run_inactive_bennett_branch
+    (active : Circuit) (control : Wire)
+    (src dst support : List Wire) (st : BasisState)
+    (hfree : Classical.HPFree active)
+    (hwellFormed : CircuitWellFormed active)
+    (huses : CircuitUsesOnly support active)
+    (hcontrolOutside : control ∉ support)
+    (hcontrol : st control = false) :
+    Classical.run
+        (circuit! {
+          active;
+          controlledCopyReg control src dst;
+          active.reverse
+        }) st =
+      st := by
+  have hcontrolAfter :
+      Classical.run active st control = false := by
+    rw [huses.preservesOutside st control hcontrolOutside]
+    exact hcontrol
+  simp only [Classical.run_append]
+  rw [run_controlledCopyReg_false control src dst
+    (Classical.run active st) hcontrolAfter]
+  exact Arithmetic.run_reverse_cancel active st hfree hwellFormed
+
+private theorem genericPointBranch_false
+    (workStart : Wire) (xC yC : Fp) (st : BasisState)
+    (hcontrol : st (pointAddGenericFlag workStart) = false) :
+    Classical.run (genericPointBranch workStart xC yC) st = st := by
+  let active :=
+    genericPointCompute workStart xC yC ++
+      packFinitePoint
+        (pointAddT2 workStart)
+        (pointAddT4 workStart)
+        (pointAddCandidate workStart)
+  have hfree : Classical.HPFree active := by
+    simp [active, genericPointCompute_HPFree, packFinitePoint_HPFree]
+  have hwellFormed : CircuitWellFormed active := by
+    simp [active, genericPointCompute_wellFormed,
+      packFinitePoint_wellFormed]
+  have huses :
+      CircuitUsesOnly (pointAddBranchActiveSupport workStart) active :=
+    usesOnly_append
+      (genericPointCompute_usesOnly workStart xC yC)
+      (packFinitePoint_usesOnly_pointAdd workStart)
+  have hcancel := run_inactive_bennett_branch
+    active (pointAddGenericFlag workStart)
+    (pointAddCandidate workStart)
+    (pointAddSelected workStart)
+    (pointAddBranchActiveSupport workStart) st
+    hfree hwellFormed huses
+    (pointAddGenericFlag_not_mem_activeSupport workStart)
+    hcontrol
+  simpa [genericPointBranch, active, List.append_assoc] using hcancel
+
+private theorem doublePointBranch_false
+    (workStart : Wire) (st : BasisState)
+    (hcontrol : st (pointAddDoubleFlag workStart) = false) :
+    Classical.run (doublePointBranch workStart) st = st := by
+  let active :=
+    doublePointCompute workStart ++
+      packFinitePoint
+        (pointAddT2 workStart)
+        (pointAddT4 workStart)
+        (pointAddCandidate workStart)
+  have hfree : Classical.HPFree active := by
+    simp [active, doublePointCompute_HPFree, packFinitePoint_HPFree]
+  have hwellFormed : CircuitWellFormed active := by
+    simp [active, doublePointCompute_wellFormed,
+      packFinitePoint_wellFormed]
+  have huses :
+      CircuitUsesOnly (pointAddBranchActiveSupport workStart) active :=
+    usesOnly_append
+      (doublePointCompute_usesOnly workStart)
+      (packFinitePoint_usesOnly_pointAdd workStart)
+  have hcancel := run_inactive_bennett_branch
+    active (pointAddDoubleFlag workStart)
+    (pointAddCandidate workStart)
+    (pointAddSelected workStart)
+    (pointAddBranchActiveSupport workStart) st
+    hfree hwellFormed huses
+    (pointAddDoubleFlag_not_mem_activeSupport workStart)
+    hcontrol
+  simpa [doublePointBranch, active, List.append_assoc] using hcancel
+
+private theorem infinityPointBranch_true_value
+    (workStart : Wire)
+    {xC yC : Fp}
+    (hC : curve.toAffine.Nonsingular xC yC)
+    (st : BasisState)
+    (hcontrol : st (pointAddInfinityFlag workStart) = true)
+    (hclean : Clean (pointAddBranchWork workStart) st) :
+    regValue (pointAddSelected workStart)
+        (Classical.run
+          (infinityPointBranch workStart (.some hC)) st) =
+      encodeNat (.some hC) := by
+  let candidate := pointAddCandidate workStart
+  let selected := pointAddSelected workStart
+  let constant := (encode (.some hC)).val
+  have hcandidateClean : Clean candidate st := by
+    apply Arithmetic.Clean.mono hclean
+    intro w hw
+    simp [candidate, pointAddBranchWork, hw]
+  have hselectedClean : Clean selected st := by
+    apply Arithmetic.Clean.mono hclean
+    intro w hw
+    simp [selected, pointAddBranchWork, hw]
+  have hcandidateNodup : candidate.Nodup := by
+    dsimp [candidate, pointAddCandidate]
+    exact List.nodup_range'
+  have hcandidateSelectedNodup :
+      (candidate ++ selected).Nodup := by
+    simpa [candidate, selected, pointAddCandidate,
+      pointAddSelected] using
+      (range'_append_nodup_of_le
+        (workStart + candidateOffset) pointWidth
+        (workStart + selectedOffset) pointWidth
+        (by
+          unfold selectedOffset
+          omega))
+  have hcandidateSelectedSubset :
+      ∀ w ∈ candidate ++ selected,
+        w ∈ pointAddBranchActiveSupport workStart := by
+    intro w hw
+    simp only [List.mem_append] at hw
+    rcases hw with hcandidate | hselected
+    · simp [candidate, pointAddBranchActiveSupport, hcandidate]
+    · simp [selected, pointAddBranchActiveSupport, hselected]
+  have hcontrolNotCandidateSelected :
+      pointAddInfinityFlag workStart ∉ candidate ++ selected := by
+    intro hw
+    exact pointAddInfinityFlag_not_mem_activeSupport workStart
+      (hcandidateSelectedSubset _ hw)
+  have hcontrolledNodup :
+      (pointAddInfinityFlag workStart ::
+        candidate ++ selected).Nodup :=
+    List.nodup_cons.mpr
+      ⟨hcontrolNotCandidateSelected, hcandidateSelectedNodup⟩
+  have hcross := (List.nodup_append.mp
+    hcandidateSelectedNodup).2.2
+  have hselectedNotCandidate :
+      ∀ w ∈ selected, w ∉ candidate := by
+    intro w hselected hcandidate
+    exact hcross w hcandidate w hselected rfl
+  have hbound : constant < 2 ^ candidate.length := by
+    change (encode (.some hC)).val < 2 ^ candidate.length
+    rw [encode_val]
+    rw [show candidate.length = pointWidth by
+      simp [candidate, pointAddCandidate]]
+    exact encodeNat_lt (.some hC)
+  let loaded := Classical.run (loadConst candidate constant) st
+  have hcandidateValue :
+      regValue candidate loaded = encodeNat (.some hC) := by
+    have hload := loadConst_correct candidate constant st
+      hcandidateNodup hcandidateClean hbound
+    calc
+      regValue candidate loaded = constant := by
+        simpa only [loaded] using hload
+      _ = encodeNat (.some hC) := by
+        simp only [constant, encode_val]
+  have hselectedCleanLoaded : Clean selected loaded := by
+    intro w hw
+    change Classical.run (loadConst candidate constant) st w = false
+    rw [loadConst_other w candidate constant st
+      (hselectedNotCandidate w hw)]
+    exact hselectedClean w hw
+  have hcontrolNotCandidate :
+      pointAddInfinityFlag workStart ∉ candidate := by
+    intro hw
+    exact hcontrolNotCandidateSelected
+      (List.mem_append.mpr (Or.inl hw))
+  have hcontrolLoaded :
+      loaded (pointAddInfinityFlag workStart) = true := by
+    change Classical.run (loadConst candidate constant) st
+      (pointAddInfinityFlag workStart) = true
+    rw [loadConst_other
+      (pointAddInfinityFlag workStart) candidate constant st
+      hcontrolNotCandidate]
+    exact hcontrol
+  let copied :=
+    Classical.run
+      (controlledCopyReg
+        (pointAddInfinityFlag workStart) candidate selected)
+      loaded
+  have hcontrolled :
+      copied =
+        Classical.run (Arithmetic.copyReg candidate selected) loaded := by
+    exact run_controlledCopyReg_true
+      (pointAddInfinityFlag workStart) candidate selected loaded
+      hcontrolledNodup hcontrolLoaded
+  have hlength : selected.length = candidate.length := by
+    simp [selected, candidate, pointAddSelected, pointAddCandidate]
+  have hcopiedValue :
+      regValue selected copied = encodeNat (.some hC) := by
+    calc
+      regValue selected copied =
+          regValue selected
+            (Classical.run (Arithmetic.copyReg candidate selected)
+              loaded) := by rw [hcontrolled]
+      _ = regValue candidate loaded :=
+        Arithmetic.copyReg_correct candidate selected loaded
+          hlength hcandidateSelectedNodup hselectedCleanLoaded
+      _ = encodeNat (.some hC) := hcandidateValue
+  have hfinalValue :
+      regValue selected
+          (Classical.run (loadConst candidate constant) copied) =
+        encodeNat (.some hC) := by
+    rw [loadConst_regValue selected candidate constant copied
+      hselectedNotCandidate]
+    exact hcopiedValue
+  simpa only [infinityPointBranch, candidate, selected, constant,
+    loaded, copied, Classical.run_append] using hfinalValue
 
 /--
 The finite computation is exactly setup followed by the candidate branches.
@@ -4460,7 +6184,12 @@ theorem pointAddBranches_infinity_correct
           (pointAddBranches workStart hC)
           st) =
       encodeNat (.some hC) := by
-  sorry
+  rw [pointAddBranches, Classical.run_append,
+    Classical.run_append,
+    genericPointBranch_false workStart xC yC st hgeneric,
+    doublePointBranch_false workStart st hdouble]
+  exact infinityPointBranch_true_value
+    workStart hC st hinfinity hclean
 
 /--
 When all three branch controls are false, nothing is XORed into `selected`.
