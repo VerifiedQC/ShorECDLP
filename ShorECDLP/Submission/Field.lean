@@ -22,9 +22,10 @@ theorems); a future optimized submission carries a different list against the sa
     **the modular reduction is the generic prime algorithm and does not exploit the
     pseudo-Mersenne structure of `p = 2^256 − 2^32 − 977`.** (Seeing the literal prime in
     the source must not be read as a pseudo-Mersenne speedup.)
-  - **Primality of `p`** is a standard published fact carried in this base layer as a
-    visible `[Fact (Nat.Prime p)]` hypothesis, not an axiom. The concrete secp256k1
-    certificate layer later discharges that instance with a Lucas/Pratt-style certificate.
+  - **Primality of `p`** is machine-checked by the Lucas/Pratt-style certificate in
+    `EllipticCurve/GeneratorOrder`.  This generic Fermat theorem keeps the minimal
+    `[Fact (Nat.Prime p)]` hypothesis in its signature; concrete secp256k1 declarations
+    instantiate it locally from that certificate, without exporting a global instance.
 
 Further items attach to the modules they describe as those land (Fermat inversion →
 `Arithmetic/ModExp`, un-windowed double-and-add → `Arithmetic/ScalarMul`, coherent-QFT
