@@ -1,4 +1,5 @@
 import ShorECDLP.Framework.Bitcoin
+import ShorECDLP.Framework.BitcoinPrimes
 import ShorECDLP.Framework.CostModel
 import ShorECDLP.Framework.Quantum.Measurement
 
@@ -28,7 +29,6 @@ to at least 99%.  These requirements are written directly in the fields below
 so a submission cannot replace or weaken them.
 -/
 structure BitcoinECDLPSubmission
-    [Fact (Nat.Prime p)]
     (primeOrder : Nat.Prime order)
     (aReg bReg : List Wire) where
   program : Secp256k1.Point → Circuit
