@@ -111,8 +111,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1.ecdlpTrial_tCount
 #print axioms ShorECDLP.Secp256k1.ecdlpTrial_wellFormed
 #print axioms ShorECDLP.Secp256k1.orderFinding_correct
-#print axioms ShorECDLP.bitcoinOrderFindingSuccessProbability
-#print axioms ShorECDLP.bitcoinRepeatedSuccessProbability
+#print axioms ShorECDLP.Quantum.OrderFinding.nearestNumerator
+#print axioms ShorECDLP.Quantum.OrderFinding.orderFindingPostprocess
 #print axioms ShorECDLP.BitcoinECDLPTrialCorrect
 #print axioms ShorECDLP.BitcoinECDLPTrialsSufficient
 #print axioms ShorECDLP.BitcoinECDLPSubmission

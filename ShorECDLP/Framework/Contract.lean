@@ -1,95 +1,89 @@
 import ShorECDLP.Framework.Bitcoin
+import ShorECDLP.Framework.CostModel
+import ShorECDLP.Framework.Quantum.Measurement
 
 /-!
-# Submission contract
+# Bitcoin ECDLP submission contract
 
-The framework fixes the Bitcoin ECDLP problem and defines the shape of a
-verified submission for it.  A submitter supplies one circuit, its T-count,
-and its trial count, but cannot choose the correctness predicates those
-objects are checked against.
+The Framework fixes the mathematical Bitcoin problem and its observable
+success criterion.  A submission remains free to choose the point encoding,
+oracle implementation, and complete trial circuit, but it must prove that the
+submitted circuit recovers the discrete logarithm of the specified public key.
 -/
 
 namespace ShorECDLP
 
-/--
-In one run, the joint Born probability of measuring registers `(a,b)` whose
-canonical ECDLP postprocessing recovers the secret.  The Bitcoin order and
-256-bit precision are fixed here; `program` is the submitted trial circuit.
--/
-noncomputable def bitcoinOrderFindingSuccessProbability
-    (secret : Nat)
-    (primeOrder : Nat.Prime order)
-    (aReg bReg : List Wire)
-    (input : BasisState)
-    (program : Circuit) : Real :=
-  Quantum.OrderFinding.orderFindingSuccessProbability
-    order 256 secret primeOrder aReg bReg
-    (Quantum.run program (Quantum.ket input))
+open scoped BigOperators
 
 /--
-Probability that at least one of `trials` independent measured runs recovers
-the secret from its measured `(a,b)` pair.
+The fixed single-trial Bitcoin correctness predicate.
+
+The recovered number must be the discrete logarithm of the specified nonzero
+public key.  The submitted circuit must preserve normalization, and the joint
+Born probability of measured pairs `(a,b)` whose canonical postprocessing
+recovers that secret must be at least the submission's proposed one-run lower
+bound.  The proposed number is itself required to lie in `[0,1]`.
 -/
-noncomputable def bitcoinRepeatedSuccessProbability
+noncomputable def BitcoinECDLPTrialCorrect
+    [Fact (Nat.Prime p)]
+    (publicKey : Secp256k1.Point)
     (secret : Nat)
     (primeOrder : Nat.Prime order)
     (aReg bReg : List Wire)
     (input : BasisState)
     (program : Circuit)
-    (trials : Nat) : Real :=
-  1 - (1 - bitcoinOrderFindingSuccessProbability
-    secret primeOrder aReg bReg input program) ^ trials
+    (singleRunSuccessLowerBound : Real) : Prop :=
+  publicKey = secret • Secp256k1.G ∧
+    publicKey ≠ 0 ∧
+    0 ≤ singleRunSuccessLowerBound ∧
+    singleRunSuccessLowerBound ≤ 1 ∧
+    Quantum.normSq (Quantum.run program (Quantum.ket input)) = 1 ∧
+    singleRunSuccessLowerBound ≤
+      ∑ a : Fin (2 ^ 256),
+        ∑ b : Fin (2 ^ 256),
+          if Quantum.OrderFinding.orderFindingPostprocess
+              order 256 primeOrder (a, b) = some (secret : ZMod order)
+          then
+            Quantum.OrderFinding.jointRegisterProbability
+              aReg bReg a.val b.val
+              (Quantum.run program (Quantum.ket input))
+          else 0
 
 /--
-The fixed single-trial Bitcoin correctness predicate.  The submitted circuit
-must preserve normalization and meet the proved secp256k1 order-finding lower
-bound.
--/
-def BitcoinECDLPTrialCorrect
-    (secret : Nat)
-    (primeOrder : Nat.Prime order)
-    (aReg bReg : List Wire)
-    (input : BasisState)
-    (program : Circuit) : Prop :=
-  Quantum.normSq (Quantum.run program (Quantum.ket input)) = 1 ∧
-    ((order - 1 : Real) / order) *
-        ((4 : Real) / Real.pi ^ 2) ^ 2 ≤
-      bitcoinOrderFindingSuccessProbability
-        secret primeOrder aReg bReg input program
-
-/--
-The fixed Bitcoin repetition criterion: the submitted number of independent
-measured trials must recover the secret with probability at least 99%.
+The fixed Bitcoin repetition criterion.  A submission's proposed one-run
+success lower bound and trial count must give at least 99% success under
+independent measured repetition.
 -/
 def BitcoinECDLPTrialsSufficient
-    (secret : Nat)
-    (primeOrder : Nat.Prime order)
-    (aReg bReg : List Wire)
-    (input : BasisState)
-    (program : Circuit)
+    (singleRunSuccessLowerBound : Real)
     (trials : Nat) : Prop :=
   (99 / 100 : Real) ≤
-    bitcoinRepeatedSuccessProbability
-      secret primeOrder aReg bReg input program trials
+    1 - (1 - singleRunSuccessLowerBound) ^ trials
 
 /--
-A verified Bitcoin ECDLP submission.  Every proof refers to the same
-`program` field, and the correctness and 99%-success predicates are fixed by
-the Framework rather than supplied by the submitter.
+A verified submission for the externally specified Bitcoin public key.
+
+The correctness predicates are fixed by the Framework.  A submitter supplies
+only one trial circuit, its exact T-count, a trial count, and proofs that the
+same circuit achieves a proposed one-run success lower bound and that the
+proposed bound reaches 99% after the submitted number of trials.
 -/
 structure BitcoinECDLPSubmission
+    [Fact (Nat.Prime p)]
+    (publicKey : Secp256k1.Point)
     (secret : Nat)
     (primeOrder : Nat.Prime order)
     (aReg bReg : List Wire)
     (input : BasisState) where
   program : Circuit
+  singleRunSuccessLowerBound : Real
   correct :
-    BitcoinECDLPTrialCorrect secret primeOrder aReg bReg input program
+    BitcoinECDLPTrialCorrect publicKey secret primeOrder
+      aReg bReg input program singleRunSuccessLowerBound
   gateCount : Nat
   gateCount_correct : tCount program = gateCount
   trialCount : Nat
   trialCount_correct :
-    BitcoinECDLPTrialsSufficient secret primeOrder aReg bReg input
-      program trialCount
+    BitcoinECDLPTrialsSufficient singleRunSuccessLowerBound trialCount
 
 end ShorECDLP

@@ -227,13 +227,15 @@ theorem bitcoinECDLPTrial_correct
       (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
     (horderG : addOrderOf G = order)
     (hQ : Q = d • G)
+    (hQnonzero : Q ≠ 0)
     (hsetup :
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
         aReg bReg pointReg (scalarMulWork workStart)
         qftAncilla 256 input) :
-    BitcoinECDLPTrialCorrect d (Fact.out : Nat.Prime order) aReg bReg input
-      (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q) := by
-  unfold BitcoinECDLPTrialCorrect bitcoinOrderFindingSuccessProbability
+    BitcoinECDLPTrialCorrect Q d (Fact.out : Nat.Prime order) aReg bReg input
+      (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
+      (41 / 250 : Real) := by
+  unfold BitcoinECDLPTrialCorrect
   have hwf := ecdlpTrial_wellFormed
     Q aReg bReg pointReg workStart qftAncilla input
     hpointLength hnodup hsetup
@@ -243,75 +245,27 @@ theorem bitcoinECDLPTrial_correct
           (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
           (Quantum.ket input)) = 1 :=
     Quantum.normSq_run_ket _ hwf input
-  refine ⟨hnorm, ?_⟩
-  exact orderFinding_correct
+  refine ⟨hQ, hQnonzero, by norm_num, by norm_num, hnorm, ?_⟩
+  exact bitcoin_singleRun_lower.trans <| orderFinding_correct
     Q aReg bReg pointReg workStart qftAncilla input
     hpointLength hnodup horderG hQ hsetup (by norm_num [order])
 
 omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 /--
-The concrete trial count `26` raises the certified single-trial success
-probability to at least 99%.
+The proposed one-run lower bound `41/250` and trial count `26` give at least
+99% success under independent measured repetition.
 -/
-theorem bitcoinECDLP_correct
-    [Fact (Nat.Prime p)] [Fact (Nat.Prime order)]
-    {d : Nat} (Q : Point)
-    (aReg bReg pointReg : List Wire)
-    (workStart qftAncilla : Wire)
-    (input : BasisState)
-    (hpointLength : pointReg.length = pointWidth)
-    (hnodup :
-      (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
-    (horderG : addOrderOf G = order)
-    (hQ : Q = d • G)
-    (hsetup :
-      Quantum.OrderFinding.OrderFindingSetup pointEncoding
-        aReg bReg pointReg (scalarMulWork workStart)
-        qftAncilla 256 input) :
-    BitcoinECDLPTrialsSufficient d (Fact.out : Nat.Prime order)
-      aReg bReg input
-      (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q) 26 := by
-  unfold BitcoinECDLPTrialsSufficient bitcoinRepeatedSuccessProbability
-    bitcoinOrderFindingSuccessProbability
-  have htrial := bitcoinECDLPTrial_correct (d := d)
-    Q aReg bReg pointReg workStart qftAncilla input
-    hpointLength hnodup horderG hQ hsetup
-  have hleNorm :=
-    Quantum.OrderFinding.orderFindingSuccessProbability_le_normSq
-      order 256 d (Fact.out : Nat.Prime order)
-      aReg bReg hsetup.a_width hsetup.b_width
-      (Quantum.run
-        (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
-        (Quantum.ket input))
-  have hsingleLeOne :
-      Quantum.OrderFinding.orderFindingSuccessProbability
-          order 256 d (Fact.out : Nat.Prime order) aReg bReg
-          (Quantum.run
-            (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
-            (Quantum.ket input)) ≤ 1 :=
-    hleNorm.trans_eq htrial.1
-  have hsingle :
-      (41 / 250 : Real) ≤
-        Quantum.OrderFinding.orderFindingSuccessProbability
-          order 256 d (Fact.out : Nat.Prime order) aReg bReg
-          (Quantum.run
-            (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
-            (Quantum.ket input)) :=
-    bitcoin_singleRun_lower.trans htrial.2
-  have hamp := independentRetrySuccessProbability_mono
-    26 hsingleLeOne hsingle
-  have hnumeric :
-      (99 / 100 : Real) ≤
-        independentRetrySuccessProbability (41 / 250 : Real) 26 := by
-    norm_num [independentRetrySuccessProbability]
-  exact hnumeric.trans hamp
+theorem bitcoinECDLP_correct :
+    BitcoinECDLPTrialsSufficient (41 / 250 : Real) 26 := by
+  norm_num [BitcoinECDLPTrialsSufficient]
 
 /--
 The concrete Bitcoin submission.  Its record fields contain the exact trial
-circuit, both correctness proofs, the per-trial T-count `841862539761920`, and
-the sufficient trial count `26`.
+circuit, certified one-run lower bound `41/250`, per-trial T-count
+`841862539761920`, and sufficient trial count `26`, together with the three
+corresponding proofs.
 -/
-def bitcoinECDLPSubmission
+noncomputable def bitcoinECDLPSubmission
     {d : Nat} (Q : Point)
     (aReg bReg pointReg : List Wire)
     (workStart qftAncilla : Wire)
@@ -326,17 +280,17 @@ def bitcoinECDLPSubmission
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
         aReg bReg pointReg (scalarMulWork workStart)
         qftAncilla 256 input) :
-    BitcoinECDLPSubmission d (Fact.out : Nat.Prime order)
+    BitcoinECDLPSubmission Q d (Fact.out : Nat.Prime order)
       aReg bReg input where
   program := ecdlpTrial aReg bReg pointReg workStart qftAncilla Q
+  singleRunSuccessLowerBound := 41 / 250
   correct := bitcoinECDLPTrial_correct (d := d) Q aReg bReg pointReg workStart
-    qftAncilla input hpointLength hnodup horderG hQ hsetup
+    qftAncilla input hpointLength hnodup horderG hQ hQnonzero hsetup
   gateCount := 841862539761920
   gateCount_correct := ecdlpTrial_tCount Q aReg bReg pointReg workStart
     qftAncilla hsetup.a_width hsetup.b_width hpointLength horderG hQ hQnonzero
   trialCount := 26
-  trialCount_correct := bitcoinECDLP_correct (d := d) Q aReg bReg pointReg workStart
-    qftAncilla input hpointLength hnodup horderG hQ hsetup
+  trialCount_correct := bitcoinECDLP_correct
 
 /-- The exact aggregate T-count of the concrete repeated Bitcoin procedure. -/
 def bitcoinECDLPTotalGateCount : Nat :=

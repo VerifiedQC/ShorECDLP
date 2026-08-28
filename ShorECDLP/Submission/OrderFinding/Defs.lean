@@ -1,12 +1,14 @@
 import ShorECDLP.Submission.OrderFinding.OracleSpec
 import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Defs
 import ShorECDLP.Framework.Bitcoin
+import ShorECDLP.Framework.Quantum.Measurement
 
 namespace ShorECDLP.Quantum.OrderFinding
 
 noncomputable section
 
 open PhaseEstimation
+open scoped BigOperators
 
 def orderFinding
     (aReg bReg : List Wire)
@@ -19,6 +21,23 @@ def orderFinding
         (run (hadamards (aReg ++ bReg)))))
 
 end
+
+/--
+Born probability that measurement followed by the canonical ECDLP
+postprocessing recovers `d`.
+-/
+noncomputable def orderFindingSuccessProbability
+    (r precision d : Nat)
+    (hr : Nat.Prime r)
+    (aReg bReg : List Wire)
+    (psi : State) : Real :=
+  ∑ a : Fin (2 ^ precision),
+    ∑ b : Fin (2 ^ precision),
+      if orderFindingPostprocess r precision hr (a, b) =
+          some (d : ZMod r)
+      then
+        jointRegisterProbability aReg bReg a.val b.val psi
+      else 0
 
 /-- Mathematical ECDLP instance used by the abstract order-finding proof. -/
 structure ECDLPSetting
@@ -46,5 +65,31 @@ structure OrderFindingSetup
   ancilla_zero : s qftAncilla = false
   ancilla_fresh :
     qftAncilla ∉ aReg ++ bReg ++ pointReg ++ oracleWork
+
+/-- The successful outcomes carry at most the state's total Born mass. -/
+theorem orderFindingSuccessProbability_le_normSq
+    (r precision d : Nat)
+    (hr : Nat.Prime r)
+    (aReg bReg : List Wire)
+    (ha : aReg.length = precision)
+    (hb : bReg.length = precision)
+    (psi : State) :
+    orderFindingSuccessProbability r precision d hr aReg bReg psi ≤
+      normSq psi := by
+  calc
+    orderFindingSuccessProbability r precision d hr aReg bReg psi ≤
+        ∑ a : Fin (2 ^ precision),
+          ∑ b : Fin (2 ^ precision),
+            jointRegisterProbability aReg bReg a.val b.val psi := by
+      unfold orderFindingSuccessProbability
+      apply Finset.sum_le_sum
+      intro a _
+      apply Finset.sum_le_sum
+      intro b _
+      split_ifs
+      · exact le_rfl
+      · exact jointRegisterProbability_nonneg _ _ _ _ _
+    _ = normSq psi :=
+      jointRegisterProbability_sum_eq_normSq aReg bReg precision ha hb psi
 
 end ShorECDLP.Quantum.OrderFinding
