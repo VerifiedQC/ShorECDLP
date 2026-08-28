@@ -1,11 +1,12 @@
+import ShorECDLP.Framework.BitcoinCurve
 import Mathlib.FieldTheory.Finite.Basic
 import Mathlib.Data.ZMod.Basic
 
 /-
 # secp256k1 base field and Fermat inversion (M1, spec layer)
 
-This is the *mathematical* backbone of M1: the secp256k1 domain parameters and the
-correctness statement for **Fermat inversion**, `a⁻¹ = a^(p-2) mod p`. The reversible
+This file states the submission's correctness target for **Fermat inversion**,
+`a⁻¹ = a^(p-2) mod p`, over the Framework's fixed Bitcoin base field. The reversible
 modular-exponentiation *circuit* built in the next M1 step implements this function, and
 its correctness proof will discharge against `fermat_inv` here — so the circuit's
 `correct` obligation and the mathematics it is judged against live in one place.
@@ -16,7 +17,8 @@ Disclosures live here, beside the constants they describe — never in `framewor
 cost model is construction-agnostic. They document algorithm choices (not machine-checked
 theorems); a future optimized submission carries a different list against the same framework.
 
-  - **Constants are secp256k1-specific**, hardcoded below (`p`, `order`, `a = 0`, `b = 7`);
+  - **Constants are secp256k1-specific**: the Framework fixes `p`, `a = 0`, `b = 7`, and
+    `order` as part of the Bitcoin problem;
     **the modular reduction is the generic prime algorithm and does not exploit the
     pseudo-Mersenne structure of `p = 2^256 − 2^32 − 977`.** (Seeing the literal prime in
     the source must not be read as a pseudo-Mersenne speedup.)
@@ -32,23 +34,6 @@ consolidated into the submission's reading-guide at M5.
 -/
 
 namespace ShorECDLP
-
-/-- The secp256k1 base-field prime `p = 2^256 − 2^32 − 977`. -/
-def p : ℕ := 2 ^ 256 - 2 ^ 32 - 977
-
-/-- The secp256k1 group order `n` (number of points on the curve). -/
-def order : ℕ :=
-  0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
-
-/-- secp256k1 short-Weierstrass coefficient `a = 0` (curve `y² = x³ + 7`). -/
-def curveA : ℕ := 0
-
-/-- secp256k1 short-Weierstrass coefficient `b = 7`. -/
-def curveB : ℕ := 7
-
-/-- The secp256k1 base field `F_p`. It is a field exactly when `p` is prime, which we
-carry as an instance hypothesis `[Fact (Nat.Prime p)]`. -/
-abbrev Fp := ZMod p
 
 /-- **Fermat inversion is correct.** For the prime field `F_p` and any nonzero `x`,
 `x^(p-2)` is the field inverse `x⁻¹`. This is the correctness target the Fermat-inversion

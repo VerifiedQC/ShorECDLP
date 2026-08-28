@@ -1,52 +1,89 @@
-import ShorECDLP.Framework.Repetition
-import ShorECDLP.Submission.Correctness.Trial
+import ShorECDLP.Framework.Bitcoin
+import ShorECDLP.Framework.CostModel
+import ShorECDLP.Framework.Quantum.Measurement
 
 /-!
 # Bitcoin ECDLP submission contract
 
-This file contains only the closed public claim for the Bitcoin curve.  The
-joint-measurement semantics and independent-repetition model live in their
-own Framework modules; generic ECDLP and order-finding definitions live under
-`Submission/OrderFinding`.
-
-There are no configurable contract parameters.  The proposition fixes
-secp256k1, 256-bit phase registers, 26 independent measured trials, a 99%
-success target, and the exact aggregate T-count.  It quantifies internally
-over the public key and every valid wire placement, and both claims reference
-the same exact `ecdlpTrial` term.
+The Framework fixes the mathematical Bitcoin problem and its observable
+success criterion.  A submission remains free to choose the point encoding,
+oracle implementation, and complete trial circuit, but it must prove that the
+submitted circuit recovers the discrete logarithm of the specified public key.
 -/
 
-namespace ShorECDLP.Secp256k1
+namespace ShorECDLP
+
+open scoped BigOperators
 
 /--
-The complete Bitcoin ECDLP claim: the concrete secp256k1 trial is normalized,
-26 independent measured runs recover the discrete logarithm with probability
-at least 99%, and those same 26 trials cost exactly
-21,888,426,033,809,920 T gates.
--/
-def BitcoinECDLPSubmission : Prop :=
-  ∀ [Fact (Nat.Prime p)] [Fact (Nat.Prime order)]
-    {d : Nat} (Q : Point)
-    (aReg bReg pointReg : List Wire)
-    (workStart qftAncilla : Wire)
-    (input : BasisState),
-    pointReg.length = pointWidth →
-    (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup →
-    addOrderOf G = order →
-    Q = d • G →
-    Q ≠ 0 →
-    Quantum.OrderFinding.OrderFindingSetup pointEncoding
-      aReg bReg pointReg (scalarMulWork workStart)
-      qftAncilla 256 input →
-    let trial :=
-      ecdlpTrial aReg bReg pointReg workStart qftAncilla Q
-    Quantum.normSq (Quantum.run trial (Quantum.ket input)) = 1 ∧
-      (99 / 100 : Real) ≤
-        independentRetrySuccessProbability
-          (Quantum.OrderFinding.orderFindingSuccessProbability
-            order 256 d (Fact.out : Nat.Prime order) aReg bReg
-            (Quantum.run trial (Quantum.ket input)))
-          26 ∧
-      repeatedTCount trial 26 = 21888426033809920
+The fixed single-trial Bitcoin correctness predicate.
 
-end ShorECDLP.Secp256k1
+The recovered number must be the discrete logarithm of the specified nonzero
+public key.  The submitted circuit must preserve normalization, and the joint
+Born probability of measured pairs `(a,b)` whose canonical postprocessing
+recovers that secret must be at least the submission's proposed one-run lower
+bound.  The proposed number is itself required to lie in `[0,1]`.
+-/
+noncomputable def BitcoinECDLPTrialCorrect
+    [Fact (Nat.Prime p)]
+    (publicKey : Secp256k1.Point)
+    (secret : Nat)
+    (primeOrder : Nat.Prime order)
+    (aReg bReg : List Wire)
+    (input : BasisState)
+    (program : Circuit)
+    (singleRunSuccessLowerBound : Real) : Prop :=
+  publicKey = secret • Secp256k1.G ∧
+    publicKey ≠ 0 ∧
+    0 ≤ singleRunSuccessLowerBound ∧
+    singleRunSuccessLowerBound ≤ 1 ∧
+    Quantum.normSq (Quantum.run program (Quantum.ket input)) = 1 ∧
+    singleRunSuccessLowerBound ≤
+      ∑ a : Fin (2 ^ 256),
+        ∑ b : Fin (2 ^ 256),
+          if Quantum.OrderFinding.orderFindingPostprocess
+              order 256 primeOrder (a, b) = some (secret : ZMod order)
+          then
+            Quantum.OrderFinding.jointRegisterProbability
+              aReg bReg a.val b.val
+              (Quantum.run program (Quantum.ket input))
+          else 0
+
+/--
+The fixed Bitcoin repetition criterion.  A submission's proposed one-run
+success lower bound and trial count must give at least 99% success under
+independent measured repetition.
+-/
+def BitcoinECDLPTrialsSufficient
+    (singleRunSuccessLowerBound : Real)
+    (trials : Nat) : Prop :=
+  (99 / 100 : Real) ≤
+    1 - (1 - singleRunSuccessLowerBound) ^ trials
+
+/--
+A verified submission for the externally specified Bitcoin public key.
+
+The correctness predicates are fixed by the Framework.  A submitter supplies
+only one trial circuit, its exact T-count, a trial count, and proofs that the
+same circuit achieves a proposed one-run success lower bound and that the
+proposed bound reaches 99% after the submitted number of trials.
+-/
+structure BitcoinECDLPSubmission
+    [Fact (Nat.Prime p)]
+    (publicKey : Secp256k1.Point)
+    (secret : Nat)
+    (primeOrder : Nat.Prime order)
+    (aReg bReg : List Wire)
+    (input : BasisState) where
+  program : Circuit
+  singleRunSuccessLowerBound : Real
+  correct :
+    BitcoinECDLPTrialCorrect publicKey secret primeOrder
+      aReg bReg input program singleRunSuccessLowerBound
+  gateCount : Nat
+  gateCount_correct : tCount program = gateCount
+  trialCount : Nat
+  trialCount_correct :
+    BitcoinECDLPTrialsSufficient singleRunSuccessLowerBound trialCount
+
+end ShorECDLP

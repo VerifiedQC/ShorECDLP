@@ -90,6 +90,22 @@ def compiler_source_closure(files: list[Path], toolchain_root: Path) -> set[Path
     with ThreadPoolExecutor(max_workers=min(8, len(files))) as executor:
         dependency_map = dict(zip(files, executor.map(direct_source_dependencies, files)))
 
+    framework_root = (SOURCE_ROOT / "Framework").resolve()
+    submission_root = (SOURCE_ROOT / "Submission").resolve()
+    layering_violations = sorted(
+        (source.resolve(), dependency)
+        for source, dependencies in dependency_map.items()
+        if is_within(source.resolve(), framework_root)
+        for dependency in dependencies
+        if is_within(dependency, submission_root)
+    )
+    if layering_violations:
+        edges = ", ".join(
+            f"{source.relative_to(ROOT)} -> {dependency.relative_to(ROOT)}"
+            for source, dependency in layering_violations
+        )
+        raise ValueError(f"Framework must not import Submission: {edges}")
+
     sanctioned = {path.resolve() for path in files}
     dependency_path = ROOT / ".lake" / "packages"
     if dependency_path.is_symlink():
