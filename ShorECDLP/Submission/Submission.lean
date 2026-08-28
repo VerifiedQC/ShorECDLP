@@ -17,9 +17,7 @@ workspace, and QFT ancilla are fixed by the submission, so callers supply no
 layout or initialization premises.
 -/
 noncomputable def bitcoinECDLPSubmission :
-    @BitcoinECDLPSubmission ⟨p_prime⟩ order_prime
-      bitcoinAReg bitcoinBReg := by
-  letI : Fact (Nat.Prime p) := ⟨p_prime⟩
+    BitcoinECDLPSubmission order_prime bitcoinAReg bitcoinBReg := by
   obtain ⟨haLength, hbLength, hpointLength, hnodup, hancillaFresh⟩ :=
     bitcoinWireLayout
   exact
