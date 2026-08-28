@@ -278,6 +278,34 @@ theorem ecdlpOracle_correct
         (regValue bReg st) • Q)).val st hpointNodup]
   simp only [ecdlpFunction, add_assoc]
 
+/-- The two-call oracle stays inside its two scalar registers, point
+accumulator, and shared scalar-multiplication workspace. -/
+theorem ecdlpOracle_usesOnly
+    (aReg bReg pointReg : List Wire)
+    (workStart : Wire)
+    (P Q : Point) :
+    CircuitUsesOnly
+      (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart)
+      (ecdlpOracle aReg bReg pointReg workStart P Q) := by
+  rw [ecdlpOracle]
+  apply Arithmetic.usesOnly_append
+  · apply Arithmetic.usesOnly_mono
+      (scalarMul_usesOnly aReg pointReg workStart P)
+    intro w hw
+    simp only [List.mem_append] at hw ⊢
+    rcases hw with (ha | hpoint) | hwork
+    · exact Or.inl (Or.inl (Or.inl ha))
+    · exact Or.inl (Or.inr hpoint)
+    · exact Or.inr hwork
+  · apply Arithmetic.usesOnly_mono
+      (scalarMul_usesOnly bReg pointReg workStart Q)
+    intro w hw
+    simp only [List.mem_append] at hw ⊢
+    rcases hw with (hb | hpoint) | hwork
+    · exact Or.inl (Or.inl (Or.inr hb))
+    · exact Or.inl (Or.inr hpoint)
+    · exact Or.inr hwork
+
 /-- The exact concrete oracle circuit is H/P-free. -/
 theorem ecdlpOracle_HPFree
     (aReg bReg pointReg : List Wire)

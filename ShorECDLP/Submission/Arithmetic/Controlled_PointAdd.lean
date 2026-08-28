@@ -1947,6 +1947,165 @@ theorem controlledPointAdd_correct
 /-! ## Public structural lemmas -/
 
 omit [Fact (Nat.Prime p)] in
+/-- Register swap reads and writes only the two registers being swapped. -/
+private theorem pointSwapReg_usesOnly :
+    ∀ (left right : List Wire),
+      CircuitUsesOnly (left ++ right) (pointSwapReg left right) := by
+  intro left
+  induction left with
+  | nil =>
+      intro right
+      simp [pointSwapReg, CircuitUsesOnly]
+  | cons x xs ih =>
+      intro right
+      cases right with
+      | nil => simp [pointSwapReg, CircuitUsesOnly]
+      | cons y ys =>
+          intro g hg
+          simp only [pointSwapReg, List.mem_cons] at hg
+          rcases hg with rfl | rfl | rfl | hg
+          · simp [Gate.UsesOnly]
+          · simp [Gate.UsesOnly]
+          · simp [Gate.UsesOnly]
+          · apply Arithmetic.usesOnly_mono (ih ys) (c := pointSwapReg xs ys)
+              (fun w hw => by
+                simp only [List.mem_append, List.mem_cons] at hw ⊢
+                tauto) g hg
+
+omit [Fact (Nat.Prime p)] in
+/-- The out-of-place controlled point addition stays inside its declared
+control, point, output, and workspace footprint. -/
+theorem controlledPointAddOut_usesOnly
+    (control : Wire)
+    (pointReg outReg : List Wire)
+    (workStart : Wire)
+    (C : Point) :
+    CircuitUsesOnly
+      ([control] ++ pointReg ++ outReg ++
+        controlledPointAddOutWork workStart)
+      (controlledPointAddOut
+        control pointReg outReg workStart C) := by
+  cases C with
+  | zero =>
+      change CircuitUsesOnly
+        ([control] ++ pointReg ++ outReg ++
+          controlledPointAddOutWork workStart)
+        (Arithmetic.copyReg pointReg outReg)
+      apply Arithmetic.copyReg_usesOnly
+      · intro w hw
+        simp [hw]
+      · intro w hw
+        simp [hw]
+  | some hC =>
+      rename_i xC yC
+      let choice := controlledPointAddChoice workStart
+      let pointWorkStart := controlledPointAddPointWorkStart workStart
+      let work := pointAddWork pointWorkStart
+      let selected := pointAddSelected pointWorkStart
+      let computePoint :=
+        pointAddFiniteCompute pointReg pointWorkStart hC
+      let choose :=
+        selectPoint control pointReg selected choice
+      let compute := computePoint ++ choose
+      let support :=
+        [control] ++ pointReg ++ outReg ++ choice ++ work
+
+      have hcomputePoint : CircuitUsesOnly support computePoint := by
+        apply Arithmetic.usesOnly_mono
+          (pointAddFiniteCompute_usesOnly
+            pointReg pointWorkStart hC)
+        intro w hw
+        simp only [List.mem_append] at hw
+        rcases hw with hpoint | hwork
+        · simp [support, hpoint]
+        · change w ∈ work at hwork
+          simp [support, hwork]
+
+      have hchoose : CircuitUsesOnly support choose := by
+        apply Arithmetic.usesOnly_mono
+          (selectPoint_usesOnly
+            control pointReg selected choice)
+        intro w hw
+        simp only [selectFootprint, List.mem_cons,
+          List.mem_append] at hw
+        rcases hw with ((rfl | hpoint) | hselected) | hchoice
+        · simp [support]
+        · simp [support, hpoint]
+        · have hwork := pointAddSelected_mem_pointAddWork
+              pointWorkStart w hselected
+          change w ∈ work at hwork
+          simp [support, hwork]
+        · simp [support, hchoice]
+
+      have hcompute : CircuitUsesOnly support compute :=
+        Arithmetic.usesOnly_append hcomputePoint hchoose
+
+      have hcopy :
+          CircuitUsesOnly support
+            (Arithmetic.copyReg choice outReg) := by
+        apply Arithmetic.copyReg_usesOnly
+        · intro w hw
+          simp [support, hw]
+        · intro w hw
+          simp [support, hw]
+
+      have htotal : CircuitUsesOnly support
+          ((compute ++ Arithmetic.copyReg choice outReg) ++
+            compute.reverse) :=
+        Arithmetic.usesOnly_append
+          (Arithmetic.usesOnly_append hcompute hcopy)
+          (Arithmetic.usesOnly_reverse hcompute)
+      simpa [controlledPointAddOut, controlledPointAddOutWork,
+        choice, pointWorkStart, work, selected, computePoint,
+        choose, compute, support] using htotal
+
+omit [Fact (Nat.Prime p)] in
+/-- Controlled point addition stays inside its control, point register, and
+declared reusable workspace. -/
+theorem controlledPointAdd_usesOnly
+    (control : Wire)
+    (pointReg : List Wire)
+    (workStart : Wire)
+    (C : Point) :
+    CircuitUsesOnly
+      ([control] ++ pointReg ++ controlledPointAddWork workStart)
+      (controlledPointAdd control pointReg workStart C) := by
+  let temp := controlledPointAddTemp workStart
+  let auxStart := controlledPointAddAuxStart workStart
+  let work := controlledPointAddOutWork auxStart
+  let support := [control] ++ pointReg ++ temp ++ work
+  let forward :=
+    controlledPointAddOut control pointReg temp auxStart C
+  let backward :=
+    controlledPointAddOut control pointReg temp auxStart (-C)
+
+  have hforward : CircuitUsesOnly support forward := by
+    simpa [support, forward] using
+      controlledPointAddOut_usesOnly
+        control pointReg temp auxStart C
+  have hbackward : CircuitUsesOnly support backward := by
+    simpa [support, backward] using
+      controlledPointAddOut_usesOnly
+        control pointReg temp auxStart (-C)
+  have hswap :
+      CircuitUsesOnly support (pointSwapReg pointReg temp) := by
+    apply Arithmetic.usesOnly_mono
+      (pointSwapReg_usesOnly pointReg temp)
+    intro w hw
+    simp only [List.mem_append] at hw
+    rcases hw with hpoint | htemp
+    · simp [support, hpoint]
+    · simp [support, htemp]
+
+  have htotal : CircuitUsesOnly support
+      ((forward ++ pointSwapReg pointReg temp) ++ backward.reverse) :=
+    Arithmetic.usesOnly_append
+      (Arithmetic.usesOnly_append hforward hswap)
+      (Arithmetic.usesOnly_reverse hbackward)
+  simpa [controlledPointAdd, controlledPointAddWork,
+    temp, auxStart, work, support, forward, backward] using htotal
+
+omit [Fact (Nat.Prime p)] in
 /-- Controlled point addition uses only classical reversible gates. -/
 theorem controlledPointAdd_HPFree
     (control : Wire)

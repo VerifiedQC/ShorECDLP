@@ -122,11 +122,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLP_correct
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPSubmission
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPTotalGateCount_correct
+#print axioms ShorECDLP.qubitCount
+#print axioms ShorECDLP.Secp256k1.bitcoinECDLPTrial_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 101 ]]; then
-  printf 'expected one hundred one #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 103 ]]; then
+  printf 'expected one hundred three #print axioms results\n' >&2
   exit 1
 fi
 

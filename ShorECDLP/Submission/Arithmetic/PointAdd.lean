@@ -11928,6 +11928,30 @@ private theorem pointAddSetup_usesOnly
   rw [pointAddSetup]
   exact usesOnly_append hcopies hflags
 
+/-- The selected-result register belongs to the declared PointAdd workspace. -/
+theorem pointAddSelected_mem_pointAddWork
+    (workStart : Wire) :
+    ∀ w ∈ pointAddSelected workStart,
+      w ∈ pointAddWork workStart :=
+  pointAddSelected_mem_work workStart
+
+/-- The finite-point computation reads and writes only its public point register
+and declared PointAdd workspace. -/
+theorem pointAddFiniteCompute_usesOnly
+    (pointReg : List Wire)
+    (workStart : Wire)
+    {xC yC : Fp}
+    (hC : curve.toAffine.Nonsingular xC yC) :
+    CircuitUsesOnly
+      (pointReg ++ pointAddWork workStart)
+      (pointAddFiniteCompute pointReg workStart hC) := by
+  rw [pointAddFiniteCompute]
+  exact usesOnly_append
+    (pointAddSetup_usesOnly pointReg workStart xC yC)
+    (usesOnly_mono
+      (pointAddBranches_usesOnly_work workStart hC)
+      (fun w hw => List.mem_append_right pointReg hw))
+
 /--
 Structural facts needed to reverse `pointAddFiniteCompute`.
 
