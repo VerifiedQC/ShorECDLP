@@ -22,6 +22,13 @@ namespace ShorECDLP
 /-- A computational basis state: one bit per wire. Layer-neutral (see the module comment). -/
 abbrev BasisState := Wire → Bool
 
+/-- The canonical all-zero computational basis state. -/
+def zeroBasisState : BasisState := fun _ => false
+
+@[simp]
+theorem zeroBasisState_apply (w : Wire) : zeroBasisState w = false :=
+  rfl
+
 /-- Every wire in `ws` holds `false` in the basis state `st`. -/
 def Clean (ws : List Wire) (st : BasisState) : Prop :=
   ∀ w ∈ ws, st w = false
@@ -66,6 +73,13 @@ def writeReg : List Wire → Nat → BasisState → BasisState
 
 theorem regValue_cons (w : Wire) (ws : List Wire) (s : BasisState) :
     regValue (w :: ws) s = (if s w then 1 else 0) + 2 * regValue ws s := rfl
+
+@[simp]
+theorem regValue_zeroBasisState (ws : List Wire) :
+    regValue ws zeroBasisState = 0 := by
+  induction ws with
+  | nil => rfl
+  | cons w ws ih => simp [regValue_cons, ih]
 
 /-- Updating a wire outside a register leaves the register's value unchanged. -/
 theorem regValue_upd_not_mem (ws : List Wire) (s : BasisState) (i : Wire) (b : Bool)

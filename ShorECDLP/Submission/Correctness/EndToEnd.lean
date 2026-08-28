@@ -221,7 +221,6 @@ theorem bitcoinECDLPTrial_correct
     {d : Nat} (Q : Point)
     (aReg bReg pointReg : List Wire)
     (workStart qftAncilla : Wire)
-    (input : BasisState)
     (hpointLength : pointReg.length = pointWidth)
     (hnodup :
       (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
@@ -231,23 +230,23 @@ theorem bitcoinECDLPTrial_correct
     (hsetup :
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
         aReg bReg pointReg (scalarMulWork workStart)
-        qftAncilla 256 input) :
-    BitcoinECDLPTrialCorrect Q d (Fact.out : Nat.Prime order) aReg bReg input
+        qftAncilla 256 zeroBasisState) :
+    BitcoinECDLPTrialCorrect Q d (Fact.out : Nat.Prime order) aReg bReg
       (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
       (41 / 250 : Real) := by
   unfold BitcoinECDLPTrialCorrect
   have hwf := ecdlpTrial_wellFormed
-    Q aReg bReg pointReg workStart qftAncilla input
+    Q aReg bReg pointReg workStart qftAncilla zeroBasisState
     hpointLength hnodup hsetup
   have hnorm :
       Quantum.normSq
         (Quantum.run
           (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
-          (Quantum.ket input)) = 1 :=
-    Quantum.normSq_run_ket _ hwf input
+          (Quantum.ket zeroBasisState)) = 1 :=
+    Quantum.normSq_run_ket _ hwf zeroBasisState
   refine ⟨hQ, hQnonzero, by norm_num, by norm_num, hnorm, ?_⟩
   exact bitcoin_singleRun_lower.trans <| orderFinding_correct
-    Q aReg bReg pointReg workStart qftAncilla input
+    Q aReg bReg pointReg workStart qftAncilla zeroBasisState
     hpointLength hnodup horderG hQ hsetup (by norm_num [order])
 
 omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
@@ -260,35 +259,51 @@ theorem bitcoinECDLP_correct :
   norm_num [BitcoinECDLPTrialsSufficient]
 
 /--
-The concrete Bitcoin submission.  Its record fields contain the exact trial
-circuit, certified one-run lower bound `41/250`, per-trial T-count
-`841862539761920`, and sufficient trial count `26`, together with the three
-corresponding proofs.
+The concrete Bitcoin submission for every nonzero public key.  It accepts only
+the structural circuit layout, constructs the canonical zero-state setup
+internally, and certifies one public-key-indexed trial family with one-run lower
+bound `41/250`, uniform per-trial T-count `841862539761920`, and trial count
+`26`.
 -/
 noncomputable def bitcoinECDLPSubmission
-    {d : Nat} (Q : Point)
     (aReg bReg pointReg : List Wire)
     (workStart qftAncilla : Wire)
-    (input : BasisState)
+    (haLength : aReg.length = 256)
+    (hbLength : bReg.length = 256)
     (hpointLength : pointReg.length = pointWidth)
     (hnodup :
       (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
     (horderG : addOrderOf G = order)
-    (hQ : Q = d • G)
-    (hQnonzero : Q ≠ 0)
-    (hsetup :
-      Quantum.OrderFinding.OrderFindingSetup pointEncoding
-        aReg bReg pointReg (scalarMulWork workStart)
-        qftAncilla 256 input) :
-    BitcoinECDLPSubmission Q d (Fact.out : Nat.Prime order)
-      aReg bReg input where
-  program := ecdlpTrial aReg bReg pointReg workStart qftAncilla Q
+    (hancillaFresh :
+      qftAncilla ∉
+        aReg ++ bReg ++ pointReg ++ scalarMulWork workStart) :
+    BitcoinECDLPSubmission (Fact.out : Nat.Prime order) aReg bReg where
+  program := fun Q =>
+    ecdlpTrial aReg bReg pointReg workStart qftAncilla Q
   singleRunSuccessLowerBound := 41 / 250
-  correct := bitcoinECDLPTrial_correct (d := d) Q aReg bReg pointReg workStart
-    qftAncilla input hpointLength hnodup horderG hQ hQnonzero hsetup
+  correct := by
+    intro Q d hQ hQnonzero
+    let hsetup :
+        Quantum.OrderFinding.OrderFindingSetup pointEncoding
+          aReg bReg pointReg (scalarMulWork workStart)
+          qftAncilla 256 zeroBasisState :=
+      { a_width := haLength
+        b_width := hbLength
+        a_zero := regValue_zeroBasisState aReg
+        b_zero := regValue_zeroBasisState bReg
+        point_zero := by
+          simp only [regValue_zeroBasisState, pointEncoding_encode_val,
+            encodeNat_zero]
+        oracleWork_zero := by simp [Clean]
+        ancilla_zero := zeroBasisState_apply qftAncilla
+        ancilla_fresh := hancillaFresh }
+    exact bitcoinECDLPTrial_correct (d := d) Q aReg bReg pointReg workStart
+      qftAncilla hpointLength hnodup horderG hQ hQnonzero hsetup
   gateCount := 841862539761920
-  gateCount_correct := ecdlpTrial_tCount Q aReg bReg pointReg workStart
-    qftAncilla hsetup.a_width hsetup.b_width hpointLength horderG hQ hQnonzero
+  gateCount_correct := by
+    intro Q d hQ hQnonzero
+    exact ecdlpTrial_tCount Q aReg bReg pointReg workStart
+      qftAncilla haLength hbLength hpointLength horderG hQ hQnonzero
   trialCount := 26
   trialCount_correct := bitcoinECDLP_correct
 
@@ -301,29 +316,30 @@ The submission's certified per-trial count times its certified trial count is
 the advertised aggregate T-count `21888426033809920`.
 -/
 theorem bitcoinECDLPTotalGateCount_correct
-    {d : Nat} (Q : Point)
     (aReg bReg pointReg : List Wire)
     (workStart qftAncilla : Wire)
-    (input : BasisState)
+    (haLength : aReg.length = 256)
+    (hbLength : bReg.length = 256)
     (hpointLength : pointReg.length = pointWidth)
     (hnodup :
       (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
     (horderG : addOrderOf G = order)
+    (hancillaFresh :
+      qftAncilla ∉
+        aReg ++ bReg ++ pointReg ++ scalarMulWork workStart)
+    {d : Nat} (Q : Point)
     (hQ : Q = d • G)
-    (hQnonzero : Q ≠ 0)
-    (hsetup :
-      Quantum.OrderFinding.OrderFindingSetup pointEncoding
-        aReg bReg pointReg (scalarMulWork workStart)
-        qftAncilla 256 input) :
+    (hQnonzero : Q ≠ 0) :
     repeatedTCount
-      (bitcoinECDLPSubmission Q aReg bReg pointReg workStart qftAncilla
-        input hpointLength hnodup horderG hQ hQnonzero hsetup).program
-      (bitcoinECDLPSubmission Q aReg bReg pointReg workStart qftAncilla
-        input hpointLength hnodup horderG hQ hQnonzero hsetup).trialCount =
+      ((bitcoinECDLPSubmission aReg bReg pointReg workStart qftAncilla
+        haLength hbLength hpointLength hnodup horderG hancillaFresh).program Q)
+      (bitcoinECDLPSubmission aReg bReg pointReg workStart qftAncilla
+        haLength hbLength hpointLength hnodup horderG hancillaFresh).trialCount =
       bitcoinECDLPTotalGateCount := by
   unfold repeatedTCount
-  rw [(bitcoinECDLPSubmission Q aReg bReg pointReg workStart qftAncilla
-    input hpointLength hnodup horderG hQ hQnonzero hsetup).gateCount_correct]
+  rw [(bitcoinECDLPSubmission aReg bReg pointReg workStart qftAncilla
+    haLength hbLength hpointLength hnodup horderG hancillaFresh).gateCount_correct
+      Q d hQ hQnonzero]
   norm_num [bitcoinECDLPSubmission, bitcoinECDLPTotalGateCount]
 
 end Secp256k1

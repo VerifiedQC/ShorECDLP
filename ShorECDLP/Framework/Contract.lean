@@ -30,14 +30,14 @@ noncomputable def BitcoinECDLPTrialCorrect
     (secret : Nat)
     (primeOrder : Nat.Prime order)
     (aReg bReg : List Wire)
-    (input : BasisState)
     (program : Circuit)
     (singleRunSuccessLowerBound : Real) : Prop :=
   publicKey = secret • Secp256k1.G ∧
     publicKey ≠ 0 ∧
     0 ≤ singleRunSuccessLowerBound ∧
     singleRunSuccessLowerBound ≤ 1 ∧
-    Quantum.normSq (Quantum.run program (Quantum.ket input)) = 1 ∧
+    Quantum.normSq
+      (Quantum.run program (Quantum.ket zeroBasisState)) = 1 ∧
     singleRunSuccessLowerBound ≤
       ∑ a : Fin (2 ^ 256),
         ∑ b : Fin (2 ^ 256),
@@ -46,7 +46,7 @@ noncomputable def BitcoinECDLPTrialCorrect
           then
             Quantum.OrderFinding.jointRegisterProbability
               aReg bReg a.val b.val
-              (Quantum.run program (Quantum.ket input))
+              (Quantum.run program (Quantum.ket zeroBasisState))
           else 0
 
 /--
@@ -61,27 +61,33 @@ def BitcoinECDLPTrialsSufficient
     1 - (1 - singleRunSuccessLowerBound) ^ trials
 
 /--
-A verified submission for the externally specified Bitcoin public key.
+A verified submission for every nonzero Bitcoin public key.
 
 The correctness predicates are fixed by the Framework.  A submitter supplies
-only one trial circuit, its exact T-count, a trial count, and proofs that the
-same circuit achieves a proposed one-run success lower bound and that the
-proposed bound reaches 99% after the submitted number of trials.
+one public-key-indexed circuit family, its uniform exact T-count, a trial
+count, and proofs that the same family achieves a proposed one-run success
+lower bound for every valid key and reaches 99% after the submitted number of
+trials.  The circuit family receives the public key but never the secret, and
+every circuit is evaluated from `zeroBasisState`.
 -/
 structure BitcoinECDLPSubmission
     [Fact (Nat.Prime p)]
-    (publicKey : Secp256k1.Point)
-    (secret : Nat)
     (primeOrder : Nat.Prime order)
-    (aReg bReg : List Wire)
-    (input : BasisState) where
-  program : Circuit
+    (aReg bReg : List Wire) where
+  program : Secp256k1.Point → Circuit
   singleRunSuccessLowerBound : Real
   correct :
-    BitcoinECDLPTrialCorrect publicKey secret primeOrder
-      aReg bReg input program singleRunSuccessLowerBound
+    ∀ (publicKey : Secp256k1.Point) (secret : Nat),
+      publicKey = secret • Secp256k1.G →
+      publicKey ≠ 0 →
+      BitcoinECDLPTrialCorrect publicKey secret primeOrder
+        aReg bReg (program publicKey) singleRunSuccessLowerBound
   gateCount : Nat
-  gateCount_correct : tCount program = gateCount
+  gateCount_correct :
+    ∀ (publicKey : Secp256k1.Point) (secret : Nat),
+      publicKey = secret • Secp256k1.G →
+      publicKey ≠ 0 →
+      tCount (program publicKey) = gateCount
   trialCount : Nat
   trialCount_correct :
     BitcoinECDLPTrialsSufficient singleRunSuccessLowerBound trialCount
