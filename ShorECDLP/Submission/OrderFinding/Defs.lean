@@ -1,7 +1,6 @@
 import ShorECDLP.Submission.OrderFinding.OracleSpec
 import ShorECDLP.Submission.OrderFinding.PhaseEstimation.Defs
-import ShorECDLP.Framework.Quantum.Measurement
-import Mathlib.Algebra.Field.ZMod
+import ShorECDLP.Framework.Bitcoin
 
 namespace ShorECDLP.Quantum.OrderFinding
 
@@ -20,38 +19,6 @@ def orderFinding
         (run (hadamards (aReg ++ bReg)))))
 
 end
-
-/-- Round a `precision`-bit phase sample to its nearest numerator modulo `r`. -/
-def nearestNumerator (r precision value : Nat) : Nat :=
-  (2 * r * value + 2 ^ precision) / (2 * 2 ^ precision)
-
-/-- Canonical classical recovery from one pair of ECDLP Fourier samples. -/
-noncomputable def orderFindingPostprocess
-    (r precision : Nat)
-    (hr : Nat.Prime r)
-    (out : Fin (2 ^ precision) × Fin (2 ^ precision)) :
-    Option (ZMod r) := by
-  letI : Fact (Nat.Prime r) := ⟨hr⟩
-  let k : ZMod r := nearestNumerator r precision out.1.val
-  let l : ZMod r := nearestNumerator r precision out.2.val
-  exact if k = 0 then none else some (l / k)
-
-/--
-Born probability that measurement followed by the canonical ECDLP
-postprocessing recovers `d`.
--/
-noncomputable def orderFindingSuccessProbability
-    (r precision d : Nat)
-    (hr : Nat.Prime r)
-    (aReg bReg : List Wire)
-    (psi : State) : Real :=
-  ∑ a : Fin (2 ^ precision),
-    ∑ b : Fin (2 ^ precision),
-      if orderFindingPostprocess r precision hr (a, b) =
-          some (d : ZMod r)
-      then
-        jointRegisterProbability aReg bReg a.val b.val psi
-      else 0
 
 /-- Mathematical ECDLP instance used by the abstract order-finding proof. -/
 structure ECDLPSetting
@@ -79,31 +46,5 @@ structure OrderFindingSetup
   ancilla_zero : s qftAncilla = false
   ancilla_fresh :
     qftAncilla ∉ aReg ++ bReg ++ pointReg ++ oracleWork
-
-/-- The successful outcomes carry at most the state's total Born mass. -/
-theorem orderFindingSuccessProbability_le_normSq
-    (r precision d : Nat)
-    (hr : Nat.Prime r)
-    (aReg bReg : List Wire)
-    (ha : aReg.length = precision)
-    (hb : bReg.length = precision)
-    (psi : State) :
-    orderFindingSuccessProbability r precision d hr aReg bReg psi ≤
-      normSq psi := by
-  calc
-    orderFindingSuccessProbability r precision d hr aReg bReg psi ≤
-        ∑ a : Fin (2 ^ precision),
-          ∑ b : Fin (2 ^ precision),
-            jointRegisterProbability aReg bReg a.val b.val psi := by
-      unfold orderFindingSuccessProbability
-      apply Finset.sum_le_sum
-      intro a _
-      apply Finset.sum_le_sum
-      intro b _
-      split_ifs
-      · exact le_rfl
-      · exact jointRegisterProbability_nonneg _ _ _ _ _
-    _ = normSq psi :=
-      jointRegisterProbability_sum_eq_normSq aReg bReg precision ha hb psi
 
 end ShorECDLP.Quantum.OrderFinding

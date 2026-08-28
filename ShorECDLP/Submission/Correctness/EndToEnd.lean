@@ -15,7 +15,7 @@ standard generator has that additive order.
 The exact single-trial circuit is named explicitly so its correctness and
 resource theorems refer to the same term.  The final declarations package the
 concrete 26-run measured procedure, its 99% correctness proof, and its exact
-per-trial gate count in the generic six-field Framework `Submission` record;
+per-trial gate count in the fixed Framework `BitcoinECDLPSubmission` record;
 the aggregate count is then derived from its two certified numeric fields.
 -/
 
@@ -212,40 +212,6 @@ private theorem bitcoin_singleRun_lower :
   norm_num [order] at hpi4 ⊢
   nlinarith
 
-/--
-The single-trial correctness specification used by the Bitcoin submission:
-the output is normalized and the canonical recovery procedure succeeds with
-probability at least `41 / 250`.
--/
-def BitcoinECDLPTrialCorrect
-    {d : Nat}
-    (aReg bReg : List Wire)
-    (input : BasisState)
-    (trial : Circuit) : Prop :=
-  Quantum.normSq
-      (Quantum.run trial (Quantum.ket input)) = 1 ∧
-    (41 / 250 : Real) ≤
-      Quantum.OrderFinding.orderFindingSuccessProbability
-        order 256 d (Fact.out : Nat.Prime order) aReg bReg
-        (Quantum.run trial (Quantum.ket input))
-
-/--
-The repeated-success criterion used by the Bitcoin submission: independent
-measured trials recover the secret with probability at least 99%.
--/
-def BitcoinECDLPTrialsSufficient
-    {d : Nat}
-    (aReg bReg : List Wire)
-    (input : BasisState)
-    (trial : Circuit)
-    (trials : Nat) : Prop :=
-  (99 / 100 : Real) ≤
-      independentRetrySuccessProbability
-        (Quantum.OrderFinding.orderFindingSuccessProbability
-          order 256 d (Fact.out : Nat.Prime order) aReg bReg
-          (Quantum.run trial (Quantum.ket input)))
-        trials
-
 omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 /--
 The exact 256-bit `ecdlpTrial` meets the single-trial Bitcoin specification.
@@ -265,9 +231,9 @@ theorem bitcoinECDLPTrial_correct
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
         aReg bReg pointReg (scalarMulWork workStart)
         qftAncilla 256 input) :
-    BitcoinECDLPTrialCorrect (d := d) aReg bReg input
+    BitcoinECDLPTrialCorrect d (Fact.out : Nat.Prime order) aReg bReg input
       (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q) := by
-  unfold BitcoinECDLPTrialCorrect
+  unfold BitcoinECDLPTrialCorrect bitcoinOrderFindingSuccessProbability
   have hwf := ecdlpTrial_wellFormed
     Q aReg bReg pointReg workStart qftAncilla input
     hpointLength hnodup hsetup
@@ -278,18 +244,9 @@ theorem bitcoinECDLPTrial_correct
           (Quantum.ket input)) = 1 :=
     Quantum.normSq_run_ket _ hwf input
   refine ⟨hnorm, ?_⟩
-  have hsingleExact := orderFinding_correct
+  exact orderFinding_correct
     Q aReg bReg pointReg workStart qftAncilla input
     hpointLength hnodup horderG hQ hsetup (by norm_num [order])
-  have hsingle :
-      (41 / 250 : Real) ≤
-        Quantum.OrderFinding.orderFindingSuccessProbability
-          order 256 d (Fact.out : Nat.Prime order) aReg bReg
-          (Quantum.run
-            (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
-            (Quantum.ket input)) :=
-    bitcoin_singleRun_lower.trans hsingleExact
-  exact hsingle
 
 omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 /--
@@ -311,9 +268,11 @@ theorem bitcoinECDLP_correct
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
         aReg bReg pointReg (scalarMulWork workStart)
         qftAncilla 256 input) :
-    BitcoinECDLPTrialsSufficient (d := d) aReg bReg input
+    BitcoinECDLPTrialsSufficient d (Fact.out : Nat.Prime order)
+      aReg bReg input
       (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q) 26 := by
-  unfold BitcoinECDLPTrialsSufficient
+  unfold BitcoinECDLPTrialsSufficient bitcoinRepeatedSuccessProbability
+    bitcoinOrderFindingSuccessProbability
   have htrial := bitcoinECDLPTrial_correct (d := d)
     Q aReg bReg pointReg workStart qftAncilla input
     hpointLength hnodup horderG hQ hsetup
@@ -331,8 +290,16 @@ theorem bitcoinECDLP_correct
             (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
             (Quantum.ket input)) ≤ 1 :=
     hleNorm.trans_eq htrial.1
+  have hsingle :
+      (41 / 250 : Real) ≤
+        Quantum.OrderFinding.orderFindingSuccessProbability
+          order 256 d (Fact.out : Nat.Prime order) aReg bReg
+          (Quantum.run
+            (ecdlpTrial aReg bReg pointReg workStart qftAncilla Q)
+            (Quantum.ket input)) :=
+    bitcoin_singleRun_lower.trans htrial.2
   have hamp := independentRetrySuccessProbability_mono
-    26 hsingleLeOne htrial.2
+    26 hsingleLeOne hsingle
   have hnumeric :
       (99 / 100 : Real) ≤
         independentRetrySuccessProbability (41 / 250 : Real) 26 := by
@@ -359,9 +326,8 @@ def bitcoinECDLPSubmission
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
         aReg bReg pointReg (scalarMulWork workStart)
         qftAncilla 256 input) :
-    Submission
-      (BitcoinECDLPTrialCorrect (d := d) aReg bReg input)
-      (BitcoinECDLPTrialsSufficient (d := d) aReg bReg input) where
+    BitcoinECDLPSubmission d (Fact.out : Nat.Prime order)
+      aReg bReg input where
   program := ecdlpTrial aReg bReg pointReg workStart qftAncilla Q
   correct := bitcoinECDLPTrial_correct (d := d) Q aReg bReg pointReg workStart
     qftAncilla input hpointLength hnodup horderG hQ hsetup

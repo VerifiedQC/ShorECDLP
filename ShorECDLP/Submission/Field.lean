@@ -1,3 +1,4 @@
+import ShorECDLP.Framework.Bitcoin
 import Mathlib.FieldTheory.Finite.Basic
 import Mathlib.Data.ZMod.Basic
 
@@ -16,7 +17,8 @@ Disclosures live here, beside the constants they describe — never in `framewor
 cost model is construction-agnostic. They document algorithm choices (not machine-checked
 theorems); a future optimized submission carries a different list against the same framework.
 
-  - **Constants are secp256k1-specific**, hardcoded below (`p`, `order`, `a = 0`, `b = 7`);
+  - **Constants are secp256k1-specific**: the Framework fixes `order` as part of the
+    Bitcoin problem, while this file fixes `p`, `a = 0`, and `b = 7`;
     **the modular reduction is the generic prime algorithm and does not exploit the
     pseudo-Mersenne structure of `p = 2^256 − 2^32 − 977`.** (Seeing the literal prime in
     the source must not be read as a pseudo-Mersenne speedup.)
@@ -35,10 +37,6 @@ namespace ShorECDLP
 
 /-- The secp256k1 base-field prime `p = 2^256 − 2^32 − 977`. -/
 def p : ℕ := 2 ^ 256 - 2 ^ 32 - 977
-
-/-- The secp256k1 group order `n` (number of points on the curve). -/
-def order : ℕ :=
-  0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 
 /-- secp256k1 short-Weierstrass coefficient `a = 0` (curve `y² = x³ + 7`). -/
 def curveA : ℕ := 0

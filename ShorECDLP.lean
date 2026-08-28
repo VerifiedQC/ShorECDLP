@@ -11,6 +11,7 @@ import ShorECDLP.Framework.BasisState
 import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Framework.Quantum.Measurement
 import ShorECDLP.Framework.Repetition
+import ShorECDLP.Framework.Bitcoin
 import ShorECDLP.Framework.Contract
 import ShorECDLP.Submission.Field
 import ShorECDLP.Submission.QFT.Main
