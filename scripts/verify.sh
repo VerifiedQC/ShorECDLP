@@ -113,8 +113,6 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1.orderFinding_correct
 #print axioms ShorECDLP.Quantum.OrderFinding.nearestNumerator
 #print axioms ShorECDLP.Quantum.OrderFinding.orderFindingPostprocess
-#print axioms ShorECDLP.BitcoinECDLPTrialCorrect
-#print axioms ShorECDLP.BitcoinECDLPTrialsSufficient
 #print axioms ShorECDLP.BitcoinECDLPSubmission
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPTrial_correct
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLP_correct
@@ -123,8 +121,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 99 ]]; then
-  printf 'expected ninety-nine #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 97 ]]; then
+  printf 'expected ninety-seven #print axioms results\n' >&2
   exit 1
 fi
 

@@ -37,7 +37,7 @@ import ShorECDLP.Submission.EllipticCurve.PointEncoding
 import ShorECDLP.Submission.EllipticCurve.PointRegister
 import ShorECDLP.Submission.EllipticCurve.Secp256k1
 import ShorECDLP.Submission.Correctness.Trial
-import ShorECDLP.Submission.Correctness.EndToEnd
+import ShorECDLP.Submission.Submission
 import ShorECDLP.Submission.Correctness.Reduction
 import ShorECDLP.Submission.OrderFinding.OracleSpec
 import ShorECDLP.Submission.OrderFinding.OracleRefinement
