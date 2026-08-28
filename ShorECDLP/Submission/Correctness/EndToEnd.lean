@@ -263,6 +263,193 @@ theorem bitcoinECDLP_correct :
     (99 / 100 : Real) ≤ 1 - (1 - (41 / 250 : Real)) ^ (26 : Nat) := by
   norm_num
 
+/-! ## Closed submission wire layout -/
+
+/-- The first 256-bit phase register of the concrete submission. -/
+def bitcoinAReg : List Wire :=
+  List.range' 0 256
+
+/-- The second 256-bit phase register of the concrete submission. -/
+def bitcoinBReg : List Wire :=
+  List.range' 256 256
+
+/-- The 513-bit encoded-point register of the concrete submission. -/
+def bitcoinPointReg : List Wire :=
+  List.range' 512 pointWidth
+
+/-- The QFT ancilla, placed between the public registers and the workspace. -/
+def bitcoinQFTAncilla : Wire :=
+  1025
+
+/-- The first workspace wire, immediately after the QFT ancilla. -/
+def bitcoinWorkStart : Wire :=
+  1026
+
+/--
+The fixed submission layout has the required widths, pairwise-disjoint public
+and workspace wires, and a fresh QFT ancilla.  The proof uses interval bounds;
+it does not evaluate the large workspace with `decide`.
+-/
+theorem bitcoinWireLayout :
+    bitcoinAReg.length = 256 ∧
+    bitcoinBReg.length = 256 ∧
+    bitcoinPointReg.length = pointWidth ∧
+    (bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg ++
+      scalarMulWork bitcoinWorkStart).Nodup ∧
+    bitcoinQFTAncilla ∉
+      bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg ++
+        scalarMulWork bitcoinWorkStart := by
+  have append_nodup_of_bounds :
+      ∀ (left right : List Wire) (boundary : Wire),
+        left.Nodup →
+        right.Nodup →
+        (∀ w ∈ left, w < boundary) →
+        (∀ w ∈ right, boundary ≤ w) →
+        (left ++ right).Nodup := by
+    intro left right boundary hleft hright hleftBound hrightBound
+    rw [List.nodup_append]
+    refine ⟨hleft, hright, ?_⟩
+    intro w hwLeft _ hwRight rfl
+    exact (Nat.not_lt_of_ge (hrightBound w hwRight)) (hleftBound w hwLeft)
+
+  have hArithmeticNodup :
+      (pointAddArithmeticWork 2052).Nodup := by
+    exact List.nodup_dedup _
+  have hArithmeticOffset : pointAddArithmeticOffset 2052 = 6164 := by
+    rfl
+  have hArithmeticLower :
+      ∀ w ∈ pointAddArithmeticWork 2052, 6164 ≤ w := by
+    intro w hw
+    simp only [pointAddArithmeticWork, List.mem_dedup,
+      List.mem_append] at hw
+    rcases hw with (hw | hw) | hw
+    all_goals
+      simp only [shiftWires, List.mem_map] at hw
+      obtain ⟨source, _, rfl⟩ := hw
+      rw [hArithmeticOffset]
+      exact Nat.le_add_right 6164 source
+
+  have hPointWorkNodup : (pointAddWork 2052).Nodup := by
+    change
+      (List.range' 2052 4112 ++ pointAddArithmeticWork 2052).Nodup
+    apply append_nodup_of_bounds _ _ 6164
+    · exact List.nodup_range'
+    · exact hArithmeticNodup
+    · intro w hw
+      exact (List.mem_range'_1.mp hw).2
+    · exact hArithmeticLower
+  have hPointWorkLower : ∀ w ∈ pointAddWork 2052, 2052 ≤ w := by
+    intro w hw
+    change
+      w ∈ List.range' 2052 4112 ++ pointAddArithmeticWork 2052 at hw
+    rcases List.mem_append.mp hw with hw | hw
+    · exact (List.mem_range'_1.mp hw).1
+    · exact (Nat.le_trans (by norm_num) (hArithmeticLower w hw))
+
+  have hOutWorkNodup : (controlledPointAddOutWork 1539).Nodup := by
+    change
+      (List.range' 1539 pointWidth ++ pointAddWork 2052).Nodup
+    apply append_nodup_of_bounds _ _ 2052
+    · exact List.nodup_range'
+    · exact hPointWorkNodup
+    · intro w hw
+      simpa [pointWidth] using (List.mem_range'_1.mp hw).2
+    · exact hPointWorkLower
+  have hOutWorkLower :
+      ∀ w ∈ controlledPointAddOutWork 1539, 1539 ≤ w := by
+    intro w hw
+    change w ∈ List.range' 1539 pointWidth ++ pointAddWork 2052 at hw
+    rcases List.mem_append.mp hw with hw | hw
+    · exact (List.mem_range'_1.mp hw).1
+    · exact (Nat.le_trans (by norm_num) (hPointWorkLower w hw))
+
+  have hWorkNodup : (scalarMulWork bitcoinWorkStart).Nodup := by
+    change
+      (List.range' 1026 pointWidth ++
+        controlledPointAddOutWork 1539).Nodup
+    apply append_nodup_of_bounds _ _ 1539
+    · exact List.nodup_range'
+    · exact hOutWorkNodup
+    · intro w hw
+      simpa [pointWidth] using (List.mem_range'_1.mp hw).2
+    · exact hOutWorkLower
+  have hWorkLower :
+      ∀ w ∈ scalarMulWork bitcoinWorkStart, 1026 ≤ w := by
+    intro w hw
+    change
+      w ∈ List.range' 1026 pointWidth ++
+        controlledPointAddOutWork 1539 at hw
+    rcases List.mem_append.mp hw with hw | hw
+    · exact (List.mem_range'_1.mp hw).1
+    · exact (Nat.le_trans (by norm_num) (hOutWorkLower w hw))
+
+  have hPublicNodup :
+      (bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg).Nodup := by
+    have hab : (bitcoinAReg ++ bitcoinBReg).Nodup := by
+      apply append_nodup_of_bounds _ _ 256
+      · exact List.nodup_range'
+      · exact List.nodup_range'
+      · intro w hw
+        change w ∈ List.range' 0 256 at hw
+        exact (List.mem_range'_1.mp hw).2
+      · intro w hw
+        change w ∈ List.range' 256 256 at hw
+        exact (List.mem_range'_1.mp hw).1
+    have habp :
+        ((bitcoinAReg ++ bitcoinBReg) ++ bitcoinPointReg).Nodup := by
+      apply append_nodup_of_bounds _ _ 512
+      · exact hab
+      · exact List.nodup_range'
+      · intro w hw
+        rcases List.mem_append.mp hw with hw | hw
+        · change w ∈ List.range' 0 256 at hw
+          exact (List.mem_range'_1.mp hw).2.trans_le (by norm_num)
+        · change w ∈ List.range' 256 256 at hw
+          simpa using (List.mem_range'_1.mp hw).2
+      · intro w hw
+        change w ∈ List.range' 512 pointWidth at hw
+        exact (List.mem_range'_1.mp hw).1
+    simpa only [List.append_assoc] using habp
+  have hPublicUpper :
+      ∀ w ∈ bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg, w < 1025 := by
+    intro w hw
+    simp only [List.mem_append] at hw
+    rcases hw with hw | hw
+    · rcases hw with hw | hw
+      · change w ∈ List.range' 0 256 at hw
+        exact (List.mem_range'_1.mp hw).2.trans_le (by norm_num)
+      · change w ∈ List.range' 256 256 at hw
+        exact (List.mem_range'_1.mp hw).2.trans_le (by norm_num)
+    · change w ∈ List.range' 512 pointWidth at hw
+      simpa [pointWidth] using (List.mem_range'_1.mp hw).2
+  have hnodup :
+      (bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg ++
+        scalarMulWork bitcoinWorkStart).Nodup := by
+    have h := append_nodup_of_bounds
+      (bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg)
+      (scalarMulWork bitcoinWorkStart) 1026
+      hPublicNodup hWorkNodup
+      (fun w hw => (hPublicUpper w hw).trans (by norm_num)) hWorkLower
+    simpa only [List.append_assoc] using h
+  have hancillaFresh :
+      bitcoinQFTAncilla ∉
+        bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg ++
+          scalarMulWork bitcoinWorkStart := by
+    intro hw
+    have hw' :
+        bitcoinQFTAncilla ∈
+          (bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg) ++
+            scalarMulWork bitcoinWorkStart := by
+      simpa only [List.append_assoc] using hw
+    rcases List.mem_append.mp hw' with hwPublic | hwWork
+    · have := hPublicUpper bitcoinQFTAncilla hwPublic
+      norm_num [bitcoinQFTAncilla] at this
+    · have := hWorkLower bitcoinQFTAncilla hwWork
+      norm_num [bitcoinQFTAncilla] at this
+
+  exact ⟨by simp [bitcoinAReg], by simp [bitcoinBReg],
+    by simp [bitcoinPointReg], hnodup, hancillaFresh⟩
+
 /-- The exact aggregate T-count of the concrete repeated Bitcoin procedure. -/
 def bitcoinECDLPTotalGateCount : Nat :=
   21888426033809920
