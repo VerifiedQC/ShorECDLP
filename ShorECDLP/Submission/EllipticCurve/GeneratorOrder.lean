@@ -1492,17 +1492,19 @@ theorem order_prime : Nat.Prime order := by
       reduce_mod_char
       decide
 
-instance : Fact (Nat.Prime p) := ⟨p_prime⟩
-
-instance : Fact (Nat.Prime order) := ⟨order_prime⟩
-
-
 /-! ## Generator-order point certificate
 
 The following generated certificate replays binary scalar multiplication of the
 published generator by the published order.  Each finite step is checked by
 the affine formulas from `AffineFormula`; inverses are supplied explicitly and
 verified by multiplication modulo `p`. -/
+
+section GeneratorOrderCertificate
+
+/- The affine formulas use Mathlib's prime-field instances.  Keep the concrete
+primality evidence local to this certificate so importing this module does not
+install a global `Fact (Nat.Prime p)` instance. -/
+local instance : Fact (Nat.Prime p) := ⟨p_prime⟩
 
 theorem coordinates_eq_none_iff (P : Point) : coordinates P = none ↔ P = 0 := by
   cases P with
@@ -18078,8 +18080,9 @@ private theorem affineNsmulBinRec_order_eq_zero :
 /-- Once the published order is shown to kill `G`, its primality and `G_ne_zero` identify
 the additive order of `G` exactly. -/
 theorem generator_order_of_nsmul_eq_zero (h : order • G = 0) :
-    addOrderOf G = order :=
-  addOrderOf_eq_prime h G_ne_zero
+    addOrderOf G = order := by
+  letI : Fact (Nat.Prime order) := ⟨order_prime⟩
+  exact addOrderOf_eq_prime h G_ne_zero
 
 /-- The published secp256k1 subgroup order kills the published generator. -/
 theorem generator_nsmul_eq_zero : order • G = 0 := by
@@ -18089,5 +18092,7 @@ theorem generator_nsmul_eq_zero : order • G = 0 := by
 /-- The published secp256k1 generator has the published prime subgroup order. -/
 theorem generator_order : addOrderOf G = order :=
   generator_order_of_nsmul_eq_zero generator_nsmul_eq_zero
+
+end GeneratorOrderCertificate
 end Secp256k1
 end ShorECDLP
