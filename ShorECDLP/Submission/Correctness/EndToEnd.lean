@@ -1,5 +1,6 @@
 import ShorECDLP.Framework.Contract
 import ShorECDLP.Framework.Repetition
+import ShorECDLP.Submission.EllipticCurve.GeneratorOrder
 import ShorECDLP.Submission.Correctness.Trial
 import ShorECDLP.Submission.OrderFinding.Main
 import Mathlib.Analysis.Real.Pi.Bounds
@@ -8,25 +9,25 @@ import Mathlib.Analysis.Real.Pi.Bounds
 # Conditional secp256k1 order-finding theorem
 
 This module applies the already-proved two-register order-finding theorem to
-the concrete two-ScalarMul ECDLP oracle.  The result keeps the two remaining
-secp256k1 group facts visible: primality of `order` and the statement that the
-standard generator has that additive order.
+the concrete two-ScalarMul ECDLP oracle.  Primality of `p` and `order`, and the
+statement that the standard generator has additive order `order`, are
+discharged by the certificate module.
 
 The exact single-trial circuit is named explicitly so its correctness and
-resource theorems refer to the same term.  The final declarations package the
-concrete 26-run measured procedure, its 99% correctness proof, and its exact
-per-trial gate count in the fixed Framework `BitcoinECDLPSubmission` record;
-the aggregate count is then derived from its two certified numeric fields.
+resource theorems refer to the same term.  This module supplies the proofs used
+by the concrete record in `Submission/Submission.lean` and derives the exact
+aggregate count for 26 measured trials.
 -/
 
 namespace ShorECDLP
 namespace Secp256k1
 
-variable [Fact (Nat.Prime p)] [Fact (Nat.Prime order)]
+/- The concrete base-field certificate is available only while elaborating this
+module; importing `EndToEnd` does not install a global primality instance. -/
+local instance : Fact (Nat.Prime p) := ⟨p_prime⟩
 
 open Quantum.PhaseEstimation
 
-omit [Fact (Nat.Prime order)] in
 private theorem scalarMulTable_ne_zero_of_order
     (scalarReg : List Wire) (P : Point)
     (hlength : scalarReg.length = 256)
@@ -52,26 +53,24 @@ private theorem scalarMulTable_ne_zero_of_order
 
 private theorem publicKey_order
     {d : Nat} (Q : Point)
-    (horderG : addOrderOf G = order)
     (hQ : Q = d • G)
     (hQnonzero : Q ≠ 0) :
     addOrderOf Q = order := by
   have hdnot : ¬ order ∣ d := by
     intro hd
     have hdsmul : d • G = 0 := by
-      rw [← addOrderOf_dvd_iff_nsmul_eq_zero, horderG]
+      rw [← addOrderOf_dvd_iff_nsmul_eq_zero, generator_order]
       exact hd
     exact hQnonzero (hQ.trans hdsmul)
   have hcoprime : order.Coprime d :=
-    ((Fact.out : Nat.Prime order).coprime_iff_not_dvd).2 hdnot
+    order_prime.coprime_iff_not_dvd.2 hdnot
   have hcoprimeG : (addOrderOf G).Coprime d := by
-    simpa [horderG] using hcoprime
+    simpa [generator_order] using hcoprime
   calc
     addOrderOf Q = addOrderOf (d • G) := congrArg addOrderOf hQ
     _ = addOrderOf G := hcoprimeG.addOrderOf_nsmul
-    _ = order := horderG
+    _ = order := generator_order
 
-omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 private theorem hadamards_tCount (reg : List Wire) :
     tCount (hadamards reg) = 0 := by
   induction reg with
@@ -82,12 +81,10 @@ private theorem hadamards_tCount (reg : List Wire) :
         simpa only [hadamards] using ih
       simpa only [tCost, zero_add] using ih'
 
-omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 private theorem hadamards_wellFormed (reg : List Wire) :
     CircuitWellFormed (hadamards reg) := by
   simp [hadamards, CircuitWellFormed, Gate.WellFormed]
 
-omit [Fact (Nat.Prime order)] in
 /-- The exact trial is a well-formed unitary circuit on a valid layout. -/
 theorem ecdlpTrial_wellFormed
     (Q : Point)
@@ -118,8 +115,8 @@ theorem ecdlpTrial_wellFormed
 
 /--
 The concrete secp256k1 oracle satisfies the conditional ECDLP order-finding
-success bound.  The generator-order equality and the relation `Q = d • G`
-remain explicit hypotheses.
+success bound.  The public-key relation `Q = d • G` remains an explicit
+hypothesis.
 -/
 theorem orderFinding_correct
     {d precision : Nat}
@@ -130,7 +127,6 @@ theorem orderFinding_correct
     (hpointLength : pointReg.length = pointWidth)
     (hnodup :
       (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
-    (horderG : addOrderOf G = order)
     (hQ : Q = d • G)
     (hsetup :
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
@@ -140,7 +136,7 @@ theorem orderFinding_correct
     ((order - 1 : ℝ) / order) *
         ((4 : ℝ) / Real.pi ^ 2) ^ 2 ≤
       Quantum.OrderFinding.orderFindingSuccessProbability
-        order precision d (Fact.out : Nat.Prime order)
+        order precision d order_prime
         aReg bReg
         (Quantum.run
           (ecdlpTrial
@@ -148,8 +144,8 @@ theorem orderFinding_correct
           (Quantum.ket s)) := by
   let hsetting :
       Quantum.OrderFinding.ECDLPSetting G Q order d :=
-    { prime_order := (Fact.out : Nat.Prime order)
-      order_P := horderG
+    { prime_order := order_prime
+      order_P := generator_order
       Q_eq := hQ }
 
   have hspec := ecdlpOracle_spec
@@ -174,15 +170,14 @@ theorem ecdlpTrial_tCount
     (haLength : aReg.length = 256)
     (hbLength : bReg.length = 256)
     (hpointLength : pointReg.length = pointWidth)
-    (horderG : addOrderOf G = order)
     (hQ : Q = d • G)
     (hQnonzero : Q ≠ 0) :
     tCount (ecdlpTrial
       aReg bReg pointReg workStart qftAncilla Q) =
       841862539761920 := by
   have hGTable := scalarMulTable_ne_zero_of_order
-    aReg G haLength horderG
-  have horderQ := publicKey_order Q horderG hQ hQnonzero
+    aReg G haLength generator_order
+  have horderQ := publicKey_order Q hQ hQnonzero
   have hQTable := scalarMulTable_ne_zero_of_order
     bReg Q hbLength horderQ
   rw [ecdlpTrial, tCount_append, tCount_append, tCount_append,
@@ -192,7 +187,6 @@ theorem ecdlpTrial_tCount
     Quantum.tCount_iqft, Quantum.tCount_iqft,
     haLength, hbLength]
 
-omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 private theorem bitcoin_singleRun_lower :
     (41 / 250 : Real) ≤
       ((order - 1 : Real) / order) *
@@ -212,20 +206,17 @@ private theorem bitcoin_singleRun_lower :
   norm_num [order] at hpi4 ⊢
   nlinarith
 
-omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 /--
 The exact 256-bit `ecdlpTrial` meets the four single-trial proof fields used by
 the Bitcoin submission record.
 -/
 theorem bitcoinECDLPTrial_correct
-    [Fact (Nat.Prime p)] [Fact (Nat.Prime order)]
     {d : Nat} (Q : Point)
     (aReg bReg pointReg : List Wire)
     (workStart qftAncilla : Wire)
     (hpointLength : pointReg.length = pointWidth)
     (hnodup :
       (aReg ++ bReg ++ pointReg ++ scalarMulWork workStart).Nodup)
-    (horderG : addOrderOf G = order)
     (hQ : Q = d • G)
     (hsetup :
       Quantum.OrderFinding.OrderFindingSetup pointEncoding
@@ -241,7 +232,7 @@ theorem bitcoinECDLPTrial_correct
       ∑ a : Fin (2 ^ 256),
         ∑ b : Fin (2 ^ 256),
           if Quantum.OrderFinding.orderFindingPostprocess
-              order 256 (Fact.out : Nat.Prime order) (a, b) =
+              order 256 order_prime (a, b) =
               some (d : ZMod order)
           then
             Quantum.OrderFinding.jointRegisterProbability
@@ -262,9 +253,8 @@ theorem bitcoinECDLPTrial_correct
   refine ⟨by norm_num, by norm_num, hnorm, ?_⟩
   exact bitcoin_singleRun_lower.trans <| orderFinding_correct
     Q aReg bReg pointReg workStart qftAncilla zeroBasisState
-    hpointLength hnodup horderG hQ hsetup (by norm_num [order])
+    hpointLength hnodup hQ hsetup (by norm_num [order])
 
-omit [Fact (Nat.Prime p)] [Fact (Nat.Prime order)] in
 /--
 The proposed one-run lower bound `41/250` and trial count `26` give at least
 99% success under independent measured repetition.
@@ -284,7 +274,6 @@ theorem bitcoinECDLPTotalGateCount_correct
     (haLength : aReg.length = 256)
     (hbLength : bReg.length = 256)
     (hpointLength : pointReg.length = pointWidth)
-    (horderG : addOrderOf G = order)
     {d : Nat} (Q : Point)
     (hQ : Q = d • G)
     (hQnonzero : Q ≠ 0) :
@@ -293,7 +282,7 @@ theorem bitcoinECDLPTotalGateCount_correct
       bitcoinECDLPTotalGateCount := by
   unfold repeatedTCount
   rw [ecdlpTrial_tCount Q aReg bReg pointReg workStart qftAncilla
-    haLength hbLength hpointLength horderG hQ hQnonzero]
+    haLength hbLength hpointLength hQ hQnonzero]
   norm_num [bitcoinECDLPTotalGateCount]
 
 end Secp256k1

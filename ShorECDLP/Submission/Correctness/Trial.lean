@@ -1,4 +1,5 @@
 import ShorECDLP.Submission.EllipticCurve.ECDLPOracle
+import ShorECDLP.Submission.EllipticCurve.GeneratorOrder
 import ShorECDLP.Submission.OrderFinding.Defs
 
 /-!
@@ -10,7 +11,8 @@ repetition policy, and resource certificate live in separate modules.
 
 namespace ShorECDLP.Secp256k1
 
-variable [Fact (Nat.Prime p)]
+/- Keep the proved base-field primality local to this concrete circuit. -/
+local instance : Fact (Nat.Prime p) := ⟨p_prime⟩
 
 open Quantum.PhaseEstimation
 
