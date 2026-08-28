@@ -238,17 +238,6 @@ def gateTarget : Gate → Wire
   | .CCX _ _ t => t
   | .P _ _ t   => t
 
-/-- All wires read or written by a primitive gate. -/
-def gateWires : Gate → List Wire
-  | .X t       => [t]
-  | .H t       => [t]
-  | .CX c t    => [c, t]
-  | .CCX a b t => [a, b, t]
-  | .P _ _ t   => [t]
-
-/-- The (not necessarily duplicate-free) support of a circuit. -/
-def circuitWires (c : Circuit) : List Wire := c.flatMap gateWires
-
 /-- A gate's target belongs to its support. -/
 theorem gateTarget_mem_gateWires (g : Gate) : gateTarget g ∈ gateWires g := by
   cases g <;> simp [gateTarget, gateWires]

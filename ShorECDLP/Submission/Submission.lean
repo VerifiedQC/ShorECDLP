@@ -53,6 +53,10 @@ noncomputable def bitcoinECDLPSubmission :
           bitcoinAReg bitcoinBReg bitcoinPointReg
           bitcoinWorkStart bitcoinQFTAncilla
           haLength hbLength hpointLength hQ hQnonzero
+      qubitCount := bitcoinQubitCount
+      qubitCount_correct := by
+        intro Q _d _hQ _hQnonzero
+        exact bitcoinECDLPTrial_qubitCount Q
       trialCount := 26
       trialCount_correct := bitcoinECDLP_correct }
 

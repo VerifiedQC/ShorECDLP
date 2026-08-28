@@ -25,8 +25,9 @@ the circuit receives the public key but never the secret.  Each run starts in
 circuit must preserve normalization, and the joint Born probability of
 measured pairs `(a,b)` whose canonical postprocessing recovers the secret must
 reach that bound.  Finally, independent repetition must raise the same bound
-to at least 99%.  These requirements are written directly in the fields below
-so a submission cannot replace or weaken them.
+to at least 99%.  The exact T-count and a static qubit upper bound must both be
+certified for that same circuit family.  These requirements are written
+directly in the fields below so a submission cannot replace or weaken them.
 -/
 structure BitcoinECDLPSubmission
     (primeOrder : Nat.Prime order)
@@ -57,6 +58,12 @@ structure BitcoinECDLPSubmission
       publicKey = secret • Secp256k1.G →
       publicKey ≠ 0 →
       tCount (program publicKey) = gateCount
+  qubitCount : Nat
+  qubitCount_correct :
+    ∀ (publicKey : Secp256k1.Point) (secret : Nat),
+      publicKey = secret • Secp256k1.G →
+      publicKey ≠ 0 →
+      ShorECDLP.qubitCount (program publicKey) ≤ qubitCount
   trialCount : Nat
   trialCount_correct :
     (99 / 100 : Real) ≤

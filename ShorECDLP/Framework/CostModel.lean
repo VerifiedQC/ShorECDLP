@@ -1,18 +1,20 @@
 import ShorECDLP.Framework.InstructionSet
+import Mathlib.Data.List.Defs
 
 /-
-# Cost model — framework layer (curve- and construction-agnostic)
+# Resource model — framework layer (curve- and construction-agnostic)
 
-A **naive, simple T-count**. Cliffords `{X, H, CX}` are free, a Toffoli `CCX` costs 7
+A circuit's static qubit count is the number of distinct wire labels touched by
+its gates.  The time metric is a **naive, simple T-count**: Cliffords `{X, H, CX}`
+are free, a Toffoli `CCX` costs 7
 (the standard unitary Toffoli), and either direction of a phase rotation `P` costs 1.
-`tCount` sums this over a
-circuit — the whole framework metric.
+`tCount` sums this over a circuit.
 
 This is deliberately the *simple baseline*. A submission that wants a different or tighter
 count (a 4-T Toffoli under measurement, an exact rotation-synthesis cost, a separate Toffoli
 tally, …) proves that as its own theorem submission-side; the framework does not bake it in.
 
-The model is **construction-agnostic**: it makes no claim about which curve, reduction,
+The measures are **construction-agnostic**: they make no claim about which curve, reduction,
 inversion, or QFT a submission used. Those are submission choices, and the note explaining
 how to read a particular number lives **submission-side** beside the constants it describes
 (see `ShorECDLP/Submission/`). Keeping `framework/` disclosure-free keeps this a small audited
@@ -20,6 +22,20 @@ base that can judge any submission.
 -/
 
 namespace ShorECDLP
+
+/-- All wires read or written by a primitive gate. -/
+def gateWires : Gate → List Wire
+  | .X t       => [t]
+  | .H t       => [t]
+  | .CX c t    => [c, t]
+  | .CCX a b t => [a, b, t]
+  | .P _ _ t   => [t]
+
+/-- The (not necessarily duplicate-free) support of a circuit. -/
+def circuitWires (c : Circuit) : List Wire := c.flatMap gateWires
+
+/-- Number of distinct qubit wires touched by a static circuit. -/
+def qubitCount (c : Circuit) : Nat := (circuitWires c).dedup.length
 
 /-- Naive T-count of a single primitive gate: Cliffords free, Toffoli 7,
 either direction of a phase rotation 1. -/

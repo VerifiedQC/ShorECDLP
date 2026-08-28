@@ -683,6 +683,37 @@ theorem scalarMul_tCount_of_table_ne_zero
 /-! ## Structural lemmas -/
 
 omit [Fact (Nat.Prime p)] in
+/-- Every generic scalar-fold circuit stays inside its controls, point
+register, and shared controlled-add workspace. -/
+private theorem scalarMulCore_usesOnly
+    (controls pointReg : List Wire)
+    (points : List Point)
+    (workStart : Wire) :
+    CircuitUsesOnly
+      (controls ++ pointReg ++ scalarMulWork workStart)
+      (scalarMulCore pointReg workStart controls points) := by
+  induction controls generalizing points with
+  | nil =>
+      cases points <;> simp [scalarMulCore, CircuitUsesOnly]
+  | cons control controls ih =>
+      cases points with
+      | nil => simp [scalarMulCore, CircuitUsesOnly]
+      | cons C points =>
+          rw [scalarMulCore]
+          apply Arithmetic.usesOnly_append
+          · apply Arithmetic.usesOnly_mono
+              (controlledPointAdd_usesOnly
+                control pointReg workStart C)
+            intro w hw
+            simp only [scalarMulWork, List.mem_append,
+              List.mem_cons, List.not_mem_nil, or_false] at hw ⊢
+            tauto
+          · apply Arithmetic.usesOnly_mono (ih points)
+            intro w hw
+            simp only [List.mem_append, List.mem_cons] at hw ⊢
+            tauto
+
+omit [Fact (Nat.Prime p)] in
 /-- Every generic scalar-fold circuit is H/P-free. -/
 private theorem scalarMulCore_HPFree
     (controls pointReg : List Wire)
@@ -752,6 +783,18 @@ private theorem scalarMulCore_wellFormed
               control pointReg workStart C hpointLength
               (by simpa [scalarMulWork] using hhead),
             ih points htail⟩
+
+/-- The concrete doubling-table scalar multiplication stays inside its scalar
+register, point register, and reusable workspace. -/
+theorem scalarMul_usesOnly
+    (scalarReg pointReg : List Wire)
+    (workStart : Wire)
+    (P : Point) :
+    CircuitUsesOnly
+      (scalarReg ++ pointReg ++ scalarMulWork workStart)
+      (scalarMul scalarReg pointReg workStart P) := by
+  exact scalarMulCore_usesOnly
+    scalarReg pointReg (scalarMulTable scalarReg P) workStart
 
 /-- The concrete doubling-table scalar multiplication is H/P-free. -/
 theorem scalarMul_HPFree
