@@ -1152,7 +1152,13 @@ doubling followed by a controlled addition.
 
 ## 9. Modular exponentiation
 
-Source: `ShorECDLP/Submission/Arithmetic/ModExp.lean`.
+Sources:
+
+- `ShorECDLP/Submission/Arithmetic/ModExp.lean` (Bennett-history reference plan)
+- `ShorECDLP/Submission/Arithmetic/LowSpaceModExp.lean` (active checkpointed plan)
+
+Sections 9.1--9.8 describe the original generic reference plan. Section 9.9 explains the
+lower-space plan used by the concrete secp256k1 submission.
 
 ### 9.1 LSB-first square-and-multiply
 
@@ -1198,7 +1204,8 @@ Each `MulCall` stores:
 - a proof `certified : ModMulContract ...`.
 
 The exponentiation schedule never opens a multiplier's private implementation. It uses only
-the certified `ModMulContract`; the concrete instance supplies the low-space multiplier above.
+the certified `ModMulContract`. Both exponentiation implementations use this boundary; the
+concrete instance supplies the low-space multiplier above.
 
 ### 9.4 The three schedule cases
 
@@ -1298,6 +1305,38 @@ Again `M=13` requires width `w=5` for the current equal-width stack, so the expo
 Thus `3^5 mod 13 = 9`.
 
 Notice the bit-zero step: the circuit still computes `3*9 mod 13 = 1`, but the selector retains the old accumulator `3`.
+
+### 9.9 The active reversible-checkpoint plan
+
+`LowSpaceModExp.lean` evaluates the equivalent most-significant-bit recurrence
+
+```text
+next = (acc * acc mod M) * (bit ? base : 1) mod M
+```
+
+without retaining one accumulator for every exponent bit. A leaf uses two certified
+multiplications to compute `square` and `square*base`, selects the bit-dependent result into a
+clean output, and reverses both multiplications so its three temporary registers and multiplier
+workspace are clean again.
+
+Leaves are arranged in a balanced binary checkpoint tree. At an internal node the circuit:
+
+```text
+compute left half into checkpoint
+compute right half into output
+reverse left half
+```
+
+Thus one checkpoint per live tree level replaces the linear history. If a leaf costs `L`, a node
+has cost `2*left + right`; a perfect depth-`d` subtree therefore costs `3^d * L`. The concrete
+257-bit tree handles the highest bit in one leaf and the other 256 bits in a perfect depth-eight
+subtree, for `2 + 3^8 = 6563` leaf executions. This is the deliberate space/time tradeoff.
+
+For secp256k1 the complete exponentiation layout contains four public/initial 257-bit registers,
+nine checkpoint registers, three reusable leaf registers, and the multiplier's 517-wire work
+area: exactly 4,629 declared wires. `secpProgram_qubitCount` also proves directly that the circuit
+touches at most 4,629 wires. The public result remains the same `ModExpContract`, so
+`FermatInv.correct` and all callers use the same semantic boundary.
 
 ---
 
@@ -1754,7 +1793,8 @@ Let:
 | clean modular add | `91w` |
 | Bennett schoolbook modular multiply | `2n(2A+7w)` |
 | low-space Horner modular multiply | `154wn` |
-| modular exponentiation, uniform calls and `n=w` | `2((2w-1)C_mul+7w^2)` |
+| Bennett-history modular exponentiation, uniform calls and `n=w` | `2((2w-1)C_mul+7w^2)` |
+| active 257-bit checkpoint exponentiation | `(2+3^8)(4C_mul+7w)` |
 | Fermat inversion | exactly the supplied exponentiation cost |
 
 ### 13.2 Reference schoolbook and active low-space formulas
@@ -1787,7 +1827,7 @@ $$
 C_{low\text{-}mul}=154w^2,
 $$
 
-so its same generic exponentiation schedule has
+so the generic Bennett-history exponentiation schedule, when supplied that multiplier, has
 
 $$
 C_{low\text{-}exp}
@@ -1797,6 +1837,20 @@ $$
 
 The cubic term still comes from roughly `2w` quadratic multiplier calls. Fermat inversion
 inherits whichever certified exponentiation program is supplied.
+
+The active concrete plan instead has one locally cleaned leaf cost
+
+$$
+C_{leaf}=4C_{low\text{-}mul}+7w,
+$$
+
+and its fixed 257-bit checkpoint tree has
+
+$$
+C_{checkpoint}=(2+3^8)C_{leaf}.
+$$
+
+The factor `2+3^8=6563` is the exact recursive recomputation weight, not an estimate.
 
 ### 13.3 Why `w=257` for the generic adder
 
@@ -1819,8 +1873,9 @@ Evaluating the proved symbolic formulas gives:
 | modular add | `91*257` | `23,387` | `3,341` |
 | reference schoolbook multiply | `378*257^2` | `24,966,522` | `3,566,646` |
 | concrete low-space multiply | `154*257^2` | `10,171,546` | `1,453,078` |
-| concrete modular exponentiation | `616*257^3 - 294*257^2` | `10,436,930,882` | `1,490,990,126` |
-| Fermat inversion | same concrete exponentiation program | `10,436,930,882` | `1,490,990,126` |
+| reference Bennett exponentiation with low-space calls | `616*257^3 - 294*257^2` | `10,436,930,882` | `1,490,990,126` |
+| concrete checkpoint exponentiation | `(2+3^8)*(4*10,171,546+7*257)` | `267,035,232,429` | `38,147,890,347` |
+| Fermat inversion | same concrete checkpoint program | `267,035,232,429` | `38,147,890,347` |
 
 The Toffoli-equivalent column simply divides by seven because these arithmetic circuits contain no `P` gates.
 
@@ -1839,19 +1894,24 @@ Thus its declared layout contains `8w+2` wires. At `w=257`, that is `2,058` wire
 
 The active multiplier does not retain a per-bit history. Its public theorems
 `secpMulLayout_allWires_length` and `secpMulProgram_qubitCount` certify exactly 1,288 declared
-wires (771 public and 517 private) and at most 1,288 wires touched. The exponentiation plan
-still retains its square-and-multiply history, so the full
-Bitcoin trial uses the separately certified dense-capacity bound from `EndToEnd.lean`.
+wires (771 public and 517 private) and at most 1,288 wires touched. The active exponentiator's
+`secpLayout_allWires_length` and `secpProgram_qubitCount` similarly certify 4,629 declared wires
+and at most 4,629 touched. After shifting that arithmetic area behind the point-addition
+registers, `EndToEnd.lean` proves the complete one-trial Bitcoin circuit fits the dense capacity
+bound of 11,561 wires. The 26 measured trials run sequentially and reuse the same device.
 
 ### 13.6 How to read these costs
 
 The formulas teach three architectural facts.
 
-1. **Cleanup is visible.** Both multiplication and exponentiation pay an outer factor of two for compute-copy-uncompute.
+1. **Cleanup is visible.** The reference plans use one outer compute-copy-uncompute pass. The
+   active exponentiator cleans each leaf locally and reverses checkpoint subtrees explicitly.
 2. **Arithmetic nesting is expensive.** Linear-bit multiplication over linear-cost modular
-   steps is quadratic; linear-bit exponentiation over quadratic multiplication is cubic.
-3. **Space and time trade off.** The Horner multiplier removes the width-many Bennett history
-   and lowers the active constant, while exponentiation still retains history for cleanup.
+   steps is quadratic; exponentiation invokes that quadratic operation many times.
+3. **Space and time trade off.** The Horner multiplier removes per-bit multiplication history.
+   The checkpoint tree removes per-bit exponentiation history too, but recomputes subtrees, raising
+   the concrete exponentiation cost from `10,436,930,882` to `267,035,232,429` T gates while
+   reducing the complete Bitcoin dense-capacity bound from 206,624 to 11,561 wires.
 
 ---
 
@@ -1920,7 +1980,7 @@ the submission.”
 
 **Correct:** that remains a verified reference plan. The concrete submission uses the
 `154w²` low-space multiplier, whose exact width-257 cost is `10,171,546`; its same-program
-Fermat inversion costs `10,436,930,882` T gates.
+checkpointed Fermat inversion costs `267,035,232,429` T gates and touches at most 4,629 wires.
 
 **Overstatement:** “The arithmetic stack proves the ECDLP oracle.”
 
@@ -1945,12 +2005,13 @@ For a first pass, read module headers and theorem signatures before proof bodies
 9. `ShorECDLP/Submission/Arithmetic/ModAdd.lean`
 10. `ShorECDLP/Submission/Arithmetic/ModMul.lean`
 11. `ShorECDLP/Submission/Arithmetic/ModExp.lean`
-12. `ShorECDLP/Submission/Field.lean`
-13. `ShorECDLP/Submission/Arithmetic/FermatInv.lean`
-14. `ShorECDLP/Submission/EllipticCurve/Secp256k1.lean`
-15. `ShorECDLP/Submission/EllipticCurve/Precompute.lean`
-16. `ShorECDLP/Submission/OrderFinding/OracleSpec.lean`
-17. `ShorECDLP/Submission/OrderFinding/Main.lean`
+12. `ShorECDLP/Submission/Arithmetic/LowSpaceModExp.lean`
+13. `ShorECDLP/Submission/Field.lean`
+14. `ShorECDLP/Submission/Arithmetic/FermatInv.lean`
+15. `ShorECDLP/Submission/EllipticCurve/Secp256k1.lean`
+16. `ShorECDLP/Submission/EllipticCurve/Precompute.lean`
+17. `ShorECDLP/Submission/OrderFinding/OracleSpec.lean`
+18. `ShorECDLP/Submission/OrderFinding/Main.lean`
 
 The directory guide `ShorECDLP/Submission/Arithmetic/README.md` contains the import and contract-composition DAGs.
 
@@ -2001,6 +2062,8 @@ When reading an arithmetic theorem, ask:
 | exponentiation plan | `ShorECDLP.ModExp.Plan` |
 | exponentiation public package | `ShorECDLP.ModExp.Plan.modExp_contract` |
 | uniform exponentiation cost | `ShorECDLP.ModExp.Plan.program_tCount_eq_of_uniform` |
+| checkpoint exponentiation plan | `ShorECDLP.LowSpaceModExp.Plan` |
+| checkpoint exponentiation public package | `ShorECDLP.LowSpaceModExp.Plan.modExp_contract` |
 | field identity | `ShorECDLP.fermat_inv` |
 | inversion closure | `ShorECDLP.FermatInv.correct` |
 | secp point type | `ShorECDLP.Secp256k1.Point` |
@@ -2139,10 +2202,10 @@ The arithmetic development is best understood as a verified tower of interfaces.
 
 At the bottom, reversible full-adder cells compose into ripple circuits. The active multiplier
 uses a one-ancilla Cuccaro adder to build clean in-place reduction, then scans multiplier bits
-with a fixed-workspace Horner recurrence. Certified multiplier calls lift that circuit into
-square-and-multiply exponentiation. Finally, a short field theorem reinterprets exponentiation
-by `p-2` as inversion. The older typed-history schoolbook multiplier remains as a proved generic
-reference construction.
+with a fixed-workspace Horner recurrence. Certified multiplier calls feed a balanced reversible
+checkpoint tree for square-and-multiply exponentiation. Finally, a short field theorem
+reinterprets exponentiation by `p-2` as inversion. The older typed-history multiplier and
+exponentiator remain proved generic reference constructions.
 
 At every composite boundary, the development carries more than a number-theoretic result: it preserves inputs, clears scratch, confines wire use, proves exact cost, records classical faithfulness, and proves physical well-formedness—all for one program term.
 
@@ -2170,8 +2233,12 @@ ShorECDLP/Submission/
     RippleAdder.lean
     Primitives.lean
     ModAdd.lean
+    InPlaceAdder.lean
+    InPlaceModular.lean
+    LowSpaceModMul.lean
     ModMul.lean
     ModExp.lean
+    LowSpaceModExp.lean
     FermatInv.lean
   EllipticCurve/
     Secp256k1.lean

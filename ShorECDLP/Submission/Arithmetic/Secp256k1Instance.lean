@@ -1,6 +1,6 @@
 import ShorECDLP.Submission.Arithmetic.ModAdd
 import ShorECDLP.Submission.Arithmetic.LowSpaceModMul
-import ShorECDLP.Submission.Arithmetic.ModExp
+import ShorECDLP.Submission.Arithmetic.LowSpaceModExp
 import ShorECDLP.Submission.Arithmetic.FermatInv
 import Lean.Elab.Tactic.Omega
 import Mathlib.Tactic.NormNum
@@ -26,15 +26,16 @@ mulProgram lhs bits out scratch
      unload p
 
 secpProgram
-  := Bennett-clean square-and-multiply over all 257 exponent bits,
-     using the concrete multiplier plan above and one shared multiplier workspace
+  := MSB-first square-and-multiply over all 257 exponent bits,
+     using a balanced reversible checkpoint tree and one shared leaf workspace
 ```
 
 Wire allocation uses numbered blocks of capacity 257.  Every register occupies a complete block;
 one-bit carry registers occupy a one-wire block.  Distinct block identifiers imply disjoint wire
 ranges.  The multiplier declares 771 public wires and 517 reusable work wires, for 1,288 total.
-The fixed exponentiation schedule still owns 770 history registers, but every multiplication call
-reuses that same 517-wire workspace.
+The exponentiator instead owns nine 257-bit checkpoint registers, three reusable leaf registers,
+and that same 517-wire multiplier workspace.  Its complete public/work layout contains 4,629
+wires; it never retains a width-many linear history.
 
 ## Specification
 
@@ -42,8 +43,10 @@ reuses that same 517-wire workspace.
 the existing `ModAddWiring`, `ModMulContract`, and `ModExpContract` interfaces. Direct
 `*Program_correct` and `*Program_tCount` theorems expose the same correctness and cost facts
 without a contract projection. Their instantiated costs are respectively `23,387`, `10,171,546`,
-and `10,436,930,882` T gates. Finally, `secp_fermat_inverse` specializes `FermatInv.correct` to
-this same `secpProgram`; it introduces no second circuit or independent inversion claim.
+and `267,035,232,429` T gates.  The checkpoint schedule trades recomputation for space: it removes
+the linear exponentiation history but executes leaf transitions repeatedly. Finally,
+`secp_fermat_inverse` specializes `FermatInv.correct` to this same `secpProgram`; it introduces no
+second circuit or independent inversion claim.
 -/
 
 namespace ShorECDLP
@@ -554,102 +557,6 @@ def mulCall (lhsId rhsId outId accId start : Nat)
   cost := mulCost
   certified := mul_contract lhsId rhsId outId accId start hlhs hrhs hacc hlr hla hra
 
-def historyCount : Nat → Nat
-  | 0 => 0
-  | 1 => 2
-  | n + 2 => 3 + historyCount (n + 1)
-
-def historyBlocks : Nat → Nat → List Block
-  | _, 0 => []
-  | start, 1 => [regBlock start, regBlock (start + 1)]
-  | start, n + 2 =>
-      [regBlock start, regBlock (start + 1), regBlock (start + 2)] ++
-        historyBlocks (start + 3) (n + 1)
-
-@[simp] theorem historyBlocks_ids (start bits : Nat) :
-    (historyBlocks start bits).map Block.id = List.range' start (historyCount bits) := by
-  induction bits using Nat.twoStepInduction generalizing start with
-  | zero => simp [historyBlocks, historyCount]
-  | one => simp [historyBlocks, historyCount, List.range']
-  | more bits ih₀ ih₁ =>
-      rw [historyBlocks, List.map_append, ih₁]
-      change [start, start + 1, start + 2] ++
-          List.range' (start + 3) (historyCount (bits + 1)) =
-        List.range' start (3 + historyCount (bits + 1))
-      rw [show [start, start + 1, start + 2] = List.range' start 3 by
-        simp [List.range', Nat.add_assoc]]
-      exact List.range'_append
-
-structure BuiltSchedule (bits : List Wire) (accId powerId duplicateId mulAccId mulStart : Nat)
-    where
-  finalAcc : ModExp.Reg fieldWidth
-  schedule : ModExp.Schedule fieldWidth p (mulWork mulAccId mulStart) (reg duplicateId)
-    (reg accId) (reg powerId) bits finalAcc
-
-def buildSchedule : (bits : List Wire) → (accId powerId historyStart duplicateId mulAccId
-    mulStart : Nat) → accId < historyStart → powerId < historyStart →
-    accId ≠ powerId → historyStart + historyCount bits.length ≤ duplicateId →
-    duplicateId < mulAccId → mulAccId < mulStart →
-    BuiltSchedule bits accId powerId duplicateId mulAccId mulStart
-  | [], accId, powerId, _historyStart, duplicateId, mulAccId, mulStart,
-      _hacc, _hpower, _hpa, _hbudget, _hdup, _hmul =>
-      { finalAcc := reg accId
-        schedule := .nil (reg accId) (reg powerId) }
-  | [bit], accId, powerId, historyStart, duplicateId, mulAccId, mulStart,
-      hacc, hpower, hpa, hbudget, hdup, hmul =>
-      let productId := historyStart
-      let nextAccId := historyStart + 1
-      let accMul := mulCall powerId accId productId mulAccId mulStart
-        (by omega) (by omega) hmul hpa.symm (by omega) (by omega)
-      { finalAcc := reg nextAccId
-        schedule := .last (reg accId) (reg powerId) bit (reg productId) (reg nextAccId)
-          accMul rfl rfl rfl rfl }
-  | bit :: nextBit :: bits, accId, powerId, historyStart, duplicateId, mulAccId,
-      mulStart, hacc, hpower, hpa, hbudget, hdup, hmul =>
-      let nextPowerId := historyStart
-      let productId := historyStart + 1
-      let nextAccId := historyStart + 2
-      let accMul := mulCall powerId accId productId mulAccId mulStart
-        (by omega) (by omega) hmul hpa.symm (by omega) (by omega)
-      let squareMul := mulCall powerId duplicateId nextPowerId mulAccId mulStart
-        (by omega) (by omega) hmul (by omega) (by omega) (by omega)
-      let tail := buildSchedule (nextBit :: bits) nextAccId nextPowerId (historyStart + 3)
-        duplicateId mulAccId mulStart (by omega) (by omega) (by omega)
-        (by simp only [List.length_cons, historyCount] at hbudget ⊢; omega) hdup hmul
-      { finalAcc := tail.finalAcc
-        schedule := .cons (reg accId) (reg powerId) bit nextBit bits (reg nextPowerId)
-          (reg productId) (reg nextAccId) tail.finalAcc accMul squareMul
-          rfl rfl rfl rfl rfl rfl rfl rfl tail.schedule }
-
-theorem buildSchedule_owned (bits : List Wire) (accId powerId historyStart duplicateId
-    mulAccId mulStart : Nat) (hacc : accId < historyStart) (hpower : powerId < historyStart)
-    (hpa : accId ≠ powerId) (hbudget : historyStart + historyCount bits.length ≤ duplicateId)
-    (hdup : duplicateId < mulAccId) (hmul : mulAccId < mulStart) :
-    (buildSchedule bits accId powerId historyStart duplicateId mulAccId mulStart hacc hpower
-      hpa hbudget hdup hmul).schedule.owned =
-      blocksWires (historyBlocks historyStart bits.length) := by
-  induction bits using List.twoStepInduction generalizing accId powerId historyStart with
-  | nil => simp [buildSchedule, ModExp.Schedule.owned, historyBlocks, blocksWires]
-  | singleton bit =>
-      simp [buildSchedule, ModExp.Schedule.owned, historyBlocks, blocksWires]
-  | cons_cons bit nextBit bits ih₀ ih₁ =>
-      simp only [buildSchedule, ModExp.Schedule.owned, List.length_cons, historyBlocks]
-      rw [ih₁]
-      simp [blocksWires, List.append_assoc]
-
-theorem buildSchedule_uniform (bits : List Wire) (accId powerId historyStart duplicateId
-    mulAccId mulStart : Nat) (hacc : accId < historyStart) (hpower : powerId < historyStart)
-    (hpa : accId ≠ powerId) (hbudget : historyStart + historyCount bits.length ≤ duplicateId)
-    (hdup : duplicateId < mulAccId) (hmul : mulAccId < mulStart) :
-    (buildSchedule bits accId powerId historyStart duplicateId mulAccId mulStart hacc hpower
-      hpa hbudget hdup hmul).schedule.UniformMulCost mulCost := by
-  induction bits using List.twoStepInduction generalizing accId powerId historyStart with
-  | nil => simp [buildSchedule, ModExp.Schedule.UniformMulCost]
-  | singleton bit => simp [buildSchedule, ModExp.Schedule.UniformMulCost, mulCall]
-  | cons_cons bit nextBit bits ih₀ ih₁ =>
-      simp only [buildSchedule, ModExp.Schedule.UniformMulCost]
-      exact ⟨rfl, rfl, ih₁ _ _ _ _ _ _ _ _⟩
-
 def mulWorkBlocks (mulAccId mulStart : Nat) : List Block :=
   [bitBlock (mulStart + 2), regBlock mulAccId, regBlock mulStart,
     bitBlock (mulStart + 1), bitBlock (mulStart + 3)]
@@ -678,246 +585,209 @@ theorem append_mulWorkBlocks_ids_nodup (front : List Block) (mulAccId mulStart :
     simp [mulWorkBlocks] at hright
     rcases hright with rfl | rfl | rfl | rfl | rfl <;> omega
 
-def lastSupportBlocks (powerId accId historyStart mulAccId mulStart : Nat) : List Block :=
-  [regBlock powerId, regBlock accId, regBlock historyStart,
-    regBlock (historyStart + 1)] ++ mulWorkBlocks mulAccId mulStart
-
-def consSupportBlocks (powerId accId historyStart duplicateId mulAccId mulStart : Nat) :
-    List Block :=
-  [regBlock powerId, regBlock accId, regBlock (historyStart + 1),
-    regBlock (historyStart + 2), regBlock duplicateId, regBlock historyStart] ++
-      mulWorkBlocks mulAccId mulStart
-
-@[simp] theorem lastSupport_eq (flag : Wire) (powerId accId historyStart mulAccId mulStart : Nat) :
-    ModExp.Schedule.lastSupport flag (reg powerId) (reg accId) (reg historyStart)
-      (reg (historyStart + 1)) (mulWork mulAccId mulStart) =
-      flag :: blocksWires (lastSupportBlocks powerId accId historyStart mulAccId mulStart) := by
-  simp [ModExp.Schedule.lastSupport, lastSupportBlocks, mulWork_eq_blocksWires,
-    blocksWires, List.append_assoc]
-
-@[simp] theorem consSupport_eq (flag : Wire) (powerId accId historyStart duplicateId
-    mulAccId mulStart : Nat) :
-    ModExp.Schedule.consSupport flag (reg powerId) (reg accId) (reg (historyStart + 1))
-      (reg (historyStart + 2)) (reg duplicateId) (reg historyStart)
-      (mulWork mulAccId mulStart) =
-      flag :: blocksWires
-        (consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart) := by
-  simp [ModExp.Schedule.consSupport, consSupportBlocks, mulWork_eq_blocksWires,
-    blocksWires, List.append_assoc]
-
-theorem lastSupportBlocks_ids_nodup (powerId accId historyStart duplicateId mulAccId
-    mulStart : Nat) (hpower : powerId < historyStart) (hacc : accId < historyStart)
-    (hpa : powerId ≠ accId) (hbudget : historyStart + 2 ≤ duplicateId)
-    (hdup : duplicateId < mulAccId) (hmul : mulAccId < mulStart) :
-    ((lastSupportBlocks powerId accId historyStart mulAccId mulStart).map Block.id).Nodup := by
-  apply append_mulWorkBlocks_ids_nodup
-  · simp [List.nodup_cons]
-    omega
-  · intro id hid
-    simp at hid
-    rcases hid with rfl | rfl | rfl | rfl <;> omega
-  · exact hmul
-
-theorem consSupportBlocks_ids_nodup (powerId accId historyStart duplicateId mulAccId
-    mulStart : Nat) (hpower : powerId < historyStart) (hacc : accId < historyStart)
-    (hpa : powerId ≠ accId) (hbudget : historyStart + 3 ≤ duplicateId)
-    (hdup : duplicateId < mulAccId) (hmul : mulAccId < mulStart) :
-    ((consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart).map
-      Block.id).Nodup := by
-  apply append_mulWorkBlocks_ids_nodup
-  · simp [List.nodup_cons]
-    omega
-  · intro id hid
-    simp at hid
-    rcases hid with rfl | rfl | rfl | rfl | rfl | rfl <;> omega
-  · exact hmul
-
-theorem exponent_not_mem_lastSupportIds (exponentId powerId accId historyStart duplicateId
-    mulAccId mulStart : Nat) (hexp : exponentId < historyStart)
-    (hep : exponentId ≠ powerId) (hea : exponentId ≠ accId)
-    (hbudget : historyStart + 2 ≤ duplicateId) (hdup : duplicateId < mulAccId)
-    (hmul : mulAccId < mulStart) :
-    exponentId ∉ (lastSupportBlocks powerId accId historyStart mulAccId mulStart).map Block.id := by
-  rw [lastSupportBlocks, List.map_append, List.mem_append, not_or]
-  constructor
-  · simp [hep, hea]
-    omega
-  · intro h
-    simp [mulWorkBlocks] at h
-    rcases h with rfl | rfl | rfl | rfl | rfl <;> omega
-
-theorem exponent_not_mem_consSupportIds (exponentId powerId accId historyStart duplicateId
-    mulAccId mulStart : Nat) (hexp : exponentId < historyStart)
-    (hep : exponentId ≠ powerId) (hea : exponentId ≠ accId)
-    (hbudget : historyStart + 3 ≤ duplicateId)
-    (hdup : duplicateId < mulAccId) (hmul : mulAccId < mulStart) :
-    exponentId ∉
-      (consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart).map Block.id := by
-  rw [consSupportBlocks, List.map_append, List.mem_append, not_or]
-  constructor
-  · simp [hep, hea]
-    omega
-  · intro h
-    simp [mulWorkBlocks] at h
-    rcases h with rfl | rfl | rfl | rfl | rfl <;> omega
-
-theorem consSupport_tail_ids_nodup (powerId accId historyStart duplicateId mulAccId
-    mulStart tailBits : Nat) (hpower : powerId < historyStart) (hacc : accId < historyStart)
-    (hpa : powerId ≠ accId)
-    (hbudget : historyStart + 3 + historyCount tailBits ≤ duplicateId)
-    (hdup : duplicateId < mulAccId) (hmul : mulAccId < mulStart) :
-    (((consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart) ++
-      historyBlocks (historyStart + 3) tailBits).map Block.id).Nodup := by
-  rw [List.map_append, List.nodup_append]
-  refine ⟨consSupportBlocks_ids_nodup powerId accId historyStart duplicateId mulAccId
-    mulStart hpower hacc hpa (by omega) hdup hmul, ?_, ?_⟩
-  · rw [historyBlocks_ids]
-    exact List.nodup_range'
-  · intro x hx y hy
-    rw [historyBlocks_ids, List.mem_range'] at hy
-    obtain ⟨i, hi, rfl⟩ := hy
-    rw [consSupportBlocks, List.map_append, List.mem_append] at hx
-    rcases hx with hx | hx
-    · simp at hx
-      rcases hx with rfl | rfl | rfl | rfl | rfl | rfl <;> omega
-    · simp [mulWorkBlocks] at hx
-      rcases hx with rfl | rfl | rfl | rfl | rfl <;> omega
-
-theorem exponent_not_mem_historyBlocks (exponentId historyStart bits : Nat)
-    (hexp : exponentId < historyStart) :
-    exponentId ∉ (historyBlocks historyStart bits).map Block.id := by
-  rw [historyBlocks_ids, List.mem_range']
-  intro h
-  obtain ⟨i, hi, heq⟩ := h
-  omega
-
-set_option maxRecDepth 10000 in
-theorem buildSchedule_valid (exponentId : Nat) :
-    ∀ (bits : List Wire) (accId powerId historyStart duplicateId mulAccId mulStart : Nat)
-      (hacc : accId < historyStart) (hpower : powerId < historyStart)
-      (hpa : accId ≠ powerId)
-      (hbudget : historyStart + historyCount bits.length ≤ duplicateId)
-      (hdup : duplicateId < mulAccId) (hmul : mulAccId < mulStart),
-      bits.Nodup →
-      (∀ bit ∈ bits, bit ∈ (reg exponentId).wires) →
-      exponentId < historyStart → exponentId ≠ accId → exponentId ≠ powerId →
-      (buildSchedule bits accId powerId historyStart duplicateId mulAccId mulStart hacc hpower
-        hpa hbudget hdup hmul).schedule.Valid := by
-  intro bits
-  induction bits using List.twoStepInduction with
-  | nil =>
-      intro accId powerId historyStart duplicateId mulAccId mulStart hacc hpower hpa
-        hbudget hdup hmul _ _ _ _ _
-      simp [buildSchedule, ModExp.Schedule.Valid]
-  | singleton flag =>
-      intro accId powerId historyStart duplicateId mulAccId mulStart hacc hpower hpa
-        hbudget hdup hmul hbits hmem hexp hea hep
-      have hbudget₂ : historyStart + 2 ≤ duplicateId := by
-        simpa [historyCount] using hbudget
-      have hflagMem : flag ∈ (reg exponentId).wires :=
-        hmem flag (by simp)
-      have hids := lastSupportBlocks_ids_nodup powerId accId historyStart duplicateId
-        mulAccId mulStart hpower hacc hpa.symm hbudget₂ hdup hmul
-      have hexpFresh := exponent_not_mem_lastSupportIds exponentId powerId accId historyStart
-        duplicateId mulAccId mulStart hexp hep hea hbudget₂ hdup hmul
-      have hflagFresh : flag ∉
-          blocksWires (lastSupportBlocks powerId accId historyStart mulAccId mulStart) :=
-        not_mem_blocksWires_of_source (regBlock exponentId) _ flag hflagMem hexpFresh
-      have hstage : (flag ::
-          blocksWires (lastSupportBlocks powerId accId historyStart mulAccId mulStart)).Nodup :=
-        List.nodup_cons.mpr ⟨hflagFresh, blocksWires_nodup _ hids⟩
-      change (buildSchedule [flag] accId powerId historyStart duplicateId mulAccId mulStart
-        hacc hpower hpa hbudget hdup hmul).schedule.Valid
-      simp only [buildSchedule, ModExp.Schedule.Valid]
-      rw [lastSupport_eq]
-      exact hstage
-  | cons_cons flag nextFlag bits ih₀ ih₁ =>
-      intro accId powerId historyStart duplicateId mulAccId mulStart hacc hpower hpa
-        hbudget hdup hmul hbits hmem hexp hea hep
-      have htailNodup : (nextFlag :: bits).Nodup :=
-        (List.nodup_cons.mp hbits).2
-      have hflagTail : flag ∉ nextFlag :: bits :=
-        (List.nodup_cons.mp hbits).1
-      have hflagMem : flag ∈ (reg exponentId).wires :=
-        hmem flag (List.mem_cons_self ..)
-      have htailMem : ∀ bit ∈ nextFlag :: bits, bit ∈ (reg exponentId).wires := by
-        intro bit hbit
-        exact hmem bit (List.mem_cons_of_mem flag hbit)
-      have hbudgetTail : historyStart + 3 + historyCount (bits.length + 1) ≤ duplicateId := by
-        simp only [List.length_cons, historyCount] at hbudget
-        omega
-      have hids := consSupportBlocks_ids_nodup powerId accId historyStart duplicateId
-        mulAccId mulStart hpower hacc hpa.symm (by omega) hdup hmul
-      have hexpFresh := exponent_not_mem_consSupportIds exponentId powerId accId historyStart
-        duplicateId mulAccId mulStart hexp hep hea (by omega) hdup hmul
-      have hflagFresh : flag ∉ blocksWires
-          (consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart) :=
-        not_mem_blocksWires_of_source (regBlock exponentId) _ flag hflagMem hexpFresh
-      have hstage : (flag :: blocksWires
-          (consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart)).Nodup :=
-        List.nodup_cons.mpr ⟨hflagFresh, blocksWires_nodup _ hids⟩
-      let tail := buildSchedule (nextFlag :: bits) (historyStart + 2) historyStart
-        (historyStart + 3) duplicateId mulAccId mulStart (by omega) (by omega) (by omega)
-        (by simp only [List.length_cons] at hbudgetTail ⊢; exact hbudgetTail) hdup hmul
-      have htailOwned : tail.schedule.owned =
-          blocksWires (historyBlocks (historyStart + 3) (bits.length + 1)) := by
-        simpa [tail] using buildSchedule_owned (nextFlag :: bits) (historyStart + 2)
-          historyStart (historyStart + 3) duplicateId mulAccId mulStart (by omega)
-          (by omega) (by omega)
-          (by simp only [List.length_cons] at hbudgetTail ⊢; exact hbudgetTail) hdup hmul
-      have hcombined := consSupport_tail_ids_nodup powerId accId historyStart duplicateId
-        mulAccId mulStart (bits.length + 1) hpower hacc hpa.symm hbudgetTail hdup hmul
-      have hcurrentTail := blocksWires_disjoint_of_ids
-        (consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart)
-        (historyBlocks (historyStart + 3) (bits.length + 1)) hcombined
-      have hexpNotHistory := exponent_not_mem_historyBlocks exponentId (historyStart + 3)
-        (bits.length + 1) (by omega)
-      have hfuture : ModExp.Schedule.WireDisjoint
-          (flag :: blocksWires
-            (consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart))
-          ((nextFlag :: bits) ++ tail.schedule.owned) := by
-        intro x hx y hy
-        rw [List.mem_cons] at hx
-        rcases hx with hx | hx
-        · subst x
-          rcases List.mem_append.mp hy with hy | hy
-          · exact fun e => hflagTail (e ▸ hy)
-          · rw [htailOwned] at hy
-            exact fun e => not_mem_blocksWires_of_source (regBlock exponentId)
-              (historyBlocks (historyStart + 3) (bits.length + 1)) flag hflagMem
-              hexpNotHistory (e ▸ hy)
-        · rcases List.mem_append.mp hy with hy | hy
-          · have hyMem := htailMem y hy
-            exact fun e => not_mem_blocksWires_of_source (regBlock exponentId)
-              (consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart)
-              y hyMem hexpFresh (e ▸ hx)
-          · rw [htailOwned] at hy
-            exact hcurrentTail x hx y hy
-      have htailValid := ih₁ nextFlag (historyStart + 2) historyStart (historyStart + 3)
-        duplicateId mulAccId mulStart (by omega) (by omega) (by omega)
-        (by simpa only [List.length_cons] using hbudgetTail) hdup hmul
-        htailNodup htailMem (by omega) (by omega) (by omega)
-      change (buildSchedule (flag :: nextFlag :: bits) accId powerId historyStart
-        duplicateId mulAccId mulStart hacc hpower hpa hbudget hdup hmul).schedule.Valid
-      simp only [buildSchedule, ModExp.Schedule.Valid]
-      refine ⟨?_, ?_, htailValid⟩
-      · rw [consSupport_eq]
-        exact hstage
-      · rw [consSupport_eq]
-        change ModExp.Schedule.WireDisjoint
-          (flag :: blocksWires
-            (consSupportBlocks powerId accId historyStart duplicateId mulAccId mulStart))
-          ((nextFlag :: bits) ++ tail.schedule.owned)
-        exact hfuture
-
 def baseId : Nat := 0
 def exponentId : Nat := 1
 def outId : Nat := 2
 def initialAccId : Nat := 3
-def historyStartId : Nat := 4
-def duplicateId : Nat := historyStartId + historyCount fieldWidth
-def mulAccId : Nat := duplicateId + 1
-def mulStartId : Nat := mulAccId + 1
+def mulWorkStartId : Nat := 4
+
+/-! ## Low-space exponentiation allocation -/
+
+def lowCheckpointStartId : Nat := 4
+def lowCheckpointCount : Nat := 9
+def lowDuplicateId : Nat := lowCheckpointStartId + lowCheckpointCount
+def lowSquareId : Nat := lowDuplicateId + 1
+def lowProductId : Nat := lowSquareId + 1
+def lowMulAccId : Nat := lowProductId + 1
+def lowMulStartId : Nat := lowMulAccId + 1
+
+/-- Consecutive checkpoint registers, one for each live pebbling level. -/
+def lowCheckpointRegs : Nat → Nat → List (ModExp.Reg fieldWidth)
+  | 0, _ => []
+  | depth + 1, start => reg start :: lowCheckpointRegs depth (start + 1)
+
+/-- A perfect tree whose leaves enumerate one power-of-two interval from high bit to low bit. -/
+def lowPerfectTree : Nat → Nat → LowSpaceModExp.BitTree
+  | 0, start => .leaf (bitWire exponentId + start)
+  | depth + 1, start =>
+      .node (lowPerfectTree depth (start + 2 ^ depth)) (lowPerfectTree depth start)
+
+/-- One placed low-space square-and-multiply transition. -/
+def lowExpStep (index inputId outputId : Nat) (hindex : index < fieldWidth)
+    (hinput : inputId < lowDuplicateId) :
+    LowSpaceModExp.Step fieldWidth p (reg baseId) (reg exponentId)
+      (reg lowDuplicateId) (reg lowSquareId) (reg lowProductId)
+      (mulWork lowMulAccId lowMulStartId) (bitWire exponentId + index)
+      (reg inputId) (reg outputId) where
+  squareMul := mulCall inputId lowDuplicateId lowSquareId lowMulAccId lowMulStartId
+    (by simp only [lowMulStartId, lowMulAccId, lowProductId, lowSquareId]; omega)
+    (by simp only [lowMulStartId, lowMulAccId, lowProductId, lowSquareId]; omega)
+    (by simp only [lowMulStartId]; omega) (by omega)
+    (by simp only [lowMulAccId, lowProductId, lowSquareId]; omega)
+    (by simp only [lowMulAccId, lowProductId, lowSquareId]; omega)
+  squareLhs := rfl
+  squareRhs := rfl
+  squareOut := rfl
+  squareWork := rfl
+  productMul := mulCall lowSquareId baseId lowProductId lowMulAccId lowMulStartId
+    (by norm_num [lowMulStartId, lowMulAccId, lowProductId, lowSquareId,
+      lowDuplicateId, lowCheckpointStartId, lowCheckpointCount])
+    (by norm_num [baseId, lowMulStartId, lowMulAccId, lowProductId, lowSquareId,
+      lowDuplicateId, lowCheckpointStartId, lowCheckpointCount])
+    (by simp [lowMulStartId])
+    (by norm_num [baseId, lowSquareId, lowDuplicateId, lowCheckpointStartId,
+      lowCheckpointCount])
+    (by simp only [lowMulAccId, lowProductId]; omega)
+    (by norm_num [baseId, lowMulAccId, lowProductId, lowSquareId, lowDuplicateId,
+      lowCheckpointStartId, lowCheckpointCount])
+  productLhs := rfl
+  productRhs := rfl
+  productOut := rfl
+  productWork := rfl
+  bit_mem := by
+    rw [reg_wires, regBlock, Block.wires, List.mem_range']
+    exact ⟨index, hindex, by simp [bitWire]⟩
+
+/-- Build a perfect reversible-pebbling schedule from one reusable checkpoint stack. -/
+def lowBuildPerfect : (depth start checkpointStart inputId outputId : Nat) →
+    start + 2 ^ depth ≤ fieldWidth →
+    checkpointStart + depth ≤ lowDuplicateId →
+    inputId < lowDuplicateId → outputId < lowDuplicateId →
+    LowSpaceModExp.Schedule fieldWidth p (reg baseId) (reg exponentId)
+      (reg lowDuplicateId) (reg lowSquareId) (reg lowProductId)
+      (mulWork lowMulAccId lowMulStartId)
+      (lowPerfectTree depth start) (lowCheckpointRegs depth checkpointStart)
+      (reg inputId) (reg outputId)
+  | 0, start, checkpointStart, inputId, outputId, hbits, _hbudget, hinput, _houtput =>
+      LowSpaceModExp.Schedule.leaf (bitWire exponentId + start)
+        (lowCheckpointRegs 0 checkpointStart) (reg inputId) (reg outputId)
+        (lowExpStep start inputId outputId (by simp at hbits; omega) hinput)
+  | depth + 1, start, checkpointStart, inputId, outputId, hbits, hbudget, hinput, houtput =>
+      .node (lowPerfectTree depth (start + 2 ^ depth)) (lowPerfectTree depth start)
+        (reg checkpointStart) (lowCheckpointRegs depth (checkpointStart + 1))
+        (reg inputId) (reg outputId)
+        (lowBuildPerfect depth (start + 2 ^ depth) (checkpointStart + 1)
+          inputId checkpointStart (by simp [Nat.pow_succ] at hbits ⊢; omega)
+          (by omega) hinput (by omega))
+        (lowBuildPerfect depth start (checkpointStart + 1)
+          checkpointStart outputId (by simp [Nat.pow_succ] at hbits; omega)
+          (by omega) (by omega) houtput)
+
+def lowSecpTree : LowSpaceModExp.BitTree :=
+  .node (.leaf (bitWire exponentId + 256)) (lowPerfectTree 8 0)
+
+def lowSecpCheckpoints : List (ModExp.Reg fieldWidth) :=
+  lowCheckpointRegs lowCheckpointCount lowCheckpointStartId
+
+set_option maxRecDepth 10000 in
+def lowSecpSchedule :
+    LowSpaceModExp.Schedule fieldWidth p (reg baseId) (reg exponentId)
+      (reg lowDuplicateId) (reg lowSquareId) (reg lowProductId)
+      (mulWork lowMulAccId lowMulStartId) lowSecpTree lowSecpCheckpoints
+      (reg initialAccId) (reg outId) := by
+  unfold lowSecpTree lowSecpCheckpoints lowCheckpointCount lowCheckpointStartId
+  exact LowSpaceModExp.Schedule.node _ _ (reg 4) (lowCheckpointRegs 8 5)
+    (reg initialAccId) (reg outId)
+    (LowSpaceModExp.Schedule.leaf (bitWire exponentId + 256)
+      (lowCheckpointRegs 8 5) (reg initialAccId) (reg 4)
+      (lowExpStep 256 initialAccId 4 (by norm_num [fieldWidth])
+        (by norm_num [initialAccId, lowDuplicateId, lowCheckpointCount,
+          lowCheckpointStartId])))
+    (lowBuildPerfect 8 0 5 4 outId (by norm_num [fieldWidth])
+      (by norm_num [lowDuplicateId, lowCheckpointCount, lowCheckpointStartId])
+      (by norm_num [lowDuplicateId, lowCheckpointCount, lowCheckpointStartId])
+      (by norm_num [outId, lowDuplicateId, lowCheckpointCount, lowCheckpointStartId]))
+
+/-- Blocks occupied by a consecutive checkpoint stack. -/
+def lowCheckpointBlocks : Nat → Nat → List Block
+  | 0, _ => []
+  | depth + 1, start => regBlock start :: lowCheckpointBlocks depth (start + 1)
+
+theorem lowCheckpointWires_eq (depth start : Nat) :
+    LowSpaceModExp.checkpointWires (lowCheckpointRegs depth start) =
+      blocksWires (lowCheckpointBlocks depth start) := by
+  induction depth generalizing start with
+  | zero => simp [lowCheckpointRegs, lowCheckpointBlocks,
+      LowSpaceModExp.checkpointWires, blocksWires]
+  | succ depth ih =>
+      rw [lowCheckpointRegs, lowCheckpointBlocks]
+      change (reg start).wires ++
+          LowSpaceModExp.checkpointWires (lowCheckpointRegs depth (start + 1)) =
+        (regBlock start).wires ++ blocksWires (lowCheckpointBlocks depth (start + 1))
+      rw [reg_wires, ih]
+
+def lowSecpScheduleBlocks : List Block :=
+  [regBlock baseId, regBlock exponentId, regBlock initialAccId, regBlock outId] ++
+    lowCheckpointBlocks lowCheckpointCount lowCheckpointStartId ++
+    [regBlock lowDuplicateId, regBlock lowSquareId, regBlock lowProductId] ++
+    mulWorkBlocks lowMulAccId lowMulStartId
+
+theorem lowSecpScheduleBlocks_ids_nodup :
+    (lowSecpScheduleBlocks.map Block.id).Nodup := by
+  norm_num [lowSecpScheduleBlocks, lowCheckpointBlocks, lowCheckpointCount,
+    lowCheckpointStartId, lowDuplicateId, lowSquareId, lowProductId, lowMulAccId,
+    lowMulStartId, baseId, exponentId, initialAccId, outId, mulWorkBlocks,
+    List.nodup_cons]
+
+theorem lowSecpSchedule_allWires : lowSecpSchedule.allWires =
+    blocksWires lowSecpScheduleBlocks := by
+  rw [show lowSecpSchedule.allWires =
+      (reg baseId).wires ++ (reg exponentId).wires ++ (reg initialAccId).wires ++
+        (reg outId).wires ++ LowSpaceModExp.checkpointWires lowSecpCheckpoints ++
+        LowSpaceModExp.scratch (reg lowDuplicateId) (reg lowSquareId)
+          (reg lowProductId) (mulWork lowMulAccId lowMulStartId) by rfl]
+  rw [show lowSecpCheckpoints =
+      lowCheckpointRegs lowCheckpointCount lowCheckpointStartId by rfl,
+    lowCheckpointWires_eq, mulWork_eq_blocksWires]
+  simp [lowSecpScheduleBlocks, lowCheckpointCount,
+    lowCheckpointStartId, LowSpaceModExp.scratch, blocksWires, List.append_assoc]
+
+theorem lowSecpSchedule_valid : lowSecpSchedule.allWires.Nodup := by
+  rw [lowSecpSchedule_allWires]
+  exact blocksWires_nodup _ lowSecpScheduleBlocks_ids_nodup
+
+set_option maxRecDepth 10000 in
+theorem lowSecpTree_bits : lowSecpTree.wires = (reg exponentId).wires.reverse := by
+  decide
+
+def lowStepCost : Nat := 4 * mulCost + 7 * fieldWidth
+
+theorem lowExpStep_cost (index inputId outputId : Nat) (hindex : index < fieldWidth)
+    (hinput : inputId < lowDuplicateId) :
+    (lowExpStep index inputId outputId hindex hinput).cost = lowStepCost := by
+  simp [LowSpaceModExp.Step.cost, lowExpStep, lowStepCost, mulCall]
+  omega
+
+theorem lowBuildPerfect_cost : ∀ (depth start checkpointStart inputId outputId : Nat)
+    (hbits : start + 2 ^ depth ≤ fieldWidth)
+    (hbudget : checkpointStart + depth ≤ lowDuplicateId)
+    (hinput : inputId < lowDuplicateId) (houtput : outputId < lowDuplicateId),
+    (lowBuildPerfect depth start checkpointStart inputId outputId hbits hbudget hinput
+      houtput).cost = 3 ^ depth * lowStepCost := by
+  intro depth
+  induction depth with
+  | zero =>
+      intro start checkpointStart inputId outputId hbits hbudget hinput houtput
+      simp [lowBuildPerfect, LowSpaceModExp.Schedule.cost, lowExpStep_cost]
+  | succ depth ih =>
+      intro start checkpointStart inputId outputId hbits hbudget hinput houtput
+      simp only [lowBuildPerfect, LowSpaceModExp.Schedule.cost]
+      rw [ih, ih]
+      simp [Nat.pow_succ]
+      ring
+
+theorem lowSecpSchedule_cost : lowSecpSchedule.cost = (2 + 3 ^ 8) * lowStepCost := by
+  rw [show lowSecpSchedule.cost =
+      2 * (lowExpStep 256 initialAccId 4 (by norm_num [fieldWidth])
+          (by norm_num [initialAccId, lowDuplicateId, lowCheckpointCount,
+            lowCheckpointStartId])).cost +
+        (lowBuildPerfect 8 0 5 4 outId (by norm_num [fieldWidth])
+          (by norm_num [lowDuplicateId, lowCheckpointCount, lowCheckpointStartId])
+          (by norm_num [lowDuplicateId, lowCheckpointCount, lowCheckpointStartId])
+          (by norm_num [outId, lowDuplicateId, lowCheckpointCount,
+            lowCheckpointStartId])).cost by rfl]
+  rw [lowExpStep_cost, lowBuildPerfect_cost]
+  ring
 
 /-- One fully instantiated width-257 modular-adder wiring.  The exponentiation schedule uses the
 same relative seven-block allocation at every modular-addition call. -/
@@ -965,13 +835,13 @@ theorem secpAddProgram_correct (st : BasisState)
 
 /-- One fully instantiated width-257 low-space modular multiplier. -/
 def secpMulProgram : Circuit :=
-  mulProgram baseId exponentId outId initialAccId historyStartId
+  mulProgram baseId exponentId outId initialAccId mulWorkStartId
 
 def secpMulLayout : RegisterLayout :=
   { lhs := (reg baseId).wires
     rhs := (reg exponentId).wires
     out := (reg outId).wires
-    work := mulWork initialAccId historyStartId }
+    work := mulWork initialAccId mulWorkStartId }
 
 /-- The complete concrete multiplier layout is 771 public wires plus 517 reusable work wires. -/
 theorem secpMulLayout_allWires_length : secpMulLayout.allWires.length = 1288 := by
@@ -982,10 +852,10 @@ set_option maxRecDepth 10000 in
 /-- Same-program contract for the fixed width-257 low-space multiplier above. -/
 theorem secp_modMul_contract : ModMulContract secpMulProgram secpMulLayout p mulCost := by
   simpa [secpMulProgram, secpMulLayout] using
-    (mul_contract baseId exponentId outId initialAccId historyStartId
-      (by norm_num [baseId, historyStartId])
-      (by norm_num [exponentId, historyStartId])
-      (by norm_num [initialAccId, historyStartId])
+    (mul_contract baseId exponentId outId initialAccId mulWorkStartId
+      (by norm_num [baseId, mulWorkStartId])
+      (by norm_num [exponentId, mulWorkStartId])
+      (by norm_num [initialAccId, mulWorkStartId])
       (by norm_num [baseId, exponentId])
       (by norm_num [baseId, initialAccId])
       (by norm_num [exponentId, initialAccId]))
@@ -1026,119 +896,89 @@ theorem secpMulProgram_correct (st : BasisState)
       clean(secpMulLayout.work, after) := by
   exact secp_modMul_contract.correct st hlayout hlhsBound hrhsBound hclean
 
-private theorem initial_budget :
-    historyStartId + historyCount (reg exponentId).wires.length ≤ duplicateId := by
-  rw [(reg exponentId).length_eq]
-  rfl
-
-def secpSchedule : BuiltSchedule (reg exponentId).wires initialAccId baseId duplicateId
-    mulAccId mulStartId :=
-  buildSchedule (reg exponentId).wires initialAccId baseId historyStartId duplicateId
-    mulAccId mulStartId (by norm_num [initialAccId, historyStartId])
-    (by norm_num [baseId, historyStartId]) (by norm_num [initialAccId, baseId])
-    initial_budget (by simp [mulAccId]) (by simp [mulStartId])
-
-theorem secpSchedule_owned : secpSchedule.schedule.owned =
-    blocksWires (historyBlocks historyStartId fieldWidth) := by
-  have h := buildSchedule_owned (reg exponentId).wires initialAccId baseId historyStartId
-    duplicateId mulAccId mulStartId (by norm_num [initialAccId, historyStartId])
-    (by norm_num [baseId, historyStartId]) (by norm_num [initialAccId, baseId])
-    initial_budget (by simp [mulAccId]) (by simp [mulStartId])
-  rw [(reg exponentId).length_eq] at h
-  exact h
-
-set_option maxRecDepth 10000 in
-theorem secpSchedule_valid : secpSchedule.schedule.Valid := by
-  apply buildSchedule_valid exponentId (reg exponentId).wires initialAccId baseId historyStartId
-    duplicateId mulAccId mulStartId (by norm_num [initialAccId, historyStartId])
-    (by norm_num [baseId, historyStartId]) (by norm_num [initialAccId, baseId])
-    initial_budget (by simp [mulAccId]) (by simp [mulStartId])
-  · exact (regBlock exponentId).wires_nodup
-  · intro bit hbit
-    exact hbit
-  · norm_num [exponentId, historyStartId]
-  · norm_num [exponentId, initialAccId]
-  · norm_num [exponentId, baseId]
-
-set_option maxRecDepth 10000 in
-theorem secpSchedule_uniform : secpSchedule.schedule.UniformMulCost mulCost := by
-  exact buildSchedule_uniform (reg exponentId).wires initialAccId baseId historyStartId
-    duplicateId mulAccId mulStartId (by norm_num [initialAccId, historyStartId])
-    (by norm_num [baseId, historyStartId]) (by norm_num [initialAccId, baseId])
-    initial_budget (by simp [mulAccId]) (by simp [mulStartId])
-
 theorem p_large : 1 < p := by norm_num [p]
 
 set_option maxRecDepth 10000 in
-def secpPlan : ModExp.Plan fieldWidth p where
+def secpPlan : LowSpaceModExp.Plan fieldWidth p where
   base := reg baseId
   exponent := reg exponentId
   out := reg outId
   initialAcc := reg initialAccId
-  finalAcc := secpSchedule.finalAcc
-  mulWork := mulWork mulAccId mulStartId
-  duplicate := reg duplicateId
-  schedule := secpSchedule.schedule
-  valid := secpSchedule_valid
+  duplicate := reg lowDuplicateId
+  square := reg lowSquareId
+  product := reg lowProductId
+  mulWork := mulWork lowMulAccId lowMulStartId
+  tree := lowSecpTree
+  checkpoints := lowSecpCheckpoints
+  schedule := lowSecpSchedule
+  valid := lowSecpSchedule_valid
+  tree_bits := lowSecpTree_bits
   widthPos := by norm_num [fieldWidth]
   modulusLarge := p_large
 
 def secpLayoutBlocks : List Block :=
   [regBlock baseId, regBlock exponentId, regBlock outId, regBlock initialAccId] ++
-    historyBlocks historyStartId fieldWidth ++ [regBlock duplicateId] ++
-    mulWorkBlocks mulAccId mulStartId
-
-set_option maxRecDepth 10000 in
-private theorem secpLayoutFrontBlocks_ids :
-    (([regBlock baseId, regBlock exponentId, regBlock outId, regBlock initialAccId] ++
-      historyBlocks historyStartId fieldWidth ++ [regBlock duplicateId]).map Block.id) =
-      List.range' 0 mulAccId := by
-  let history := historyCount fieldWidth
-  rw [List.map_append, List.map_append, historyBlocks_ids]
-  simp only [List.map_cons, List.map_nil, regBlock_id]
-  unfold baseId exponentId outId initialAccId historyStartId duplicateId mulAccId
-  change
-    [0, 1, 2, 3] ++ List.range' 4 history ++ [4 + history] =
-      List.range' 0 (4 + history + 1)
-  have hprefix : [0, 1, 2, 3] = List.range' 0 4 := by decide
-  rw [hprefix]
-  rw [show [4 + history] = List.range' (4 + history) 1 by simp [List.range']]
-  rw [List.range'_append]
-  exact List.range'_append
+    lowCheckpointBlocks lowCheckpointCount lowCheckpointStartId ++
+    [regBlock lowDuplicateId, regBlock lowSquareId, regBlock lowProductId] ++
+    mulWorkBlocks lowMulAccId lowMulStartId
 
 theorem secpLayoutBlocks_ids_nodup : (secpLayoutBlocks.map Block.id).Nodup := by
-  unfold secpLayoutBlocks
-  apply append_mulWorkBlocks_ids_nodup
-  · rw [secpLayoutFrontBlocks_ids]
-    exact List.nodup_range'
-  · intro id hid
-    rw [secpLayoutFrontBlocks_ids, List.mem_range'] at hid
-    omega
-  · exact (by simp [mulAccId, mulStartId] : mulAccId < mulStartId)
+  norm_num [secpLayoutBlocks, lowCheckpointBlocks, lowCheckpointCount,
+    lowCheckpointStartId, lowDuplicateId, lowSquareId, lowProductId, lowMulAccId,
+    lowMulStartId, baseId, exponentId, outId, initialAccId, mulWorkBlocks,
+    List.nodup_cons]
 
 theorem secpPlan_allWires : secpPlan.layout.allWires = blocksWires secpLayoutBlocks := by
-  have howned := secpSchedule_owned
-  simp only [ModExp.Plan.layout, RegisterLayout.allWires, secpPlan]
-  rw [howned, mulWork_eq_blocksWires]
-  simp [secpLayoutBlocks, blocksWires, List.append_assoc]
+  simp only [LowSpaceModExp.Plan.layout, RegisterLayout.allWires, secpPlan]
+  rw [show LowSpaceModExp.checkpointWires lowSecpCheckpoints =
+      blocksWires (lowCheckpointBlocks lowCheckpointCount lowCheckpointStartId) by
+        exact lowCheckpointWires_eq _ _,
+    mulWork_eq_blocksWires]
+  simp [secpLayoutBlocks, LowSpaceModExp.scratch, blocksWires, List.append_assoc]
 
 theorem secpPlan_layout_valid : secpPlan.layout.Valid := by
-  refine ⟨?_, ?_, ?_⟩
-  · exact (reg baseId).length_eq.trans (reg exponentId).length_eq.symm
-  · exact (reg baseId).length_eq.trans (reg outId).length_eq.symm
-  · rw [secpPlan_allWires]
-    exact blocksWires_nodup _ secpLayoutBlocks_ids_nodup
+  exact LowSpaceModExp.Plan.layout_valid secpPlan
 
 def secpCost : Nat :=
-  2 * ((2 * fieldWidth - 1) * mulCost + 7 * fieldWidth * fieldWidth)
+  (2 + 3 ^ 8) * lowStepCost
 
 def secpProgram : Circuit := secpPlan.program
 
 def secpLayout : RegisterLayout := secpPlan.layout
 
+/-- The exponentiator declares four public/initial registers, nine checkpoints, three reusable
+leaf registers, and the multiplier's 517-wire workspace. -/
+theorem secpLayout_allWires_length : secpLayout.allWires.length = 4629 := by
+  rw [secpLayout, secpPlan_allWires]
+  norm_num [secpLayoutBlocks, lowCheckpointBlocks, lowCheckpointCount,
+    lowCheckpointStartId, lowDuplicateId, lowSquareId, lowProductId, lowMulAccId,
+    lowMulStartId, baseId, exponentId, outId, initialAccId, mulWorkBlocks,
+    blocksWires, regBlock, bitBlock, Block.wires, fieldWidth]
+
 set_option maxRecDepth 10000 in
 theorem secp_modExp_contract : ModExpContract secpProgram secpLayout p secpCost := by
-  exact ModExp.Plan.modExp_contract_uniform secpPlan secpSchedule_uniform
+  rw [show secpCost = secpPlan.cost by
+    simpa [secpCost, LowSpaceModExp.Plan.cost] using lowSecpSchedule_cost]
+  exact LowSpaceModExp.Plan.modExp_contract secpPlan
+
+/-- The concrete exponentiator touches at most the 4,629 wires in its complete layout. -/
+theorem secpProgram_qubitCount : qubitCount secpProgram ≤ 4629 := by
+  have hsubset :
+      (circuitWires secpProgram).dedup.toFinset ⊆ secpLayout.allWires.toFinset := by
+    intro w hw
+    have hwCircuit : w ∈ circuitWires secpProgram := by
+      simpa using hw
+    have hwLayout :=
+      (ModAddSupport.circuitUsesOnly_iff_support secpLayout.allWires secpProgram).mp
+        secp_modExp_contract.usesOnly w hwCircuit
+    simpa using hwLayout
+  have hcard := Finset.card_le_card hsubset
+  rw [List.toFinset_card_of_nodup (List.nodup_dedup _)] at hcard
+  calc
+    qubitCount secpProgram = (circuitWires secpProgram).dedup.length := rfl
+    _ ≤ secpLayout.allWires.toFinset.card := hcard
+    _ ≤ secpLayout.allWires.length := List.toFinset_card_le _
+    _ = 4629 := secpLayout_allWires_length
 
 /-- Direct functional correctness of the concrete secp256k1-field exponentiation program. -/
 theorem secpProgram_correct (st : BasisState)
@@ -1172,17 +1012,15 @@ theorem secpMulProgram_tCount : tCount secpMulProgram = 10171546 := by
   rw [secp_modMul_contract.counted]
   exact mulCost_eq
 
-set_option maxRecDepth 10000 in
-/-- The fixed 257-bit exponent schedule stores 770 intermediate field registers. -/
-theorem historyCount_eq : historyCount fieldWidth = 770 := by
-  norm_num [historyCount, fieldWidth]
+/-! The fixed schedule uses nine checkpoint registers and one three-register leaf scratch set. -/
+theorem lowCheckpointCount_eq : lowCheckpointCount = 9 := rfl
 
 /-- The instantiated 257-bit modular exponentiator has this exact Clifford+T cost. -/
-theorem secpCost_eq : secpCost = 10436930882 := by
-  norm_num [secpCost, mulCost, fieldWidth]
+theorem secpCost_eq : secpCost = 267035232429 := by
+  norm_num [secpCost, lowStepCost, mulCost, fieldWidth]
 
 /-- Exact numeric T-count for the concrete secp256k1-field exponentiation program. -/
-theorem secpProgram_tCount : tCount secpProgram = 10436930882 := by
+theorem secpProgram_tCount : tCount secpProgram = 267035232429 := by
   rw [secp_modExp_contract.counted]
   exact secpCost_eq
 

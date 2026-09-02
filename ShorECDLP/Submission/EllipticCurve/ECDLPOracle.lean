@@ -45,7 +45,7 @@ theorem ecdlpOracle_tCount_of_tables_ne_zero
     (hP : ∀ C ∈ scalarMulTable aReg P, C ≠ 0)
     (hQ : ∀ C ∈ scalarMulTable bReg Q, C ≠ 0) :
     tCount (ecdlpOracle aReg bReg pointReg workStart P Q) =
-      669924831604 * (aReg.length + bReg.length) := by
+      17092216130612 * (aReg.length + bReg.length) := by
   rw [ecdlpOracle, tCount_append,
     scalarMul_tCount_of_table_ne_zero
       aReg pointReg workStart P hpointLength hP,

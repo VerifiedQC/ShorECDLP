@@ -304,7 +304,7 @@ theorem ecdlpTrial_tCount
     (hQnonzero : Q ≠ 0) :
     tCount (ecdlpTrial
       aReg bReg pointReg workStart qftAncilla Q) =
-      343001514760448 := by
+      8751214659852544 := by
   have hGTable := scalarMulTable_ne_zero_of_order
     aReg G haLength generator_order
   have horderQ := publicKey_order Q hQ hQnonzero
@@ -465,10 +465,10 @@ def bitcoinQFTAncilla : Wire :=
 def bitcoinWorkStart : Wire :=
   1026
 
-/-- Certified static qubit capacity of the current, non-reusing Bitcoin
-allocation.  Every wire used by one trial has an index below this value. -/
+/-- Certified static qubit capacity of the current dense Bitcoin allocation.
+Every wire used by one trial has an index below this value. -/
 def bitcoinQubitCount : Nat :=
-  206624
+  11561
 
 /-- Dense physical-wire envelope used to certify the current allocation. -/
 private def bitcoinAllWires : List Wire :=
@@ -497,7 +497,7 @@ private theorem blocksWires_upper
 
 private theorem secpAddLayout_upper :
     ∀ w ∈ Secp256k1Instance.secpAddLayout.allWires,
-      w < Secp256k1Instance.fieldWidth * 780 := by
+      w < Secp256k1Instance.fieldWidth * 21 := by
   let blocks :=
     [Secp256k1Instance.regBlock Secp256k1Instance.baseId,
       Secp256k1Instance.regBlock Secp256k1Instance.exponentId,
@@ -512,7 +512,7 @@ private theorem secpAddLayout_upper :
       Secp256k1Instance.reg, Secp256k1Instance.blocksWires,
       List.append_assoc]
   rw [hlayout]
-  apply blocksWires_upper blocks 780
+  apply blocksWires_upper blocks 21
   intro block hblock
   simp only [blocks, List.mem_append, List.mem_cons,
     List.not_mem_nil, or_false] at hblock
@@ -526,14 +526,14 @@ private theorem secpAddLayout_upper :
 
 private theorem secpMulLayout_upper :
     ∀ w ∈ Secp256k1Instance.secpMulLayout.allWires,
-      w < Secp256k1Instance.fieldWidth * 780 := by
+      w < Secp256k1Instance.fieldWidth * 21 := by
   let blocks :=
     [Secp256k1Instance.regBlock Secp256k1Instance.baseId,
       Secp256k1Instance.regBlock Secp256k1Instance.exponentId,
       Secp256k1Instance.regBlock Secp256k1Instance.outId] ++
       Secp256k1Instance.mulWorkBlocks
         Secp256k1Instance.initialAccId
-        Secp256k1Instance.historyStartId
+        Secp256k1Instance.mulWorkStartId
   have hlayout :
       Secp256k1Instance.secpMulLayout.allWires =
         Secp256k1Instance.blocksWires blocks := by
@@ -543,7 +543,7 @@ private theorem secpMulLayout_upper :
     simp [blocks, Secp256k1Instance.blocksWires,
       Secp256k1Instance.reg, List.append_assoc]
   rw [hlayout]
-  apply blocksWires_upper blocks 780
+  apply blocksWires_upper blocks 21
   intro block hblock
   simp only [blocks, List.mem_append, List.mem_cons,
     List.not_mem_nil, or_false] at hblock
@@ -554,47 +554,35 @@ private theorem secpMulLayout_upper :
   · have hid : block.id ∈
         (Secp256k1Instance.mulWorkBlocks
           Secp256k1Instance.initialAccId
-          Secp256k1Instance.historyStartId).map
+          Secp256k1Instance.mulWorkStartId).map
             Secp256k1Instance.Block.id :=
         List.mem_map_of_mem hprivate
     rw [Secp256k1Instance.mulWorkBlocks_ids] at hid
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hid
     norm_num [Secp256k1Instance.initialAccId,
-      Secp256k1Instance.historyStartId] at hid ⊢
+      Secp256k1Instance.mulWorkStartId] at hid ⊢
     omega
 
 private theorem secpLayout_upper :
     ∀ w ∈ Secp256k1Instance.secpLayout.allWires,
-      w < Secp256k1Instance.fieldWidth * 780 := by
+      w < Secp256k1Instance.fieldWidth * 21 := by
   rw [Secp256k1Instance.secpLayout,
     Secp256k1Instance.secpPlan_allWires]
-  apply blocksWires_upper Secp256k1Instance.secpLayoutBlocks 780
+  apply blocksWires_upper Secp256k1Instance.secpLayoutBlocks 21
   intro block hblock
   have hid : block.id ∈
       Secp256k1Instance.secpLayoutBlocks.map
         Secp256k1Instance.Block.id :=
     List.mem_map_of_mem hblock
-  unfold Secp256k1Instance.secpLayoutBlocks at hid
-  simp only [List.map_append, List.map_cons, List.map_nil,
-    Secp256k1Instance.regBlock_id, List.mem_append,
-    List.mem_cons, List.not_mem_nil, or_false,
-    Secp256k1Instance.historyBlocks_ids,
-    Secp256k1Instance.mulWorkBlocks_ids] at hid
-  have hduplicate : Secp256k1Instance.duplicateId = 774 := by
-    unfold Secp256k1Instance.duplicateId
-    rw [Secp256k1Instance.historyCount_eq]
-    norm_num [Secp256k1Instance.historyStartId]
-  have hmulAcc : Secp256k1Instance.mulAccId = 775 := by
-    simp [Secp256k1Instance.mulAccId, hduplicate]
-  have hmulStart : Secp256k1Instance.mulStartId = 776 := by
-    simp [Secp256k1Instance.mulStartId, hmulAcc]
-  rw [Secp256k1Instance.historyCount_eq, hduplicate, hmulAcc,
-    hmulStart] at hid
-  simp only [List.mem_range'] at hid
-  norm_num [Secp256k1Instance.baseId,
+  norm_num [Secp256k1Instance.secpLayoutBlocks,
+    Secp256k1Instance.lowCheckpointBlocks,
+    Secp256k1Instance.lowCheckpointCount,
+    Secp256k1Instance.lowCheckpointStartId,
+    Secp256k1Instance.lowDuplicateId, Secp256k1Instance.lowSquareId,
+    Secp256k1Instance.lowProductId, Secp256k1Instance.lowMulAccId,
+    Secp256k1Instance.lowMulStartId, Secp256k1Instance.baseId,
     Secp256k1Instance.exponentId, Secp256k1Instance.outId,
-    Secp256k1Instance.initialAccId,
-    Secp256k1Instance.historyStartId, Secp256k1Instance.fieldWidth] at hid ⊢
+    Secp256k1Instance.initialAccId, Secp256k1Instance.mulWorkBlocks] at hid ⊢
   omega
 
 private theorem pointAddArithmeticWork_upper :
@@ -610,7 +598,7 @@ private theorem pointAddArithmeticWork_upper :
     have hoffset : pointAddArithmeticOffset 2052 = 6164 := rfl
     calc
       pointAddArithmeticOffset 2052 + source <
-          6164 + Secp256k1Instance.fieldWidth * 780 := by
+          6164 + Secp256k1Instance.fieldWidth * 21 := by
         rw [hoffset]
         exact Nat.add_lt_add_left hsourceUpper 6164
       _ = bitcoinQubitCount := by
@@ -622,7 +610,7 @@ private theorem pointAddArithmeticWork_upper :
     have hoffset : pointAddArithmeticOffset 2052 = 6164 := rfl
     calc
       pointAddArithmeticOffset 2052 + source <
-          6164 + Secp256k1Instance.fieldWidth * 780 := by
+          6164 + Secp256k1Instance.fieldWidth * 21 := by
         rw [hoffset]
         exact Nat.add_lt_add_left hsourceUpper 6164
       _ = bitcoinQubitCount := by
@@ -634,7 +622,7 @@ private theorem pointAddArithmeticWork_upper :
     have hoffset : pointAddArithmeticOffset 2052 = 6164 := rfl
     calc
       pointAddArithmeticOffset 2052 + source <
-          6164 + Secp256k1Instance.fieldWidth * 780 := by
+          6164 + Secp256k1Instance.fieldWidth * 21 := by
         rw [hoffset]
         exact Nat.add_lt_add_left hsourceUpper 6164
       _ = bitcoinQubitCount := by
@@ -848,11 +836,11 @@ private theorem bitcoinDeclaredWires_subset :
   · change w ∈ List.range' 0 256 at ha
     have hbound := (List.mem_range'_1.mp ha).2
     simpa [bitcoinAllWires, bitcoinQubitCount] using
-      (hbound.trans (by norm_num : 256 < 206624))
+      (hbound.trans (by norm_num : 256 < 11561))
   · change w ∈ List.range' 256 256 at hb
     have hbound := (List.mem_range'_1.mp hb).2
     simpa [bitcoinAllWires, bitcoinQubitCount] using
-      (hbound.trans (by norm_num : 512 < 206624))
+      (hbound.trans (by norm_num : 512 < 11561))
   · change w ∈ List.range' 512 pointWidth at hpoint
     have hbound := (List.mem_range'_1.mp hpoint).2
     have hlt : w < bitcoinQubitCount := by
@@ -887,7 +875,7 @@ private theorem qubitCount_le_of_usesOnly
   simpa [qubitCount] using hcard
 
 /-- The current concrete one-trial Bitcoin circuit touches at most
-`206,624` distinct qubit wires.  Sequential measured repetition reuses this
+`11,561` distinct qubit wires.  Sequential measured repetition reuses this
 same device, so the bound is not multiplied by 26. -/
 theorem bitcoinECDLPTrial_qubitCount
     (Q : Point) :
@@ -912,9 +900,9 @@ theorem bitcoinECDLPTrial_qubitCount
 
 /-- The exact aggregate T-count of the concrete repeated Bitcoin procedure. -/
 def bitcoinECDLPTotalGateCount : Nat :=
-  8918039383771648
+  227531581156166144
 
-/-- Repeating the exact trial 26 times has T-count `8918039383771648`. -/
+/-- Repeating the exact trial 26 times has T-count `227531581156166144`. -/
 theorem bitcoinECDLPTotalGateCount_correct
     (aReg bReg pointReg : List Wire)
     (workStart qftAncilla : Wire)

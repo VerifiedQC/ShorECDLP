@@ -22,6 +22,7 @@ import ShorECDLP.Submission.Arithmetic.Adder
 import ShorECDLP.Submission.Arithmetic.FermatInv
 import ShorECDLP.Submission.Arithmetic.InPlaceAdder
 import ShorECDLP.Submission.Arithmetic.InPlaceModular
+import ShorECDLP.Submission.Arithmetic.LowSpaceModExp
 import ShorECDLP.Submission.Arithmetic.LowSpaceModMul
 import ShorECDLP.Submission.Arithmetic.ModAdd
 import ShorECDLP.Submission.Arithmetic.ModExp
