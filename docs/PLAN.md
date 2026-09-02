@@ -1,430 +1,505 @@
-# ShorECDLP
+# ShorECDLP implementation plan
 
-A minimal, **ecdsa.fail-style verification infrastructure** for quantum resource-estimate
-submissions, together with **one super-naive Shor/ECDLP submission** that fills it.
+ShorECDLP is an ecdsa.fail-style Lean verification repository for quantum resource-estimate
+submissions against secp256k1. It currently contains one complete, deliberately naive construction.
+The next construction will implement the space-efficient algorithm from
+[arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-Repo: https://github.com/VerifiedQC/ShorECDLP. Toolchain: `leanprover/lean4:v4.28.0`,
-Mathlib pinned. Curve: secp256k1 (Bitcoin).
+**Status snapshot.** This document describes `main@2e87a3cc048840232c2f3919a2a269f2783ea50e`
+and the approved source-layout direction as of 2026-09-02. A `✓` means the declaration is
+root-reachable and covered by the repository verifier on that baseline. “Target” is not a proved
+claim. The source relocation and paper implementation described below have not yet landed.
 
-**Status snapshot.** This document reflects the root-reachable source in this tree, refreshed
-for the concrete-oracle integration built on `main@6a21aa4`. A `✓` below means the component is
-implemented, imported by `ShorECDLP.lean`, and covered by the repository verifier. “Planned” means
-that no implementation is present; a partial milestone lists its exact landed and open boundaries.
+## 1. Current verified result
 
----
+The current construction is a closed Bitcoin ECDLP submission, not merely an arithmetic library.
+For every nonzero public key `Q = d • G`, `bitcoinECDLPSubmission` connects one concrete circuit
+family to all of these checked fields:
 
-## 1. The infrastructure (`Framework/`)
+| Property | Verified value |
+|---|---:|
+| exponent precision | two 256-bit registers |
+| encoded affine point | 513 bits |
+| one-run success lower bound | `41 / 250` |
+| independent runs for at least 99% success | 26 |
+| T count per run | `841,862,539,761,920` |
+| T count for 26 sequential runs | `21,888,426,033,809,920` |
+| static qubit-capacity upper bound per run | `1,394,478` |
 
-The framework design fixes the following and nothing else. The gate set, cost model, and
-classical/quantum semantics are implemented; the final submission-package structure is still an
-M5 item:
+The qubit value is an honest dense-allocation upper bound, not a claim that every label is used.
+The 26 runs are sequential and reuse the same physical wires.
 
-- **A trusted primitive gate set** `{X, H, CX, CCX, P(dir,k)}` and a circuit as a list of them
-  (`Circuit := List Gate`). The Clifford/Toffoli gates `{X, H, CX, CCX}` express all
-  reversible arithmetic; `P(dir,k)` is a single-qubit rotation by `±2π/2^k`, which supplies
-  the mutually adjoint phases the QFT and inverse QFT need (none of the other four can produce
-  a non-trivial phase).
-- **A naive, simple T-count cost model** `tCount : Circuit → ℕ`, curve- and
-  construction-agnostic: Cliffords `{X, H, CX}` cost 0, Toffoli `CCX` costs 7, a rotation
-  `P(dir,k)` costs 1 in either direction. A submission that wants a different or tighter count (a 4-T Toffoli, an
-  exact rotation-synthesis cost, a Toffoli count, …) proves that as its own theorem — the
-  framework only fixes the simple baseline.
-- **A submission contract (planned at M5).** A submission will provide a `program` (a circuit
-  family) together with a proof that it is `correct` and a proof of its `counted` T-count bound —
-  both stated about the *same* `program` term.
-- **The semantics `correct` is stated against.** A layer-neutral basis-state type
-  `BasisState := Wire → Bool` with a *classical* action (`Classical.run`, gates as basis-state
-  permutations) for the reversible arithmetic (M1–M3), and — added at M4 — a *separate*
-  Hilbert-space layer over `BasisState →₀ ℂ` for the QFT, bridged to the classical one by an
-  agreement lemma so arithmetic correctness lifts to the quantum layer for free (see §5).
+The proof chain is complete and standard-axiom-only:
 
-The framework checks the two proofs and makes no claim about which curve or algorithm a
-submission uses. Any construction that fills the contract is a submission; optimized
-constructions are simply different submissions against the same framework.
+- secp256k1 field and group certificates, including primality and `addOrderOf G = order`;
+- primitive-gate classical and finite-support quantum semantics;
+- reversible modular add/subtract/multiply/exponentiate and Fermat inversion;
+- a total affine group-law specification and clean controlled point addition;
+- binary doubling-table scalar multiplication and a two-call ECDLP oracle;
+- coherent QFT/IQFT and two-dimensional order finding;
+- exact oracle refinement, concrete end-to-end correctness, resource aggregation, and repetition;
+- a nullary `BitcoinECDLPSubmission` record with correctness, T-count, qubit, and trial fields.
 
----
+This construction will be called the **Naive** submission after the source split. “Naive” describes
+its arithmetic and allocation strategy, not its proof status.
 
-## 2. The submission: Shor for ECDLP over secp256k1
+## 2. Target source architecture
 
-### 2.1 Problem
+The repository will contain two isolated implementations over one small semantic framework and one
+pure mathematical layer:
 
-Given the secp256k1 base point `P` of prime order `n` and a target `Q = [k]P`, recover `k`.
-
-### 2.2 Algorithm
-
-Shor's algorithm as 2-D period finding. The oracle `f(a,b) = [a]P ⊞ [b]Q = [a + k·b]P` is
-constant on cosets of the hidden subgroup `H = ⟨(−k, 1)⟩`; the QFT runs on the domain
-registers, and one measurement yields `(α, β)` with `β ≡ k·α (mod n)`.
-
-```
-Input : secp256k1 E/F_p, base point P (order n), target Q = [k]P.
-Output: k.
-
-1.  Registers: a, b (each m qubits);  R (an affine point of E, init O).
-2.  H^{⊗m} on a and on b.
-3.  Oracle U_f, by classically-controlled double-and-add over precomputed tables:
-        for i in 0..m-1:  if a_i : R ← R ⊞ [2^i]P
-        for i in 0..m-1:  if b_i : R ← R ⊞ [2^i]Q
-    → 2m proved Bennett-clean controlled point translations; their exact aggregate cost
-      remains open.
-4.  Leave R unobserved (equivalently, discard it after the oracle). The current theorem
-    marginalizes over R in the probability calculation; operational measurement/discard
-    semantics are still planned.
-5.  Inverse QFT over 2^m on a, and on b.
-6.  Measure a, b → (α, β); round each phase to the nearest numerator modulo the known n,
-    then recover k = β·α⁻¹ (mod n).
-7.  Verify Q == [k]P classically; repeat if needed.
-```
-
-### 2.3 Construction (naive, un-optimized)
-
-- **Field** `F_p`, `p = 2^256 − 2^32 − 977` (hardcoded). Schoolbook modular multiplication;
-  inversion by Fermat, `a⁻¹ = a^(p−2)`.
-- **Point addition**: affine Weierstrass, a quantum point ⊞ a classical constant point; the
-  `[2^i]P` / `[2^i]Q` tables are precomputed classical constants with a verified doubling
-  recurrence.
-- **Scalar multiplication**: classically-controlled binary double-and-add, `2m` additions.
-- **Oracle**: adds `[a]P ⊞ [b]Q` into `R`. The current probability theorem marginalizes over
-  `R`; operational measurement/discard remains planned.
-- **QFT**: textbook coherent in-register QFT over `2^m` (`H` +
-  controlled-`P(.forward,k)`), with the inverse QFT defined by the generic circuit adjoint and
-  applied to each exponent register in order finding.
-- **Recovery**: because the subgroup order is known, round both sampled phases to their nearest
-  numerators modulo `n`, then compute `k = β·α⁻¹ (mod n)` when `α ≠ 0`.
-
-### 2.4 Current proof status
-
-Landed on the status baseline:
-
-- **Framework + M1 arithmetic.** Classical and quantum circuit semantics are defined, and the
-  full reversible field-arithmetic chain is verified: ripple addition, modular addition,
-  modular subtraction, clean zero/equality predicates, schoolbook modular multiplication,
-  square-and-multiply exponentiation, and Fermat inversion. The generic constructors now have a
-  concrete width-257 secp256k1 block allocation with exact numeric costs. Correctness,
-  cleanup/locality, `HPFree`, well-formedness, and exact `tCount` obligations refer to the same
-  circuit terms.
-- **Concrete M2/M3 functional path.** The canonical Mathlib secp256k1 affine point type,
-  circuit-free total affine formula, injective 513-bit encoding, register-padding interface,
-  PointAdd, controlled PointAdd, doubling-table ScalarMul, and the two-call ECDLP oracle are
-  root-reachable. Direct functional correctness is proved throughout; controlled PointAdd,
-  ScalarMul, and the oracle expose the `HPFree`/well-formedness theorems required by refinement.
-  The oracle has an exact whole-state theorem, refines through `ECDLPOracleSpec.ofCircuit`, and
-  instantiates the conditional secp256k1 order-finding success theorem.
-- **Partial M4.** The finite-support Hilbert-space semantics, classical-to-quantum agreement,
-  inner-product preservation, exact QFT/IQFT circuits and proofs, generic exact/approximate
-  phase estimation (under a supplied controlled-powers linear map), an abstract ECDLP-oracle
-  contract, the generic circuit/classical-action-to-oracle refinement, the algebraic
-  hidden-subgroup recovery reduction, and the conditional two-register Fourier-sampling theorem
-  are verified. Under the abstract oracle contract, the latter recovers `d mod r` with one-shot
-  probability at least `((r−1)/r)·(4/π²)²`.
-
-Still open before the repository can claim the target end-to-end result:
-
-- operational measurement/discard and repetition semantics for turning the existing marginal
-  probability statement into an executable sampling contract;
-- the generator-order certificate needed by the concrete secp256k1 specialization;
-- exact PointAdd/ScalarMul/oracle cost aggregation, followed by the same-program end-to-end
-  correctness and T-count theorem, `Framework.Contract` instance, and checked secp256k1 reference
-  number.
-
----
-
-## 3. File structure
-
-```
-lakefile.lean  lean-toolchain  lake-manifest.json
-docs/PLAN.md
-docs/ARITHMETIC.md                         # bottom-up arithmetic textbook
-scripts/verify.sh
-ShorECDLP.lean                              # root aggregator
+```text
 ShorECDLP/
-  Framework/
-    InstructionSet.lean                    # [M0 ✓] gates, adjoints, wires, circuits, well-formedness
-    CostModel.lean                         # [M0 ✓] curve-agnostic naive tCount
-    BasisState.lean                        # [M0 ✓] BasisState, register read/write, Clean
-    Classical/
-      Semantics.lean                       # [M1.0 ✓] basis-state run + HPFree
-    Quantum/
-      Semantics.lean                       # [M4 ✓] finite-support states + agreement bridge
-      InnerProduct.lean                    # [M4 ✓] unitarity, normalization, circuit adjoints
-      Measure.lean            (planned)    # [M4] measurement/discard semantics
-    Contract.lean             (planned)    # [M5] same-program correct + counted package
+  Math/                       # pure definitions and lemmas; transitively Mathlib-only
+  Framework/                  # implementation-neutral classical/quantum machine semantics
   Submission/
-    Field.lean                             # [M1 ✓] p, order, curve constants, Fermat identity
-    Arithmetic/
-      README.md                            # exact import and contract-composition DAGs
-      Contracts.lean                      # [M1 ✓] clean same-program arithmetic interfaces
-      Primitives.lean                     # [M1 ✓] load/copy/select and support lemmas
-      Adder.lean                          # [M1.1 ✓] reversible full-adder cell
-      RippleAdder.lean                    # [M1.2 ✓] n-bit ripple-carry adder
-      ModAdd.lean                         # [M1.3 ✓] clean modular addition
-      ModMul.lean                         # [M1.4 ✓] clean schoolbook modular multiplication
-      ModExp.lean                         # [M1.5 ✓] clean square-and-multiply exponentiation
-      FermatInv.lean                      # [M1.6 ✓] inversion from a ModExp contract
-      Secp256k1Instance.lean              # [M1 ✓] concrete width-257 plans and wire allocation
-      ModSub.lean                         # [M1 ✓] clean modular subtraction
-      Predicates.lean                     # [M1 ✓] clean equality/zero flags
-      PointAdd.lean                       # [M2 ✓] clean addition by a classical point
-      Controlled_PointAdd.lean            # [M3 ✓] controlled in-place point translation
-      ScalarMul.lean                      # [M3 ✓] controlled doubling-table scalar fold
-    EllipticCurve/
-      Secp256k1.lean                      # [M2 ✓] canonical curve, affine Point, and generator
-      Precompute.lean                     # [M2 ✓] generic verified [2^i]base tables
-      PointEncoding.lean                  # [M2 ✓] concrete injective 513-bit encoding
-      PointRegister.lean                  # [M2 ✓] slicing/write/padding interface
-      AffineFormula.lean                  # [M2 ✓] total circuit-free group-law decision tree
-      ECDLPOracle.lean                    # [M3 ✓] concrete two-ScalarMul U_f + refinement
-    QFT/
-      Defs.lean                            # [M4 ✓] cPhase, QFT, exact adjoint IQFT
-      Main.lean                            # [M4 ✓] public QFT/IQFT correctness
-      Proofs/
-        CPhase.lean  Step.lean             # [M4 ✓] gate/step semantics
-        Fourier.lean  Swap.lean            # [M4 ✓] Fourier expansion + bit reversal
-        Count.lean                         # [M4 ✓] tCount, WF, normalization
-    OrderFinding/
-      OracleSpec.lean                      # [M4 ✓] abstract inner-product-preserving ECDLP oracle
-      OracleRefinement.lean               # [M4 ✓] circuit/classical-action → ECDLPOracleSpec
-      Defs.lean                            # [M4 ✓] two-register algorithm, postprocess, success mass
-      Main.lean                            # [M4 ✓] conditional one-shot ECDLP success theorem
-      Proofs/
-        CyclicEigenstates.lean  OracleKickback.lean
-        FourierSampling.lean   Probability.lean
-        Postprocess.lean        SuccessProbability.lean
-                                             # [M4 ✓] 2-D Fourier sampling and recovery proof chain
-      PhaseEstimation/
-        Defs.lean                          # [M4 ✓] generic semantic QPE map/contracts
-        Main.lean                          # [M4 ✓] exact and ≥4/π² approximate theorems
-        Proofs/
-          Hadamard.lean  ControlledPowers.lean  Eigenphase.lean
-          Fourier.lean  Probability.lean  Approximations.lean
-                                             # [M4 ✓] generic QPE proof chain
-    Correctness/
-      Reduction.lean                       # [M4 ✓] period invariance + exact recovery in ZMod order
-      EndToEnd.lean                        # [M4 ✓] conditional concrete secp256k1 instantiation
-    Instance.lean             (planned)    # [M5] fills Framework.Contract
-    Reference.lean            (planned)    # [M5] checked secp256k1 resource number
+    Naive/                    # the entire current construction
+    2607_13816/               # arXiv:2607.13816v2 construction
 ```
 
-The five primitive gate families + the cost model are the entire trusted surface; everything else is
-a derived circuit. Measurement and ancilla live in `Framework/Quantum/`, never as new gates.
+The requested numeric directory is valid. Lean imports its module component with escaped syntax:
 
----
+```lean
+import ShorECDLP.Submission.«2607_13816».EEA.Model
+```
 
-## 4. Milestones
+New paper declarations use the readable namespace `ShorECDLP.Paper2607_13816`.
 
-- **M0 ✓** — framework: instruction set `{X,H,CX,CCX,P(dir,k)}`, naive T-count cost model,
-  layer-neutral `BasisState`.
-- **M1 ✓** — field arithmetic, split into small steps (one PR per step):
-    - **M1.0 ✓** classical basis-state semantics + register encoding
-    - **M1.1 ✓** verified reversible full-adder cell
-    - **M1.2 ✓** n-bit ripple-carry adder (`regValue(out) = a + b mod 2^n`)
-    - **M1.3 ✓** clean modular adder (`(a + b) mod p`)
-    - **M1.4 ✓** clean schoolbook modular multiplier + composable `HPFree` guard
-    - **M1.5 ✓** clean modular exponentiation (square-and-multiply)
-    - **M1.6 ✓** Fermat inversion from `ModExpContract`, discharged against `fermat_inv`
-    - **Concrete instance ✓** clean subtraction/predicates plus an actual width-257 secp256k1
-      adder wiring, multiplication plan, exponentiation plan, and same-program inversion theorem
-- **M2 (functional path complete; resource integration open)** — the curve/generator spec,
-  precompute tables, point encoding/register interface, total affine formula, and clean PointAdd
-  circuit are proved. Exact PointAdd cost aggregation remains open.
-- **M3 (partial)** — controlled PointAdd, doubling-table ScalarMul, and the concrete two-call oracle
-  are proved correct, H/P-free, and well formed. The oracle's exact whole-state equation and
-  `ECDLPOracleSpec` refinement are complete; exact ScalarMul/oracle resource aggregation remains.
-- **M4 (partial)** — quantum semantics/bridge, unitarity, coherent QFT/IQFT, abstract oracle
-  contract, generic exact/approximate phase estimation, algebraic reduction, conditional
-  two-register ECDLP sampling/recovery, and the circuit-to-oracle refinement lemma are complete;
-  the concrete-oracle instantiation and conditional secp256k1 application are also complete.
-  Measurement/repetition, a generator-order certificate, and end-to-end same-program resource
-  composition remain. Refining generic QPE's supplied
-  `ControlledPowersOn` map is optional library work, not a dependency of the landed direct
-  two-register order-finding theorem.
-- **M5 (open)** — the framework contract instance and checked secp256k1 reference number remain.
+### 2.1 Import rules
 
-Each layer: `lake build` green, `#print axioms` free of `sorry` / `native_decide` / new
-axioms, and `counted` bound to the same `program` term as `correct`.
+The verifier will enforce this dependency policy using both textual import checks and Lean
+`--src-deps` output:
 
----
+- `Math/**` imports only Mathlib or other `Math/**` modules. Its transitive in-repository source
+  closure contains no Framework or Submission path.
+- `Framework/**` imports Mathlib, Math, or Framework, never either submission.
+- `Submission/Naive/**` may import Mathlib, Math, Framework, and Naive, never `2607_13816`.
+- `Submission/2607_13816/**` may import Mathlib, Math, Framework, and `2607_13816`, never Naive.
+- Only the root/verification sentinel imports both submissions.
 
-## 5. Notes
+Thus no arithmetic circuit, QFT implementation, oracle contract, resource formula, or correctness
+theorem is shared between the two submissions. Shared problem-specific material must be genuinely
+pure mathematics. Generic notions such as primitive gates, basis states, linear semantics, Born
+mass, and adaptive sequencing remain in Framework.
 
-- **Disclosures** for this submission live beside the relevant construction in `Submission/`,
-  never in the framework cost model. The current tree exposes the field/reduction assumptions
-  and the coherent-QFT count. The scalar-multiplication circuit is landed; exact
-  PointAdd/ScalarMul/oracle resource disclosures remain pending cost aggregation.
-- The register width `m` exceeds `⌈log₂ n⌉` by the phase-estimation precision padding.
-- The landed point encoding uses 513 public bits: `O ↦ 0` and finite `(x,y) ↦
-  `1 + 2*x.val + 2^257*y.val`. `PointRegister.lean` proves the explicit 256-to-257 zero-padding
-  interface needed by the concrete field circuits, whose modular adder uses `width = 257` because
-  it requires `2*p ≤ 2^width`.
-- Primality of `p` and, where recovery needs field inversion, of `order` are visible
-  `[Fact (Nat.Prime ...)]` hypotheses, not axioms. The stronger claim that `G` has order `order`
-  is not yet proved.
-- The framework metric is T-count; against Roetteler's `1.26×10¹¹` **Toffoli** the cross-check
-  is `×7` (naive Toffoli→T), since the arithmetic Toffolis dominate and the QFT rotations are
-  a lower-order term.
-- **Classical→quantum bridge (M4 design locks).** `Classical.run` is the cheap base
-  (permutation proofs ≪ unitary proofs). At M4 the quantum layer is *additive over the same
-  `BasisState`* (amplitudes `BasisState →₀ ℂ`; `{X,CX,CCX}` permute the support exactly as the
-  classical action already says, `H` makes a 2-term superposition, `P(dir,k)` scales by the
-  corresponding signed phase — never
-  a parallel `Fin (2^n)` basis). One **agreement lemma** — on an H/P-free circuit, the quantum
-  run of `|s⟩` equals the delta at `⟪c⟫ s` — transports every M1–M3 arithmetic `correct` up to
-  the quantum layer for free; arithmetic is never re-proved in Hilbert space.
-- **H/P-free guard.** The classical semantics treats `H`/`P` as identity, so it is faithful
-  only on H/P-free circuits. `Classical.HPFree : Circuit → Prop` is now machine-checked and
-  composable; the M1 circuit theorems/contracts discharge it, and it is exactly the hypothesis
-  used by the M4 agreement lemma.
-- **Notation** (`Classical`-scoped): `s[i ↦ b]` (wire update), `⟦g⟧` (a gate's classical
-  transformer), `⟪c⟫` (a circuit's, run left to right).
+### 2.2 What belongs in `Math/`
 
----
+Candidates include:
 
-## 6. Conventions (every PR follows this — the "PR #1 style")
+- the secp256k1 constants, curve, affine point type, and generator;
+- primality and generator-order certificates;
+- the mathematical total affine group law and field identities;
+- pure ECDLP hidden-subgroup, rounding, recovery, and postprocessing lemmas;
+- generic doubling-table and scalar identities; and
+- pure independent-repetition probability lemmas.
 
-- **One PR per fine-grained step** (M1.0, M1.1, …), branched off the latest `main`, small
-  enough to review on its own.
-- **PR body**: what the step adds (bulleted), that it builds green, that `#print axioms` is
-  free of `sorry` / `native_decide` / new axioms, and the next step.
-- **Naming**: types stay layer-neutral (`BasisState`); the classical marker goes on the
-  *actions* (`Classical.*`). Nothing should read as a semantics it isn't.
-- **Notation**: use readable notation in statements *and* proofs so they read close to the
-  math, and introduce new notation for each new operation as it appears (with `@[inherit_doc]`
-  so it self-documents). Current: `s[i ↦ b]`, `⟦g⟧`, `⟪c⟫`.
-- **Proofs**: no `sorry` / `native_decide` / new axioms; `correct` and `counted` are stated
-  about the *same* `program` term; carry only the hypotheses actually used (the unused-argument
-  linters enforce this).
-- **Same trusted surface**: everything is a derived circuit over the five primitive gates;
-  the framework cost model stays disclosure-free and curve-agnostic.
+A declaration moves only if its complete proof dependency closure is Mathlib/Math. Circuit types,
+register encodings, quantum states, oracle specifications, phase-estimation programs, and resource
+models are not pure mathematics.
 
----
+### 2.3 Phase-0 relocation policy
 
-## 7. M4 quantum layer — landed components and remaining integration
+The first implementation PR is a structural move:
 
-The quantum semantics is implemented additively over the same `BasisState`. It provides the
-amplitude state `BasisState →₀ ℂ`, gates as linear maps
-(`onKet` + `linearCombination`), the **agreement bridge** (`run (ket s) = ket (Classical.run c s)`
-for `HPFree` circuits — transports all M1–M3 arithmetic correctness up for free), and **norm
-preservation** (`run_preservesNormSq` for `CircuitWellFormed` circuits ⇒ `normSq_run_ket = 1`,
-the Born-rule input for the success bound). The gate set is adjoint-closed, and
-`run_adjoint_run` / `run_run_adjoint` prove two-sided cancellation on arbitrary finite-support
-states.
+1. audit current Framework and Submission declarations;
+2. extract eligible pure declarations into Math;
+3. move all remaining current algorithm modules under `Submission/Naive/`;
+4. move the Bitcoin-specific unitary submission contract out of Framework and into Naive;
+5. add the four import-direction gates above; and
+6. make both submissions root-reachable without permitting cross-imports.
 
-**Two orthogonal circuit predicates** (keep separate, never bundled): `Classical.HPFree` (no H/P —
-for the agreement bridge) and `CircuitWellFormed` (distinct wires per gate — for unitarity).
-Arithmetic needs **both**; the QFT needs **`WellFormed` only** (it has H/P, so it is not HPFree,
-and its correctness goes through the quantum semantics, not the classical bridge).
+The recommended first move preserves current public declaration names. Parent/head `#print` and
+`#print axioms` output must agree for every public declaration, apart from unavoidable qualified
+source names. Renaming the whole existing API into `ShorECDLP.Naive` would be a separate
+source-breaking migration and requires an explicit decision.
 
-**Landed QFT and phase-estimation components** (stated over `Quantum.run`):
+## 3. Semantic and resource boundaries
 
-- **Q0/Q1 ✓ — controlled-phase atom.** Controlled-`P(.forward,k)` is realized in-set as
-  `cPhase k c t anc := [.CCX c t anc, .P .forward k anc, .CCX c t anc]` (`anc` fresh `|0⟩`) — ket action
-  `(if s c && s t then phaseCoeff .forward k else 1) • ket s`, at cost 2 Toffoli
-  + 1 P. Its require-and-restore spec says `anc` is `|0⟩` on entry and returns to `|0⟩` (the same
-  freshness discipline as the adder's `st s = false`), so a single ancilla is reused across the
-  whole QFT. The inverse atom is obtained by circuit adjoint and uses `P(.inverse,k)` at the
-  same cost; synthesizing it from a product of positive phases would distort the resource count.
-- **Q2 ✓ — single-target step.** `H` on the target plus the controlled-phase cascade has a
-  proved ket action and well-formedness theorem.
-- **Q3 ✓ — full QFT.** `qft_correct` proves the normalized Fourier-sum action for an LSB-first
-  register, including the final bit reversal.
-- **Q4 ✓ — count, well-formedness, and normalization.** `tCount_qft`, `tCount_iqft`, both
-  well-formedness theorems, and norm preservation are proved about the concrete circuits.
-- **Q5 ✓ — inverse QFT.** `iqft` is the generic circuit adjoint; exact two-sided cancellation is
-  proved on arbitrary finite-support states.
-- **Q6 ✓ — generic phase estimation.** `phaseEstimation_correct_exact` proves the exact-grid
-  result, and `phaseEstimation_correct_approx` supplies a nearest label within half a grid cell
-  with probability at least `4/π²`. These theorems intentionally assume a supplied linear
-  controlled-powers block satisfying `ControlledPowersOn`.
-- **Q7 ✓ — conditional two-register order finding.** `orderFinding_correct` decomposes the point
-  register into cyclic characters, proves the joint oracle kickback, applies the two inverse QFTs,
-  and combines peak rounding with division in `ZMod r`. Given `ECDLPOracleSpec`, it recovers the
-  hidden shift `d mod r` with one-shot probability at least `((r−1)/r)·(4/π²)²`. The theorem
-  marginalizes the unmeasured registers through `jointRegisterProbability`. Its concrete
-  secp256k1 oracle refinement and conditional application are now landed; a measurement circuit
-  and the final resource theorem are not.
+### 3.1 Unitary programs remain unitary
 
-**Remaining M4 integration.** The concrete ECDLP path no longer needs a new generic
-controlled-powers theorem: `orderFinding_correct` directly consumes one joint oracle. The
-two-ScalarMul circuit, its exact classical whole-state theorem, its `ECDLPOracleSpec` refinement,
-and the conditional secp256k1 application are now landed. What remains is computational-basis
-measurement/discard and repetition semantics, a generator-order certificate, and the final
-same-program correctness/resource theorem.
+The current trusted program surface is:
 
----
+```lean
+Gate       := X | H | CX | CCX | P direction angle wire
+Circuit    := List Gate
+Quantum.run : Circuit -> State ->ₗ[ℂ] State
+```
 
-## 8. Concrete oracle construction roadmap
+`Circuit.adjoint` and the inner-product theorems rely on every gate being unitary. Mid-circuit
+measurement will therefore not be added as another `Gate`.
 
-`orderFinding_correct` should remain unchanged. It already proves the difficult 2-D
-Fourier-sampling and recovery statement for any linear map satisfying `ECDLPOracleSpec`. The
-concrete side must supply a single exact classical action:
+### 3.2 Adaptive programs use instruments
+
+The paper path needs X-basis measurement, reset, wire reuse, and classical feed-forward. An
+`AdaptiveCircuit` will alternate existing unitary Circuit blocks with measurement/reset nodes and
+classical continuations. Its denotation is a finite list of unnormalized Kraus branches. A branch's
+squared norm is its Born mass; summing all branches is trace preserving.
+
+The critical integration relation is coherent, not merely pointwise classical correctness:
 
 ```text
-regValue aReg s = a
-regValue bReg s = b
-regValue pointReg s = (enc.encode R).val
-Clean oracleWork s
-----------------------------------------------------------------
-Classical.run oracleCircuit s
-  = writeReg pointReg
-      (enc.encode (R + ecdlpFunction P Q a b)).val s
+for each transcript h, there is a coefficient c_h such that
+K_h |s> = c_h U |s> for every valid basis state s,
+and sum_h |c_h|^2 = 1.
 ```
 
-The whole-state equality is intentional: it preserves the exponent registers and every outside
-wire and restores `oracleWork` exactly, so no garbage remains entangled with the Fourier
-registers.
+`c_h` may depend on the internal measurement transcript but not on the input. By linearity, every
+valid superposition is preserved up to the same branch coefficient, and final Born probabilities
+agree with the ideal program after summing internal transcripts. This is required because Shor's
+oracle is evaluated on a superposition.
 
-### 8.1 Dependency order
+### 3.3 Do not conflate T and Toffoli metrics
 
-1. **Circuit-to-oracle refinement ✓.** `ECDLPOracleSpec.ofCircuit` is proved from point
-   width/global non-aliasing,
-   `Classical.HPFree oracleCircuit`, `CircuitWellFormed oracleCircuit`, and the classical equation
-   above. Its two substantive fields then follow from existing framework theorems:
-   `run_ket_agrees_classical` supplies `onKet`, while `run_preservesInner` supplies
-   `preservesInner`. This module stays independent of concrete arithmetic.
-
-2. **Point representation ✓.** The 513-bit affine encoding with raw-code validity and injectivity
-   is root-reachable. `PointRegister.lean` supplies the register-slicing, `writeReg`, and
-   256-to-257 zero-padding lemmas needed by the arithmetic implementation.
-
-3. **Concrete field leaves ✓.** The tree contains actual width-257 secp256k1 `ModAddWiring`,
-   `ModMul.Plan`, and `ModExp.Plan` values with proved validity and exact numeric costs. Fermat
-   inversion is specialized from that exact exponentiation program. Clean modular subtraction and
-   equality/zero predicates are also root-reachable; these supply slope numerators,
-   exceptional-case tests, and the nonzero premise of `FermatInv.correct`.
-
-4. **Circuit-free total affine specification ✓.** `AffineFormula.lean` proves that its explicit
-   total decision tree agrees with Mathlib point addition across infinity, inverse-pair,
-   doubling, and generic cases. The result remains independent of reversible wire layout.
-
-5. **Clean point translation ✓ (functional/structural).** PointAdd implements the affine
-   formula with clean scratch and direct correctness; controlled PointAdd supplies the public
-   H/P-freedom and well-formedness closure used downstream. Exact aggregate point-translation
-   cost remains a resource-integration item.
-
-6. **Scalar folds and the joint oracle ✓ (functional/structural).** `scalarMul` folds controlled
-   translations over the little-endian scalar bits and verified doubling table. The concrete
-   oracle is exactly two `scalarMul` calls, reusing the restored scratch region, and has the
-   classical whole-state equation displayed above together with `HPFree` and well-formedness.
-   Exact ScalarMul/oracle cost aggregation remains open.
-
-7. **Refinement and Bitcoin specialization ✓ (conditional).** The concrete circuit refines
-   through `ECDLPOracleSpec.ofCircuit`, and `Correctness/EndToEnd.lean` applies
-   `orderFinding_correct` without a new Fourier or success-bound proof. The specialization keeps
-   `Nat.Prime order`, `addOrderOf Secp256k1.G = order`, and `Q = d • G` visible as hypotheses;
-   the generator-order certificate is therefore still open. Operational measurement/repetition
-   and the final M5 resource contract remain later layers.
-
-The remaining prerequisites are independent: the generator-order certificate,
-measurement/repetition semantics, and exact PointAdd/ScalarMul/oracle cost aggregation. Once all
-three are available, the final path is:
+The Naive submission's existing `tCount` assigns 7 T gates to `CCX` and 1 T gate to each dyadic
+phase rotation. The paper reports Toffoli and CNOT counts and uses measurement-assisted
+uncomputation. The paper submission therefore gets a separate compositional resource vector with
+at least:
 
 ```text
-independent prerequisites
-  → same-program end-to-end correctness/resource theorem
-  → Framework.Contract + Reference
+X, H, CNOT, Toffoli, dyadic phase, X-measure/reset,
+classically controlled correction, table lookup, and maximum live qubits.
 ```
 
-Steps 1–7 are functionally complete and root-reachable. The remaining work is mathematical
-certification, operational sampling, and resource integration; each item stays a separate,
-reviewable PR with root reachability, warning-fatal build, targeted axiom disclosure, and
-exhaustive axiom audit.
+Sequential counts add; adaptive branches use a proved worst case unless a more precise statistic is
+explicit. A conversion to a fault-tolerant T count is a separate theorem with a stated synthesis
+model. No paper Toffoli number is copied into the existing T-count field.
+
+## 4. The two submissions
+
+### 4.1 Naive submission ✓
+
+The current algorithm uses two 256-bit exponent registers, a 513-bit affine-point accumulator,
+Fermat inversion, binary controlled double-and-add, and two coherent inverse QFTs. Its oracle is
+
+```text
+(a, b, R) |-> (a, b, R + a•G + b•Q).
+```
+
+Every arithmetic circuit restores its workspace. The oracle's whole-state equation preserves the
+exponent registers and every outside wire, refines to the unitary oracle specification, and feeds
+the proved Fourier-sampling/postprocessing theorem. This entire chain moves to
+`Submission/Naive/`; it is not imported by the paper implementation.
+
+### 4.2 arXiv:2607.13816v2 target
+
+Pinned sources:
+
+- paper: arXiv HTML v2, `2607.13816v2`;
+- supplemental generator:
+  [`ZeroWang030221/Space-Efficient-Quantum-Algorithm-for-Elliptic-Curve-Discrete-Logarithms-with-Resource-Estimation`](https://github.com/ZeroWang030221/Space-Efficient-Quantum-Algorithm-for-Elliptic-Curve-Discrete-Logarithms-with-Resource-Estimation/tree/e64aa3c1198d96aeb389e64bc7ae48edbb9712ec),
+  commit `e64aa3c1198d96aeb389e64bc7ae48edbb9712ec`.
+
+The supplement is a differential-test oracle, not a trusted proof source. At that pin it contains
+detailed EEA and point-addition generators, but no complete signed-window plus semiclassical-QFT
+implementation.
+
+The paper path consists of:
+
+1. fixed-step, register-sharing reversible EEA inversion;
+2. step-dependent active windows and location-controlled arithmetic;
+3. measurement-assisted uncomputation with input-independent phase correction;
+4. three-register in-place division, multiplication, and total affine point addition;
+5. semiclassical Fourier sampling;
+6. signed-window double-scalar multiplication with five sequential table lookups; and
+7. one adaptive end-to-end correctness and resource contract.
+
+## 5. Completion criteria
+
+A paper phase is complete only when all applicable conditions hold for the same executable term:
+
+- the program is constructed from primitive unitary gates and the separately defined adaptive
+  measure/reset operation; no trusted arithmetic or point-add gate is added;
+- a direct theorem states the input/output map before any contract packages it;
+- input registers are preserved, clean work is restored, borrowed qubits are restored for arbitrary
+  initial values, and measured wires are proved reset before reuse;
+- each adaptive branch has an input-independent coefficient times the ideal operation;
+- well-formedness, disjointness, locality, and all clean/borrowed preconditions are explicit;
+- exact resource formulas follow constructors by induction rather than expanding a multi-million-
+  gate secp256k1 list;
+- the fixed `n = 256` program is certified before optional generic asymptotics;
+- no `sorry`, `admit`, `native_decide`, custom axiom, or trusted counting macro is used; and
+- root closure, warning-fatal build, targeted and exhaustive axiom audits, hosted CI, and exact-head
+  independent review pass.
+
+## 6. Dependency-ordered roadmap
+
+### Phase 0 — source split and specification reconciliation
+
+Perform the relocation in Section 2.3 without changing current program or theorem meaning. Record
+the exact paper schedule/layout, pin small differential tests, freeze the resource vocabulary, and
+quarantine the unresolved paper claims in Section 7.
+
+**Gate:** parent/head public declarations and axioms agree; Math, Framework, Naive, and
+`2607_13816` import checks pass; both submissions are root-reachable.
+
+### Phase 1 — adaptive semantics and coherent refinement
+
+Modules:
+
+- `Framework/Quantum/Adaptive.lean`
+- `Framework/Quantum/CoherentRefinement.lean`
+
+Define X-basis projection/reset Kraus maps, adaptive sequencing, branch histories, Born mass,
+well-formedness, and separate resources. Prove the exact basis-ket rule, reset cleanliness, total
+Born-mass preservation, coherent composition, extension to supported superpositions, and final
+probability equivalence.
+
+**Gate:** coherent refinement—not basis-only behavior—composes across all later arithmetic.
+
+### Phase 2 — measurement-based uncomputation
+
+Modules:
+
+- `Framework/Quantum/MeasurementUncompute.lean`
+- `Submission/2607_13816/Canary/AdaptiveCPhase.lean`
+
+Lift X measurement to an `m`-bit register. Before correction, transcript `b` and old value `y`
+produce coefficient `2^(-m/2) (-1)^(b·y)`. Prove a generic recompute/Z-correct/uncompute theorem
+whose final coefficient depends only on `b`. Validate it on a computed-AND/controlled-phase canary
+and derive its measurement and Toffoli counts.
+
+**Gate:** phase cancellation, reset, and resource claims are exact; the canary does not modify the
+Naive QFT.
+
+### Phase 3 — pure four-phase EEA model
+
+Module: `Submission/2607_13816/EEA/Model.lean`.
+
+Define the paper's remainder/coefficient recurrence, quotient bits, four phases, sign, iteration
+parity, lengths, and circular shift. Relate it to packed Work1 `(t,q,r)` and shifted Work2
+`(t',r')`. Prove field non-overlap, the `x > p/2` correction, invariant preservation,
+reversibility, terminal inverse, and identity padding.
+
+**Gate:** for every `1 <= x < p`, the extracted value is `x⁻¹ mod p`; small tests agree with the
+pinned generator but are not used as proofs.
+
+### Phase 4 — exact step bound and active windows
+
+Modules:
+
+- `Submission/2607_13816/EEA/Bounds.lean`
+- `Submission/2607_13816/EEA/Windows.lean`
+
+Certify the 1,620-step secp256k1 schedule without trusting floating point. Use an exact rational
+certificate for the algebraic growth bound, then prove every reachable location lies within the
+paper's static window at each step and every post-terminal step is identity.
+
+**Gate:** all nonzero 256-bit field inputs terminate in 1,620 steps and every pruned gate location
+is proved unreachable.
+
+### Phase 5 — one EEA step as a circuit
+
+Area: `Submission/2607_13816/EEA/`.
+
+Implement circular shifts, unary iteration, location-controlled sign/quotient swap,
+location-controlled ripple add/subtract, borrowed-work length updates, and the optimized four-phase
+step. Each block gets direct semantics, unaffected-wire and work-restoration theorems,
+well-formedness, locality, and a closed resource formula.
+
+**Gate:** the adaptive step coherently implements the Phase-3 logical step for every invariant
+state; counts are symbolic over the active window.
+
+### Phase 6 — forward and reverse EEA programs
+
+Modules:
+
+- `Submission/2607_13816/EEA/Program.lean`
+- `Submission/2607_13816/EEA/Secp256k1.lean`
+
+Compose the exact 1,620-step schedule. Forward EEA produces the inverse and retained `Γ(x)`; a
+separately proved reverse schedule restores `x` and clears `Γ(x)`. Measurement prevents using a
+fictional `Circuit.adjoint` for the adaptive program.
+
+Target space is `2n + 6 floor(log2 n) + 19`, or 579 wires at `n = 256`. This must follow the actual
+wire lists and reuse proof.
+
+**Gate:** forward then reverse is identity on every nonzero field input, branch coefficients are
+input-independent, and the exact secp resource vector is derived.
+
+### Phase 7 — Appendix-B multiplication and squaring
+
+Modules:
+
+- `Submission/2607_13816/Arithmetic/HornerMul.lean`
+- `Submission/2607_13816/Arithmetic/Square.lean`
+
+Implement the MSB-first Horner schedule with `n` controlled modular additions and `n - 1`
+doublings. Prove arithmetic, cleanup, and locality, then derive the `17 n² + O(n)` leading Toffoli
+term from lower-level formulas. Naive arithmetic is not imported.
+
+**Gate:** exact 256-bit vectors and symbolic bounds are proved for multiplication and squaring.
+
+### Phase 8 — in-place division and multiplication
+
+Module: `Submission/2607_13816/Arithmetic/InPlace.lean`.
+
+Implement Figure 15: forward EEA; compute `y/x`; X-measure/reset old `Y`; reverse EEA using released
+`Y`; recompute `y`; apply transcript-controlled Z correction; uncompute; and place the quotient.
+Prove each branch equals `2^(-n/2)` times the intended map, independent of `x,y`, and prove the
+analogous in-place multiply.
+
+**Gate:** all measured wires are reusable and `Γ(x)` plus arithmetic work are cleared on every
+branch.
+
+### Phase 9 — total controlled affine point addition
+
+Module: `Submission/2607_13816/PointAdd.lean`.
+
+Implement Figure 14 and prove
+
+```text
+R |-> R + (if control then C else 0)
+```
+
+for the total elliptic-curve group law, including infinity, inverse pairs, doubling, and zero
+denominators. Generic nonzero-denominator correctness is not enough for a superposed oracle. The
+target is `3n + 6 floor(log2 n) + 19 = 835` live wires at `n = 256`; if total exceptional handling
+requires more, report the larger proved number.
+
+**Gate:** coherent total correctness, complete cleanup, exact resource vector, and honest live-wire
+bound.
+
+### Phase 10 — semiclassical Fourier/order finding
+
+Modules:
+
+- `Submission/2607_13816/Fourier/Semiclassical.lean`
+- `Submission/2607_13816/OrderFinding.lean`
+
+Prove the Figure-3 bit-by-bit measurement/feed-forward schedule has the same outcome distribution as
+the mathematical inverse Fourier transform, including bit ordering. Then prove the paper
+submission's own two-dimensional sampling and postprocessing theorem. It may reuse only pure Math
+lemmas; it may not import Naive QFT or order finding.
+
+Choose the exponent precision explicitly and prove `order <= 2^precision`; do not mix the paper's
+generic `n + 1` diagrams with the current 256-bit specialization.
+
+**Gate:** an independent one-run lower bound with probability summed over internal histories and
+final measurement outcomes.
+
+### Phase 11 — signed windows and QROM
+
+Modules:
+
+- `Submission/2607_13816/Window/Recoding.lean`
+- `Submission/2607_13816/Window/TableLookup.lean`
+- `Submission/2607_13816/Window/Oracle.lean`
+- `Submission/2607_13816/Window/Schedule.lean`
+
+Prove signed recoding, five sequential table lookups, lookup cleanup, and double-scalar correctness.
+For `w = 16`, derive `5 * 2^16` from the QROM constructor. Make the paper's reduction from 32 naive
+windows to 28 (`2n/w - 4`) explicit and prove the four omitted windows are sound.
+
+Also construct the missing lifetime schedule between a width-16 quantum address and the
+semiclassical one-wire exponent processing. Either prove the complete maximum live allocation is
+835 or report the true larger value.
+
+**Gate:** exact oracle correctness, exact lookup/window count, and full-program live-qubit theorem
+for one schedule.
+
+### Phase 12 — adaptive end-to-end contract
+
+Modules:
+
+- `Submission/2607_13816/Oracle.lean`
+- `Submission/2607_13816/EndToEnd.lean`
+- `Submission/2607_13816/Resources.lean`
+- `Submission/2607_13816/Contract.lean`
+
+Define a paper-specific adaptive oracle specification and prove coherent refinement to the pure
+mathematical ECDLP map. The Naive unitary `ECDLPOracleSpec.ofCircuit` is not imported. Connect the
+paper oracle, semiclassical order finding, final sampling, secp certificates, and one resource
+vector in a closed record.
+
+Report one-run resources separately from the repository's at-least-99% repeated submission:
+sequential repetition multiplies time but reuses qubits.
+
+**Gate:** unconditional concrete secp256k1 correctness, success, cleanup, exact counts, and maximum
+live qubits for one executable adaptive program. Only then is replacing the default submission a
+separate reviewed decision.
+
+## 7. Paper targets that are not yet claims
+
+| Item | Printed target | Required Lean evidence |
+|---|---:|---|
+| EEA steps at `n = 256` | 1,620 | exact bound certificate |
+| inversion space | `2n + 6 floor(log2 n) + 19` = 579 | concrete wire lists and reuse |
+| point-add space | `3n + 6 floor(log2 n) + 19` = 835 | total point add plus all live controls |
+| inversion Toffolis | `< 216.636 n² + O(n log n)` | sum of exact active-window block formulas |
+| point-add Toffolis | `1003 n² + O(n log n)` | exact arithmetic composition |
+| full leading term | `1008 n³ / log2 n + O(n²)` | proved signed-window schedule |
+| secp window schedule | `w = 16`, 28 additions, five lookups/window | exact recoding, omission, and QROM proofs |
+
+Two discrepancies remain explicit blockers for a headline resource claim.
+
+### 7.1 `2^30.88` versus `2^30.63`
+
+The abstract, overview, and Table 2 report `2^30.88` Toffolis for secp256k1. The last paragraph of
+Section 6.4 reports `2^30.63`. Taking its rounded Table-6 point-add value `Q_A = 70.10 million`
+literally gives
+
+```text
+28 * (5 * 2^16 + Q_A) = 1,971,975,040 ≈ 2^30.877,
+```
+
+which is consistent with `2^30.88`, not `2^30.63`. Because `70.10 million` is rounded, Lean will
+derive an exact integer from the program rather than adopt either printed exponent.
+
+### 7.2 The complete 835-wire schedule is absent
+
+The paper's one-qubit semiclassical exponent schedule and its width-16 signed-window address are not
+composed in the pinned supplement. The supplement demonstrates a one-control 835-wire point-adder
+layout, not the complete order-finding lifetime schedule. The final plan therefore reports and
+proves separately:
+
+- live wires for one total controlled point addition; and
+- maximum live wires for the complete adaptive order-finding program.
+
+They are equal only if Phase 11 proves the required reuse.
+
+## 8. Active branch disposition
+
+- **PR #54, adaptive foundation:** frozen at
+  `252232b9ca6d3c5575003883315b9dd8209fc339` pending approval of this roadmap. If the adaptive
+  architecture is accepted, it becomes Phase 1a after the Phase-0 source split is reconciled.
+- **Unpublished measurement-uncompute canary:** local only; do not commit or publish it before this
+  plan is approved. After approval it belongs under `Submission/2607_13816/Canary/`.
+- **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
+  the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
+  otherwise close it after Phase 6 is accepted.
+
+No paper-performance claim is attached to any of these intermediate branches.
+
+## 9. Review gates
+
+Every implementation PR must pass:
+
+1. warning-fatal build;
+2. root/source closure and all import-direction guards;
+3. no `sorry`, `admit`, `native_decide`, or new custom axiom;
+4. targeted `#print axioms` for public correctness and resource theorems;
+5. exhaustive reachable-declaration axiom audit;
+6. direct statement and executable-body review against its specification;
+7. small differential tests against the pinned supplement where applicable;
+8. hosted CI and independent exact-head review before merge.
+
+Explicit stop/go reviews occur after coherent semantics (Phase 2), EEA model/windows (Phase 4),
+concrete inversion (Phase 6), total point addition (Phase 9), full window/lifetime scheduling
+(Phase 11), and the final contract (Phase 12).
+
+## 10. Decisions still required before implementation resumes
+
+The `Math/`, `Submission/Naive/`, and `Submission/2607_13816/` source split is adopted. The remaining
+choices are:
+
+1. keep the Phase-0 relocation path-only, or also rename the current public API into a
+   `ShorECDLP.Naive` namespace; recommendation: path-only first;
+2. accept separate adaptive-instrument semantics plus coherent refinement and allow PR #54 to
+   become Phase 1a; recommendation: accept;
+3. require total group-law point addition even if the real bound exceeds 835; recommendation:
+   require totality;
+4. keep 835 qubits, 28 windows, and `2^30.88` Toffolis as provisional until one program proves
+   them; recommendation: keep provisional; and
+5. keep PR #53 unmerged as a fallback until EEA reaches Phase 6; recommendation: keep unmerged.
+
+Implementation remains paused until these choices, or a revised scope, are approved.
