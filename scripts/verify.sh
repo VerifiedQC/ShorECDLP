@@ -96,6 +96,12 @@ import ShorECDLP
 #print axioms ShorECDLP.Quantum.OrderFinding.jointRegisterProbability_nonneg
 #print axioms ShorECDLP.Quantum.OrderFinding.jointRegisterProbability_sum_eq_normSq
 #print axioms ShorECDLP.Quantum.OrderFinding.orderFindingSuccessProbability_le_normSq
+#print axioms ShorECDLP.Quantum.projectZ_ket
+#print axioms ShorECDLP.Quantum.xResetKraus_ket
+#print axioms ShorECDLP.Quantum.xResetKraus_clean
+#print axioms ShorECDLP.Quantum.normSq_xResetKraus_ket
+#print axioms ShorECDLP.Quantum.normSq_xResetKraus_false_add_true
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.run_preservesBornMass
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -127,8 +133,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 103 ]]; then
-  printf 'expected one hundred three #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 109 ]]; then
+  printf 'expected one hundred nine #print axioms results\n' >&2
   exit 1
 fi
 
