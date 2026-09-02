@@ -35,6 +35,11 @@ import ShorECDLP
 #print axioms ShorECDLP.LowSpaceModMul.program_correct
 #print axioms ShorECDLP.LowSpaceModMul.program_tCount
 #print axioms ShorECDLP.LowSpaceModMul.layout_allWires_length
+#print axioms ShorECDLP.LowSpaceModExp.Step.correct
+#print axioms ShorECDLP.LowSpaceModExp.Schedule.correct
+#print axioms ShorECDLP.LowSpaceModExp.Plan.modExp_contract
+#print axioms ShorECDLP.LowSpaceModExp.Plan.program_correct
+#print axioms ShorECDLP.LowSpaceModExp.Plan.program_tCount
 #print axioms ShorECDLP.modSub_contract
 #print axioms ShorECDLP.modSub_program_correct
 #print axioms ShorECDLP.modSub_tCount
@@ -65,6 +70,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1Instance.secp_modExp_contract
 #print axioms ShorECDLP.Secp256k1Instance.secpProgram_correct
 #print axioms ShorECDLP.Secp256k1Instance.secpProgram_tCount
+#print axioms ShorECDLP.Secp256k1Instance.secpLayout_allWires_length
+#print axioms ShorECDLP.Secp256k1Instance.secpProgram_qubitCount
 #print axioms ShorECDLP.Secp256k1Instance.secp_fermat_inverse
 #print axioms ShorECDLP.Secp256k1.pointAddFiniteCompute_tCount
 #print axioms ShorECDLP.Secp256k1.pointAdd_zero_tCount
@@ -138,8 +145,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 114 ]]; then
-  printf 'expected one hundred fourteen #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 121 ]]; then
+  printf 'expected one hundred twenty-one #print axioms results\n' >&2
   exit 1
 fi
 

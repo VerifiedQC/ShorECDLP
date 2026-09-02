@@ -1051,7 +1051,7 @@ private theorem secpMulLayout_valid :
             Secp256k1Instance.regBlock Secp256k1Instance.outId] ++
           Secp256k1Instance.mulWorkBlocks
             Secp256k1Instance.initialAccId
-            Secp256k1Instance.historyStartId).map
+            Secp256k1Instance.mulWorkStartId).map
           Secp256k1Instance.Block.id).Nodup := by
         apply Secp256k1Instance.append_mulWorkBlocks_ids_nodup
         · norm_num [Secp256k1Instance.baseId,
@@ -1067,7 +1067,7 @@ private theorem secpMulLayout_valid :
               Secp256k1Instance.outId,
               Secp256k1Instance.initialAccId]
         · norm_num [Secp256k1Instance.initialAccId,
-            Secp256k1Instance.historyStartId]
+            Secp256k1Instance.mulWorkStartId]
     have hnd :=
       Secp256k1Instance.blocksWires_nodup
         ([Secp256k1Instance.regBlock Secp256k1Instance.baseId,
@@ -1075,7 +1075,7 @@ private theorem secpMulLayout_valid :
             Secp256k1Instance.regBlock Secp256k1Instance.outId] ++
           Secp256k1Instance.mulWorkBlocks
             Secp256k1Instance.initialAccId
-            Secp256k1Instance.historyStartId)
+            Secp256k1Instance.mulWorkStartId)
         hids
     simpa [Secp256k1Instance.secpMulLayout,
       RegisterLayout.allWires,
@@ -2982,14 +2982,14 @@ private theorem fieldMul_tCount
 
 private theorem fieldInv_tCount
     (offset : Wire) (input out : List Wire) :
-    tCount (fieldInv offset input out) = 20873861764 := by
+    tCount (fieldInv offset input out) = 534070464858 := by
   simp [fieldInv, tCount_append, copyReg_tCount, loadConst_tCount,
     tCount_reverse, shiftCircuit_tCount,
     Secp256k1Instance.secpProgram_tCount]
 
 private theorem genericPointCompute_tCount
     (workStart : Wire) (xC yC : Fp) :
-    tCount (genericPointCompute workStart xC yC) = 41829516862 := by
+    tCount (genericPointCompute workStart xC yC) = 1068222723050 := by
   simp [genericPointCompute, tCount_append, tCount_reverse,
     fieldSubConst_tCount, fieldInv_tCount, fieldMul_tCount,
     fieldSub_tCount]
@@ -3001,7 +3001,7 @@ private theorem threeXSquared_tCount
     fieldMul_tCount, fieldAdd_tCount]
 
 private theorem doublePointCompute_tCount (workStart : Wire) :
-    tCount (doublePointCompute workStart) = 41911076326 := by
+    tCount (doublePointCompute workStart) = 1068304282514 := by
   simp [doublePointCompute, tCount_append, tCount_reverse,
     threeXSquared_tCount, fieldAdd_tCount, fieldInv_tCount,
     fieldMul_tCount, fieldSub_tCount]
@@ -3041,14 +3041,14 @@ private theorem pointAddSetup_tCount
 
 private theorem genericPointBranch_tCount
     (workStart : Wire) (xC yC : Fp) :
-    tCount (genericPointBranch workStart xC yC) = 83659037315 := by
+    tCount (genericPointBranch workStart xC yC) = 2136445449691 := by
   simp [genericPointBranch, tCount_append, tCount_reverse,
     genericPointCompute_tCount, packFinitePoint_tCount,
     controlledCopyReg_tCount, pointAddCandidate, pointAddSelected,
     pointWidth]
 
 private theorem doublePointBranch_tCount (workStart : Wire) :
-    tCount (doublePointBranch workStart) = 83822156243 := by
+    tCount (doublePointBranch workStart) = 2136608568619 := by
   simp [doublePointBranch, tCount_append, tCount_reverse,
     doublePointCompute_tCount, packFinitePoint_tCount,
     controlledCopyReg_tCount, pointAddCandidate, pointAddSelected,
@@ -3069,7 +3069,7 @@ private theorem infinityPointBranch_tCount
 private theorem pointAddBranches_tCount
     (workStart : Wire) {xC yC : Fp}
     (hC : curve.toAffine.Nonsingular xC yC) :
-    tCount (pointAddBranches workStart hC) = 167481197149 := by
+    tCount (pointAddBranches workStart hC) = 4273054021901 := by
   simp [pointAddBranches, tCount_append, genericPointBranch_tCount,
     doublePointBranch_tCount, infinityPointBranch_tCount]
 
@@ -3078,7 +3078,7 @@ theorem pointAddFiniteCompute_tCount
     (pointReg : List Wire) (workStart : Wire)
     {xC yC : Fp} (hC : curve.toAffine.Nonsingular xC yC) :
     tCount (pointAddFiniteCompute pointReg workStart hC) =
-      167481204310 := by
+      4273054029062 := by
   simp [pointAddFiniteCompute, tCount_append, pointAddSetup_tCount,
     pointAddBranches_tCount]
 
@@ -3206,7 +3206,7 @@ theorem pointAdd_finite_tCount
     (workStart : Wire)
     {xC yC : Fp} (hC : curve.toAffine.Nonsingular xC yC) :
     tCount (pointAdd pointReg outReg workStart (.some hC)) =
-      334962408620 := by
+      8546108058124 := by
   simp [pointAdd, tCount_append, tCount_reverse, copyReg_tCount,
     pointAddFiniteCompute_tCount]
 
@@ -5686,7 +5686,7 @@ private theorem fieldInv_correct
   have hexponentFits : p - 2 <
       2 ^ Secp256k1Instance.secpLayout.rhs.length := by
     exact hexponentBound.trans (by
-      simpa [Secp256k1Instance.secpLayout, ModExp.Plan.layout,
+      simpa [Secp256k1Instance.secpLayout, LowSpaceModExp.Plan.layout,
         Secp256k1Instance.secpPlan,
         Secp256k1Instance.reg, Secp256k1Instance.regBlock,
         Secp256k1Instance.fieldWidth,
@@ -5698,7 +5698,7 @@ private theorem fieldInv_correct
     Secp256k1Instance.secp_modExp_contract
     Secp256k1Instance.secpPlan_layout_valid
     (by
-      simp [Secp256k1Instance.secpLayout, ModExp.Plan.layout,
+      simp [Secp256k1Instance.secpLayout, LowSpaceModExp.Plan.layout,
         Secp256k1Instance.secpPlan,
         Secp256k1Instance.reg, Secp256k1Instance.regBlock,
         fieldWidth, Secp256k1Instance.fieldWidth,

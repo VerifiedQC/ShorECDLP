@@ -157,9 +157,13 @@ ShorECDLP/
       Primitives.lean                     # [M1 ✓] load/copy/select and support lemmas
       Adder.lean                          # [M1.1 ✓] reversible full-adder cell
       RippleAdder.lean                    # [M1.2 ✓] n-bit ripple-carry adder
+      InPlaceAdder.lean                   # [M1 ✓] reusable one-carry in-place addition
+      InPlaceModular.lean                 # [M1 ✓] reusable in-place modular steps
       ModAdd.lean                         # [M1.3 ✓] clean modular addition
       ModMul.lean                         # [M1.4 ✓] clean schoolbook modular multiplication
+      LowSpaceModMul.lean                 # [M1.4 ✓] active fixed-workspace Horner multiplier
       ModExp.lean                         # [M1.5 ✓] clean square-and-multiply exponentiation
+      LowSpaceModExp.lean                 # [M1.5 ✓] active checkpointed exponentiation
       FermatInv.lean                      # [M1.6 ✓] inversion from a ModExp contract
       Secp256k1Instance.lean              # [M1 ✓] concrete width-257 plans and wire allocation
       ModSub.lean                         # [M1 ✓] clean modular subtraction
@@ -219,11 +223,14 @@ a derived circuit. Measurement and ancilla live in `Framework/Quantum/`, never a
     - **M1.1 ✓** verified reversible full-adder cell
     - **M1.2 ✓** n-bit ripple-carry adder (`regValue(out) = a + b mod 2^n`)
     - **M1.3 ✓** clean modular adder (`(a + b) mod p`)
-    - **M1.4 ✓** clean schoolbook modular multiplier + composable `HPFree` guard
-    - **M1.5 ✓** clean modular exponentiation (square-and-multiply)
+    - **M1.4 ✓** clean modular multiplication: schoolbook reference plus active low-space Horner
+      implementation and composable `HPFree` guard
+    - **M1.5 ✓** clean modular exponentiation: Bennett-history reference plus active reversible-
+      checkpoint square-and-multiply
     - **M1.6 ✓** Fermat inversion from `ModExpContract`, discharged against `fermat_inv`
     - **Concrete instance ✓** clean subtraction/predicates plus an actual width-257 secp256k1
-      adder wiring, multiplication plan, exponentiation plan, and same-program inversion theorem
+      adder wiring, low-space multiplication/checkpointed exponentiation plans, and same-program
+      inversion theorem
 - **M2 (functional path complete; resource integration open)** — the curve/generator spec,
   precompute tables, point encoding/register interface, total affine formula, and clean PointAdd
   circuit are proved. Exact PointAdd cost aggregation remains open.
@@ -387,10 +394,11 @@ registers.
    256-to-257 zero-padding lemmas needed by the arithmetic implementation.
 
 3. **Concrete field leaves ✓.** The tree contains actual width-257 secp256k1 `ModAddWiring`,
-   `ModMul.Plan`, and `ModExp.Plan` values with proved validity and exact numeric costs. Fermat
-   inversion is specialized from that exact exponentiation program. Clean modular subtraction and
-   equality/zero predicates are also root-reachable; these supply slope numerators,
-   exceptional-case tests, and the nonzero premise of `FermatInv.correct`.
+   `LowSpaceModMul`, and `LowSpaceModExp.Plan` values with proved validity, direct qubit bounds,
+   and exact numeric costs. Fermat inversion is specialized from that exact exponentiation
+   program. Clean modular subtraction and equality/zero predicates are also root-reachable; these
+   supply slope numerators, exceptional-case tests, and the nonzero premise of
+   `FermatInv.correct`.
 
 4. **Circuit-free total affine specification ✓.** `AffineFormula.lean` proves that its explicit
    total decision tree agrees with Mathlib point addition across infinity, inverse-pair,

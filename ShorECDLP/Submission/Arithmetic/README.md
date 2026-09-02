@@ -67,6 +67,7 @@ flowchart LR
   ModSub["ModSub.lean"]
   ModMul["ModMul.lean"]
   ModExp["ModExp.lean"]
+  LowSpaceModExp["LowSpaceModExp.lean"]
   FermatInv["FermatInv.lean"]
   Instance["Secp256k1Instance.lean"]
 
@@ -89,11 +90,12 @@ flowchart LR
   ModMul --> InPlaceModular
   InPlaceModular --> LowSpaceModMul
   Primitives --> ModExp
+  ModExp --> LowSpaceModExp
   Contracts --> FermatInv
   Field --> FermatInv
   ModAdd --> Instance
   LowSpaceModMul --> Instance
-  ModExp --> Instance
+  LowSpaceModExp --> Instance
   FermatInv --> Instance
 ```
 
@@ -106,17 +108,19 @@ flowchart LR
   Add["modAdd_contract"]
   LegacyMul["ModMul.Plan.modMul_contract"]
   LowMul["LowSpaceModMul.modMul_contract"]
-  Exp["ModExp.Plan.modExp_contract"]
+  LegacyExp["ModExp.Plan.modExp_contract"]
+  LowExp["LowSpaceModExp.Plan.modExp_contract"]
   Inv["FermatInv.correct"]
   Instance["Secp256k1Instance.secpProgram"]
 
   Add -->|ModAddContract| LegacyMul
-  LegacyMul -->|ModMulContract| Exp
-  LowMul -->|ModMulContract| Exp
-  Exp -->|ModExpContract at p, exponent p - 2| Inv
+  LegacyMul -->|ModMulContract| LegacyExp
+  LowMul -->|ModMulContract| LowExp
+  LegacyExp -->|ModExpContract at p, exponent p - 2| Inv
+  LowExp -->|ModExpContract at p, exponent p - 2| Inv
   Add -->|fixed 257-bit wiring| Instance
   LowMul -->|fixed 257-bit layout| Instance
-  Exp -->|fixed 257-bit schedule| Instance
+  LowExp -->|fixed 257-bit checkpoint schedule| Instance
   Inv -->|same-program specialization| Instance
 ```
 
@@ -135,9 +139,10 @@ flowchart LR
 | [`ModAdd.lean`](ModAdd.lean) | Adds two registers modulo an arbitrary positive modulus using ripple addition, one conditional reduction, and uncomputation. | `modAdd`, `modAdd_program_correct`, `modAdd_tCount`, `modAdd_contract` |
 | [`ModSub.lean`](ModSub.lean) | Subtracts two registers modulo an arbitrary positive modulus using two's-complement ripple subtraction, conditional correction, and uncomputation. | `modSub`, `modSub_program_correct`, `modSub_tCount`, `modSub_contract` |
 | [`ModMul.lean`](ModMul.lean) | Generic Bennett-clean schoolbook multiplier retained as a compositional reference implementation. | `ModMul.Plan.program`, `ModMul.Plan.program_correct`, `ModMul.Plan.program_tCount`, `ModMul.Plan.modMul_contract` |
-| [`ModExp.lean`](ModExp.lean) | Bennett-clean, LSB-first square-and-multiply built from certified modular-multiplication calls. | `ModExp.Plan.program`, `ModExp.Plan.program_correct`, `ModExp.Plan.program_tCount`, `ModExp.Plan.program_tCount_eq_of_uniform`, `ModExp.Plan.modExp_contract` |
+| [`ModExp.lean`](ModExp.lean) | Generic Bennett-clean, LSB-first square-and-multiply retained as a compositional reference implementation. | `ModExp.Plan.program`, `ModExp.Plan.program_correct`, `ModExp.Plan.program_tCount`, `ModExp.Plan.program_tCount_eq_of_uniform`, `ModExp.Plan.modExp_contract` |
+| [`LowSpaceModExp.lean`](LowSpaceModExp.lean) | MSB-first square-and-multiply with a balanced reversible checkpoint tree, one reusable leaf scratch set, and exact cleanup. | `LowSpaceModExp.Plan.program`, `LowSpaceModExp.Plan.program_correct`, `LowSpaceModExp.Plan.program_tCount`, `LowSpaceModExp.Plan.modExp_contract` |
 | [`FermatInv.lean`](FermatInv.lean) | Thin field-specific correctness closure: exponentiation by `p - 2` computes inversion in `Fp`. It defines no second circuit. | `FermatInv.correct` |
-| [`Secp256k1Instance.lean`](Secp256k1Instance.lean) | Concrete block allocation for the width-257 secp256k1 modular adder, 1,288-wire low-space multiplier, exponentiator, and Fermat inversion specialization. | `addProgram_correct`, `addProgram_tCount`, `mulProgram_correct`, `mulProgram_tCount`, `secpMulLayout_allWires_length`, `secpMulProgram_qubitCount`, `secpAddProgram_correct`, `secpAddProgram_tCount`, `secpMulProgram_correct`, `secpMulProgram_tCount`, `secpProgram_correct`, `secpProgram_tCount`, `secp_fermat_inverse` |
+| [`Secp256k1Instance.lean`](Secp256k1Instance.lean) | Concrete block allocation for the width-257 secp256k1 modular adder, 1,288-wire low-space multiplier, 4,629-wire checkpointed exponentiator, and Fermat inversion specialization. | `addProgram_correct`, `addProgram_tCount`, `mulProgram_correct`, `mulProgram_tCount`, `secpMulLayout_allWires_length`, `secpMulProgram_qubitCount`, `secpLayout_allWires_length`, `secpProgram_qubitCount`, `secpAddProgram_correct`, `secpAddProgram_tCount`, `secpMulProgram_correct`, `secpMulProgram_tCount`, `secpProgram_correct`, `secpProgram_tCount`, `secp_fermat_inverse` |
 
 ## Contract discipline
 
@@ -152,11 +157,12 @@ same `program`:
 - `tCount program = cost`;
 - `program` is H/P-free and physically well-formed.
 
-`ModMul.Plan` and `ModExp.Plan` use a Bennett compute-copy-uncompute wrapper: build the
-forward history, copy the result to a disjoint public output, and run the history in
-reverse. The concrete secp256k1 instance instead supplies `LowSpaceModMul.program` to
-`ModExp`: it updates a clean output by reversible Horner steps and restores one modulus
-register, one mask, and three flag wires after every call.
+`ModMul.Plan` and `ModExp.Plan` are generic Bennett-history reference constructions. The active
+secp256k1 instance instead supplies `LowSpaceModMul.program` to `LowSpaceModExp`: the multiplier
+uses a fixed Horner workspace, while exponentiation uses nine recursive checkpoints and one
+reusable three-register leaf scratch set. Each checkpoint node computes its left half, computes
+its right half, then reverses the left half; all private wires are restored exactly. This reduces
+the complete exponentiator layout to 4,629 wires at the cost of repeated leaf transitions.
 
 ## Suggested reading order
 
@@ -164,8 +170,9 @@ register, one mask, and three flag wires after every call.
 2. [`Adder.lean`](Adder.lean) and [`RippleAdder.lean`](RippleAdder.lean) for the bit-level
    arithmetic base.
 3. [`Primitives.lean`](Primitives.lean) for the shared reversible-circuit tools.
-4. [`InPlaceAdder.lean`](InPlaceAdder.lean), [`InPlaceModular.lean`](InPlaceModular.lean), and
-   [`LowSpaceModMul.lean`](LowSpaceModMul.lean) for the active low-space multiplication path.
+4. [`InPlaceAdder.lean`](InPlaceAdder.lean), [`InPlaceModular.lean`](InPlaceModular.lean),
+   [`LowSpaceModMul.lean`](LowSpaceModMul.lean), and [`LowSpaceModExp.lean`](LowSpaceModExp.lean)
+   for the active low-space arithmetic path.
 5. [`Predicates.lean`](Predicates.lean) for clean reversible zero/equality flags.
 6. [`ModAdd.lean`](ModAdd.lean), [`ModSub.lean`](ModSub.lean), [`ModMul.lean`](ModMul.lean), and
    [`ModExp.lean`](ModExp.lean) for the modular construction and reference-plan interfaces.
