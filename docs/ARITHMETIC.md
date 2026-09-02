@@ -1837,9 +1837,10 @@ The concrete parametric `modAddLayout` uses:
 
 Thus its declared layout contains `8w+2` wires. At `w=257`, that is `2,058` wires for this deliberately straightforward modular-adder placement.
 
-The active multiplier does not retain a per-bit history. Its public theorem
-`secpMulLayout_allWires_length` certifies exactly 1,288 declared wires: 771 public and 517
-private. The exponentiation plan still retains its square-and-multiply history, so the full
+The active multiplier does not retain a per-bit history. Its public theorems
+`secpMulLayout_allWires_length` and `secpMulProgram_qubitCount` certify exactly 1,288 declared
+wires (771 public and 517 private) and at most 1,288 wires touched. The exponentiation plan
+still retains its square-and-multiply history, so the full
 Bitcoin trial uses the separately certified dense-capacity bound from `EndToEnd.lean`.
 
 ### 13.6 How to read these costs

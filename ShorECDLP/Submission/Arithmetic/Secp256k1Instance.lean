@@ -990,6 +990,28 @@ theorem secp_modMul_contract : ModMulContract secpMulProgram secpMulLayout p mul
       (by norm_num [baseId, initialAccId])
       (by norm_num [exponentId, initialAccId]))
 
+/-- The concrete multiplier touches at most the 1,288 wires declared by its complete layout. -/
+theorem secpMulProgram_qubitCount : qubitCount secpMulProgram ≤ 1288 := by
+  have hsubset :
+      (circuitWires secpMulProgram).dedup.toFinset ⊆
+        secpMulLayout.allWires.toFinset := by
+    intro w hw
+    have hwCircuit : w ∈ circuitWires secpMulProgram := by
+      simpa using hw
+    have hwLayout :=
+      (ModAddSupport.circuitUsesOnly_iff_support
+        secpMulLayout.allWires secpMulProgram).mp
+        secp_modMul_contract.usesOnly w hwCircuit
+    simpa using hwLayout
+  have hcard := Finset.card_le_card hsubset
+  rw [List.toFinset_card_of_nodup (List.nodup_dedup _)] at hcard
+  calc
+    qubitCount secpMulProgram =
+        (circuitWires secpMulProgram).dedup.length := rfl
+    _ ≤ secpMulLayout.allWires.toFinset.card := hcard
+    _ ≤ secpMulLayout.allWires.length := List.toFinset_card_le _
+    _ = 1288 := secpMulLayout_allWires_length
+
 /-- Direct functional correctness of the fixed width-257 modular-multiplication program. -/
 theorem secpMulProgram_correct (st : BasisState)
     (hlayout : secpMulLayout.Valid)
