@@ -2976,32 +2976,32 @@ private theorem fieldSubConst_tCount
 
 private theorem fieldMul_tCount
     (offset : Wire) (lhs rhs out : List Wire) :
-    tCount (fieldMul offset lhs rhs out) = 49933044 := by
+    tCount (fieldMul offset lhs rhs out) = 20343092 := by
   simp [fieldMul, tCount_append, copyReg_tCount, tCount_reverse,
     shiftCircuit_tCount, Secp256k1Instance.secpMulProgram_tCount]
 
 private theorem fieldInv_tCount
     (offset : Wire) (input out : List Wire) :
-    tCount (fieldInv offset input out) = 51233152516 := by
+    tCount (fieldInv offset input out) = 20873861764 := by
   simp [fieldInv, tCount_append, copyReg_tCount, loadConst_tCount,
     tCount_reverse, shiftCircuit_tCount,
     Secp256k1Instance.secpProgram_tCount]
 
 private theorem genericPointCompute_tCount
     (workStart : Wire) (xC yC : Fp) :
-    tCount (genericPointCompute workStart xC yC) = 102666458174 := by
+    tCount (genericPointCompute workStart xC yC) = 41829516862 := by
   simp [genericPointCompute, tCount_append, tCount_reverse,
     fieldSubConst_tCount, fieldInv_tCount, fieldMul_tCount,
     fieldSub_tCount]
 
 private theorem threeXSquared_tCount
     (offset : Wire) (x scratch₀ scratch₁ out : List Wire) :
-    tCount (threeXSquared offset x scratch₀ scratch₁ out) = 100006410 := by
+    tCount (threeXSquared offset x scratch₀ scratch₁ out) = 40826506 := by
   simp [threeXSquared, tCount_append, tCount_reverse,
     fieldMul_tCount, fieldAdd_tCount]
 
 private theorem doublePointCompute_tCount (workStart : Wire) :
-    tCount (doublePointCompute workStart) = 102866377446 := by
+    tCount (doublePointCompute workStart) = 41911076326 := by
   simp [doublePointCompute, tCount_append, tCount_reverse,
     threeXSquared_tCount, fieldAdd_tCount, fieldInv_tCount,
     fieldMul_tCount, fieldSub_tCount]
@@ -3041,14 +3041,14 @@ private theorem pointAddSetup_tCount
 
 private theorem genericPointBranch_tCount
     (workStart : Wire) (xC yC : Fp) :
-    tCount (genericPointBranch workStart xC yC) = 205332919939 := by
+    tCount (genericPointBranch workStart xC yC) = 83659037315 := by
   simp [genericPointBranch, tCount_append, tCount_reverse,
     genericPointCompute_tCount, packFinitePoint_tCount,
     controlledCopyReg_tCount, pointAddCandidate, pointAddSelected,
     pointWidth]
 
 private theorem doublePointBranch_tCount (workStart : Wire) :
-    tCount (doublePointBranch workStart) = 205732758483 := by
+    tCount (doublePointBranch workStart) = 83822156243 := by
   simp [doublePointBranch, tCount_append, tCount_reverse,
     doublePointCompute_tCount, packFinitePoint_tCount,
     controlledCopyReg_tCount, pointAddCandidate, pointAddSelected,
@@ -3069,7 +3069,7 @@ private theorem infinityPointBranch_tCount
 private theorem pointAddBranches_tCount
     (workStart : Wire) {xC yC : Fp}
     (hC : curve.toAffine.Nonsingular xC yC) :
-    tCount (pointAddBranches workStart hC) = 411065682013 := by
+    tCount (pointAddBranches workStart hC) = 167481197149 := by
   simp [pointAddBranches, tCount_append, genericPointBranch_tCount,
     doublePointBranch_tCount, infinityPointBranch_tCount]
 
@@ -3078,7 +3078,7 @@ theorem pointAddFiniteCompute_tCount
     (pointReg : List Wire) (workStart : Wire)
     {xC yC : Fp} (hC : curve.toAffine.Nonsingular xC yC) :
     tCount (pointAddFiniteCompute pointReg workStart hC) =
-      411065689174 := by
+      167481204310 := by
   simp [pointAddFiniteCompute, tCount_append, pointAddSetup_tCount,
     pointAddBranches_tCount]
 
@@ -3206,7 +3206,7 @@ theorem pointAdd_finite_tCount
     (workStart : Wire)
     {xC yC : Fp} (hC : curve.toAffine.Nonsingular xC yC) :
     tCount (pointAdd pointReg outReg workStart (.some hC)) =
-      822131378348 := by
+      334962408620 := by
   simp [pointAdd, tCount_append, tCount_reverse, copyReg_tCount,
     pointAddFiniteCompute_tCount]
 

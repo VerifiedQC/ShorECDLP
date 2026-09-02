@@ -1,5 +1,5 @@
 import ShorECDLP.Submission.Arithmetic.ModAdd
-import ShorECDLP.Submission.Arithmetic.ModMul
+import ShorECDLP.Submission.Arithmetic.LowSpaceModMul
 import ShorECDLP.Submission.Arithmetic.ModExp
 import ShorECDLP.Submission.Arithmetic.FermatInv
 import Lean.Elab.Tactic.Omega
@@ -18,9 +18,12 @@ required by `ModAddWiring.fit`, namely `2 * p ≤ 2 ^ 257`.
 addProgram lhs rhs out scratch
   := modAdd over seven fresh scratch blocks
 
-mulPlan bits power acc scratch
-  := for each multiplier bit:
-       duplicate power; add power+power; mask by bit; add mask+acc
+mulProgram lhs bits out scratch
+  := load p into one scratch register;
+     for bits from most significant to least significant:
+       out := 2*out mod p;
+       out := out + (bit ? lhs : 0) mod p;
+     unload p
 
 secpProgram
   := Bennett-clean square-and-multiply over all 257 exponent bits,
@@ -29,16 +32,17 @@ secpProgram
 
 Wire allocation uses numbered blocks of capacity 257.  Every register occupies a complete block;
 one-bit carry registers occupy a one-wire block.  Distinct block identifiers imply disjoint wire
-ranges.  The fixed exponentiation layout uses one contiguous block-ID interval, while its schedule
-owns 770 history registers and reuses the same 257-stage multiplier workspace at every call.
+ranges.  The multiplier declares 771 public wires and 517 reusable work wires, for 1,288 total.
+The fixed exponentiation schedule still owns 770 history registers, but every multiplication call
+reuses that same 517-wire workspace.
 
 ## Specification
 
 `add_wiring`, `mul_contract`, and `secp_modExp_contract` certify the exact programs above against
 the existing `ModAddWiring`, `ModMulContract`, and `ModExpContract` interfaces. Direct
 `*Program_correct` and `*Program_tCount` theorems expose the same correctness and cost facts
-without a contract projection. Their instantiated costs are respectively `23,387`, `24,966,522`,
-and `25,616,576,258` T gates. Finally, `secp_fermat_inverse` specializes `FermatInv.correct` to
+without a contract projection. Their instantiated costs are respectively `23,387`, `10,171,546`,
+and `10,436,930,882` T gates. Finally, `secp_fermat_inverse` specializes `FermatInv.correct` to
 this same `secpProgram`; it introduces no second circuit or independent inversion claim.
 -/
 
@@ -431,54 +435,6 @@ theorem addProgram_tCount (lhsId rhsId outId start : Nat) :
       ((reg (start + 6)).length_eq.trans (reg start).length_eq.symm)
       ((reg outId).length_eq.trans (reg lhsId).length_eq.symm)
 
-def mulStageBlocks (start : Nat) : List Block :=
-  [regBlock start, regBlock (start + 1)] ++ addScratchBlocks (start + 2) ++
-    [regBlock (start + 9), regBlock (start + 10)] ++ addScratchBlocks (start + 11)
-
-def mulPrivateBlocks : Nat → Nat → List Block
-  | _, 0 => []
-  | start, steps + 1 => mulStageBlocks start ++ mulPrivateBlocks (start + 18) steps
-
-def mulPlan : (controls : List Wire) → (powerId accId start : Nat) →
-    powerId < start → accId < start →
-    ModMul.Plan p addCost controls (reg powerId).wires (reg accId).wires
-  | [], powerId, accId, _start, _hpower, _hacc => .done (reg powerId).wires (reg accId).wires
-  | control :: controls, powerId, accId, start, hpower, hacc =>
-      .step (reg start).wires (reg (start + 1)).wires (reg (start + 9)).wires
-        (reg (start + 10)).wires (addWork (start + 2)) (addWork (start + 11))
-        (addProgram powerId start (start + 1) (start + 2))
-        (addProgram (start + 9) accId (start + 10) (start + 11))
-        (add_contract powerId start (start + 1) (start + 2) (by omega) (by omega)
-          (by omega) (by omega))
-        (add_contract (start + 9) accId (start + 10) (start + 11) (by omega)
-          (by omega) (by omega) (by omega))
-        (mulPlan controls (start + 1) (start + 10) (start + 18) (by omega) (by omega))
-
-@[simp] theorem mulStageBlocks_ids (start : Nat) :
-    (mulStageBlocks start).map Block.id = List.range' start 18 := by
-  simp [mulStageBlocks, addScratchBlocks, List.range', Nat.add_assoc]
-
-@[simp] theorem mulPrivateBlocks_ids (start steps : Nat) :
-    (mulPrivateBlocks start steps).map Block.id = List.range' start (18 * steps) := by
-  induction steps generalizing start with
-  | zero => simp [mulPrivateBlocks]
-  | succ steps ih =>
-      rw [mulPrivateBlocks, List.map_append, mulStageBlocks_ids, ih]
-      rw [List.range'_append]
-      congr 1
-      simp [Nat.mul_succ, Nat.add_comm]
-
-theorem mulPlan_privateWires (controls : List Wire) (powerId accId start : Nat)
-    (hpower : powerId < start) (hacc : accId < start) :
-    (mulPlan controls powerId accId start hpower hacc).privateWires =
-      blocksWires (mulPrivateBlocks start controls.length) := by
-  induction controls generalizing powerId accId start with
-  | nil => simp [mulPlan, ModMul.Plan.privateWires, mulPrivateBlocks, blocksWires]
-  | cons control controls ih =>
-      simp only [mulPlan, ModMul.Plan.privateWires, List.length_cons, mulPrivateBlocks]
-      rw [ih]
-      simp [mulStageBlocks, addWork, blocksWires, List.append_assoc]
-
 theorem not_mem_blocksWires_of_source (source : Block) (blocks : List Block) (wire : Wire)
     (hwire : wire ∈ source.wires) (hid : source.id ∉ blocks.map Block.id) :
     wire ∉ blocksWires blocks := by
@@ -499,206 +455,90 @@ theorem blocksWires_disjoint_of_ids (left right : List Block)
   rw [blocksWires, List.flatMap_append, List.nodup_append] at h
   exact h.2.2
 
-def mulStageSupportBlocks (powerId accId start : Nat) : List Block :=
-  [regBlock powerId, regBlock start, regBlock (start + 1)] ++
-    addScratchBlocks (start + 2) ++
-    [regBlock (start + 9), regBlock accId, regBlock (start + 10)] ++
-    addScratchBlocks (start + 11)
+/-! ## Low-space multiplication allocation -/
 
-@[simp] theorem mulStageSupport_eq (control : Wire) (powerId accId start : Nat) :
-    ModMul.Plan.stageSupport control (reg powerId).wires (reg start).wires
-      (reg (start + 1)).wires (addWork (start + 2)) (reg (start + 9)).wires
-      (reg accId).wires (reg (start + 10)).wires (addWork (start + 11)) =
-      control :: blocksWires (mulStageSupportBlocks powerId accId start) := by
-  simp [ModMul.Plan.stageSupport, mulStageSupportBlocks, addWork, blocksWires,
-    List.append_assoc]
+/-- All but the low bit of a concrete field register. -/
+def regHigh (id : Nat) : List Wire :=
+  List.range' (bitWire id + 1) (fieldWidth - 1)
 
-theorem mulStageSupportBlocks_ids_nodup (powerId accId start : Nat)
-    (hpower : powerId < start) (hacc : accId < start) (hpa : powerId ≠ accId) :
-    ((mulStageSupportBlocks powerId accId start).map Block.id).Nodup := by
-  simp [mulStageSupportBlocks, addScratchBlocks, List.nodup_cons]
-  omega
+@[simp] theorem reg_wires_eq_low_high (id : Nat) :
+    (reg id).wires = bitWire id :: regHigh id := by
+  change List.range' (257 * id) 257 =
+    257 * id :: List.range' (257 * id + 1) 256
+  rw [show (257 : Nat) = 256 + 1 by omega, List.range'_succ]
 
-theorem mulStage_rest_ids_nodup (powerId accId start steps : Nat)
-    (hpower : powerId < start) (hacc : accId < start) (hpa : powerId ≠ accId) :
-    (((mulStageSupportBlocks powerId accId start) ++
-      mulPrivateBlocks (start + 18) steps).map Block.id).Nodup := by
-  rw [List.map_append, mulPrivateBlocks_ids, List.nodup_append]
-  refine ⟨mulStageSupportBlocks_ids_nodup powerId accId start hpower hacc hpa,
-    List.nodup_range', ?_⟩
-  intro x hx y hy
-  rw [List.mem_range'] at hy
-  obtain ⟨i, hi, rfl⟩ := hy
-  simp [mulStageSupportBlocks, addScratchBlocks] at hx
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
-    rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> omega
+def mulCarry (start : Nat) : Wire := bitWire (start + 1)
+def mulBranch (start : Nat) : Wire := bitWire (start + 2)
+def mulOverflow (start : Nat) : Wire := bitWire (start + 3)
+
+/-- One loaded modulus register, one reusable mask, and three one-bit flags. -/
+def mulWork (modulusId start : Nat) : List Wire :=
+  LowSpaceModMul.work (reg modulusId).wires (reg start).wires
+    (mulCarry start) (mulBranch start) (mulOverflow start)
+
+/-- Concrete low-space multiplier program. -/
+def mulProgram (lhsId rhsId outId modulusId start : Nat) : Circuit :=
+  LowSpaceModMul.program p (reg lhsId).wires (reg rhsId).wires
+    (reg modulusId).wires (bitWire outId) (regHigh outId) (reg start).wires
+    (mulCarry start) (mulBranch start) (mulOverflow start)
+
+def mulCost : Nat := 154 * fieldWidth * fieldWidth
 
 set_option maxRecDepth 10000 in
-theorem mulPlan_valid (rhsId : Nat) :
-    ∀ (controls : List Wire) (powerId accId start : Nat)
-      (hpower : powerId < start) (hacc : accId < start),
-      controls.Nodup →
-      (∀ control ∈ controls, control ∈ (reg rhsId).wires) →
-      rhsId < start → rhsId ≠ powerId → rhsId ≠ accId → powerId ≠ accId →
-      (mulPlan controls powerId accId start hpower hacc).Valid fieldWidth := by
-  intro controls
-  induction controls with
-  | nil =>
-      intro powerId accId start hpower hacc _ _ _ _ _ _
-      simp [mulPlan, ModMul.Plan.Valid, reg, regBlock, fieldWidth]
-  | cons control controls ih =>
-      intro powerId accId start hpower hacc hcontrols hmem hrhs hrp hra hpa
-      obtain ⟨hcontrolTail, htailNodup⟩ := List.nodup_cons.mp hcontrols
-      have hcontrolMem : control ∈ (reg rhsId).wires :=
-        hmem control (List.mem_cons_self ..)
-      have htailMem : ∀ wire ∈ controls, wire ∈ (reg rhsId).wires := by
-        intro wire hwire
-        exact hmem wire (List.mem_cons_of_mem control hwire)
-      have hstageIds := mulStageSupportBlocks_ids_nodup powerId accId start hpower hacc hpa
-      have hrhsNotStage : rhsId ∉
-          (mulStageSupportBlocks powerId accId start).map Block.id := by
-        simp [mulStageSupportBlocks, addScratchBlocks]
-        omega
-      have hcontrolFresh : control ∉
-          blocksWires (mulStageSupportBlocks powerId accId start) :=
-        not_mem_blocksWires_of_source (regBlock rhsId)
-          (mulStageSupportBlocks powerId accId start) control hcontrolMem hrhsNotStage
-      have hstageNodup :
-          (control :: blocksWires (mulStageSupportBlocks powerId accId start)).Nodup :=
-        List.nodup_cons.mpr ⟨hcontrolFresh,
-          blocksWires_nodup _ hstageIds⟩
-      let rest := mulPlan controls (start + 1) (start + 10) (start + 18)
-        (by omega) (by omega)
-      have hrestPrivate : rest.privateWires =
-          blocksWires (mulPrivateBlocks (start + 18) controls.length) := by
-        simpa [rest] using mulPlan_privateWires controls (start + 1) (start + 10)
-          (start + 18) (by omega) (by omega)
-      have hrhsNotRest : rhsId ∉
-          (mulPrivateBlocks (start + 18) controls.length).map Block.id := by
-        rw [mulPrivateBlocks_ids, List.mem_range']
-        intro h
-        obtain ⟨i, hi, heq⟩ := h
-        omega
-      have hcurrentRest := blocksWires_disjoint_of_ids
-        (mulStageSupportBlocks powerId accId start)
-        (mulPrivateBlocks (start + 18) controls.length)
-        (mulStage_rest_ids_nodup powerId accId start controls.length hpower hacc hpa)
-      have hfuture : ModMul.Plan.WireDisjoint
-          (control :: blocksWires (mulStageSupportBlocks powerId accId start))
-          (controls ++ rest.privateWires) := by
-        intro x hx y hy
-        rw [List.mem_cons] at hx
-        rcases hx with hx | hx
-        · subst x
-          rcases List.mem_append.mp hy with hy | hy
-          · exact fun e => hcontrolTail (e ▸ hy)
-          · rw [hrestPrivate] at hy
-            exact fun e => not_mem_blocksWires_of_source (regBlock rhsId)
-              (mulPrivateBlocks (start + 18) controls.length) control hcontrolMem
-              hrhsNotRest (e ▸ hy)
-        · rcases List.mem_append.mp hy with hy | hy
-          · have hyMem := htailMem y hy
-            exact fun e => not_mem_blocksWires_of_source (regBlock rhsId)
-              (mulStageSupportBlocks powerId accId start) y hyMem hrhsNotStage
-              (e ▸ hx)
-          · rw [hrestPrivate] at hy
-            exact hcurrentRest x hx y hy
-      have hrestValid := ih (start + 1) (start + 10) (start + 18)
-        (by omega) (by omega) htailNodup htailMem (by omega) (by omega) (by omega)
-        (by omega)
-      change (mulPlan (control :: controls) powerId accId start hpower hacc).Valid fieldWidth
-      simp only [mulPlan, ModMul.Plan.Valid]
-      refine ⟨(reg powerId).length_eq, (reg accId).length_eq, (reg start).length_eq,
-        (reg (start + 1)).length_eq, (reg (start + 9)).length_eq,
-        (reg (start + 10)).length_eq, ?_, ?_, hrestValid⟩
-      · rw [mulStageSupport_eq]
-        exact hstageNodup
-      · rw [mulStageSupport_eq]
-        change ModMul.Plan.WireDisjoint
-          (control :: blocksWires (mulStageSupportBlocks powerId accId start))
-          (controls ++ rest.privateWires)
-        exact hfuture
-
-def placedMulPlan (lhsId rhsId accId start : Nat) (hlhs : lhsId < start)
-    (hacc : accId < start) :
-    ModMul.Plan p addCost (reg rhsId).wires (reg lhsId).wires (reg accId).wires :=
-  mulPlan (reg rhsId).wires lhsId accId start hlhs hacc
-
-def mulWork (accId start : Nat) : List Wire :=
-  (reg accId).wires ++ blocksWires (mulPrivateBlocks start fieldWidth)
-
-def mulCost : Nat := 2 * fieldWidth * (2 * addCost + 7 * fieldWidth)
-
-theorem placedMulPlan_valid (lhsId rhsId accId start : Nat)
-    (hlhs : lhsId < start) (hrhs : rhsId < start) (hacc : accId < start)
-    (hlr : lhsId ≠ rhsId) (hla : lhsId ≠ accId) (hra : rhsId ≠ accId) :
-    (placedMulPlan lhsId rhsId accId start hlhs hacc).Valid fieldWidth := by
-  apply mulPlan_valid rhsId (reg rhsId).wires lhsId accId start hlhs hacc
-  · exact (regBlock rhsId).wires_nodup
-  · intro wire hwire
-    exact hwire
-  · exact hrhs
-  · exact hlr.symm
-  · exact hra
-  · exact hla
-
-set_option maxRecDepth 10000 in
-theorem mul_contract (lhsId rhsId outId accId start : Nat)
-    (hlhs : lhsId < start) (hrhs : rhsId < start) (hacc : accId < start)
-    (hlr : lhsId ≠ rhsId) (hla : lhsId ≠ accId) (hra : rhsId ≠ accId) :
-    let plan := placedMulPlan lhsId rhsId accId start hlhs hacc
-    ModMulContract (plan.program (reg outId).wires)
+theorem mul_contract (lhsId rhsId outId modulusId start : Nat)
+    (_hlhs : lhsId < start) (_hrhs : rhsId < start) (_hmodulus : modulusId < start)
+    (_hlr : lhsId ≠ rhsId) (_hlm : lhsId ≠ modulusId) (_hrm : rhsId ≠ modulusId) :
+    ModMulContract (mulProgram lhsId rhsId outId modulusId start)
       { lhs := (reg lhsId).wires, rhs := (reg rhsId).wires,
-        out := (reg outId).wires, work := mulWork accId start }
+        out := (reg outId).wires, work := mulWork modulusId start }
       p mulCost := by
-  let plan := placedMulPlan lhsId rhsId accId start hlhs hacc
-  have hvalid : plan.Valid fieldWidth :=
-    placedMulPlan_valid lhsId rhsId accId start hlhs hrhs hacc hlr hla hra
-  have hcontract := ModMul.Plan.modMul_contract plan (reg outId).wires fieldWidth hvalid p_pos
-  have hprivate := mulPlan_privateWires (reg rhsId).wires lhsId accId start hlhs hacc
-  rw [(reg rhsId).length_eq] at hcontract
-  rw [(reg rhsId).length_eq] at hprivate
-  change ModMulContract (plan.program (reg outId).wires)
-    { lhs := (reg lhsId).wires, rhs := (reg rhsId).wires,
-      out := (reg outId).wires, work := mulWork accId start }
-    p mulCost
-  rw [mulWork, ← hprivate]
-  change ModMulContract (plan.program (reg outId).wires)
-    (plan.layout (reg outId).wires) p mulCost
-  exact hcontract
+  have hsourceLen : (reg lhsId).wires.length =
+      (bitWire outId :: regHigh outId).length := by
+    rw [← reg_wires_eq_low_high]
+    exact (reg lhsId).length_eq.trans (reg outId).length_eq.symm
+  have hmodLen : (reg modulusId).wires.length =
+      (bitWire outId :: regHigh outId).length := by
+    rw [← reg_wires_eq_low_high]
+    exact (reg modulusId).length_eq.trans (reg outId).length_eq.symm
+  have hmaskLen : (reg start).wires.length =
+      (bitWire outId :: regHigh outId).length := by
+    rw [← reg_wires_eq_low_high]
+    exact (reg start).length_eq.trans (reg outId).length_eq.symm
+  have hcontract := LowSpaceModMul.modMul_contract p (reg lhsId).wires
+    (reg rhsId).wires (reg modulusId).wires (bitWire outId) (regHigh outId)
+    (reg start).wires (mulCarry start) (mulBranch start) (mulOverflow start)
+    p_pos (by norm_num [p]) hsourceLen hmodLen hmaskLen p_fits
+  simpa [mulProgram, mulWork, mulCost, LowSpaceModMul.layout,
+    reg_wires_eq_low_high] using hcontract
 
-set_option maxRecDepth 10000 in
-/-- Direct correctness theorem for a placed width-257 modular-multiplication program. -/
-theorem placedMulPlan_program_correct (lhsId rhsId outId accId start : Nat)
-    (hlhs : lhsId < start) (hrhs : rhsId < start) (hacc : accId < start)
-    (hlr : lhsId ≠ rhsId) (hla : lhsId ≠ accId) (hra : rhsId ≠ accId)
+/-- Direct correctness theorem for any placed low-space width-257 multiplier. -/
+theorem mulProgram_correct (lhsId rhsId outId modulusId start : Nat)
+    (hlhs : lhsId < start) (hrhs : rhsId < start) (hmodulus : modulusId < start)
+    (hlr : lhsId ≠ rhsId) (hlm : lhsId ≠ modulusId) (hrm : rhsId ≠ modulusId)
     (st : BasisState)
     (hlayout :
       ({ lhs := (reg lhsId).wires
          rhs := (reg rhsId).wires
          out := (reg outId).wires
-         work := mulWork accId start } : RegisterLayout).Valid)
+         work := mulWork modulusId start } : RegisterLayout).Valid)
     (hlhsBound : st⟦ᵣ(reg lhsId).wires⟧ < p)
     (hrhsBound : st⟦ᵣ(reg rhsId).wires⟧ < p)
-    (hclean : clean((reg outId).wires ++ mulWork accId start, st)) :
-    let plan := placedMulPlan lhsId rhsId accId start hlhs hacc
-    let after := ⟪plan.program (reg outId).wires⟫ st
+    (hclean : clean((reg outId).wires ++ mulWork modulusId start, st)) :
+    let after := ⟪mulProgram lhsId rhsId outId modulusId start⟫ st
     AgreesOn (reg lhsId).wires st after ∧
       AgreesOn (reg rhsId).wires st after ∧
       after⟦ᵣ(reg outId).wires⟧ =
         st⟦ᵣ(reg lhsId).wires⟧ * st⟦ᵣ(reg rhsId).wires⟧ % p ∧
-      clean(mulWork accId start, after) := by
-  exact (mul_contract lhsId rhsId outId accId start hlhs hrhs hacc hlr hla hra).correct
-    st hlayout hlhsBound hrhsBound hclean
+      clean(mulWork modulusId start, after) := by
+  exact (mul_contract lhsId rhsId outId modulusId start hlhs hrhs hmodulus
+    hlr hlm hrm).correct st hlayout hlhsBound hrhsBound hclean
 
-set_option maxRecDepth 10000 in
-/-- Exact T-count for any placed width-257 modular-multiplication program. -/
-theorem placedMulPlan_program_tCount (lhsId rhsId outId accId start : Nat)
-    (hlhs : lhsId < start) (hrhs : rhsId < start) (hacc : accId < start)
-    (hlr : lhsId ≠ rhsId) (hla : lhsId ≠ accId) (hra : rhsId ≠ accId) :
-    let plan := placedMulPlan lhsId rhsId accId start hlhs hacc
-    tCount (plan.program (reg outId).wires) = mulCost :=
-  (mul_contract lhsId rhsId outId accId start hlhs hrhs hacc hlr hla hra).counted
+/-- Exact T-count for any placed low-space width-257 multiplier. -/
+theorem mulProgram_tCount (lhsId rhsId outId modulusId start : Nat)
+    (hlhs : lhsId < start) (hrhs : rhsId < start) (hmodulus : modulusId < start)
+    (hlr : lhsId ≠ rhsId) (hlm : lhsId ≠ modulusId) (hrm : rhsId ≠ modulusId) :
+    tCount (mulProgram lhsId rhsId outId modulusId start) = mulCost :=
+  (mul_contract lhsId rhsId outId modulusId start hlhs hrhs hmodulus hlr hlm hrm).counted
 
 def mulCall (lhsId rhsId outId accId start : Nat)
     (hlhs : lhsId < start) (hrhs : rhsId < start) (hacc : accId < start)
@@ -710,7 +550,7 @@ def mulCall (lhsId rhsId outId accId start : Nat)
     out := reg outId
     work := mulWork accId start
   }
-  program := (placedMulPlan lhsId rhsId accId start hlhs hacc).program (reg outId).wires
+  program := mulProgram lhsId rhsId outId accId start
   cost := mulCost
   certified := mul_contract lhsId rhsId outId accId start hlhs hrhs hacc hlr hla hra
 
@@ -811,16 +651,18 @@ theorem buildSchedule_uniform (bits : List Wire) (accId powerId historyStart dup
       exact ⟨rfl, rfl, ih₁ _ _ _ _ _ _ _ _⟩
 
 def mulWorkBlocks (mulAccId mulStart : Nat) : List Block :=
-  regBlock mulAccId :: mulPrivateBlocks mulStart fieldWidth
+  [bitBlock (mulStart + 2), regBlock mulAccId, regBlock mulStart,
+    bitBlock (mulStart + 1), bitBlock (mulStart + 3)]
 
 @[simp] theorem mulWorkBlocks_ids (mulAccId mulStart : Nat) :
     (mulWorkBlocks mulAccId mulStart).map Block.id =
-      mulAccId :: List.range' mulStart (18 * fieldWidth) := by
+      [mulStart + 2, mulAccId, mulStart, mulStart + 1, mulStart + 3] := by
   simp [mulWorkBlocks]
 
 theorem mulWork_eq_blocksWires (mulAccId mulStart : Nat) :
     mulWork mulAccId mulStart = blocksWires (mulWorkBlocks mulAccId mulStart) := by
-  simp [mulWork, mulWorkBlocks, blocksWires]
+  simp [mulWork, mulWorkBlocks, blocksWires, LowSpaceModMul.work,
+    mulCarry, mulBranch, mulOverflow, List.append_assoc]
 
 theorem append_mulWorkBlocks_ids_nodup (front : List Block) (mulAccId mulStart : Nat)
     (hfront : (front.map Block.id).Nodup)
@@ -829,20 +671,12 @@ theorem append_mulWorkBlocks_ids_nodup (front : List Block) (mulAccId mulStart :
     ((front ++ mulWorkBlocks mulAccId mulStart).map Block.id).Nodup := by
   rw [List.map_append, List.nodup_append]
   refine ⟨hfront, ?_, ?_⟩
-  · rw [mulWorkBlocks_ids, List.nodup_cons]
-    refine ⟨?_, List.nodup_range'⟩
-    rw [List.mem_range']
-    intro h
-    obtain ⟨i, hi, heq⟩ := h
+  · simp [mulWorkBlocks, List.nodup_cons]
     omega
   · intro left hleft right hright
     have hleftBound := hbefore left hleft
-    rw [mulWorkBlocks_ids, List.mem_cons] at hright
-    rcases hright with rfl | hright
-    · omega
-    · rw [List.mem_range'] at hright
-      obtain ⟨i, hi, rfl⟩ := hright
-      omega
+    simp [mulWorkBlocks] at hright
+    rcases hright with rfl | rfl | rfl | rfl | rfl <;> omega
 
 def lastSupportBlocks (powerId accId historyStart mulAccId mulStart : Nat) : List Block :=
   [regBlock powerId, regBlock accId, regBlock historyStart,
@@ -908,13 +742,9 @@ theorem exponent_not_mem_lastSupportIds (exponentId powerId accId historyStart d
   constructor
   · simp [hep, hea]
     omega
-  · rw [mulWorkBlocks_ids, List.mem_cons]
-    intro h
-    rcases h with heq | h
-    · omega
-    · rw [List.mem_range'] at h
-      obtain ⟨i, hi, heq⟩ := h
-      omega
+  · intro h
+    simp [mulWorkBlocks] at h
+    rcases h with rfl | rfl | rfl | rfl | rfl <;> omega
 
 theorem exponent_not_mem_consSupportIds (exponentId powerId accId historyStart duplicateId
     mulAccId mulStart : Nat) (hexp : exponentId < historyStart)
@@ -927,13 +757,9 @@ theorem exponent_not_mem_consSupportIds (exponentId powerId accId historyStart d
   constructor
   · simp [hep, hea]
     omega
-  · rw [mulWorkBlocks_ids, List.mem_cons]
-    intro h
-    rcases h with heq | h
-    · omega
-    · rw [List.mem_range'] at h
-      obtain ⟨i, hi, heq⟩ := h
-      omega
+  · intro h
+    simp [mulWorkBlocks] at h
+    rcases h with rfl | rfl | rfl | rfl | rfl <;> omega
 
 theorem consSupport_tail_ids_nodup (powerId accId historyStart duplicateId mulAccId
     mulStart tailBits : Nat) (hpower : powerId < historyStart) (hacc : accId < historyStart)
@@ -954,12 +780,8 @@ theorem consSupport_tail_ids_nodup (powerId accId historyStart duplicateId mulAc
     rcases hx with hx | hx
     · simp at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl | rfl <;> omega
-    · rw [mulWorkBlocks_ids, List.mem_cons] at hx
-      rcases hx with rfl | hx
-      · omega
-      · rw [List.mem_range'] at hx
-        obtain ⟨j, hj, rfl⟩ := hx
-        omega
+    · simp [mulWorkBlocks] at hx
+      rcases hx with rfl | rfl | rfl | rfl | rfl <;> omega
 
 theorem exponent_not_mem_historyBlocks (exponentId historyStart bits : Nat)
     (hexp : exponentId < historyStart) :
@@ -1141,16 +963,9 @@ theorem secpAddProgram_correct (st : BasisState)
       clean(secpAddLayout.work, after) := by
   exact secp_modAdd_contract.correct st hlayout hlhsBound hrhsBound hclean
 
-/-- One fully instantiated width-257 schoolbook multiplication plan.  It is also the relative
-plan used to build every certified multiplier call in `secpSchedule`. -/
-def secpMulPlan :
-    ModMul.Plan p addCost (reg exponentId).wires (reg baseId).wires
-      (reg initialAccId).wires :=
-  placedMulPlan baseId exponentId initialAccId historyStartId
-    (by norm_num [baseId, historyStartId])
-    (by norm_num [initialAccId, historyStartId])
-
-def secpMulProgram : Circuit := secpMulPlan.program (reg outId).wires
+/-- One fully instantiated width-257 low-space modular multiplier. -/
+def secpMulProgram : Circuit :=
+  mulProgram baseId exponentId outId initialAccId historyStartId
 
 def secpMulLayout : RegisterLayout :=
   { lhs := (reg baseId).wires
@@ -1158,21 +973,15 @@ def secpMulLayout : RegisterLayout :=
     out := (reg outId).wires
     work := mulWork initialAccId historyStartId }
 
-set_option maxRecDepth 10000 in
-/-- Validity of the fixed width-257 multiplication plan. -/
-theorem secpMulPlan_valid : secpMulPlan.Valid fieldWidth := by
-  exact placedMulPlan_valid baseId exponentId initialAccId historyStartId
-    (by norm_num [baseId, historyStartId])
-    (by norm_num [exponentId, historyStartId])
-    (by norm_num [initialAccId, historyStartId])
-    (by norm_num [baseId, exponentId])
-    (by norm_num [baseId, initialAccId])
-    (by norm_num [exponentId, initialAccId])
+/-- The complete concrete multiplier layout is 771 public wires plus 517 reusable work wires. -/
+theorem secpMulLayout_allWires_length : secpMulLayout.allWires.length = 1288 := by
+  norm_num [secpMulLayout, RegisterLayout.allWires, mulWork, LowSpaceModMul.work,
+    reg, regBlock, Block.wires, regHigh, bitWire, fieldWidth]
 
 set_option maxRecDepth 10000 in
-/-- Same-program contract for the fixed width-257 schoolbook multiplier above. -/
+/-- Same-program contract for the fixed width-257 low-space multiplier above. -/
 theorem secp_modMul_contract : ModMulContract secpMulProgram secpMulLayout p mulCost := by
-  simpa [secpMulProgram, secpMulLayout, secpMulPlan] using
+  simpa [secpMulProgram, secpMulLayout] using
     (mul_contract baseId exponentId outId initialAccId historyStartId
       (by norm_num [baseId, historyStartId])
       (by norm_num [exponentId, historyStartId])
@@ -1180,6 +989,28 @@ theorem secp_modMul_contract : ModMulContract secpMulProgram secpMulLayout p mul
       (by norm_num [baseId, exponentId])
       (by norm_num [baseId, initialAccId])
       (by norm_num [exponentId, initialAccId]))
+
+/-- The concrete multiplier touches at most the 1,288 wires declared by its complete layout. -/
+theorem secpMulProgram_qubitCount : qubitCount secpMulProgram ≤ 1288 := by
+  have hsubset :
+      (circuitWires secpMulProgram).dedup.toFinset ⊆
+        secpMulLayout.allWires.toFinset := by
+    intro w hw
+    have hwCircuit : w ∈ circuitWires secpMulProgram := by
+      simpa using hw
+    have hwLayout :=
+      (ModAddSupport.circuitUsesOnly_iff_support
+        secpMulLayout.allWires secpMulProgram).mp
+        secp_modMul_contract.usesOnly w hwCircuit
+    simpa using hwLayout
+  have hcard := Finset.card_le_card hsubset
+  rw [List.toFinset_card_of_nodup (List.nodup_dedup _)] at hcard
+  calc
+    qubitCount secpMulProgram =
+        (circuitWires secpMulProgram).dedup.length := rfl
+    _ ≤ secpMulLayout.allWires.toFinset.card := hcard
+    _ ≤ secpMulLayout.allWires.length := List.toFinset_card_le _
+    _ = 1288 := secpMulLayout_allWires_length
 
 /-- Direct functional correctness of the fixed width-257 modular-multiplication program. -/
 theorem secpMulProgram_correct (st : BasisState)
@@ -1258,46 +1089,32 @@ def secpLayoutBlocks : List Block :=
     mulWorkBlocks mulAccId mulStartId
 
 set_option maxRecDepth 10000 in
-theorem secpLayoutBlocks_ids : secpLayoutBlocks.map Block.id =
-    List.range' 0 (mulStartId + 18 * fieldWidth) := by
+private theorem secpLayoutFrontBlocks_ids :
+    (([regBlock baseId, regBlock exponentId, regBlock outId, regBlock initialAccId] ++
+      historyBlocks historyStartId fieldWidth ++ [regBlock duplicateId]).map Block.id) =
+      List.range' 0 mulAccId := by
   let history := historyCount fieldWidth
-  let privateCount := 18 * fieldWidth
-  unfold secpLayoutBlocks
-  rw [List.map_append, List.map_append, List.map_append, historyBlocks_ids,
-    mulWorkBlocks_ids]
+  rw [List.map_append, List.map_append, historyBlocks_ids]
   simp only [List.map_cons, List.map_nil, regBlock_id]
-  unfold baseId exponentId outId initialAccId historyStartId duplicateId mulAccId mulStartId
+  unfold baseId exponentId outId initialAccId historyStartId duplicateId mulAccId
   change
-    [0, 1, 2, 3] ++ List.range' 4 history ++
-        [4 + history] ++ ((4 + history + 1) :: List.range' (4 + history + 2) privateCount) =
-      List.range' 0 (4 + history + 2 + privateCount)
+    [0, 1, 2, 3] ++ List.range' 4 history ++ [4 + history] =
+      List.range' 0 (4 + history + 1)
   have hprefix : [0, 1, 2, 3] = List.range' 0 4 := by decide
-  have htwo : [4 + history, 4 + history + 1] = List.range' (4 + history) 2 := by
-    simp [List.range']
-  have hpair : [4 + history] ++
-      ((4 + history + 1) :: List.range' (4 + history + 2) privateCount) =
-      [4 + history, 4 + history + 1] ++
-        List.range' (4 + history + 2) privateCount := by simp
   rw [hprefix]
-  simp only [List.append_assoc]
-  rw [hpair, htwo]
-  have htail : List.range' (4 + history) 2 ++
-      List.range' (4 + history + 2) privateCount =
-      List.range' (4 + history) (2 + privateCount) := by
-    exact List.range'_append
-  rw [htail]
-  have hmid : List.range' 4 history ++
-      List.range' (4 + history) (2 + privateCount) =
-      List.range' 4 (history + (2 + privateCount)) := by
-    exact List.range'_append
-  rw [hmid]
-  simpa [Nat.add_assoc] using
-    (List.range'_append (s := 0) (m := 4) (n := history + (2 + privateCount))
-      (step := 1))
+  rw [show [4 + history] = List.range' (4 + history) 1 by simp [List.range']]
+  rw [List.range'_append]
+  exact List.range'_append
 
 theorem secpLayoutBlocks_ids_nodup : (secpLayoutBlocks.map Block.id).Nodup := by
-  rw [secpLayoutBlocks_ids]
-  exact List.nodup_range'
+  unfold secpLayoutBlocks
+  apply append_mulWorkBlocks_ids_nodup
+  · rw [secpLayoutFrontBlocks_ids]
+    exact List.nodup_range'
+  · intro id hid
+    rw [secpLayoutFrontBlocks_ids, List.mem_range'] at hid
+    omega
+  · exact (by simp [mulAccId, mulStartId] : mulAccId < mulStartId)
 
 theorem secpPlan_allWires : secpPlan.layout.allWires = blocksWires secpLayoutBlocks := by
   have howned := secpSchedule_owned
@@ -1341,9 +1158,9 @@ theorem secpProgram_correct (st : BasisState)
 theorem addCost_eq : addCost = 23387 := by
   norm_num [addCost, fieldWidth]
 
-/-- The instantiated 257-bit schoolbook multiplier has this exact Clifford+T cost. -/
-theorem mulCost_eq : mulCost = 24966522 := by
-  norm_num [mulCost, addCost, fieldWidth]
+/-- The instantiated 257-bit low-space multiplier has this exact Clifford+T cost. -/
+theorem mulCost_eq : mulCost = 10171546 := by
+  norm_num [mulCost, fieldWidth]
 
 /-- Exact numeric T-count for the fixed width-257 modular-addition program. -/
 theorem secpAddProgram_tCount : tCount secpAddProgram = 23387 := by
@@ -1351,7 +1168,7 @@ theorem secpAddProgram_tCount : tCount secpAddProgram = 23387 := by
   exact addCost_eq
 
 /-- Exact numeric T-count for the fixed width-257 modular-multiplication program. -/
-theorem secpMulProgram_tCount : tCount secpMulProgram = 24966522 := by
+theorem secpMulProgram_tCount : tCount secpMulProgram = 10171546 := by
   rw [secp_modMul_contract.counted]
   exact mulCost_eq
 
@@ -1361,11 +1178,11 @@ theorem historyCount_eq : historyCount fieldWidth = 770 := by
   norm_num [historyCount, fieldWidth]
 
 /-- The instantiated 257-bit modular exponentiator has this exact Clifford+T cost. -/
-theorem secpCost_eq : secpCost = 25616576258 := by
-  norm_num [secpCost, mulCost, addCost, fieldWidth]
+theorem secpCost_eq : secpCost = 10436930882 := by
+  norm_num [secpCost, mulCost, fieldWidth]
 
 /-- Exact numeric T-count for the concrete secp256k1-field exponentiation program. -/
-theorem secpProgram_tCount : tCount secpProgram = 25616576258 := by
+theorem secpProgram_tCount : tCount secpProgram = 10436930882 := by
   rw [secp_modExp_contract.counted]
   exact secpCost_eq
 

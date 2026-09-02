@@ -26,6 +26,15 @@ import ShorECDLP
 #print axioms ShorECDLP.modAdd_tCount
 #print axioms ShorECDLP.ModAddSupport.modAdd_usesOnly
 #print axioms ShorECDLP.ModAddSupport.modAddCompute_usesOnly
+#print axioms ShorECDLP.inPlaceAddCarry_correct
+#print axioms ShorECDLP.inPlaceAddCarry_tCount
+#print axioms ShorECDLP.modularDouble_correct
+#print axioms ShorECDLP.modularDouble_tCount
+#print axioms ShorECDLP.controlledModAdd_correct
+#print axioms ShorECDLP.controlledModAdd_tCount
+#print axioms ShorECDLP.LowSpaceModMul.program_correct
+#print axioms ShorECDLP.LowSpaceModMul.program_tCount
+#print axioms ShorECDLP.LowSpaceModMul.layout_allWires_length
 #print axioms ShorECDLP.modSub_contract
 #print axioms ShorECDLP.modSub_program_correct
 #print axioms ShorECDLP.modSub_tCount
@@ -43,14 +52,16 @@ import ShorECDLP
 #print axioms ShorECDLP.FermatInv.correct
 #print axioms ShorECDLP.Secp256k1Instance.addProgram_correct
 #print axioms ShorECDLP.Secp256k1Instance.addProgram_tCount
-#print axioms ShorECDLP.Secp256k1Instance.placedMulPlan_program_correct
-#print axioms ShorECDLP.Secp256k1Instance.placedMulPlan_program_tCount
+#print axioms ShorECDLP.Secp256k1Instance.mulProgram_correct
+#print axioms ShorECDLP.Secp256k1Instance.mulProgram_tCount
 #print axioms ShorECDLP.Secp256k1Instance.secp_modAdd_contract
 #print axioms ShorECDLP.Secp256k1Instance.secpAddProgram_correct
 #print axioms ShorECDLP.Secp256k1Instance.secpAddProgram_tCount
 #print axioms ShorECDLP.Secp256k1Instance.secp_modMul_contract
 #print axioms ShorECDLP.Secp256k1Instance.secpMulProgram_correct
 #print axioms ShorECDLP.Secp256k1Instance.secpMulProgram_tCount
+#print axioms ShorECDLP.Secp256k1Instance.secpMulLayout_allWires_length
+#print axioms ShorECDLP.Secp256k1Instance.secpMulProgram_qubitCount
 #print axioms ShorECDLP.Secp256k1Instance.secp_modExp_contract
 #print axioms ShorECDLP.Secp256k1Instance.secpProgram_correct
 #print axioms ShorECDLP.Secp256k1Instance.secpProgram_tCount
@@ -127,8 +138,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 103 ]]; then
-  printf 'expected one hundred three #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 114 ]]; then
+  printf 'expected one hundred fourteen #print axioms results\n' >&2
   exit 1
 fi
 

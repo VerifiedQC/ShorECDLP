@@ -953,11 +953,12 @@ The theorem also supplies correctness, input preservation, work cleanup, full su
 
 # Part III — Multiplication, exponentiation, and inversion
 
-## 8. Modular multiplication
+## 8. Modular multiplication: reference and low-space circuits
 
-Source: `ShorECDLP/Submission/Arithmetic/ModMul.lean`.
+Sources: `ShorECDLP/Submission/Arithmetic/ModMul.lean`,
+`InPlaceAdder.lean`, `InPlaceModular.lean`, and `LowSpaceModMul.lean`.
 
-### 8.1 Schoolbook multiplication in modular form
+### 8.1 Schoolbook reference multiplication in modular form
 
 Write the multiplier `y` in little-endian binary:
 
@@ -1097,9 +1098,39 @@ $$
 T_{mul}(w)=2w(182w+7w)=378w^2.
 $$
 
-This substitution is valid algebra on the proved formulas. The repository has not yet constructed the concrete width-`257` plans and wire allocation needed to turn it into a checked secp256k1 multiplier instance.
+This remains a verified generic reference construction. The concrete secp256k1 instance now
+uses the lower-space Horner circuit described next instead of instantiating this history-heavy
+plan.
 
-### 8.7 Example: `7 * 11 mod 13`
+### 8.7 The active low-space Horner multiplier
+
+For the concrete submission, `LowSpaceModMul.program` scans the little-endian multiplier from
+its most significant end and updates one clean output register in place:
+
+```text
+load modulus into modulusReg
+for bit in reverse(multiplier):
+  out := 2*out mod modulus
+  out := out + (bit ? source : 0) mod modulus
+unload modulusReg
+```
+
+`InPlaceAdder` supplies the one-ancilla Cuccaro add/subtract primitive.
+`InPlaceModular` builds the modular double and controlled modular add while exactly
+uncomputing their comparison and overflow flags. Every Horner iteration reuses the same
+modulus register, masked-addend register, carry bit, branch bit, and overflow bit.
+
+For arithmetic width `w` and `n` multiplier bits, Lean proves
+
+$$
+T_{low\text{-}mul}(n,w)=154wn.
+$$
+
+A uniform-width layout declares exactly `5w+3` wires: `3w` public input/output wires and
+`2w+3` private reusable work wires. At `w=n=257`, the checked concrete multiplier therefore
+uses 1,288 declared wires (517 private) and costs 10,171,546 T gates.
+
+### 8.8 Example: `7 * 11 mod 13`
 
 The modular-adder fit condition for `M=13` requires width `w=5`, so the equal-width public multiplier represents `11` by the padded little-endian bits `[1,1,0,1,0]`.
 
@@ -1113,7 +1144,9 @@ The modular-adder fit condition for `M=13` requires width `w=5`, so the equal-wi
 
 All values are reduced modulo `13`. The answer is `12`, and indeed `7*11=77=5*13+12`.
 
-The final doubled power is not needed. This deliberately simple multiplier nevertheless performs a double at every bit; unlike exponentiation, this module does not omit its last unused doubling. That is one place an optimized future submission could improve the circuit.
+The table illustrates the low-to-high schoolbook reference recurrence. The active Horner
+circuit processes the same padded bits in the opposite order and accumulates by repeated
+doubling followed by a controlled addition.
 
 ---
 
@@ -1164,7 +1197,8 @@ Each `MulCall` stores:
 - its exact `cost`;
 - a proof `certified : ModMulContract ...`.
 
-The exponentiation schedule never opens the multiplier's schoolbook history. It uses only the certified public behavior.
+The exponentiation schedule never opens a multiplier's private implementation. It uses only
+the certified `ModMulContract`; the concrete instance supplies the low-space multiplier above.
 
 ### 9.4 The three schedule cases
 
@@ -1718,11 +1752,12 @@ Let:
 | constant add, width `w` | `21w` |
 | selector, width `w` | `7w` |
 | clean modular add | `91w` |
-| modular multiply | `2n(2A+7w)` |
+| Bennett schoolbook modular multiply | `2n(2A+7w)` |
+| low-space Horner modular multiply | `154wn` |
 | modular exponentiation, uniform calls and `n=w` | `2((2w-1)C_mul+7w^2)` |
 | Fermat inversion | exactly the supplied exponentiation cost |
 
-### 13.2 Substituting the verified adder formula
+### 13.2 Reference schoolbook and active low-space formulas
 
 For equal-width multiplication, put `n=w` and `A=91w`:
 
@@ -1745,7 +1780,23 @@ $$
 C_{exp}=1512w^3-742w^2.
 $$
 
-The cubic term comes from roughly `2w` multiplier calls, each of quadratic schoolbook cost. Fermat inversion inherits this exponentiation cost.
+That is the reference schoolbook-plan specialization. The concrete instance supplies the
+low-space multiplier contract with
+
+$$
+C_{low\text{-}mul}=154w^2,
+$$
+
+so its same generic exponentiation schedule has
+
+$$
+C_{low\text{-}exp}
+=2\left((2w-1)154w^2+7w^2\right)
+=616w^3-294w^2.
+$$
+
+The cubic term still comes from roughly `2w` quadratic multiplier calls. Fermat inversion
+inherits whichever certified exponentiation program is supplied.
 
 ### 13.3 Why `w=257` for the generic adder
 
@@ -1766,13 +1817,16 @@ Evaluating the proved symbolic formulas gives:
 | Operation | Formula specialization | T-count | Toffoli-equivalent count |
 | --- | ---: | ---: | ---: |
 | modular add | `91*257` | `23,387` | `3,341` |
-| modular multiply | `378*257^2` | `24,966,522` | `3,566,646` |
-| modular exponentiation | `1512*257^3 - 742*257^2` | `25,616,576,258` | `3,659,510,894` |
-| Fermat inversion | same exponentiation program | `25,616,576,258` | `3,659,510,894` |
+| reference schoolbook multiply | `378*257^2` | `24,966,522` | `3,566,646` |
+| concrete low-space multiply | `154*257^2` | `10,171,546` | `1,453,078` |
+| concrete modular exponentiation | `616*257^3 - 294*257^2` | `10,436,930,882` | `1,490,990,126` |
+| Fermat inversion | same concrete exponentiation program | `10,436,930,882` | `1,490,990,126` |
 
 The Toffoli-equivalent column simply divides by seven because these arithmetic circuits contain no `P` gates.
 
-**Crucial qualification:** these numbers are algebraic substitutions into checked generic formulas. They are not yet the output of a checked, concrete width-257 `ModAddWiring`, `ModMul.Plan`, and `ModExp.Plan` instance on `main`.
+These are checked concrete values: `Secp256k1Instance` supplies the width-257 adder wiring,
+the low-space multiplier layout and contract, and the exponentiation schedule, then proves the
+numeric T-counts for those exact circuit terms.
 
 ### 13.5 Workspace
 
@@ -1783,15 +1837,21 @@ The concrete parametric `modAddLayout` uses:
 
 Thus its declared layout contains `8w+2` wires. At `w=257`, that is `2,058` wires for this deliberately straightforward modular-adder placement.
 
-The multiplication and exponentiation plans retain full histories for Bennett cleanup. Their total work sizes depend on the supplied sublayout and plan structure; the current public theorems do not expose one closed secp256k1 workspace total.
+The active multiplier does not retain a per-bit history. Its public theorems
+`secpMulLayout_allWires_length` and `secpMulProgram_qubitCount` certify exactly 1,288 declared
+wires (771 public and 517 private) and at most 1,288 wires touched. The exponentiation plan
+still retains its square-and-multiply history, so the full
+Bitcoin trial uses the separately certified dense-capacity bound from `EndToEnd.lean`.
 
 ### 13.6 How to read these costs
 
 The formulas teach three architectural facts.
 
 1. **Cleanup is visible.** Both multiplication and exponentiation pay an outer factor of two for compute-copy-uncompute.
-2. **Schoolbook nesting is expensive.** Linear-bit multiplication over linear-cost addition is quadratic; linear-bit exponentiation over quadratic multiplication is cubic.
-3. **The baseline is intentionally naive.** Specialized reduction, better multiplication, better inversion, or history-pebbling could change the dominant constants or asymptotics, but each needs a new proof-carrying implementation.
+2. **Arithmetic nesting is expensive.** Linear-bit multiplication over linear-cost modular
+   steps is quadratic; linear-bit exponentiation over quadratic multiplication is cubic.
+3. **Space and time trade off.** The Horner multiplier removes the width-many Bennett history
+   and lowers the active constant, while exponentiation still retains history for cleanup.
 
 ---
 
@@ -1855,9 +1915,12 @@ Outside M1, `Reduction.recoverShift_correct` separately assumes `[Fact (Nat.Prim
 
 **Correct:** `FermatInv.correct` proves that the output's cast into `Fp` equals the field inverse. A separate canonical-representative lemma would be needed to state the strongest natural-number equality.
 
-**Overstatement:** “The width-257 secp256k1 inversion circuit costs 25.6 billion T.”
+**Overstatement:** “The old `378w²` schoolbook substitution is the concrete multiplier used by
+the submission.”
 
-**Correct:** `25,616,576,258` is the conditional evaluation of verified generic formulas after substituting a uniform clean-adder/multiplier stack. The concrete plan instance is not yet built.
+**Correct:** that remains a verified reference plan. The concrete submission uses the
+`154w²` low-space multiplier, whose exact width-257 cost is `10,171,546`; its same-program
+Fermat inversion costs `10,436,930,882` T gates.
 
 **Overstatement:** “The arithmetic stack proves the ECDLP oracle.”
 
@@ -2074,7 +2137,12 @@ A circuit whose gate roles use distinct wires where required, enabling the physi
 
 The arithmetic development is best understood as a verified tower of interfaces.
 
-At the bottom, a six-gate reversible circuit implements one full-adder cell. Ripple composition turns the cell identity into an `n`-bit equality. A carry from adding `2^w-M` becomes a comparison flag, enabling modular addition. Typed histories lift modular addition into schoolbook multiplication, and certified multiplier calls lift multiplication into square-and-multiply exponentiation. Finally, a short field theorem reinterprets exponentiation by `p-2` as inversion.
+At the bottom, reversible full-adder cells compose into ripple circuits. The active multiplier
+uses a one-ancilla Cuccaro adder to build clean in-place reduction, then scans multiplier bits
+with a fixed-workspace Horner recurrence. Certified multiplier calls lift that circuit into
+square-and-multiply exponentiation. Finally, a short field theorem reinterprets exponentiation
+by `p-2` as inversion. The older typed-history schoolbook multiplier remains as a proved generic
+reference construction.
 
 At every composite boundary, the development carries more than a number-theoretic result: it preserves inputs, clears scratch, confines wire use, proves exact cost, records classical faithfulness, and proves physical well-formedness—all for one program term.
 

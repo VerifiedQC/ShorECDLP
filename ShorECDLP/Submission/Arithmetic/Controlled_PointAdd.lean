@@ -140,7 +140,7 @@ private theorem controlledPointAddOut_tCount_of_ne_zero
     (workStart : Wire) (C : Point) (hC : C ≠ 0)
     (hpointLength : pointReg.length = pointWidth) :
     tCount (controlledPointAddOut
-      control pointReg outReg workStart C) = 822131385530 := by
+      control pointReg outReg workStart C) = 334962415802 := by
   cases C with
   | zero => exact (hC rfl).elim
   | @some xC yC hxy =>
@@ -168,7 +168,7 @@ theorem controlledPointAdd_tCount_of_ne_zero
     (C : Point) (hC : C ≠ 0)
     (hpointLength : pointReg.length = pointWidth) :
     tCount (controlledPointAdd control pointReg workStart C) =
-      1644262771060 := by
+      669924831604 := by
   have hneg : -C ≠ 0 := neg_ne_zero.mpr hC
   simp [controlledPointAdd, tCount_append, tCount_reverse,
     controlledPointAddOut_tCount_of_ne_zero _ _ _ _ _ hC hpointLength,
