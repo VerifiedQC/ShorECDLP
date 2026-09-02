@@ -344,7 +344,7 @@ theorem inPlaceAddCarry_correct :
                 hwa hwb hwc
               _ = st₁ w := houtsideTail w hwbs hwOut
               _ = st w := cuccaroMajority_other a b carry w st hwa hwb hwc
-                       
+
           rw [hrun]
           exact ⟨hsourceFinal, huma.2.2, hnumeric, houtside⟩
 
