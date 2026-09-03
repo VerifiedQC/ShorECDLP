@@ -16,7 +16,11 @@ open Classical Quantum
 
 noncomputable section
 
-/-- Leaf visitation order, matching the supplement's `order="inc"` / `order="dec"` switch. -/
+/-- Branch visitation order on a caller-supplied tree.  `inc` visits the zero subtree first and
+`dec` visits the one subtree first, matching the supplement's local `order="inc"` / `order="dec"`
+switch.  Numeric increasing/decreasing label order additionally requires the supplement's
+sorted/deduplicated-label, highest-varying-bit tree-construction certificate; that concrete builder
+is outside this generic control-flow boundary. -/
 inductive UnaryOrder where
   | inc
   | dec

@@ -374,14 +374,14 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first dependency-closed construction unit is merged. It contains standalone exact
-Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
+**Status:** the first two dependency-closed construction units are merged. PR #62 contains
+standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
 named-wire locality, physical well-formedness, and constructor-derived resource equations. The
 unary traversal coherently refines its full compute/uncompute reference and uses exactly one
-measurement and seven T gates per internal decision node. The next dependency-closed unit now
-implements the pinned coherent `_apply_cell` specialization (`MEASUREMENT_UNCOMPUTE = False`) and
+measurement and seven T gates per internal decision node. PR #63 implements the pinned coherent
+`_apply_cell` specialization (`MEASUREMENT_UNCOMPUTE = False`) and
 its prepared-slice two-pass MAJ/UMA ripple core, plus a per-bit borrowed-work XOR normal form for
 the later length decoders. The ripple has direct whole-basis-state semantics, clean-scratch
 restoration, named locality, and physical well-formedness. Its seven-Toffoli-per-lane equation
@@ -389,11 +389,14 @@ matches the paper; the separate 49-T equation is only the repository Framework's
 this coherent reference circuit. A later adaptive aggregate must bind and count the actual coherent
 or measurement-uncompute realization it composes. The borrowed writer's
 four-CNOT-per-set-bit count is local only and is not a production aggregate until the grouped
-write/zero-map/write/zero-map composition is proved. The next unit generalizes the pruned unary
-decoder to circuit-valued leaf actions in both exact supplement orders (`inc` and `dec`), while
-preserving decoder wires and coherently refining the corresponding full unitary traversal.
-Concrete synchronized dual-endpoint scans, upper/lower zero-map production, complete length
-blocks, and the indexed four-phase step remain open within Phase 5.
+write/zero-map/write/zero-map composition is proved. PR #64, the current review unit, generalizes
+the pruned unary decoder to circuit-valued leaf actions in zero-subtree-first (`inc`) and
+one-subtree-first (`dec`) order on a caller-supplied tree, while preserving decoder wires and
+coherently refining the corresponding full unitary traversal. The concrete supplement construction
+from sorted/deduplicated labels by highest-varying-bit splits—and its certificate that these local
+branch orders induce numeric increasing/decreasing label order—remains open for the composition
+unit, together with synchronized dual-endpoint scans, upper/lower zero-map production, complete
+length blocks, and the indexed four-phase step.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -576,10 +579,12 @@ They are equal only if Phase 11 proves the required reuse.
   `_apply_cell` MAJ/UMA ripple arithmetic and per-bit borrowed-work length-update kernels. Seven
   Toffolis per lane matches the paper; 49 T is only the Framework-derived coherent-circuit cost.
   Neither that T equation nor the borrowed-writer equation is yet an adaptive aggregate.
-- **Phase-5 circuit unit 3:** current implementation/review unit; circuit-valued pruned unary
-  traversal in both the supplement's increasing and decreasing orders, with decoder restoration,
-  physical well-formedness, coherent refinement, and constructor-derived resource equations.
-  Synchronized dual-endpoint scans, zero maps, full length blocks, and the indexed step remain open.
+- **PR #64, Phase-5 circuit unit 3:** current implementation/review unit; circuit-valued pruned
+  unary traversal in zero-subtree-first (`inc`) and one-subtree-first (`dec`) order on a
+  caller-supplied tree, with decoder restoration, physical well-formedness, coherent refinement,
+  and constructor-derived resource equations. The supplement's concrete sorted/deduplicated-label,
+  highest-varying-bit tree builder and its numeric-order certificate remain open, as do synchronized
+  dual-endpoint scans, zero maps, full length blocks, and the indexed step.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
