@@ -5,11 +5,11 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result below is the
-`main@2e87a3cc048840232c2f3919a2a269f2783ea50e` baseline. The approved Phase-0/1 implementation
-exists in the open dependency stack PR #56 → PR #57 → PR #58 as of 2026-09-03; it is not yet on
-`main`. A `✓` means a declaration is root-reachable and covered by the repository verifier on the
-stated baseline or exact PR head. “Target” is not a proved claim.
+**Status snapshot.** The verified Naive result and merged Phase-0/1 paper foundation below are on
+`main@66062cbf6072a815e982ca3b133e0ebfce73af34`. PR #56 → PR #57 → PR #58 landed the source
+split, adaptive Kraus semantics, and coherent-refinement bridge; Phase 2 is the current PR #59. A
+`✓` means a declaration is root-reachable and covered by the repository verifier on the stated
+baseline or exact PR head. “Target” is not a proved claim.
 
 ## 1. Current verified result
 
@@ -224,7 +224,7 @@ A paper phase is complete only when all applicable conditions hold for the same 
 
 ## 6. Dependency-ordered roadmap
 
-### Phase 0 — source split and specification reconciliation (implemented; awaiting merge)
+### Phase 0 — source split and specification reconciliation (merged)
 
 Perform the relocation in Section 2.3 without changing current program or theorem meaning. Record
 the exact paper schedule/layout, pin small differential tests, freeze the resource vocabulary, and
@@ -233,14 +233,14 @@ quarantine the unresolved paper claims in Section 7.
 **Gate:** parent/head public declarations and axioms agree; Math, Framework, Naive, and
 `2607_13816` import checks pass; both submissions are root-reachable.
 
-**Status:** PR #56 implements the path-only relocation and paper-reference reconciliation. All 55
+**Status:** PR #56 merged the path-only relocation and paper-reference reconciliation. All 55
 relocated code-bearing modules preserve their declaration/proof source modulo imports and comments;
 the 8 retained Framework modules complete the 63-module baseline, and all 1,801 public declarations
 have identical parent/head printed signatures and axiom dependencies. The warning-
 fatal build, 67/67 source closure, four textual/compiler-resolved import-direction gates, 103
 targeted disclosures, exhaustive 5,236-declaration standard-only audit, and hosted CI are green.
 
-### Phase 1 — adaptive semantics and coherent refinement (implemented; awaiting merge)
+### Phase 1 — adaptive semantics and coherent refinement (merged)
 
 Modules:
 
@@ -254,7 +254,7 @@ probability equivalence.
 
 **Gate:** coherent refinement—not basis-only behavior—composes across all later arithmetic.
 
-**Status:** PR #57 adds the separate adaptive Kraus-instrument semantics and PR #58 adds
+**Status:** PR #57 added the separate adaptive Kraus-instrument semantics and PR #58 added
 coefficient-aligned coherent refinement. The proved surface includes exact X-reset behavior and
 cleanliness, arbitrary-state Born-mass preservation, chronological sequencing without transcript
 deduplication, extension from valid basis inputs to supported superpositions, coherent
@@ -277,6 +277,16 @@ and derive its measurement and Toffoli counts.
 
 **Gate:** phase cancellation, reset, and resource claims are exact; the canary does not modify the
 Naive QFT.
+
+**Status:** PR #59 implements this phase. The framework now enumerates chronological
+false-first register transcripts, proves the exact `2^(-m/2) (-1)^(b·y)` branch coefficient,
+clears every measured wire, and proves coherent correction both from an abstract selected circuit
+and from the concrete recompute/Z-correct/uncompute construction. The isolated paper canary uses a
+direct Clifford controlled-Z correction: it coherently implements the local unitary reference with
+one measurement, one rather than two Toffolis, naive T-count 8 rather than 15, and three wires. It
+imports no Naive module and leaves the production Naive QFT unchanged. The local exact-tree gate is
+green: 3,061 warning-fatal jobs, 71/71 source closure, 144 targeted disclosures, and all 5,617
+reachable declarations within the standard axiom allowlist.
 
 ### Phase 3 — pure four-phase EEA model
 
@@ -476,18 +486,13 @@ They are equal only if Phase 11 proves the required reuse.
 
 ## 8. Active branch disposition
 
-- **PR #55, roadmap:** its approved plan content is incorporated into PR #56; the sibling PR is
-  superseded once that integration is published.
-- **PR #56, Phase 0:** source split, import gates, and pinned paper reference; code/API review is
-  green, with the plan-integration delta awaiting review.
-- **PR #57, Phase 1a:** Phase-0-reconciled adaptive foundation; proof/code review is green, with the
-  restacked exact-head delta awaiting review.
-- **PR #58, Phase 1b:** coherent refinement and final-event equivalence; proof/code review is green,
-  with the restacked exact-head delta awaiting review.
+- **PR #55, roadmap:** closed as superseded after its approved content was incorporated into PR #56.
+- **PR #56, Phase 0:** merged at `de4fc892`; source split, import gates, and pinned paper reference.
+- **PR #57, Phase 1a:** merged at `75613852`; adaptive Kraus-instrument semantics.
+- **PR #58, Phase 1b:** merged at `66062cbf`; coherent refinement and final-event equivalence.
 - **PR #54, former adaptive foundation:** closed as superseded by the reconciled PR #57.
-- **Unpublished measurement-uncompute canary:** local only. After the Phase-0/1 stack lands, rebuild
-  it from the reviewed semantics under `Submission/2607_13816/Canary/`; do not publish the stale
-  pre-split tree.
+- **PR #59, Phase-2 measurement uncomputation:** rebuilt from merged Phase-1 semantics under
+  `Submission/2607_13816/Canary/`; the stale pre-split prototype remains unpublished.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -522,5 +527,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0 and 1 are implemented in the open stack described above. Phase 2 starts from the reviewed
-and merged Phase-1 semantics; no stale pre-split canary is carried forward.
+Phases 0 and 1 are merged. Phase 2 is implemented from the reviewed Phase-1 semantics; no stale
+pre-split canary was carried forward.

@@ -113,6 +113,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Quantum.coherent_on_supported_state
 #print axioms ShorECDLP.Quantum.eventProbability_smul
 #print axioms ShorECDLP.Quantum.coherent_final_probability_eq
+#print axioms ShorECDLP.Quantum.run_controlledZ_ket
+#print axioms ShorECDLP.Quantum.clearRegister_clean
+#print axioms ShorECDLP.Quantum.registerXResetCoeff_eq_magnitude_mul_phase
+#print axioms ShorECDLP.Quantum.xResetRegisterKraus_ket
+#print axioms ShorECDLP.Quantum.xResetRegisterKraus_clean
+#print axioms ShorECDLP.Quantum.run_measureResetWithCorrection
+#print axioms ShorECDLP.Quantum.measureResetWithCorrection_coherent
+#print axioms ShorECDLP.Quantum.measureResetWithCorrection_wellFormed
+#print axioms ShorECDLP.Quantum.measureResetWithCorrection_measurementCount
+#print axioms ShorECDLP.Quantum.run_registerZCorrection_ket
+#print axioms ShorECDLP.Quantum.recomputeZCorrection_phase
+#print axioms ShorECDLP.Quantum.recomputeMeasurementUncompute_coherent
+#print axioms ShorECDLP.Quantum.recomputeMeasurementUncompute_coherent_of_classical
+#print axioms ShorECDLP.Paper2607_13816.run_idealCPhase_ket
+#print axioms ShorECDLP.Paper2607_13816.andCorrection_phase
+#print axioms ShorECDLP.Paper2607_13816.andErase_coherent
+#print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_coherent
+#print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_tCount
+#print axioms ShorECDLP.Paper2607_13816.andCorrection_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_preservesBornMass
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -144,8 +168,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 120 ]]; then
-  printf 'expected one hundred twenty #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 144 ]]; then
+  printf 'expected one hundred forty-four #print axioms results\n' >&2
   exit 1
 fi
 

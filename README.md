@@ -49,6 +49,6 @@ Toolchain: `leanprover/lean4:v4.28.0`; Mathlib pinned to the same revision as
 
 The Naive secp256k1 submission is complete and machine-verified end to end, including correctness,
 success probability, T-count, and a qubit-capacity bound for the same program. The independent
-arXiv:2607.13816v2 implementation has its source split and coherent adaptive semantics in the open
-PR #56 → PR #57 → PR #58 stack; the remaining construction phases are tracked in
+arXiv:2607.13816v2 implementation has its source split, coherent adaptive semantics, and
+measurement-uncomputation canary implemented; the remaining construction phases are tracked in
 [the implementation plan](docs/PLAN.md).
