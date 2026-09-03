@@ -5,11 +5,11 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-4 paper foundation below
-are on `main@de9fff8fea3d452841b94bc8798a947b98c7bb6d`. PR #56 → PR #57 → PR #58 → PR #59
-→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 landed the source split, adaptive Kraus semantics,
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-5 paper foundation below
+are on `main@e83ebd1238a941527c46180b16ecefbd8d710a58`. PR #56 → PR #57 → PR #58 → PR #59
+→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and the first four concrete circuit units; Phase 5 circuit unit 5 is the current
+bounds/windows, and the first five concrete circuit units; Phase 5 circuit unit 6 is the current
 implementation/review unit. A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -374,7 +374,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first four dependency-closed construction units are merged. PR #62 contains
+**Status:** the first five dependency-closed construction units are merged. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -396,15 +396,23 @@ coherently refining the corresponding full unitary traversal. PR #65 composes tw
 over the same caller-supplied tree in the supplement's exact local
 order: compute A then B, traverse each subtree with both equality controls, reverse the switches,
 and erase B then A. It proves paired decoder restoration, physical well-formedness, coherent
-refinement, and exact leaf-sum resource equations. The current fifth unit implements the concrete
+refinement, and exact leaf-sum resource equations. PR #66 implements the concrete
 supplement construction from a deduplicated label set by scanning aligned power-of-two blocks from
 the highest candidate bit downward, pruning empty halves, and emitting a node only when both halves
 survive. Its certificates identify `.inc` with the sorted labels and `.dec` with their reverse,
 bound path depth and index-wire positions, and keep the separately handled top bit outside the main
 tree's corresponding index bank, including the singleton-main-tree case. Cross-bank exclusion
-remains a full-register layout obligation. The top-special arithmetic-leaf bridge, upper/lower
-zero-map production, complete length blocks, and the indexed four-phase step remain open within
-Phase 5.
+remains a full-register layout obligation. The current sixth unit binds the source-shaped interval
+arithmetic leaves to the already-certified dual-traversal interface: each label receives a
+caller-supplied `qpair(j)` target/addend lane; the first ripple pass follows `.dec`, the second
+follows `.inc`; label zero is masked
+by the endpoint top bit; and the separately handled top label uses the supplement's direct
+equality-control stream while reusing the ripple cell's clean scratch. The same concrete terms have
+direct basis semantics, cleanup/locality and well-formedness contracts, adaptive coherent
+refinement, and constructor-derived local/traversal resource equations. Endpoint affine
+transforms, the source-built tree and physical-lane instantiation in a complete interval block,
+upper/lower zero maps, complete length blocks, the inverse aggregate, and the indexed four-phase
+step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -595,11 +603,17 @@ They are equal only if Phase 11 proves the required reuse.
   on a caller-supplied tree, with the exact A-then-B compute, paired branch switches, B-then-A
   cleanup, paired decoder restoration, coherent refinement, and constructor-derived resource
   equations.
-- **PR #66, Phase-5 circuit unit 5:** current implementation/review unit; concrete
+- **PR #66, Phase-5 circuit unit 5:** merged at `e83ebd12`; concrete
   sorted/deduplicated-label, highest-varying-bit tree construction with numeric forward/reverse
   order, recursive source-shape, path-depth, index-wire, and corresponding-bank source-top-bit
   exclusion certificates. Cross-bank exclusion remains a full-register layout obligation; the
   arithmetic leaves, zero maps, full length blocks, and indexed step remain open.
+- **Phase-5 circuit unit 6:** current implementation/review unit; clean v-chain direct equality,
+  masked-zero main leaves and direct top-special leaves, caller-supplied per-label `qpair(j)` lanes
+  in the `.dec`/`.inc` dual scans, shared equality/ripple scratch restoration, basis semantics,
+  cleanup/locality, well-formedness, coherent refinement, and constructor-derived local/traversal
+  resource equations. Complete interval-block instantiation, endpoint transforms, zero maps, full
+  length blocks, the inverse aggregate, and indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -634,5 +648,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--4 are merged. Phase 5 circuit unit 5 is the current review
+Phases 0--4 and Phase 5 circuit units 1--5 are merged. Phase 5 circuit unit 6 is the current review
 unit on that foundation.

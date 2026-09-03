@@ -248,6 +248,62 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_restoresDirty
 #print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.run_mcxVChain
+#print axioms ShorECDLP.Paper2607_13816.mcxVChain_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.mcxVChain_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.mcxVChain_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.mcxVChain_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_zeroMask_twice
+#print axioms ShorECDLP.Paper2607_13816.run_computeEqConst
+#print axioms ShorECDLP.Paper2607_13816.run_computeEqConst_twice
+#print axioms ShorECDLP.Paper2607_13816.computeEqConst_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.computeEqConst_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_toggleEqConstUnderControl
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControl_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControl_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_endpointLeafToggle
+#print axioms ShorECDLP.Paper2607_13816.run_intervalFirstLeaf
+#print axioms ShorECDLP.Paper2607_13816.run_intervalSecondLeaf
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeaf_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeaf_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeaf_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeaf_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeaf_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeaf_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeaf_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeaf_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_topSpecialFirstLeaf
+#print axioms ShorECDLP.Paper2607_13816.run_topSpecialSecondLeaf
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeaf_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeaf_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeaf_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeaf_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeaf_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeaf_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeaf_tCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeaf_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_HPFree
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_HPFree
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_preservesDecoder
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_preservesDecoder
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_clean
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_clean
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_coherent
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_coherent
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_tCount
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -279,8 +335,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 255 ]]; then
-  printf 'expected two hundred fifty-five #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 311 ]]; then
+  printf 'expected three hundred eleven #print axioms results\n' >&2
   exit 1
 fi
 
