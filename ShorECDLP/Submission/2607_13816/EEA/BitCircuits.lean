@@ -11,7 +11,9 @@ constructors below are literal `{X, CX, CCX}` circuits drawn from the supplement
 * the three-gate Fredkin decomposition used for circular shifts and location-controlled swaps;
 * the supplement's standalone, dormant four-Toffoli dirty-ancilla alternative for a
   three-controlled X; and
-* the three-Toffoli clean-v-chain specialization used by the production `_apply_cell` path.
+* the three-Toffoli coherent-cleanup specialization of `mcx_vchain` used by `_apply_cell` when
+  `MEASUREMENT_UNCOMPUTE = False`.  The supplement's adaptive mode replaces its final cleanup
+  Toffoli with measurement and feed-forward correction.
 
 Their public contracts expose the complete basis-state action, restoration of each work wire under
 its stated premise, physical well-formedness, named-wire locality, and constructor-derived resource
@@ -297,15 +299,15 @@ theorem dirtyC3X_cnotCount
 
 /-! ## Clean-v-chain three-controlled X -/
 
-/-- The three-control specialization of the pinned production supplement's clean `mcx_vchain`:
-compute the conjunction of the first two controls, use it with the third control, then restore the
-clean scratch bit. -/
+/-- The three-control specialization of the pinned supplement's clean `mcx_vchain` in coherent
+`MEASUREMENT_UNCOMPUTE = False` mode: compute the conjunction of the first two controls, use it with
+the third control, then restore the clean scratch bit coherently. -/
 def cleanC3X
     (first second third target scratch : Wire) : Circuit :=
   [.CCX first second scratch, .CCX third scratch target,
     .CCX first second scratch]
 
-/-- Exact basis-state action of the production clean-v-chain construction. -/
+/-- Exact basis-state action of the coherent clean-v-chain construction. -/
 theorem run_cleanC3X
     (first second third target scratch : Wire) (state : BasisState)
     (hnd : [first, second, third, target, scratch].Nodup)

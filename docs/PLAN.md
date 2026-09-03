@@ -381,10 +381,13 @@ pruned measured unary iteration. Each exported block has basis-state semantics, 
 named-wire locality, physical well-formedness, and constructor-derived resource equations. The
 unary traversal coherently refines its full compute/uncompute reference and uses exactly one
 measurement and seven T gates per internal decision node. The next dependency-closed unit now
-implements the pinned production path's clean-v-chain MAJ/UMA cells and prepared-slice two-pass
-ripple core, plus a per-bit borrowed-work XOR normal form for the later length decoders. The ripple
-has direct whole-basis-state semantics, clean-scratch restoration, named locality, physical
-well-formedness, and the paper's exact seven-Toffoli / 49-T formula per lane. The borrowed writer's
+implements the pinned coherent `_apply_cell` specialization (`MEASUREMENT_UNCOMPUTE = False`) and
+its prepared-slice two-pass MAJ/UMA ripple core, plus a per-bit borrowed-work XOR normal form for
+the later length decoders. The ripple has direct whole-basis-state semantics, clean-scratch
+restoration, named locality, and physical well-formedness. Its seven-Toffoli-per-lane equation
+matches the paper; the separate 49-T equation is only the repository Framework's derived cost for
+this coherent reference circuit. A later adaptive aggregate must bind and count the actual coherent
+or measurement-uncompute realization it composes. The borrowed writer's
 four-CNOT-per-set-bit count is local only and is not a production aggregate until the grouped
 write/zero-map/write/zero-map composition is proved. Concrete dual-endpoint unary scans,
 upper/lower zero-map production, complete length blocks, and the indexed four-phase step remain
@@ -567,10 +570,11 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #62, Phase-5 circuit unit 1:** merged at `d1f94940`; exact bit primitives, controlled shifts
   and increment, measurement-assisted path-AND erasure, and coherently refined pruned unary
   iteration.
-- **PR #63, Phase-5 circuit unit 2:** current implementation/review unit; pinned-production clean
-  MAJ/UMA ripple arithmetic and per-bit borrowed-work length-update kernels. The latter are not yet
-  an aggregate count. Concrete endpoint scans, zero maps, full length blocks, and the indexed step
-  remain open.
+- **PR #63, Phase-5 circuit unit 2:** current implementation/review unit; pinned coherent
+  `_apply_cell` MAJ/UMA ripple arithmetic and per-bit borrowed-work length-update kernels. Seven
+  Toffolis per lane matches the paper; 49 T is only the Framework-derived coherent-circuit cost.
+  Neither that T equation nor the borrowed-writer equation is yet an adaptive aggregate. Concrete
+  endpoint scans, zero maps, full length blocks, and the indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.

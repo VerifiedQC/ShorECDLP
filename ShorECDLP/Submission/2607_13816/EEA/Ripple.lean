@@ -7,8 +7,9 @@ This file formalizes the four location-controlled Cuccaro cells used by the pinn
 arXiv:2607.13816v2 supplement.  The unconditional CNOT skeleton is intentional: on a lane
 outside the selected interval it cancels between the two passes, while the carry update is
 controlled by the unary range accumulator.  A single clean scratch wire realizes each
-three-controlled X using the pinned production supplement's `mcx_vchain` specialization and is
-restored exactly.
+three-controlled X using the pinned supplement's coherent `mcx_vchain` specialization
+(`MEASUREMENT_UNCOMPUTE = False`) and is restored exactly.  The adaptive generator mode replaces
+the final coherent cleanup Toffoli with measurement and feed-forward correction.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -91,13 +92,13 @@ theorem controlledUmaBits_controlledUmaInvBits
       cases control <;> cases target <;> cases addend <;> cases carry <;>
         decide
 
-/-- Location-controlled MAJ with the production supplement's one-clean-wire C3X. -/
+/-- Location-controlled MAJ with the supplement's coherent one-clean-wire C3X. -/
 def controlledMaj
     (control target addend carry scratch : Wire) : Circuit :=
   [.CX carry target, .CX carry addend] ++
     cleanC3X control target addend carry scratch
 
-/-- Location-controlled UMA with the production supplement's one-clean-wire C3X. -/
+/-- Location-controlled UMA with the supplement's coherent one-clean-wire C3X. -/
 def controlledUma
     (control target addend carry scratch : Wire) : Circuit :=
   cleanC3X control target addend carry scratch ++
@@ -152,7 +153,7 @@ private theorem writeRippleCell_preservesScratch
   simp [writeRippleCell, upd, Ne.symm htargetScratch,
     Ne.symm haddendScratch, Ne.symm hcarryScratch]
 
-/-- Whole-state MAJ semantics, including restoration of the clean production scratch wire. -/
+/-- Whole-state MAJ semantics, including restoration of the clean scratch wire. -/
 theorem run_controlledMaj_state
     (control target addend carry scratch : Wire) (state : BasisState)
     (hnd : [control, target, addend, carry, scratch].Nodup)
@@ -210,7 +211,7 @@ theorem run_controlledMaj_state
       · simp [writeRippleCell, controlledMajBits, readRippleCell, upd,
           hwt, hwa, hwc]
 
-/-- Whole-state UMA semantics, including restoration of the clean production scratch wire. -/
+/-- Whole-state UMA semantics, including restoration of the clean scratch wire. -/
 theorem run_controlledUma_state
     (control target addend carry scratch : Wire) (state : BasisState)
     (hnd : [control, target, addend, carry, scratch].Nodup)
@@ -251,7 +252,7 @@ theorem run_controlledUma_state
       · simp [run, applyGate, writeRippleCell, controlledUmaBits,
           readRippleCell, upd, hwt, hwa, hwc]
 
-/-- Whole-state inverse-MAJ semantics, including restoration of the clean production scratch wire. -/
+/-- Whole-state inverse-MAJ semantics, including restoration of the clean scratch wire. -/
 theorem run_controlledMajInv_state
     (control target addend carry scratch : Wire) (state : BasisState)
     (hnd : [control, target, addend, carry, scratch].Nodup)
@@ -292,7 +293,7 @@ theorem run_controlledMajInv_state
       · simp [run, applyGate, writeRippleCell, controlledMajInvBits,
           readRippleCell, upd, hwt, hwa, hwc]
 
-/-- Whole-state inverse-UMA semantics, including restoration of the clean production scratch wire. -/
+/-- Whole-state inverse-UMA semantics, including restoration of the clean scratch wire. -/
 theorem run_controlledUmaInv_state
     (control target addend carry scratch : Wire) (state : BasisState)
     (hnd : [control, target, addend, carry, scratch].Nodup)
@@ -1144,7 +1145,7 @@ private theorem run_rippleSecondPass_protected
                 run_rippleSecondCell_protected mode control target addend carry scratch
                   wire state hhead hclean hprotected]
 
-/-- The location control is preserved and the clean production scratch wire is restored. -/
+/-- The location control is preserved and the clean scratch wire is restored. -/
 theorem controlledWindowRipple_protected
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
     (carry scratch wire : Wire) (state : BasisState)
@@ -1213,8 +1214,9 @@ private theorem rippleSecondPass_toffoliCount
                 ih addends htail]
               cases mode <;> simp [rippleSecondCell] <;> omega
 
-/-- Seven Toffolis per physical lane, matching the paper and the pinned production path: three in
-the MAJ pass and four in the UMA pass (or the inverse order for subtraction). -/
+/-- Seven Toffolis per physical lane, matching the paper's 3+4 count and the pinned coherent
+`_apply_cell` stream (`MEASUREMENT_UNCOMPUTE = False`): three in the MAJ pass and four in the UMA
+pass (or the inverse order for subtraction). -/
 theorem controlledWindowRipple_toffoliCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
     (carry scratch : Wire)
@@ -1325,7 +1327,8 @@ private theorem rippleSecondPass_tCount
               rw [rippleSecondPass, tCount_append, ih addends htail]
               cases mode <;> simp [rippleSecondCell] <;> omega
 
-/-- Constructor-derived 49-T cost per physical lane. -/
+/-- The repository Framework's constructor-derived 49-T cost per lane for this coherent reference
+circuit (`tCount` charges seven T gates per `CCX`).  This is not an adaptive paper aggregate. -/
 theorem controlledWindowRipple_tCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
     (carry scratch : Wire)
