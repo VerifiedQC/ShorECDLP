@@ -192,6 +192,25 @@ theorem paperPhaseTrace_final {s : EEAState} (hnonterminal : s.rPrime ≠ 0) :
     (paperPhaseTrace s)[3]? = some { paperStep s with phase := .swap } := by
   simp [paperPhaseTrace, hnonterminal, paperStep]
 
+/-- Public expansion of the four logical frames of an active quotient step. -/
+theorem paperPhaseTrace_nonterminal {s : EEAState} (hnonterminal : s.rPrime ≠ 0) :
+    paperPhaseTrace s =
+      [s,
+        { s with
+          q := paperQuotient s
+          r := paperRemainder s
+          lQ := (paperQuotient s).size
+          phase := .quotient },
+        { s with
+          q := paperQuotient s
+          r := paperRemainder s
+          tPrime := s.tPrime + paperQuotient s * s.t
+          lQ := (paperQuotient s).size
+          phase := .coefficient
+          shift := (paperQuotient s).size },
+        { paperStep s with phase := .swap }] := by
+  simp [paperPhaseTrace, hnonterminal, paperStep]
+
 /-- A half-open physical bit interval. -/
 structure BitSpan where
   start : ℕ
@@ -279,6 +298,19 @@ structure PaperInvariant (p x : ℕ) (s : EEAState) : Prop where
 @[simp] theorem paperStep_nonterminal {s : EEAState} (h : s.rPrime ≠ 0) :
     paperStep s = nextBoundary s := by
   simp [paperStep, h]
+
+/-- An active quotient step strictly decreases the second remainder.  This public projection is
+the well-founded clock used by the weighted bit-serial schedule. -/
+theorem paperStep_rPrime_lt {s : EEAState} (h : s.rPrime ≠ 0) :
+    (paperStep s).rPrime < s.rPrime := by
+  rw [paperStep_nonterminal h]
+  exact Nat.mod_lt _ (Nat.pos_of_ne_zero h)
+
+/-- Public remainder projection of an active quotient step. -/
+theorem paperStep_remainders {s : EEAState} (h : s.rPrime ≠ 0) :
+    (paperStep s).r = s.rPrime ∧ (paperStep s).rPrime = paperRemainder s := by
+  rw [paperStep_nonterminal h]
+  exact ⟨rfl, rfl⟩
 
 @[simp] theorem nextBoundary_canonical (s : EEAState) :
     (nextBoundary s).Canonical := by

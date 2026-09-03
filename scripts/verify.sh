@@ -138,12 +138,28 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_preservesBornMass
 #print axioms ShorECDLP.Paper2607_13816.paperInitial_correction
+#print axioms ShorECDLP.Paper2607_13816.paperStep_remainders
+#print axioms ShorECDLP.Paper2607_13816.paperPhaseTrace_nonterminal
 #print axioms ShorECDLP.Paper2607_13816.packedFields_nonoverlap
 #print axioms ShorECDLP.Paper2607_13816.paperStep_preservesInvariant
 #print axioms ShorECDLP.Paper2607_13816.paperStep_reversible_onInvariant
 #print axioms ShorECDLP.Paper2607_13816.paperRun_terminal
 #print axioms ShorECDLP.Paper2607_13816.paperRun_inverse_mod_prime
 #print axioms ShorECDLP.Paper2607_13816.paperRun_padding_is_id
+#print axioms ShorECDLP.Paper2607_13816.eeaPotential_step
+#print axioms ShorECDLP.Paper2607_13816.PaperBoundaryReachable.spent_lt_size
+#print axioms ShorECDLP.Paper2607_13816.PaperBoundaryReachable.spent_add_remaining
+#print axioms ShorECDLP.Paper2607_13816.paperQuotientWeight_le_405
+#print axioms ShorECDLP.Paper2607_13816.secp256k1_paperMicrosteps_le_1620
+#print axioms ShorECDLP.Paper2607_13816.paperIndexedFrame_exists
+#print axioms ShorECDLP.Paper2607_13816.secp256k1_paperPadding_le_596
+#print axioms ShorECDLP.Paper2607_13816.compress_terminalShiftEpoch_fst
+#print axioms ShorECDLP.Paper2607_13816.compress_terminalShiftEpoch_restore
+#print axioms ShorECDLP.Paper2607_13816.secp256k1_terminalPadding_certificate
+#print axioms ShorECDLP.Paper2607_13816.certifiedRemainderWindow_start_le_reference
+#print axioms ShorECDLP.Paper2607_13816.PaperActiveFrame.windowCertificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1_activeWindowCertificate_of_le
+#print axioms ShorECDLP.Paper2607_13816.paperPhaseTrace_fieldsNonoverlap
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -175,8 +191,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 151 ]]; then
-  printf 'expected one hundred fifty-one #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 167 ]]; then
+  printf 'expected one hundred sixty-seven #print axioms results\n' >&2
   exit 1
 fi
 
