@@ -101,7 +101,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Quantum.xResetKraus_clean
 #print axioms ShorECDLP.Quantum.normSq_xResetKraus_ket
 #print axioms ShorECDLP.Quantum.normSq_xResetKraus_false_add_true
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.run_xMeasureReset_done_clean
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.run_seq
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.WellFormed.seq
 #print axioms ShorECDLP.Quantum.AdaptiveCircuit.run_preservesBornMass
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.run_bornMass_eq_one
+#print axioms ShorECDLP.Quantum.CoherentlyImplementsOn
+#print axioms ShorECDLP.Quantum.CoherentlyImplementsOn.unitary
+#print axioms ShorECDLP.Quantum.CoherentlyImplementsOn.seq
+#print axioms ShorECDLP.Quantum.CoherentlyImplementsOn.tensor_or_disjoint
+#print axioms ShorECDLP.Quantum.coherent_on_supported_state
+#print axioms ShorECDLP.Quantum.eventProbability_smul
+#print axioms ShorECDLP.Quantum.coherent_final_probability_eq
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -133,8 +144,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 109 ]]; then
-  printf 'expected one hundred nine #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 120 ]]; then
+  printf 'expected one hundred twenty #print axioms results\n' >&2
   exit 1
 fi
 

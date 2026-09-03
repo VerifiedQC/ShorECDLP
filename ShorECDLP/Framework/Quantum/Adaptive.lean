@@ -228,6 +228,22 @@ structure InstrumentBranch where
 histories must contribute distinct Born mass even when their maps coincide. -/
 abbrev Instrument := List InstrumentBranch
 
+namespace InstrumentBranch
+
+/-- Sequential composition of two instrument branches.  Classical outcomes
+are recorded in execution order, and the second Kraus map acts last. -/
+def seq (first second : InstrumentBranch) : InstrumentBranch where
+  history := first.history ++ second.history
+  kraus := second.kraus.comp first.kraus
+
+end InstrumentBranch
+
+/-- Sequential composition of finite instruments, retaining every pair of
+classical histories as a separate branch. -/
+def Instrument.seq (first second : Instrument) : Instrument :=
+  first.flatMap fun before =>
+    second.map fun after => before.seq after
+
 /-- Total Born mass carried by every branch of an instrument. -/
 def Instrument.bornMass (instrument : Instrument) (ψ : State) : ℝ :=
   (instrument.map fun branch => normSq (branch.kraus ψ)).sum
@@ -243,6 +259,13 @@ inductive AdaptiveCircuit where
       (onFalse onTrue : AdaptiveCircuit)
 
 namespace AdaptiveCircuit
+
+/-- Run `first`, then run `second` after every terminal branch of `first`. -/
+def seq : AdaptiveCircuit → AdaptiveCircuit → AdaptiveCircuit
+  | .done, second => second
+  | .unitary circuit next, second => .unitary circuit (seq next second)
+  | .xMeasureReset target onFalse onTrue, second =>
+      .xMeasureReset target (seq onFalse second) (seq onTrue second)
 
 private def prefixBranch
     (outcome : Option Bool)
@@ -263,6 +286,83 @@ def run : AdaptiveCircuit → Instrument
         (run onTrue).map
           (prefixBranch (some true) (xResetKraus target true))
 
+@[simp]
+theorem run_unitary_done (circuit : Circuit) :
+    run (.unitary circuit .done) =
+      [{ history := [], kraus := Quantum.run circuit }] := by
+  simp [run, prefixBranch]
+
+@[simp]
+theorem run_xMeasureReset_done (target : Wire) :
+    run (.xMeasureReset target .done .done) =
+      [ { history := [false], kraus := xResetKraus target false },
+        { history := [true], kraus := xResetKraus target true } ] := by
+  simp [run, prefixBranch]
+
+/-- Every branch immediately produced by a measure/reset node has released
+the measured wire in the computational basis. -/
+theorem run_xMeasureReset_done_clean
+    (target : Wire)
+    (branch : InstrumentBranch)
+    (hbranch : branch ∈ run (.xMeasureReset target .done .done))
+    (psi : State) :
+  ∀ s, branch.kraus psi s ≠ 0 → s target = false := by
+  rw [run_xMeasureReset_done] at hbranch
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hbranch
+  rcases hbranch with hbranch | hbranch
+  · subst branch
+    exact xResetKraus_clean target false psi
+  · subst branch
+    exact xResetKraus_clean target true psi
+
+private theorem prefixBranch_seq
+    (outcome : Option Bool)
+    (before : State →ₗ[ℂ] State)
+    (first second : InstrumentBranch) :
+    (prefixBranch outcome before first).seq second =
+      prefixBranch outcome before (first.seq second) := by
+  cases outcome <;> cases first <;> cases second
+  · simp [prefixBranch, InstrumentBranch.seq, LinearMap.comp_assoc]
+  · simp [prefixBranch, InstrumentBranch.seq, LinearMap.comp_assoc]
+
+private theorem map_prefixBranch_flatMap_seq
+    (instrument rest : Instrument)
+    (outcome : Option Bool)
+    (before : State →ₗ[ℂ] State) :
+    ((instrument.map (prefixBranch outcome before)).flatMap fun first =>
+        rest.map fun second => first.seq second) =
+      (instrument.flatMap fun first =>
+        rest.map fun second => first.seq second).map
+          (prefixBranch outcome before) := by
+  induction instrument with
+  | nil => rfl
+  | cons first tail ih =>
+      simp only [List.map_cons, List.flatMap_cons, List.map_append]
+      rw [ih]
+      congr 1
+      rw [List.map_map]
+      apply List.map_congr_left
+      intro second hsecond
+      exact prefixBranch_seq outcome before first second
+
+/-- The denotation of adaptive sequencing is ordinary sequential composition
+of the two finite instruments. -/
+theorem run_seq (first second : AdaptiveCircuit) :
+    run (seq first second) = Instrument.seq (run first) (run second) := by
+  induction first with
+  | done =>
+      simp [seq, run, Instrument.seq, InstrumentBranch.seq]
+  | unitary circuit next ih =>
+      rw [seq, run, ih]
+      exact (map_prefixBranch_flatMap_seq
+        (run next) (run second) none (Quantum.run circuit)).symm
+  | xMeasureReset target onFalse onTrue ihFalse ihTrue =>
+      simp only [seq, run]
+      rw [ihFalse, ihTrue]
+      unfold Instrument.seq
+      rw [List.flatMap_append]
+      rw [map_prefixBranch_flatMap_seq, map_prefixBranch_flatMap_seq]
+
 /-- A unitary block is well formed in the existing sense; both adaptive
 continuations must themselves be well formed. -/
 def WellFormed : AdaptiveCircuit → Prop
@@ -271,6 +371,19 @@ def WellFormed : AdaptiveCircuit → Prop
       CircuitWellFormed circuit ∧ WellFormed next
   | .xMeasureReset _ onFalse onTrue =>
       WellFormed onFalse ∧ WellFormed onTrue
+
+/-- Sequential composition preserves adaptive well-formedness. -/
+theorem WellFormed.seq
+    {first second : AdaptiveCircuit}
+    (hfirst : first.WellFormed)
+    (hsecond : second.WellFormed) :
+    (first.seq second).WellFormed := by
+  induction first with
+  | done => exact hsecond
+  | unitary circuit next ih =>
+      exact ⟨hfirst.1, ih hfirst.2⟩
+  | xMeasureReset target onFalse onTrue ihFalse ihTrue =>
+      exact ⟨ihFalse hfirst.1, ihTrue hfirst.2⟩
 
 /-- Worst-case T count across classical outcomes.  Measurements, reset, and
 classical feed-forward are accounted for separately and do not silently enter
@@ -345,6 +458,16 @@ theorem run_preservesBornMass
       rw [bornMass_map_prefixBranch, bornMass_map_prefixBranch]
       rw [ihFalse hprogram.1, ihTrue hprogram.2]
       exact normSq_xResetKraus_false_add_true target ψ
+
+/-- A well-formed adaptive program maps a normalized input to an instrument
+whose branch Born masses sum to one. -/
+theorem run_bornMass_eq_one
+    (program : AdaptiveCircuit)
+    (hprogram : program.WellFormed)
+    (psi : State)
+    (hpsi : normSq psi = 1) :
+    Instrument.bornMass program.run psi = 1 := by
+  rw [run_preservesBornMass program hprogram psi, hpsi]
 
 end AdaptiveCircuit
 
