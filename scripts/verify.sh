@@ -167,6 +167,52 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_correct
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_tCount
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_correct
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_correct_of_capacity
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_ignoresExcess
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_tCount
+#print axioms ShorECDLP.Paper2607_13816.cuccaroSubBits_addBits
+#print axioms ShorECDLP.Paper2607_13816.cuccaroAddBits_subBits
+#print axioms ShorECDLP.Paper2607_13816.cuccaroAdd_correct
+#print axioms ShorECDLP.Paper2607_13816.cuccaroSub_correct
+#print axioms ShorECDLP.Paper2607_13816.run_cuccaroSub_after_add
+#print axioms ShorECDLP.Paper2607_13816.run_cuccaroAdd_after_sub
+#print axioms ShorECDLP.Paper2607_13816.cuccaroAdd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.cuccaroSub_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.cuccaroAdd_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.cuccaroAdd_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.cuccaroAdd_tCount
+#print axioms ShorECDLP.Paper2607_13816.xorConstant_correct
+#print axioms ShorECDLP.Paper2607_13816.run_xorConstant_twice
+#print axioms ShorECDLP.Paper2607_13816.addConstant_correct
+#print axioms ShorECDLP.Paper2607_13816.subConstant_correct
+#print axioms ShorECDLP.Paper2607_13816.run_subConstant_after_add
+#print axioms ShorECDLP.Paper2607_13816.addConstant_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.subConstant_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.addConstant_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.addConstant_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.addConstant_tCount
+#print axioms ShorECDLP.Paper2607_13816.constMinus_correct
+#print axioms ShorECDLP.Paper2607_13816.constMinus_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.constMinus_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.constMinus_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.constMinus_tCount
+#print axioms ShorECDLP.Paper2607_13816.prepareIntervalEndpoints_correct
+#print axioms ShorECDLP.Paper2607_13816.restoreIntervalEndpoints_correct
+#print axioms ShorECDLP.Paper2607_13816.prepareIntervalEndpoints_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.restoreIntervalEndpoints_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.prepareIntervalEndpoints_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.restoreIntervalEndpoints_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.prepareIntervalEndpoints_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.restoreIntervalEndpoints_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.prepareIntervalEndpoints_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.restoreIntervalEndpoints_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.prepareIntervalEndpoints_tCount
+#print axioms ShorECDLP.Paper2607_13816.restoreIntervalEndpoints_tCount
 #print axioms ShorECDLP.Paper2607_13816.measuredAndCorrection_phase
 #print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_coherent
 #print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_wellFormed
@@ -335,8 +381,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 311 ]]; then
-  printf 'expected three hundred eleven #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 357 ]]; then
+  printf 'expected three hundred fifty-seven #print axioms results\n' >&2
   exit 1
 fi
 
