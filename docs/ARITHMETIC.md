@@ -297,7 +297,7 @@ CircuitWellFormed  -> inner-product and norm preservation
 
 ## 3. The contract that makes arithmetic compositional
 
-The key interface is in `ShorECDLP/Submission/Arithmetic/Contracts.lean`.
+The key interface is in `ShorECDLP/Submission/Naive/Arithmetic/Contracts.lean`.
 
 ### 3.1 Public and private registers
 
@@ -419,7 +419,7 @@ These omissions are intentional. A strong, honest contract is better than a broa
 
 ## 4. The one-bit reversible full adder
 
-Source: `ShorECDLP/Submission/Arithmetic/Adder.lean`.
+Source: `ShorECDLP/Submission/Naive/Arithmetic/Adder.lean`.
 
 ### 4.1 The classical full-adder equations
 
@@ -530,7 +530,7 @@ $$
 
 ## 5. The ripple-carry adder
 
-Source: `ShorECDLP/Submission/Arithmetic/RippleAdder.lean`.
+Source: `ShorECDLP/Submission/Naive/Arithmetic/RippleAdder.lean`.
 
 ### 5.1 Lining up binary registers
 
@@ -659,7 +659,7 @@ $$
 
 ## 6. Reusable reversible primitives and Bennett cleanup
 
-Source: `ShorECDLP/Submission/Arithmetic/Primitives.lean`.
+Source: `ShorECDLP/Submission/Naive/Arithmetic/Primitives.lean`.
 
 The larger circuits repeatedly need four small ideas: loading a known constant, selecting between two candidates, copying a register, and reversing a computation.
 
@@ -773,7 +773,7 @@ The benefit is a simple, reusable contract. The cost is roughly doubling the for
 
 ## 7. Modular addition
 
-Source: `ShorECDLP/Submission/Arithmetic/ModAdd.lean`.
+Source: `ShorECDLP/Submission/Naive/Arithmetic/ModAdd.lean`.
 
 ### 7.1 The mathematical problem
 
@@ -955,7 +955,7 @@ The theorem also supplies correctness, input preservation, work cleanup, full su
 
 ## 8. Modular multiplication
 
-Source: `ShorECDLP/Submission/Arithmetic/ModMul.lean`.
+Source: `ShorECDLP/Submission/Naive/Arithmetic/ModMul.lean`.
 
 ### 8.1 Schoolbook multiplication in modular form
 
@@ -1119,7 +1119,7 @@ The final doubled power is not needed. This deliberately simple multiplier never
 
 ## 9. Modular exponentiation
 
-Source: `ShorECDLP/Submission/Arithmetic/ModExp.lean`.
+Source: `ShorECDLP/Submission/Naive/Arithmetic/ModExp.lean`.
 
 ### 9.1 LSB-first square-and-multiply
 
@@ -1271,8 +1271,8 @@ Notice the bit-zero step: the circuit still computes `3*9 mod 13 = 1`, but the s
 
 Sources:
 
-- `ShorECDLP/Submission/Field.lean`
-- `ShorECDLP/Submission/Arithmetic/FermatInv.lean`
+- `ShorECDLP/Math/Field.lean`
+- `ShorECDLP/Submission/Naive/Arithmetic/FermatInv.lean`
 
 ### 10.1 The secp256k1 field
 
@@ -1400,10 +1400,10 @@ Each would be a different implementation requiring its own correctness and cost 
 
 Sources:
 
-- `ShorECDLP/Submission/EllipticCurve/Secp256k1.lean`
-- `ShorECDLP/Submission/EllipticCurve/Precompute.lean`
-- `ShorECDLP/Submission/OrderFinding/OracleSpec.lean`
-- `ShorECDLP/Submission/OrderFinding/Main.lean`
+- `ShorECDLP/Submission/Naive/EllipticCurve/Secp256k1.lean`
+- `ShorECDLP/Math/EllipticCurve/Precompute.lean`
+- `ShorECDLP/Submission/Naive/OrderFinding/OracleSpec.lean`
+- `ShorECDLP/Submission/Naive/OrderFinding/Main.lean`
 
 The repository has landed the mathematical EC seams and a conditional abstract-oracle order-finding theorem, but not the point-arithmetic circuits themselves.
 
@@ -1875,21 +1875,21 @@ For a first pass, read module headers and theorem signatures before proof bodies
 2. `ShorECDLP/Framework/CostModel.lean`
 3. `ShorECDLP/Framework/BasisState.lean`
 4. `ShorECDLP/Framework/Classical/Semantics.lean`
-5. `ShorECDLP/Submission/Arithmetic/Contracts.lean`
-6. `ShorECDLP/Submission/Arithmetic/Adder.lean`
-7. `ShorECDLP/Submission/Arithmetic/RippleAdder.lean`
-8. `ShorECDLP/Submission/Arithmetic/Primitives.lean`
-9. `ShorECDLP/Submission/Arithmetic/ModAdd.lean`
-10. `ShorECDLP/Submission/Arithmetic/ModMul.lean`
-11. `ShorECDLP/Submission/Arithmetic/ModExp.lean`
-12. `ShorECDLP/Submission/Field.lean`
-13. `ShorECDLP/Submission/Arithmetic/FermatInv.lean`
-14. `ShorECDLP/Submission/EllipticCurve/Secp256k1.lean`
-15. `ShorECDLP/Submission/EllipticCurve/Precompute.lean`
-16. `ShorECDLP/Submission/OrderFinding/OracleSpec.lean`
-17. `ShorECDLP/Submission/OrderFinding/Main.lean`
+5. `ShorECDLP/Submission/Naive/Arithmetic/Contracts.lean`
+6. `ShorECDLP/Submission/Naive/Arithmetic/Adder.lean`
+7. `ShorECDLP/Submission/Naive/Arithmetic/RippleAdder.lean`
+8. `ShorECDLP/Submission/Naive/Arithmetic/Primitives.lean`
+9. `ShorECDLP/Submission/Naive/Arithmetic/ModAdd.lean`
+10. `ShorECDLP/Submission/Naive/Arithmetic/ModMul.lean`
+11. `ShorECDLP/Submission/Naive/Arithmetic/ModExp.lean`
+12. `ShorECDLP/Math/Field.lean`
+13. `ShorECDLP/Submission/Naive/Arithmetic/FermatInv.lean`
+14. `ShorECDLP/Submission/Naive/EllipticCurve/Secp256k1.lean`
+15. `ShorECDLP/Math/EllipticCurve/Precompute.lean`
+16. `ShorECDLP/Submission/Naive/OrderFinding/OracleSpec.lean`
+17. `ShorECDLP/Submission/Naive/OrderFinding/Main.lean`
 
-The directory guide `ShorECDLP/Submission/Arithmetic/README.md` contains the import and contract-composition DAGs.
+The directory guide `ShorECDLP/Submission/Naive/Arithmetic/README.md` contains the import and contract-composition DAGs.
 
 ### 15.2 A theorem-reading checklist
 

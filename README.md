@@ -20,12 +20,13 @@ rely on executable checks rather than machine-checked proof.
 
 ## Scope of this version
 
-This is the **simplest, un-optimized** construction — a starting point, not a
-compromise. It uses generic modular reduction (not specialized to secp256k1's
+The current `Submission/Naive` tree is the **simplest, un-optimized** construction — a starting
+point, not a compromise. It uses generic modular reduction (not specialized to secp256k1's
 pseudo-Mersenne prime), Fermat inversion, and un-windowed double-and-add. Each
-optimization (pseudo-Mersenne reduction, windowing, a cheaper inversion, …) is a
-*future submission* in the same interface. See the cost-model statement in
-`ShorECDLP/CostModel.lean` for how to read the number.
+alternative implementation lives in an isolated submission tree over the same shared mathematical
+problem and generic framework. `Submission/2607_13816` is reserved for the space-efficient
+construction from arXiv:2607.13816v2. See `ShorECDLP/Framework/CostModel.lean` for how to read
+resource bounds.
 
 ## Build
 
@@ -41,7 +42,8 @@ Toolchain: `leanprover/lean4:v4.28.0`; Mathlib pinned to the same revision as
 
 - [Implementation plan and proof status](docs/PLAN.md)
 - [Verified reversible arithmetic: a bottom-up textbook](docs/ARITHMETIC.md)
-- [Arithmetic module and API guide](ShorECDLP/Submission/Arithmetic/README.md)
+- [Arithmetic module and API guide](ShorECDLP/Submission/Naive/Arithmetic/README.md)
+- [Pinned paper generator, schedules, vectors, and quarantined claims](ShorECDLP/Submission/2607_13816/REFERENCE.md)
 
 ## Status
 
