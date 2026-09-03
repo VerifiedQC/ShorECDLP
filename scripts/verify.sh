@@ -175,6 +175,17 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_tCount
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_preservesDecoder
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_clean
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.unaryAction_coherent
+#print axioms ShorECDLP.Paper2607_13816.unaryAction_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.unaryAction_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.unaryAction_tCount
 #print axioms ShorECDLP.Paper2607_13816.run_controlledMaj
 #print axioms ShorECDLP.Paper2607_13816.run_controlledUma
 #print axioms ShorECDLP.Paper2607_13816.run_controlledMajInv
@@ -227,8 +238,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 203 ]]; then
-  printf 'expected two hundred three #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 214 ]]; then
+  printf 'expected two hundred fourteen #print axioms results\n' >&2
   exit 1
 fi
 
