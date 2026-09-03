@@ -8,6 +8,7 @@ import ShorECDLP.Framework.BasisState
 import ShorECDLP.Framework.Classical.Semantics
 import ShorECDLP.Framework.Quantum.Adaptive
 import ShorECDLP.Framework.Quantum.CoherentRefinement
+import ShorECDLP.Framework.Quantum.MeasurementUncompute
 import ShorECDLP.Framework.Quantum.Measurement
 import ShorECDLP.Framework.Repetition
 import ShorECDLP.Math.All
