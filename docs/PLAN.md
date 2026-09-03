@@ -5,11 +5,12 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0/1 paper foundation below are on
-`main@66062cbf6072a815e982ca3b133e0ebfce73af34`. PR #56 → PR #57 → PR #58 landed the source
-split, adaptive Kraus semantics, and coherent-refinement bridge; Phase 2 is the current PR #59. A
-`✓` means a declaration is root-reachable and covered by the repository verifier on the stated
-baseline or exact PR head. “Target” is not a proved claim.
+**Status snapshot.** The verified Naive result and merged Phase-0--2 paper foundation below are on
+`main@b1e6cd859753e8152fe784aeb284af79d4075358`. PR #56 → PR #57 → PR #58 → PR #59 landed the
+source split, adaptive Kraus semantics, coherent-refinement bridge, and measurement-based
+uncomputation; Phase 3 is the current review unit. A `✓` means a declaration is root-reachable and
+covered by the repository verifier on the stated baseline or exact review head. “Target” is not a
+proved claim.
 
 ## 1. Current verified result
 
@@ -294,11 +295,30 @@ Module: `Submission/2607_13816/EEA/Model.lean`.
 
 Define the paper's remainder/coefficient recurrence, quotient bits, four phases, sign, iteration
 parity, lengths, and circular shift. Relate it to packed Work1 `(t,q,r)` and shifted Work2
-`(t',r')`. Prove field non-overlap, the `x > p/2` correction, invariant preservation,
-reversibility, terminal inverse, and identity padding.
+`(t',r')`. At canonical quotient boundaries, prove ordered in-range spans, actual value capacity,
+and field non-overlap. Prove the `x > p/2` correction, invariant preservation, an active-step left
+inverse, terminal inverse, and quotient-level terminal stuttering.
 
 **Gate:** for every `1 <= x < p`, the extracted value is `x⁻¹ mod p`; small tests agree with the
 pinned generator but are not used as proofs.
+
+**Status:** the pure model is implemented. `paperStep` is explicitly one complete Euclidean
+quotient iteration; `paperPhaseTrace` exposes the four logical frames, while Phase 4 retains
+ownership of the 1,620-step bit-serial schedule and active windows. The state records quotient
+bits, sign/parity, dynamic lengths, circular shift, and the logical values sharing each `(n+3)`-bit
+work register. The proved invariant gives packed-field non-overlap, strict remainder/coefficient
+progress, `r*t + r'*t' = p`, coprimality, and the two parity-dependent `ZMod p` identities. Its
+packing theorem is boundary-only and additionally proves that every stored value fits its ordered,
+in-range span. Initialization proves the `x > p/2` correction; each active nonterminal step
+preserves the invariant and has a constructive left inverse; the terminating run reaches
+`(r,r',t) = (1,0,p)`; its extracted coefficient multiplies every `1 <= x < p` to one modulo prime
+`p`; and every post-terminal quotient-level slot stutters. This total stuttering abstraction is
+not injective across the final active/terminal boundary. Phase 4/5 explicitly own intermediate
+frame representability, indexed reachability, and the paper's borrowed padding epoch before any
+reversible fixed-horizon circuit refinement is claimed. Kernel-reduced checks match all three
+terminal vectors pinned in `REFERENCE.md`.
+The exact local gate is green: 3,063 warning-fatal jobs, 72/72 source closure, 151 targeted
+disclosures, and all 5,941 reachable declarations within the standard axiom allowlist.
 
 ### Phase 4 — exact step bound and active windows
 
@@ -309,7 +329,9 @@ Modules:
 
 Certify the 1,620-step secp256k1 schedule without trusting floating point. Use an exact rational
 certificate for the algebraic growth bound, then prove every reachable location lies within the
-paper's static window at each step and every post-terminal step is identity.
+paper's static window at each step. Define the indexed active/padding discriminator, prove the
+noncanonical phase-frame values fit their physical spans when reached, and account for the paper's
+borrowed epoch bit so terminal padding is a reversible identity at the exposed EEA boundary.
 
 **Gate:** all nonzero 256-bit field inputs terminate in 1,620 steps and every pruned gate location
 is proved unreachable.
@@ -321,10 +343,12 @@ Area: `Submission/2607_13816/EEA/`.
 Implement circular shifts, unary iteration, location-controlled sign/quotient swap,
 location-controlled ripple add/subtract, borrowed-work length updates, and the optimized four-phase
 step. Each block gets direct semantics, unaffected-wire and work-restoration theorems,
-well-formedness, locality, and a closed resource formula.
+well-formedness, locality, and a closed resource formula. Its refinement domain is the indexed
+reachable active/padding state from Phase 4, including the borrowed epoch discriminator; it must not
+claim that the unindexed stuttering `paperStep` is injective on every invariant boundary.
 
-**Gate:** the adaptive step coherently implements the Phase-3 logical step for every invariant
-state; counts are symbolic over the active window.
+**Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
+active/padding state; counts are symbolic over the active window.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -491,8 +515,11 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #57, Phase 1a:** merged at `75613852`; adaptive Kraus-instrument semantics.
 - **PR #58, Phase 1b:** merged at `66062cbf`; coherent refinement and final-event equivalence.
 - **PR #54, former adaptive foundation:** closed as superseded by the reconciled PR #57.
-- **PR #59, Phase-2 measurement uncomputation:** rebuilt from merged Phase-1 semantics under
-  `Submission/2607_13816/Canary/`; the stale pre-split prototype remains unpublished.
+- **PR #59, Phase-2 measurement uncomputation:** merged at `b1e6cd85`; rebuilt from merged Phase-1
+  semantics under `Submission/2607_13816/Canary/` with no stale pre-split prototype carried forward.
+- **Phase 3, pure EEA model:** current review unit; circuit-free quotient recurrence, packed
+  canonical-boundary geometry and value capacity, active-step left inverse, termination, modular
+  inverse, and quotient-level terminal stuttering. Indexed reversible padding remains Phase 4/5.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -527,5 +554,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0 and 1 are merged. Phase 2 is implemented from the reviewed Phase-1 semantics; no stale
-pre-split canary was carried forward.
+Phases 0--2 are merged. Phase 3 is implemented from that reviewed foundation and is the current
+review unit.

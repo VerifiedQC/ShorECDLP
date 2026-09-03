@@ -137,6 +137,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_toffoliCount
 #print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.adaptiveCPhase_preservesBornMass
+#print axioms ShorECDLP.Paper2607_13816.paperInitial_correction
+#print axioms ShorECDLP.Paper2607_13816.packedFields_nonoverlap
+#print axioms ShorECDLP.Paper2607_13816.paperStep_preservesInvariant
+#print axioms ShorECDLP.Paper2607_13816.paperStep_reversible_onInvariant
+#print axioms ShorECDLP.Paper2607_13816.paperRun_terminal
+#print axioms ShorECDLP.Paper2607_13816.paperRun_inverse_mod_prime
+#print axioms ShorECDLP.Paper2607_13816.paperRun_padding_is_id
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -168,8 +175,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 144 ]]; then
-  printf 'expected one hundred forty-four #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 151 ]]; then
+  printf 'expected one hundred fifty-one #print axioms results\n' >&2
   exit 1
 fi
 
