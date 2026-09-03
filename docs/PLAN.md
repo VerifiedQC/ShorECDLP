@@ -552,10 +552,13 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #60, Phase-3 pure EEA model:** merged at `3fd38b4f`; circuit-free quotient recurrence, packed
   canonical-boundary geometry and value capacity, active-step left inverse, termination, modular
   inverse, and quotient-level terminal stuttering.
-- **Phase 4, exact EEA bound/windows:** current implementation/review unit; exact 1,620-step bound,
+- **PR #61, Phase-4 exact EEA bound/windows:** merged at `553f41be`; exact 1,620-step bound,
   indexed active/padding reachability, borrowed terminal epoch, noncanonical frame packing, and
   certified active windows. The pinned generator remainder interval is retained only as reference;
   the concrete boundary includes the proved one-lane ordering correction.
+- **PR #62, Phase-5 circuit unit 1:** current implementation/review unit; exact bit primitives,
+  controlled shifts and increment, measurement-assisted path-AND erasure, and coherently refined
+  pruned unary iteration. Windowed arithmetic, length updates, and the indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -590,5 +593,4 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--2 are merged. Phase 3 is implemented from that reviewed foundation and is the current
-review unit.
+Phases 0--4 are merged. Phase 5 circuit unit 1 is the current review unit on that foundation.
