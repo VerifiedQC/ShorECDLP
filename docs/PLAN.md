@@ -9,8 +9,8 @@ The next construction will implement the space-efficient algorithm from
 are on `main@e83ebd1238a941527c46180b16ecefbd8d710a58`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and the first five concrete circuit units; Phase 5 circuit unit 6 is the current
-implementation/review unit. A `✓` means a
+bounds/windows, and the first five concrete circuit units; PR #67 / Phase 5 circuit unit 6 is the
+current implementation/review unit. A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
 
@@ -402,9 +402,9 @@ the highest candidate bit downward, pruning empty halves, and emitting a node on
 survive. Its certificates identify `.inc` with the sorted labels and `.dec` with their reverse,
 bound path depth and index-wire positions, and keep the separately handled top bit outside the main
 tree's corresponding index bank, including the singleton-main-tree case. Cross-bank exclusion
-remains a full-register layout obligation. The current sixth unit binds the source-shaped interval
-arithmetic leaves to the already-certified dual-traversal interface: each label receives a
-caller-supplied `qpair(j)` target/addend lane; the first ripple pass follows `.dec`, the second
+remains a full-register layout obligation. PR #67, the current sixth unit, binds the source-shaped
+interval arithmetic leaves to the already-certified dual-traversal interface: each label receives
+a caller-supplied `qpair(j)` target/addend lane; the first ripple pass follows `.dec`, the second
 follows `.inc`; label zero is masked
 by the endpoint top bit; and the separately handled top label uses the supplement's direct
 equality-control stream while reusing the ripple cell's clean scratch. The same concrete terms have
@@ -606,9 +606,9 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #66, Phase-5 circuit unit 5:** merged at `e83ebd12`; concrete
   sorted/deduplicated-label, highest-varying-bit tree construction with numeric forward/reverse
   order, recursive source-shape, path-depth, index-wire, and corresponding-bank source-top-bit
-  exclusion certificates. Cross-bank exclusion remains a full-register layout obligation; the
-  arithmetic leaves, zero maps, full length blocks, and indexed step remain open.
-- **Phase-5 circuit unit 6:** current implementation/review unit; clean v-chain direct equality,
+  exclusion certificates. Cross-bank exclusion remained a full-register layout obligation at that
+  boundary, alongside the arithmetic leaves, zero maps, full length blocks, and indexed step.
+- **PR #67, Phase-5 circuit unit 6:** current implementation/review unit; clean v-chain direct equality,
   masked-zero main leaves and direct top-special leaves, caller-supplied per-label `qpair(j)` lanes
   in the `.dec`/`.inc` dual scans, shared equality/ripple scratch restoration, basis semantics,
   cleanup/locality, well-formedness, coherent refinement, and constructor-derived local/traversal
@@ -648,5 +648,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--5 are merged. Phase 5 circuit unit 6 is the current review
-unit on that foundation.
+Phases 0--4 and Phase 5 circuit units 1--5 are merged. PR #67 / Phase 5 circuit unit 6 is the
+current review unit on that foundation.
