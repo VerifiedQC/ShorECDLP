@@ -799,4 +799,320 @@ theorem controlledIncrement_tCount
               simp [tCost]
               omega
 
+/-! ## Literal uncontrolled increment used by endpoint affine transforms -/
+
+/-- Addition of one modulo the register width, with the exact gate order of
+`inc_mod2n_uncontrolled` in the pinned supplement.  A width-`n` word consumes the first
+`n - 1` clean wires; outside that capacity the total Lean definition falls back to `[]`,
+whereas the Python generator raises. -/
+def uncontrolledIncrement : List Wire → List Wire → Circuit
+  | [], _ => []
+  | [bit], _ => [.X bit]
+  | low :: next :: rest, firstCarry :: carries =>
+      [.CX low firstCarry] ++
+        incrementTail (next :: rest) firstCarry carries ++
+        [.CX low firstCarry, .X low]
+  | _ :: _ :: _, [] => []
+
+/-- The exact uncontrolled increment changes only its target word, adds one modulo the
+word width, and restores every clean carry wire. -/
+theorem uncontrolledIncrement_correct
+    (register carries : List Wire) (state : BasisState)
+    (hlength : register.length = carries.length + 1)
+    (hnd : (register ++ carries).Nodup)
+    (hclean : Clean carries state) :
+    let after := run (uncontrolledIncrement register carries) state
+    wireValues register after =
+        incrementBits true (wireValues register state) ∧
+      ∀ wire, wire ∉ register → after wire = state wire := by
+  cases register with
+  | nil => simp at hlength
+  | cons low tail =>
+      cases tail with
+      | nil =>
+          have hcarries : carries = [] :=
+            list_eq_nil_of_one_eq_length_add_one carries (by simpa using hlength)
+          subst carries
+          constructor
+          · simp [uncontrolledIncrement, wireValues, incrementBits, run, applyGate]
+          · intro wire hwire
+            simp only [List.mem_singleton] at hwire
+            simp [uncontrolledIncrement, run, applyGate, upd, hwire]
+      | cons next rest =>
+          cases carries with
+          | nil => simp at hlength
+          | cons firstCarry carries =>
+              have htailLength : (next :: rest).length = carries.length + 1 := by
+                simpa using hlength
+              have hword :
+                  (low :: next :: rest ++ firstCarry :: carries).Nodup := by
+                simpa [List.cons_append] using hnd
+              have hlow : low ∉ next :: rest ++ firstCarry :: carries :=
+                (List.nodup_cons.mp hword).1
+              have htail := (List.nodup_cons.mp hword).2
+              have hinner :
+                  (firstCarry :: next :: rest ++ carries).Nodup := by
+                have hperm :
+                    ((next :: rest) ++ firstCarry :: carries).Perm
+                      (firstCarry :: (next :: rest) ++ carries) := by
+                  simpa [List.append_assoc] using
+                    (List.perm_middle (l₁ := next :: rest)
+                      (l₂ := carries) (a := firstCarry))
+                exact htail.perm hperm
+              have hlowCarry : low ≠ firstCarry := by
+                intro equality
+                exact hlow (by simp [equality])
+              have hcarryFalse : state firstCarry = false :=
+                hclean firstCarry (by simp)
+              let first := run [.CX low firstCarry] state
+              have hfirstCarry : first firstCarry = state low := by
+                simp [first, run, applyGate, hcarryFalse]
+              have hfirstLow : first low = state low := by
+                simp [first, run, applyGate, upd, hlowCarry]
+              have hfirstTail :
+                  wireValues (next :: rest) first =
+                    wireValues (next :: rest) state := by
+                apply wireValues_congr
+                intro wire hwire
+                have hw : wire ≠ firstCarry := by
+                  intro equality
+                  subst wire
+                  exact (List.nodup_cons.mp hinner).1
+                    (List.mem_append_left carries hwire)
+                simp [first, run, applyGate, upd, hw]
+              have hcleanFirst : Clean carries first := by
+                intro wire hwire
+                have hw : wire ≠ firstCarry := by
+                  intro equality
+                  subst wire
+                  exact (List.nodup_cons.mp hinner).1
+                    (List.mem_append_right (next :: rest) hwire)
+                simpa [first, run, applyGate, upd, hw] using
+                  hclean wire (by simp [hwire])
+              have hrecursive := incrementTail_correct
+                (next :: rest) firstCarry carries first
+                htailLength hinner hcleanFirst
+              let middle :=
+                run (incrementTail (next :: rest) firstCarry carries) first
+              have hmiddleValues :
+                  wireValues (next :: rest) middle =
+                    incrementBits (state low)
+                      (wireValues (next :: rest) state) := by
+                have hvalues :
+                    wireValues (next :: rest) middle =
+                      incrementBits (first firstCarry)
+                        (wireValues (next :: rest) first) := by
+                  simpa only [middle] using hrecursive.1
+                rw [hvalues, hfirstCarry, hfirstTail]
+              have hmiddleOutside :
+                  ∀ wire, wire ∉ next :: rest → middle wire = first wire :=
+                hrecursive.2
+              have hmiddleLow : middle low = state low := by
+                rw [hmiddleOutside low]
+                · exact hfirstLow
+                · intro hmem
+                  exact hlow (List.mem_append_left (firstCarry :: carries) hmem)
+              have hmiddleCarry : middle firstCarry = state low := by
+                rw [hmiddleOutside firstCarry]
+                · exact hfirstCarry
+                · intro hmem
+                  exact (List.nodup_cons.mp hinner).1
+                    (List.mem_append_left carries hmem)
+              let after := run [.CX low firstCarry, .X low] middle
+              have hafterLow : after low = !state low := by
+                simp [after, run, applyGate, upd, hlowCarry, hmiddleLow]
+              have hafterTail :
+                  wireValues (next :: rest) after =
+                    wireValues (next :: rest) middle := by
+                apply wireValues_congr
+                intro wire hwire
+                have hwLow : wire ≠ low := by
+                  intro equality
+                  subst wire
+                  exact hlow (List.mem_append_left (firstCarry :: carries) hwire)
+                have hwCarry : wire ≠ firstCarry := by
+                  intro equality
+                  subst wire
+                  exact (List.nodup_cons.mp hinner).1
+                    (List.mem_append_left carries hwire)
+                simp [after, run, applyGate, upd, hwLow, hwCarry]
+              rw [uncontrolledIncrement, run_append, run_append]
+              change
+                wireValues (low :: next :: rest) after =
+                    incrementBits true
+                      (wireValues (low :: next :: rest) state) ∧
+                  ∀ wire, wire ∉ low :: next :: rest →
+                    after wire = state wire
+              constructor
+              · change
+                  after low :: wireValues (next :: rest) after =
+                    Bool.xor (state low) true ::
+                      incrementBits (state low && true)
+                        (wireValues (next :: rest) state)
+                rw [hafterLow, hafterTail, hmiddleValues]
+                cases state low <;> rfl
+              · intro wire hwire
+                simp only [List.mem_cons, not_or] at hwire
+                have hwireTail : wire ∉ next :: rest := by
+                  simpa only [List.mem_cons, not_or] using hwire.2
+                by_cases hwCarry : wire = firstCarry
+                · subst wire
+                  simp [after, run, applyGate, upd, hlowCarry,
+                    Ne.symm hlowCarry, hmiddleLow, hmiddleCarry, hcarryFalse]
+                · have hmiddleWire := hmiddleOutside wire hwireTail
+                  have hafterWire : after wire = middle wire := by
+                    simp [after, run, applyGate, upd, hwire.1, hwCarry]
+                  rw [hafterWire, hmiddleWire]
+                  simp [first, run, applyGate, upd, hwCarry]
+
+@[simp]
+theorem uncontrolledIncrement_HPFree
+    (register carries : List Wire) :
+    HPFree (uncontrolledIncrement register carries) := by
+  cases register with
+  | nil => simp [uncontrolledIncrement]
+  | cons low tail =>
+      cases tail <;> cases carries <;>
+        simp [uncontrolledIncrement, incrementTail_HPFree]
+
+/-- Exact support of the source uncontrolled increment. -/
+theorem uncontrolledIncrement_usesOnly
+    (register carries : List Wire) :
+    PaperCircuitUsesOnly (register ++ carries)
+      (uncontrolledIncrement register carries) := by
+  cases register with
+  | nil => simp [uncontrolledIncrement, PaperCircuitUsesOnly]
+  | cons low tail =>
+      cases tail with
+      | nil =>
+          simp [uncontrolledIncrement, PaperCircuitUsesOnly,
+            PaperGateUsesOnly, gateWires]
+      | cons next rest =>
+          cases carries with
+          | nil => simp [uncontrolledIncrement, PaperCircuitUsesOnly]
+          | cons firstCarry carries =>
+              rw [uncontrolledIncrement]
+              apply PaperCircuitUsesOnly.append
+              · apply PaperCircuitUsesOnly.append
+                · simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
+                · apply (incrementTail_usesOnly
+                    (next :: rest) firstCarry carries).mono
+                  intro wire hwire
+                  simp only [List.mem_cons, List.mem_append] at hwire ⊢
+                  rcases hwire with (rfl | rfl | hrest) | hcarries
+                  · exact Or.inr (Or.inl rfl)
+                  · exact Or.inl (Or.inr (Or.inl rfl))
+                  · exact Or.inl (Or.inr (Or.inr hrest))
+                  · exact Or.inr (Or.inr hcarries)
+              · intro gate hgate
+                simp only [List.mem_cons, List.not_mem_nil, or_false] at hgate
+                rcases hgate with rfl | rfl
+                · simp [PaperGateUsesOnly, gateWires]
+                · simp [PaperGateUsesOnly, gateWires]
+
+/-- Physical well-formedness of the exact uncontrolled increment. -/
+theorem uncontrolledIncrement_wellFormed
+    (register carries : List Wire)
+    (hnd : (register ++ carries).Nodup) :
+    CircuitWellFormed (uncontrolledIncrement register carries) := by
+  cases register with
+  | nil => simp [uncontrolledIncrement]
+  | cons low tail =>
+      cases tail with
+      | nil => simp [uncontrolledIncrement, CircuitWellFormed, Gate.WellFormed]
+      | cons next rest =>
+          cases carries with
+          | nil => simp [uncontrolledIncrement]
+          | cons firstCarry carries =>
+              have hword :
+                  (low :: next :: rest ++ firstCarry :: carries).Nodup := by
+                simpa [List.cons_append] using hnd
+              have hlow := (List.nodup_cons.mp hword).1
+              have htail := (List.nodup_cons.mp hword).2
+              have hinner :
+                  (firstCarry :: next :: rest ++ carries).Nodup := by
+                have hperm :
+                    ((next :: rest) ++ firstCarry :: carries).Perm
+                      (firstCarry :: (next :: rest) ++ carries) := by
+                  simpa [List.append_assoc] using
+                    (List.perm_middle (l₁ := next :: rest)
+                      (l₂ := carries) (a := firstCarry))
+                exact htail.perm hperm
+              have hlowCarry : low ≠ firstCarry := by
+                intro equality
+                exact hlow (by simp [equality])
+              rw [uncontrolledIncrement, circuitWellFormed_append,
+                circuitWellFormed_append]
+              exact ⟨⟨by simp [CircuitWellFormed, Gate.WellFormed,
+                hlowCarry], incrementTail_wellFormed _ _ _ hinner⟩,
+                by simp [CircuitWellFormed, Gate.WellFormed,
+                  hlowCarry]⟩
+
+/-- Exact Toffoli count of the source uncontrolled increment. -/
+theorem uncontrolledIncrement_toffoliCount
+    (register carries : List Wire)
+    (hlength : register.length = carries.length + 1) :
+    eeaToffoliCount (uncontrolledIncrement register carries) =
+      2 * (register.length - 2) := by
+  cases register with
+  | nil => simp at hlength
+  | cons low tail =>
+      cases tail with
+      | nil =>
+          have : carries = [] := list_eq_nil_of_one_eq_length_add_one carries
+            (by simpa using hlength)
+          subst carries
+          rfl
+      | cons next rest =>
+          cases carries with
+          | nil => simp at hlength
+          | cons firstCarry carries =>
+              have htailLength : (next :: rest).length = carries.length + 1 := by
+                simpa using hlength
+              rw [uncontrolledIncrement, eeaToffoliCount_append,
+                eeaToffoliCount_append,
+                incrementTail_toffoliCount _ _ _ htailLength]
+              simp [eeaToffoliCount]
+
+/-- Exact CNOT count at width at least two. -/
+theorem uncontrolledIncrement_cnotCount
+    (low next : Wire) (rest carries : List Wire)
+    (hlength : (low :: next :: rest).length = carries.length + 1) :
+    eeaCnotCount (uncontrolledIncrement (low :: next :: rest) carries) =
+      (low :: next :: rest).length + 1 := by
+  cases carries with
+  | nil => simp at hlength
+  | cons firstCarry carries =>
+      have htailLength : (next :: rest).length = carries.length + 1 := by
+        simpa using hlength
+      rw [uncontrolledIncrement, eeaCnotCount_append,
+        eeaCnotCount_append, incrementTail_cnotCount _ _ _ htailLength]
+      simp [eeaCnotCount]
+      omega
+
+/-- Constructor-derived T count of the source uncontrolled increment. -/
+theorem uncontrolledIncrement_tCount
+    (register carries : List Wire)
+    (hlength : register.length = carries.length + 1) :
+    tCount (uncontrolledIncrement register carries) =
+      14 * (register.length - 2) := by
+  cases register with
+  | nil => simp at hlength
+  | cons low tail =>
+      cases tail with
+      | nil =>
+          have : carries = [] := list_eq_nil_of_one_eq_length_add_one carries
+            (by simpa using hlength)
+          subst carries
+          rfl
+      | cons next rest =>
+          cases carries with
+          | nil => simp at hlength
+          | cons firstCarry carries =>
+              have htailLength : (next :: rest).length = carries.length + 1 := by
+                simpa using hlength
+              rw [uncontrolledIncrement, tCount_append, tCount_append,
+                incrementTail_tCount _ _ _ htailLength]
+              simp [tCost]
+
 end ShorECDLP.Paper2607_13816

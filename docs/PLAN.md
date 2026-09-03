@@ -5,12 +5,12 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-5 paper foundation below
-are on `main@e83ebd1238a941527c46180b16ecefbd8d710a58`. PR #56 → PR #57 → PR #58 → PR #59
-→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 landed the source split, adaptive Kraus semantics,
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-6 paper foundation below
+are on `main@73434f1f8b74d972c4e0a3b43e00570dcde0e46a`. PR #56 → PR #57 → PR #58 → PR #59
+→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and the first five concrete circuit units; PR #67 / Phase 5 circuit unit 6 is the
-current implementation/review unit. A `✓` means a
+bounds/windows, and the first six concrete circuit units; Phase 5 circuit unit 7 (affine endpoint
+preparation/restoration) is the current implementation unit. A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
 
@@ -374,7 +374,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first five dependency-closed construction units are merged. PR #62 contains
+**Status:** the first six dependency-closed construction units are merged. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -409,10 +409,13 @@ follows `.inc`; label zero is masked
 by the endpoint top bit; and the separately handled top label uses the supplement's direct
 equality-control stream while reusing the ripple cell's clean scratch. The same concrete terms have
 direct basis semantics, cleanup/locality and well-formedness contracts, adaptive coherent
-refinement, and constructor-derived local/traversal resource equations. Endpoint affine
-transforms, the source-built tree and physical-lane instantiation in a complete interval block,
-upper/lower zero maps, complete length blocks, the inverse aggregate, and the indexed four-phase
-step remain open within Phase 5.
+refinement, and constructor-derived local/traversal resource equations. The current seventh unit
+implements the source's reusable uncontrolled increment, literal Cuccaro add/sub streams, clean
+constant add/subtract, `const - x`, and exact interval-endpoint preparation/restoration, with direct
+word semantics, full shared-scratch cleanup, locality, well-formedness, and constructor-derived
+coherent counts. The source-built tree and physical-lane instantiation in a complete interval
+block, upper/lower zero maps, complete length blocks, the inverse aggregate, and the indexed
+four-phase step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -608,12 +611,17 @@ They are equal only if Phase 11 proves the required reuse.
   order, recursive source-shape, path-depth, index-wire, and corresponding-bank source-top-bit
   exclusion certificates. Cross-bank exclusion remained a full-register layout obligation at that
   boundary, alongside the arithmetic leaves, zero maps, full length blocks, and indexed step.
-- **PR #67, Phase-5 circuit unit 6:** current implementation/review unit; clean v-chain direct equality,
+- **PR #67, Phase-5 circuit unit 6:** merged at `73434f1f`; clean v-chain direct equality,
   masked-zero main leaves and direct top-special leaves, caller-supplied per-label `qpair(j)` lanes
   in the `.dec`/`.inc` dual scans, shared equality/ripple scratch restoration, basis semantics,
   cleanup/locality, well-formedness, coherent refinement, and constructor-derived local/traversal
   resource equations. Complete interval-block instantiation, endpoint transforms, zero maps, full
   length blocks, the inverse aggregate, and indexed step remain open.
+- **Phase-5 circuit unit 7 (current):** source affine endpoint layer: uncontrolled increment,
+  literal Cuccaro add/sub, clean constant add/subtract, `const - x`, and exact endpoint
+  preparation/restoration, with direct word semantics, full shared-scratch cleanup, locality,
+  well-formedness, and coherent resource equations. Zero maps, complete length blocks, the inverse
+  aggregate, and the indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -648,5 +656,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--5 are merged. PR #67 / Phase 5 circuit unit 6 is the
-current review unit on that foundation.
+Phases 0--4 and Phase 5 circuit units 1--6 are merged. Phase 5 circuit unit 7 is the current
+implementation unit on that foundation.
