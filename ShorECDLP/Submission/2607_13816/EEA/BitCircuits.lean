@@ -6,14 +6,16 @@ import Lean.Elab.Tactic.Omega
 # Reversible bit primitives for the paper EEA
 
 This file starts the circuit refinement of Algorithm 3 in arXiv:2607.13816v2.  The
-constructors below are literal `{X, CX, CCX}` circuits used by the supplemental generator:
+constructors below are literal `{X, CX, CCX}` circuits drawn from the supplement:
 
 * the three-gate Fredkin decomposition used for circular shifts and location-controlled swaps;
-* the four-Toffoli dirty-ancilla decomposition of a three-controlled X.
+* the supplement's standalone, dormant four-Toffoli dirty-ancilla alternative for a
+  three-controlled X; and
+* the three-Toffoli clean-v-chain specialization used by the production `_apply_cell` path.
 
-Their public contracts expose the complete basis-state action, restoration of the dirty wire,
-physical well-formedness, named-wire locality, and constructor-derived resource counts.  No
-resource-only primitive or dependency on the Naive submission is introduced.
+Their public contracts expose the complete basis-state action, restoration of each work wire under
+its stated premise, physical well-formedness, named-wire locality, and constructor-derived resource
+counts.  No resource-only primitive or dependency on the Naive submission is introduced.
 -/
 
 namespace ShorECDLP.Paper2607_13816
