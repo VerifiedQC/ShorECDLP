@@ -278,7 +278,7 @@ and derive its measurement and Toffoli counts.
 **Gate:** phase cancellation, reset, and resource claims are exact; the canary does not modify the
 Naive QFT.
 
-**Status:** implemented on the Phase-2 branch. The framework now enumerates chronological
+**Status:** PR #59 implements this phase. The framework now enumerates chronological
 false-first register transcripts, proves the exact `2^(-m/2) (-1)^(b·y)` branch coefficient,
 clears every measured wire, and proves coherent correction both from an abstract selected circuit
 and from the concrete recompute/Z-correct/uncompute construction. The isolated paper canary uses a
@@ -491,7 +491,7 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #57, Phase 1a:** merged at `75613852`; adaptive Kraus-instrument semantics.
 - **PR #58, Phase 1b:** merged at `66062cbf`; coherent refinement and final-event equivalence.
 - **PR #54, former adaptive foundation:** closed as superseded by the reconciled PR #57.
-- **Phase-2 measurement uncomputation:** rebuilt from merged Phase-1 semantics under
+- **PR #59, Phase-2 measurement uncomputation:** rebuilt from merged Phase-1 semantics under
   `Submission/2607_13816/Canary/`; the stale pre-split prototype remains unpublished.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
