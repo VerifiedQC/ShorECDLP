@@ -5,12 +5,12 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--2 paper foundation below are on
-`main@b1e6cd859753e8152fe784aeb284af79d4075358`. PR #56 → PR #57 → PR #58 → PR #59 landed the
-source split, adaptive Kraus semantics, coherent-refinement bridge, and measurement-based
-uncomputation; Phase 3 is the current review unit. A `✓` means a declaration is root-reachable and
-covered by the repository verifier on the stated baseline or exact review head. “Target” is not a
-proved claim.
+**Status snapshot.** The verified Naive result and merged Phase-0--3 paper foundation below are on
+`main@3fd38b4f8de01505028ef80c55ba6bed728ffb84`. PR #56 → PR #57 → PR #58 → PR #59 → PR #60
+landed the source split, adaptive Kraus semantics, coherent-refinement bridge, measurement-based
+uncomputation, and pure EEA model; Phase 4 is the current implementation/review unit. A `✓` means a
+declaration is root-reachable and covered by the repository verifier on the stated baseline or
+exact review head. “Target” is not a proved claim.
 
 ## 1. Current verified result
 
@@ -336,6 +336,28 @@ borrowed epoch bit so terminal padding is a reversible identity at the exposed E
 **Gate:** all nonzero 256-bit field inputs terminate in 1,620 steps and every pruned gate location
 is proved unreachable.
 
+**Status:** implemented on the current review unit. An exact four-row rational potential
+certificate proves quotient-bit weight at most 405, hence at most 1,620 microsteps, uniformly over
+every `1 <= x < p`; no floating-point evaluation or input enumeration appears in the theorem.
+Every positive schedule index has a reachable active-or-padding witness. Padding is a multiple of
+four, is at most 596 steps for secp256k1, and carries an explicit borrowed epoch/low-word pair whose
+endpoint compression is involutive and clears the exposed epoch bit. All four noncanonical logical
+phase frames prove actual-value capacity and field non-overlap in the two packed work registers.
+
+The window audit preserves the 1,620-row generator table as `activeWindows`, but does not transfer
+its post-increment lower bound across an ordering mismatch: the analytic phase-two remainder lower
+endpoint uses `l_q` after increment, while the supplemental circuit executes remainder arithmetic
+before that increment.
+The implementation boundary is therefore `certifiedActiveWindows`, which retains one additional
+lower remainder lane and leaves the other four generator intervals unchanged. Kernel-checked
+containment covers every active remainder interval, quotient/sign selector, coefficient prefix,
+and both endpoint length decoders under the exact indexed reachability witness. The coefficient
+certificate follows the concrete selector exactly: Phase 3 ends at `ell_t + 1`, while Phase 4 ends
+at `n + 3 - ell_r' - ell_s`. Phase 5 must use the certified window; no resource theorem may claim
+the narrower remainder interval.
+The exact local gate is green: 3,065 warning-fatal jobs, 74/74 source closure, 167 targeted
+disclosures, and all 6,449 reachable declarations within the standard axiom allowlist.
+
 ### Phase 5 — one EEA step as a circuit
 
 Area: `Submission/2607_13816/EEA/`.
@@ -517,9 +539,13 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #54, former adaptive foundation:** closed as superseded by the reconciled PR #57.
 - **PR #59, Phase-2 measurement uncomputation:** merged at `b1e6cd85`; rebuilt from merged Phase-1
   semantics under `Submission/2607_13816/Canary/` with no stale pre-split prototype carried forward.
-- **Phase 3, pure EEA model:** current review unit; circuit-free quotient recurrence, packed
+- **PR #60, Phase-3 pure EEA model:** merged at `3fd38b4f`; circuit-free quotient recurrence, packed
   canonical-boundary geometry and value capacity, active-step left inverse, termination, modular
-  inverse, and quotient-level terminal stuttering. Indexed reversible padding remains Phase 4/5.
+  inverse, and quotient-level terminal stuttering.
+- **Phase 4, exact EEA bound/windows:** current implementation/review unit; exact 1,620-step bound,
+  indexed active/padding reachability, borrowed terminal epoch, noncanonical frame packing, and
+  certified active windows. The pinned generator remainder interval is retained only as reference;
+  the concrete boundary includes the proved one-lane ordering correction.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.

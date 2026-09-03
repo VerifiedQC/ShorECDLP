@@ -78,6 +78,18 @@ gives 187,926 bytes and SHA-256
 | 1536 | 243..259 | 231..258 | 1..257 | 219..258 | 245..259 |
 | 1620 | 258..259 | 257..258 | 1..257 | 255..258 | 259..259 |
 
+`activeWindows` in Lean preserves this fixed `n=256`, `T=1..1620` generator table and digest
+exactly; no parametric equality to floating-point generator evaluation is claimed.  The
+correctness audit also found an ordering discrepancy between the analytic remainder bound and the
+executable schedule: Appendix A.2 uses the post-increment quotient length in phase two, while
+`append_one_step_T` executes both remainder add/subtract blocks before incrementing `l_q`.
+`certifiedActiveWindows` therefore retains exactly one additional lower remainder lane and leaves
+the other four intervals unchanged.  Its corresponding canonical JSON has 187,916 bytes and
+SHA-256 `23b9d4e6f222acf2f84174d89c10d145091029f58dccb742cf309a7e304ca907`.
+At the six anchor rows above, its remainder starts are respectively
+`2, 2, 49, 145, 242, 257`.  Phase 5 must instantiate the concrete circuit with this certified
+window, not silently reuse the narrower reference interval.
+
 Each optimized EEA microstep executes, conditionally on its two phase bits: the prescribed
 pre-shifts; the location-controlled `r` subtraction/addition; the quotient/sign swap; the
 location-controlled `t` subtraction/addition; the post-shifts; phase updates; and, at an iteration
