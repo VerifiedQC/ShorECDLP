@@ -1,13 +1,14 @@
 import ShorECDLP.Submission.«2607_13816».EEA.UnaryIteration
 
 /-!
-# Dirty-controlled ripple cells
+# Clean-v-chain controlled ripple cells
 
 This file formalizes the four location-controlled Cuccaro cells used by the pinned
 arXiv:2607.13816v2 supplement.  The unconditional CNOT skeleton is intentional: on a lane
 outside the selected interval it cancels between the two passes, while the carry update is
-controlled by the unary range accumulator.  A single arbitrary dirty wire realizes each
-three-controlled X and is restored exactly.
+controlled by the unary range accumulator.  A single clean scratch wire realizes each
+three-controlled X using the pinned production supplement's `mcx_vchain` specialization and is
+restored exactly.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -90,29 +91,29 @@ theorem controlledUmaBits_controlledUmaInvBits
       cases control <;> cases target <;> cases addend <;> cases carry <;>
         decide
 
-/-- Location-controlled MAJ with the supplement's one-dirty-wire C3X. -/
-def controlledMajDirty
-    (control target addend carry dirty : Wire) : Circuit :=
+/-- Location-controlled MAJ with the production supplement's one-clean-wire C3X. -/
+def controlledMaj
+    (control target addend carry scratch : Wire) : Circuit :=
   [.CX carry target, .CX carry addend] ++
-    dirtyC3X control target addend carry dirty
+    cleanC3X control target addend carry scratch
 
-/-- Location-controlled UMA with the supplement's one-dirty-wire C3X. -/
-def controlledUmaDirty
-    (control target addend carry dirty : Wire) : Circuit :=
-  dirtyC3X control target addend carry dirty ++
+/-- Location-controlled UMA with the production supplement's one-clean-wire C3X. -/
+def controlledUma
+    (control target addend carry scratch : Wire) : Circuit :=
+  cleanC3X control target addend carry scratch ++
     [.CCX control addend target, .CX carry addend, .CX carry target]
 
-/-- Exact inverse of `controlledMajDirty`. -/
-def controlledMajInvDirty
-    (control target addend carry dirty : Wire) : Circuit :=
-  dirtyC3X control target addend carry dirty ++
+/-- Exact inverse of `controlledMaj`. -/
+def controlledMajInv
+    (control target addend carry scratch : Wire) : Circuit :=
+  cleanC3X control target addend carry scratch ++
     [.CX carry addend, .CX carry target]
 
-/-- Exact inverse of `controlledUmaDirty`. -/
-def controlledUmaInvDirty
-    (control target addend carry dirty : Wire) : Circuit :=
+/-- Exact inverse of `controlledUma`. -/
+def controlledUmaInv
+    (control target addend carry scratch : Wire) : Circuit :=
   [.CX carry target, .CX carry addend, .CCX control addend target] ++
-    dirtyC3X control target addend carry dirty
+    cleanC3X control target addend carry scratch
 
 /-- Read the three logical data roles of a ripple cell. -/
 def readRippleCell
@@ -128,32 +129,44 @@ def writeRippleCell
   state[target ↦ bits.target][addend ↦ bits.addend][carry ↦ bits.carry]
 
 private theorem cell_nodup_parts
-    (control target addend carry dirty : Wire)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
-    control ≠ target ∧ control ≠ addend ∧ control ≠ carry ∧ control ≠ dirty ∧
-      target ≠ addend ∧ target ≠ carry ∧ target ≠ dirty ∧
-      addend ≠ carry ∧ addend ≠ dirty ∧ carry ≠ dirty := by
+    (control target addend carry scratch : Wire)
+    (hnd : [control, target, addend, carry, scratch].Nodup) :
+    control ≠ target ∧ control ≠ addend ∧ control ≠ carry ∧ control ≠ scratch ∧
+      target ≠ addend ∧ target ≠ carry ∧ target ≠ scratch ∧
+      addend ≠ carry ∧ addend ≠ scratch ∧ carry ≠ scratch := by
   simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
     or_false, not_or] at hnd
   rcases hnd with
     ⟨⟨hct, hca, hcc, hcd⟩,
       ⟨⟨hta, htc, htd⟩,
-        ⟨⟨hac, had⟩, ⟨hcarryDirty, _⟩⟩⟩⟩
-  exact ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryDirty⟩
+        ⟨⟨hac, had⟩, ⟨hcarryScratch, _⟩⟩⟩⟩
+  exact ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryScratch⟩
 
-private theorem run_controlledMajDirty_eq
-    (control target addend carry dirty : Wire) (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
-    run (controlledMajDirty control target addend carry dirty) state =
+private theorem writeRippleCell_preservesScratch
+    (control target addend carry scratch : Wire)
+    (bits : RippleCellBits) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup) :
+    writeRippleCell target addend carry bits state scratch = state scratch := by
+  obtain ⟨_, _, _, _, _, _, htargetScratch, _, haddendScratch,
+    hcarryScratch⟩ := cell_nodup_parts control target addend carry scratch hnd
+  simp [writeRippleCell, upd, Ne.symm htargetScratch,
+    Ne.symm haddendScratch, Ne.symm hcarryScratch]
+
+/-- Whole-state MAJ semantics, including restoration of the clean production scratch wire. -/
+theorem run_controlledMaj_state
+    (control target addend carry scratch : Wire) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
+    run (controlledMaj control target addend carry scratch) state =
       writeRippleCell target addend carry
         (controlledMajBits (state control)
           (readRippleCell target addend carry state)) state := by
-  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryDirty⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryScratch⟩ :=
+    cell_nodup_parts control target addend carry scratch hnd
   have htc' : carry ≠ target := Ne.symm htc
   have hac' : carry ≠ addend := Ne.symm hac
   have hta' : addend ≠ target := Ne.symm hta
-  rw [controlledMajDirty, run_append]
+  rw [controlledMaj, run_append]
   let first := run [.CX carry target, .CX carry addend] state
   have hfirst : first =
       state[target ↦ Bool.xor (state target) (state carry)]
@@ -166,8 +179,12 @@ private theorem run_controlledMajDirty_eq
       · subst wire
         simp [first, run, applyGate, upd, hta, hac, hta', htc', hac']
       · simp [first, run, applyGate, upd, hwt, hwa]
-  have hndFirst : [control, target, addend, carry, dirty].Nodup := hnd
-  rw [run_dirtyC3X control target addend carry dirty first hndFirst, hfirst]
+  have hndFirst : [control, target, addend, carry, scratch].Nodup := hnd
+  have hcleanFirst : first scratch = false := by
+    rw [hfirst]
+    simp [upd, Ne.symm htd, Ne.symm had, hclean]
+  rw [run_cleanC3X control target addend carry scratch first hndFirst hcleanFirst,
+    hfirst]
   funext wire
   by_cases hwt : wire = target
   · subst wire
@@ -193,20 +210,22 @@ private theorem run_controlledMajDirty_eq
       · simp [writeRippleCell, controlledMajBits, readRippleCell, upd,
           hwt, hwa, hwc]
 
-private theorem run_controlledUmaDirty_eq
-    (control target addend carry dirty : Wire) (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
-    run (controlledUmaDirty control target addend carry dirty) state =
+/-- Whole-state UMA semantics, including restoration of the clean production scratch wire. -/
+theorem run_controlledUma_state
+    (control target addend carry scratch : Wire) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
+    run (controlledUma control target addend carry scratch) state =
       writeRippleCell target addend carry
         (controlledUmaBits (state control)
           (readRippleCell target addend carry state)) state := by
-  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryDirty⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryScratch⟩ :=
+    cell_nodup_parts control target addend carry scratch hnd
   have htc' : carry ≠ target := Ne.symm htc
   have hac' : carry ≠ addend := Ne.symm hac
   have hta' : addend ≠ target := Ne.symm hta
-  rw [controlledUmaDirty, run_append,
-    run_dirtyC3X control target addend carry dirty state hnd]
+  rw [controlledUma, run_append,
+    run_cleanC3X control target addend carry scratch state hnd hclean]
   funext wire
   by_cases hwt : wire = target
   · subst wire
@@ -232,20 +251,22 @@ private theorem run_controlledUmaDirty_eq
       · simp [run, applyGate, writeRippleCell, controlledUmaBits,
           readRippleCell, upd, hwt, hwa, hwc]
 
-private theorem run_controlledMajInvDirty_eq
-    (control target addend carry dirty : Wire) (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
-    run (controlledMajInvDirty control target addend carry dirty) state =
+/-- Whole-state inverse-MAJ semantics, including restoration of the clean production scratch wire. -/
+theorem run_controlledMajInv_state
+    (control target addend carry scratch : Wire) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
+    run (controlledMajInv control target addend carry scratch) state =
       writeRippleCell target addend carry
         (controlledMajInvBits (state control)
           (readRippleCell target addend carry state)) state := by
-  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryDirty⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryScratch⟩ :=
+    cell_nodup_parts control target addend carry scratch hnd
   have htc' : carry ≠ target := Ne.symm htc
   have hac' : carry ≠ addend := Ne.symm hac
   have hta' : addend ≠ target := Ne.symm hta
-  rw [controlledMajInvDirty, run_append,
-    run_dirtyC3X control target addend carry dirty state hnd]
+  rw [controlledMajInv, run_append,
+    run_cleanC3X control target addend carry scratch state hnd hclean]
   funext wire
   by_cases hwt : wire = target
   · subst wire
@@ -271,19 +292,21 @@ private theorem run_controlledMajInvDirty_eq
       · simp [run, applyGate, writeRippleCell, controlledMajInvBits,
           readRippleCell, upd, hwt, hwa, hwc]
 
-private theorem run_controlledUmaInvDirty_eq
-    (control target addend carry dirty : Wire) (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
-    run (controlledUmaInvDirty control target addend carry dirty) state =
+/-- Whole-state inverse-UMA semantics, including restoration of the clean production scratch wire. -/
+theorem run_controlledUmaInv_state
+    (control target addend carry scratch : Wire) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
+    run (controlledUmaInv control target addend carry scratch) state =
       writeRippleCell target addend carry
         (controlledUmaInvBits (state control)
           (readRippleCell target addend carry state)) state := by
-  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryDirty⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryScratch⟩ :=
+    cell_nodup_parts control target addend carry scratch hnd
   have htc' : carry ≠ target := Ne.symm htc
   have hac' : carry ≠ addend := Ne.symm hac
   have hta' : addend ≠ target := Ne.symm hta
-  rw [controlledUmaInvDirty, run_append]
+  rw [controlledUmaInv, run_append]
   let first := run
     [.CX carry target, .CX carry addend, .CCX control addend target] state
   have hfirst : first = writeRippleCell target addend carry
@@ -312,7 +335,12 @@ private theorem run_controlledUmaInvDirty_eq
             hta, htc, hac, hta', htc', hac', hct, hca, hcc]
         · simp [first, run, applyGate, writeRippleCell, upd,
             hwt, hwa, hwc]
-  rw [run_dirtyC3X control target addend carry dirty first hnd, hfirst]
+  have hcleanFirst : first scratch = false := by
+    rw [hfirst]
+    simp [writeRippleCell, upd, Ne.symm htd, Ne.symm had,
+      Ne.symm hcarryScratch, hclean]
+  rw [run_cleanC3X control target addend carry scratch first hnd hcleanFirst,
+    hfirst]
   funext wire
   by_cases hwt : wire = target
   · subst wire
@@ -339,229 +367,233 @@ private theorem run_controlledUmaInvDirty_eq
           hwt, hwa, hwc]
 
 /-- Direct basis-state contract for every exact ripple-cell constructor. -/
-theorem run_controlledMajDirty
-    (control target addend carry dirty : Wire) (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
+theorem run_controlledMaj
+    (control target addend carry scratch : Wire) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
     readRippleCell target addend carry
-        (run (controlledMajDirty control target addend carry dirty) state) =
+        (run (controlledMaj control target addend carry scratch) state) =
       controlledMajBits (state control)
         (readRippleCell target addend carry state) := by
-  rw [run_controlledMajDirty_eq control target addend carry dirty state hnd]
+  rw [run_controlledMaj_state control target addend carry scratch state hnd hclean]
   obtain ⟨_, _, _, _, hta, htc, _, hac, _, _⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+    cell_nodup_parts control target addend carry scratch hnd
   simp [readRippleCell, writeRippleCell, upd, hta, htc, hac]
 
-theorem run_controlledUmaDirty
-    (control target addend carry dirty : Wire) (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
+theorem run_controlledUma
+    (control target addend carry scratch : Wire) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
     readRippleCell target addend carry
-        (run (controlledUmaDirty control target addend carry dirty) state) =
+        (run (controlledUma control target addend carry scratch) state) =
       controlledUmaBits (state control)
         (readRippleCell target addend carry state) := by
-  rw [run_controlledUmaDirty_eq control target addend carry dirty state hnd]
+  rw [run_controlledUma_state control target addend carry scratch state hnd hclean]
   obtain ⟨_, _, _, _, hta, htc, _, hac, _, _⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+    cell_nodup_parts control target addend carry scratch hnd
   simp [readRippleCell, writeRippleCell, upd, hta, htc, hac]
 
-theorem run_controlledMajInvDirty
-    (control target addend carry dirty : Wire) (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
+theorem run_controlledMajInv
+    (control target addend carry scratch : Wire) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
     readRippleCell target addend carry
-        (run (controlledMajInvDirty control target addend carry dirty) state) =
+        (run (controlledMajInv control target addend carry scratch) state) =
       controlledMajInvBits (state control)
         (readRippleCell target addend carry state) := by
-  rw [run_controlledMajInvDirty_eq control target addend carry dirty state hnd]
+  rw [run_controlledMajInv_state control target addend carry scratch state hnd hclean]
   obtain ⟨_, _, _, _, hta, htc, _, hac, _, _⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+    cell_nodup_parts control target addend carry scratch hnd
   simp [readRippleCell, writeRippleCell, upd, hta, htc, hac]
 
-theorem run_controlledUmaInvDirty
-    (control target addend carry dirty : Wire) (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
+theorem run_controlledUmaInv
+    (control target addend carry scratch : Wire) (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
     readRippleCell target addend carry
-        (run (controlledUmaInvDirty control target addend carry dirty) state) =
+        (run (controlledUmaInv control target addend carry scratch) state) =
       controlledUmaInvBits (state control)
         (readRippleCell target addend carry state) := by
-  rw [run_controlledUmaInvDirty_eq control target addend carry dirty state hnd]
+  rw [run_controlledUmaInv_state control target addend carry scratch state hnd hclean]
   obtain ⟨_, _, _, _, hta, htc, _, hac, _, _⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+    cell_nodup_parts control target addend carry scratch hnd
   simp [readRippleCell, writeRippleCell, upd, hta, htc, hac]
 
 private theorem cell_usesOnly
     (cell : Wire → Wire → Wire → Wire → Wire → Circuit)
-    (hcell : ∀ control target addend carry dirty,
-      PaperCircuitUsesOnly [control, target, addend, carry, dirty]
-        (cell control target addend carry dirty)) :
-    ∀ control target addend carry dirty,
-      PaperCircuitUsesOnly [control, target, addend, carry, dirty]
-        (cell control target addend carry dirty) := hcell
+    (hcell : ∀ control target addend carry scratch,
+      PaperCircuitUsesOnly [control, target, addend, carry, scratch]
+        (cell control target addend carry scratch)) :
+    ∀ control target addend carry scratch,
+      PaperCircuitUsesOnly [control, target, addend, carry, scratch]
+        (cell control target addend carry scratch) := hcell
 
-theorem controlledMajDirty_usesOnly
-    (control target addend carry dirty : Wire) :
-    PaperCircuitUsesOnly [control, target, addend, carry, dirty]
-      (controlledMajDirty control target addend carry dirty) := by
+theorem controlledMaj_usesOnly
+    (control target addend carry scratch : Wire) :
+    PaperCircuitUsesOnly [control, target, addend, carry, scratch]
+      (controlledMaj control target addend carry scratch) := by
   apply PaperCircuitUsesOnly.append
   · simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
-  · exact dirtyC3X_usesOnly control target addend carry dirty
+  · exact cleanC3X_usesOnly control target addend carry scratch
 
-theorem controlledUmaDirty_usesOnly
-    (control target addend carry dirty : Wire) :
-    PaperCircuitUsesOnly [control, target, addend, carry, dirty]
-      (controlledUmaDirty control target addend carry dirty) := by
+theorem controlledUma_usesOnly
+    (control target addend carry scratch : Wire) :
+    PaperCircuitUsesOnly [control, target, addend, carry, scratch]
+      (controlledUma control target addend carry scratch) := by
   apply PaperCircuitUsesOnly.append
-  · exact dirtyC3X_usesOnly control target addend carry dirty
+  · exact cleanC3X_usesOnly control target addend carry scratch
   · simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
 
-theorem controlledMajInvDirty_usesOnly
-    (control target addend carry dirty : Wire) :
-    PaperCircuitUsesOnly [control, target, addend, carry, dirty]
-      (controlledMajInvDirty control target addend carry dirty) := by
+theorem controlledMajInv_usesOnly
+    (control target addend carry scratch : Wire) :
+    PaperCircuitUsesOnly [control, target, addend, carry, scratch]
+      (controlledMajInv control target addend carry scratch) := by
   apply PaperCircuitUsesOnly.append
-  · exact dirtyC3X_usesOnly control target addend carry dirty
+  · exact cleanC3X_usesOnly control target addend carry scratch
   · simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
 
-theorem controlledUmaInvDirty_usesOnly
-    (control target addend carry dirty : Wire) :
-    PaperCircuitUsesOnly [control, target, addend, carry, dirty]
-      (controlledUmaInvDirty control target addend carry dirty) := by
+theorem controlledUmaInv_usesOnly
+    (control target addend carry scratch : Wire) :
+    PaperCircuitUsesOnly [control, target, addend, carry, scratch]
+      (controlledUmaInv control target addend carry scratch) := by
   apply PaperCircuitUsesOnly.append
   · simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
-  · exact dirtyC3X_usesOnly control target addend carry dirty
+  · exact cleanC3X_usesOnly control target addend carry scratch
 
-theorem controlledMajDirty_wellFormed
-    (control target addend carry dirty : Wire)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
+theorem controlledMaj_wellFormed
+    (control target addend carry scratch : Wire)
+    (hnd : [control, target, addend, carry, scratch].Nodup) :
     CircuitWellFormed
-      (controlledMajDirty control target addend carry dirty) := by
+      (controlledMaj control target addend carry scratch) := by
   obtain ⟨_, _, _, _, _, htc, _, hac, _, _⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+    cell_nodup_parts control target addend carry scratch hnd
   have htc' : carry ≠ target := Ne.symm htc
   have hac' : carry ≠ addend := Ne.symm hac
-  rw [controlledMajDirty, circuitWellFormed_append]
+  rw [controlledMaj, circuitWellFormed_append]
   exact ⟨by simp [CircuitWellFormed, Gate.WellFormed, htc', hac'],
-    dirtyC3X_wellFormed control target addend carry dirty hnd⟩
+    cleanC3X_wellFormed control target addend carry scratch hnd⟩
 
-theorem controlledUmaDirty_wellFormed
-    (control target addend carry dirty : Wire)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
+theorem controlledUma_wellFormed
+    (control target addend carry scratch : Wire)
+    (hnd : [control, target, addend, carry, scratch].Nodup) :
     CircuitWellFormed
-      (controlledUmaDirty control target addend carry dirty) := by
+      (controlledUma control target addend carry scratch) := by
   obtain ⟨hct, hca, _, _, hta, htc, _, hac, _, _⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+    cell_nodup_parts control target addend carry scratch hnd
   have htc' : carry ≠ target := Ne.symm htc
   have hac' : carry ≠ addend := Ne.symm hac
   have hta' : addend ≠ target := Ne.symm hta
-  rw [controlledUmaDirty, circuitWellFormed_append]
-  exact ⟨dirtyC3X_wellFormed control target addend carry dirty hnd,
+  rw [controlledUma, circuitWellFormed_append]
+  exact ⟨cleanC3X_wellFormed control target addend carry scratch hnd,
     by simp [CircuitWellFormed, Gate.WellFormed,
       hct, hca, hta', htc', hac']⟩
 
-theorem controlledMajInvDirty_wellFormed
-    (control target addend carry dirty : Wire)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
+theorem controlledMajInv_wellFormed
+    (control target addend carry scratch : Wire)
+    (hnd : [control, target, addend, carry, scratch].Nodup) :
     CircuitWellFormed
-      (controlledMajInvDirty control target addend carry dirty) := by
+      (controlledMajInv control target addend carry scratch) := by
   obtain ⟨_, _, _, _, _, htc, _, hac, _, _⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+    cell_nodup_parts control target addend carry scratch hnd
   have htc' : carry ≠ target := Ne.symm htc
   have hac' : carry ≠ addend := Ne.symm hac
-  rw [controlledMajInvDirty, circuitWellFormed_append]
-  exact ⟨dirtyC3X_wellFormed control target addend carry dirty hnd,
+  rw [controlledMajInv, circuitWellFormed_append]
+  exact ⟨cleanC3X_wellFormed control target addend carry scratch hnd,
     by simp [CircuitWellFormed, Gate.WellFormed, htc', hac']⟩
 
-theorem controlledUmaInvDirty_wellFormed
-    (control target addend carry dirty : Wire)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
+theorem controlledUmaInv_wellFormed
+    (control target addend carry scratch : Wire)
+    (hnd : [control, target, addend, carry, scratch].Nodup) :
     CircuitWellFormed
-      (controlledUmaInvDirty control target addend carry dirty) := by
+      (controlledUmaInv control target addend carry scratch) := by
   obtain ⟨hct, hca, _, _, hta, htc, _, hac, _, _⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+    cell_nodup_parts control target addend carry scratch hnd
   have htc' : carry ≠ target := Ne.symm htc
   have hac' : carry ≠ addend := Ne.symm hac
   have hta' : addend ≠ target := Ne.symm hta
-  rw [controlledUmaInvDirty, circuitWellFormed_append]
+  rw [controlledUmaInv, circuitWellFormed_append]
   exact ⟨by simp [CircuitWellFormed, Gate.WellFormed,
       hct, hca, hta', htc', hac'],
-    dirtyC3X_wellFormed control target addend carry dirty hnd⟩
+    cleanC3X_wellFormed control target addend carry scratch hnd⟩
 
-@[simp] theorem controlledMajDirty_HPFree
-    (control target addend carry dirty : Wire) :
-    HPFree (controlledMajDirty control target addend carry dirty) := by
-  simp [controlledMajDirty]
+@[simp] theorem controlledMaj_HPFree
+    (control target addend carry scratch : Wire) :
+    HPFree (controlledMaj control target addend carry scratch) := by
+  simp [controlledMaj]
 
-@[simp] theorem controlledUmaDirty_HPFree
-    (control target addend carry dirty : Wire) :
-    HPFree (controlledUmaDirty control target addend carry dirty) := by
-  simp [controlledUmaDirty]
+@[simp] theorem controlledUma_HPFree
+    (control target addend carry scratch : Wire) :
+    HPFree (controlledUma control target addend carry scratch) := by
+  simp [controlledUma]
 
-@[simp] theorem controlledMajInvDirty_HPFree
-    (control target addend carry dirty : Wire) :
-    HPFree (controlledMajInvDirty control target addend carry dirty) := by
-  simp [controlledMajInvDirty]
+@[simp] theorem controlledMajInv_HPFree
+    (control target addend carry scratch : Wire) :
+    HPFree (controlledMajInv control target addend carry scratch) := by
+  simp [controlledMajInv]
 
-@[simp] theorem controlledUmaInvDirty_HPFree
-    (control target addend carry dirty : Wire) :
-    HPFree (controlledUmaInvDirty control target addend carry dirty) := by
-  simp [controlledUmaInvDirty]
+@[simp] theorem controlledUmaInv_HPFree
+    (control target addend carry scratch : Wire) :
+    HPFree (controlledUmaInv control target addend carry scratch) := by
+  simp [controlledUmaInv]
 
-@[simp] theorem controlledMajDirty_toffoliCount
-    (control target addend carry dirty : Wire) :
-    eeaToffoliCount (controlledMajDirty control target addend carry dirty) = 4 := by
+@[simp] theorem controlledMaj_toffoliCount
+    (control target addend carry scratch : Wire) :
+    eeaToffoliCount (controlledMaj control target addend carry scratch) = 3 := by
   rfl
 
-@[simp] theorem controlledUmaDirty_toffoliCount
-    (control target addend carry dirty : Wire) :
-    eeaToffoliCount (controlledUmaDirty control target addend carry dirty) = 5 := by
+@[simp] theorem controlledUma_toffoliCount
+    (control target addend carry scratch : Wire) :
+    eeaToffoliCount (controlledUma control target addend carry scratch) = 4 := by
   rfl
 
-@[simp] theorem controlledMajInvDirty_toffoliCount
-    (control target addend carry dirty : Wire) :
-    eeaToffoliCount (controlledMajInvDirty control target addend carry dirty) = 4 := by
+@[simp] theorem controlledMajInv_toffoliCount
+    (control target addend carry scratch : Wire) :
+    eeaToffoliCount (controlledMajInv control target addend carry scratch) = 3 := by
   rfl
 
-@[simp] theorem controlledUmaInvDirty_toffoliCount
-    (control target addend carry dirty : Wire) :
-    eeaToffoliCount (controlledUmaInvDirty control target addend carry dirty) = 5 := by
+@[simp] theorem controlledUmaInv_toffoliCount
+    (control target addend carry scratch : Wire) :
+    eeaToffoliCount (controlledUmaInv control target addend carry scratch) = 4 := by
   rfl
 
-@[simp] theorem controlledMajDirty_cnotCount
-    (control target addend carry dirty : Wire) :
-    eeaCnotCount (controlledMajDirty control target addend carry dirty) = 2 := by
+@[simp] theorem controlledMaj_cnotCount
+    (control target addend carry scratch : Wire) :
+    eeaCnotCount (controlledMaj control target addend carry scratch) = 2 := by
   rfl
 
-@[simp] theorem controlledUmaDirty_cnotCount
-    (control target addend carry dirty : Wire) :
-    eeaCnotCount (controlledUmaDirty control target addend carry dirty) = 2 := by
+@[simp] theorem controlledUma_cnotCount
+    (control target addend carry scratch : Wire) :
+    eeaCnotCount (controlledUma control target addend carry scratch) = 2 := by
   rfl
 
-@[simp] theorem controlledMajInvDirty_cnotCount
-    (control target addend carry dirty : Wire) :
-    eeaCnotCount (controlledMajInvDirty control target addend carry dirty) = 2 := by
+@[simp] theorem controlledMajInv_cnotCount
+    (control target addend carry scratch : Wire) :
+    eeaCnotCount (controlledMajInv control target addend carry scratch) = 2 := by
   rfl
 
-@[simp] theorem controlledUmaInvDirty_cnotCount
-    (control target addend carry dirty : Wire) :
-    eeaCnotCount (controlledUmaInvDirty control target addend carry dirty) = 2 := by
+@[simp] theorem controlledUmaInv_cnotCount
+    (control target addend carry scratch : Wire) :
+    eeaCnotCount (controlledUmaInv control target addend carry scratch) = 2 := by
   rfl
 
-@[simp] theorem controlledMajDirty_tCount
-    (control target addend carry dirty : Wire) :
-    ShorECDLP.tCount (controlledMajDirty control target addend carry dirty) = 28 := by
+@[simp] theorem controlledMaj_tCount
+    (control target addend carry scratch : Wire) :
+    ShorECDLP.tCount (controlledMaj control target addend carry scratch) = 21 := by
   rfl
 
-@[simp] theorem controlledUmaDirty_tCount
-    (control target addend carry dirty : Wire) :
-    ShorECDLP.tCount (controlledUmaDirty control target addend carry dirty) = 35 := by
+@[simp] theorem controlledUma_tCount
+    (control target addend carry scratch : Wire) :
+    ShorECDLP.tCount (controlledUma control target addend carry scratch) = 28 := by
   rfl
 
-@[simp] theorem controlledMajInvDirty_tCount
-    (control target addend carry dirty : Wire) :
-    ShorECDLP.tCount (controlledMajInvDirty control target addend carry dirty) = 28 := by
+@[simp] theorem controlledMajInv_tCount
+    (control target addend carry scratch : Wire) :
+    ShorECDLP.tCount (controlledMajInv control target addend carry scratch) = 21 := by
   rfl
 
-@[simp] theorem controlledUmaInvDirty_tCount
-    (control target addend carry dirty : Wire) :
-    ShorECDLP.tCount (controlledUmaInvDirty control target addend carry dirty) = 35 := by
+@[simp] theorem controlledUmaInv_tCount
+    (control target addend carry scratch : Wire) :
+    ShorECDLP.tCount (controlledUmaInv control target addend carry scratch) = 28 := by
   rfl
 
 /-! ## Exact two-pass window ripple -/
@@ -572,16 +604,16 @@ inductive RippleMode where
 deriving DecidableEq, Repr
 
 def rippleFirstCell (mode : RippleMode)
-    (control target addend carry dirty : Wire) : Circuit :=
+    (control target addend carry scratch : Wire) : Circuit :=
   match mode with
-  | .add => controlledMajDirty control target addend carry dirty
-  | .sub => controlledUmaInvDirty control target addend carry dirty
+  | .add => controlledMaj control target addend carry scratch
+  | .sub => controlledUmaInv control target addend carry scratch
 
 def rippleSecondCell (mode : RippleMode)
-    (control target addend carry dirty : Wire) : Circuit :=
+    (control target addend carry scratch : Wire) : Circuit :=
   match mode with
-  | .add => controlledUmaDirty control target addend carry dirty
-  | .sub => controlledMajInvDirty control target addend carry dirty
+  | .add => controlledUma control target addend carry scratch
+  | .sub => controlledMajInv control target addend carry scratch
 
 def rippleFirstBits (mode : RippleMode)
     (control : Bool) (bits : RippleCellBits) : RippleCellBits :=
@@ -599,26 +631,26 @@ def rippleSecondBits (mode : RippleMode)
 the low one, so this recursion emits the gates from the list's end back to its head. -/
 def rippleFirstPass (mode : RippleMode) (control : Wire) :
     List Wire → List Wire → Wire → Wire → Circuit
-  | target :: targets, addend :: addends, carry, dirty =>
-      rippleFirstPass mode control targets addends carry dirty ++
-        rippleFirstCell mode control target addend carry dirty
+  | target :: targets, addend :: addends, carry, scratch =>
+      rippleFirstPass mode control targets addends carry scratch ++
+        rippleFirstCell mode control target addend carry scratch
   | _, _, _, _ => []
 
 /-- Second Figure-11 pass, emitted from the high physical lane to the low one. -/
 def rippleSecondPass (mode : RippleMode) (control : Wire) :
     List Wire → List Wire → Wire → Wire → Circuit
-  | target :: targets, addend :: addends, carry, dirty =>
-      rippleSecondCell mode control target addend carry dirty ++
-        rippleSecondPass mode control targets addends carry dirty
+  | target :: targets, addend :: addends, carry, scratch =>
+      rippleSecondCell mode control target addend carry scratch ++
+        rippleSecondPass mode control targets addends carry scratch
   | _, _, _, _ => []
 
 /-- The literal two-pass ripple core used by both interval and prefix arithmetic after the caller
 has prepared the location control for this physical slice.  Endpoint/unary control preparation is
 a separate composition layer. -/
 def controlledWindowRipple (mode : RippleMode) (control : Wire)
-    (targets addends : List Wire) (carry dirty : Wire) : Circuit :=
-  rippleFirstPass mode control targets addends carry dirty ++
-    rippleSecondPass mode control targets addends carry dirty
+    (targets addends : List Wire) (carry scratch : Wire) : Circuit :=
+  rippleFirstPass mode control targets addends carry scratch ++
+    rippleSecondPass mode control targets addends carry scratch
 
 /-- Pure Boolean execution of the high-to-low first pass. -/
 def rippleFirstState (mode : RippleMode) (control : Wire) :
@@ -646,46 +678,92 @@ def controlledWindowRippleState (mode : RippleMode) (control : Wire)
   rippleSecondState mode control targets addends carry
     (rippleFirstState mode control targets addends carry state)
 
-/-- Each aligned lane has the five distinct roles required by the dirty C3X decomposition. -/
+/-- Each aligned lane has the five distinct roles required by the clean C3X decomposition. -/
 def RippleLaneLayouts (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) : Prop :=
+    (carry scratch : Wire) : Prop :=
   List.Forall₂
-    (fun target addend => [control, target, addend, carry, dirty].Nodup)
+    (fun target addend => [control, target, addend, carry, scratch].Nodup)
     targets addends
 
+private theorem rippleFirstState_preservesScratch
+    (mode : RippleMode) (control : Wire) (targets addends : List Wire)
+    (carry scratch : Wire) (state : BasisState)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
+    rippleFirstState mode control targets addends carry state scratch =
+      state scratch := by
+  induction targets generalizing addends state with
+  | nil =>
+      cases addends with
+      | nil => rfl
+      | cons addend addends => cases hlayouts
+  | cons target targets ih =>
+      cases addends with
+      | nil => cases hlayouts
+      | cons addend addends =>
+          cases hlayouts with
+          | cons hhead htail =>
+              rw [rippleFirstState,
+                writeRippleCell_preservesScratch control target addend carry scratch
+                  _ _ hhead,
+                ih addends state htail]
+
+private theorem rippleSecondState_preservesScratch
+    (mode : RippleMode) (control : Wire) (targets addends : List Wire)
+    (carry scratch : Wire) (state : BasisState)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
+    rippleSecondState mode control targets addends carry state scratch =
+      state scratch := by
+  induction targets generalizing addends state with
+  | nil =>
+      cases addends with
+      | nil => rfl
+      | cons addend addends => cases hlayouts
+  | cons target targets ih =>
+      cases addends with
+      | nil => cases hlayouts
+      | cons addend addends =>
+          cases hlayouts with
+          | cons hhead htail =>
+              rw [rippleSecondState, ih addends _ htail,
+                writeRippleCell_preservesScratch control target addend carry scratch
+                  _ state hhead]
+
 private theorem run_rippleFirstCell
-    (mode : RippleMode) (control target addend carry dirty : Wire)
+    (mode : RippleMode) (control target addend carry scratch : Wire)
     (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
-    run (rippleFirstCell mode control target addend carry dirty) state =
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
+    run (rippleFirstCell mode control target addend carry scratch) state =
       writeRippleCell target addend carry
         (rippleFirstBits mode (state control)
           (readRippleCell target addend carry state)) state := by
   cases mode with
   | add => simpa [rippleFirstCell, rippleFirstBits] using
-      run_controlledMajDirty_eq control target addend carry dirty state hnd
+      run_controlledMaj_state control target addend carry scratch state hnd hclean
   | sub => simpa [rippleFirstCell, rippleFirstBits] using
-      run_controlledUmaInvDirty_eq control target addend carry dirty state hnd
+      run_controlledUmaInv_state control target addend carry scratch state hnd hclean
 
 private theorem run_rippleSecondCell
-    (mode : RippleMode) (control target addend carry dirty : Wire)
+    (mode : RippleMode) (control target addend carry scratch : Wire)
     (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup) :
-    run (rippleSecondCell mode control target addend carry dirty) state =
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false) :
+    run (rippleSecondCell mode control target addend carry scratch) state =
       writeRippleCell target addend carry
         (rippleSecondBits mode (state control)
           (readRippleCell target addend carry state)) state := by
   cases mode with
   | add => simpa [rippleSecondCell, rippleSecondBits] using
-      run_controlledUmaDirty_eq control target addend carry dirty state hnd
+      run_controlledUma_state control target addend carry scratch state hnd hclean
   | sub => simpa [rippleSecondCell, rippleSecondBits] using
-      run_controlledMajInvDirty_eq control target addend carry dirty state hnd
+      run_controlledMajInv_state control target addend carry scratch state hnd hclean
 
 private theorem run_rippleFirstPass
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) (state : BasisState)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    run (rippleFirstPass mode control targets addends carry dirty) state =
+    (carry scratch : Wire) (state : BasisState)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch)
+    (hclean : state scratch = false) :
+    run (rippleFirstPass mode control targets addends carry scratch) state =
       rippleFirstState mode control targets addends carry state := by
   induction targets generalizing addends state with
   | nil =>
@@ -698,14 +776,22 @@ private theorem run_rippleFirstPass
       | cons addend addends =>
           cases hlayouts with
           | cons hhead htail =>
-              rw [rippleFirstPass, run_append, ih addends _ htail]
-              exact run_rippleFirstCell mode control target addend carry dirty _ hhead
+              have hmiddleClean :
+                  rippleFirstState mode control targets addends carry state scratch =
+                    false := by
+                rw [rippleFirstState_preservesScratch mode control targets addends
+                  carry scratch state htail]
+                exact hclean
+              rw [rippleFirstPass, run_append, ih addends _ htail hclean]
+              exact run_rippleFirstCell mode control target addend carry scratch _
+                hhead hmiddleClean
 
 private theorem run_rippleSecondPass
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) (state : BasisState)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    run (rippleSecondPass mode control targets addends carry dirty) state =
+    (carry scratch : Wire) (state : BasisState)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch)
+    (hclean : state scratch = false) :
+    run (rippleSecondPass mode control targets addends carry scratch) state =
       rippleSecondState mode control targets addends carry state := by
   induction targets generalizing addends state with
   | nil =>
@@ -718,27 +804,41 @@ private theorem run_rippleSecondPass
       | cons addend addends =>
           cases hlayouts with
           | cons hhead htail =>
+              have hnextClean :
+                  writeRippleCell target addend carry
+                      (rippleSecondBits mode (state control)
+                        (readRippleCell target addend carry state)) state scratch =
+                    false := by
+                rw [writeRippleCell_preservesScratch control target addend carry scratch
+                  _ state hhead]
+                exact hclean
               rw [rippleSecondPass, run_append,
-                run_rippleSecondCell mode control target addend carry dirty state hhead,
-                ih addends _ htail]
+                run_rippleSecondCell mode control target addend carry scratch state hhead hclean,
+                ih addends _ htail hnextClean]
               rfl
 
 /-- Direct whole-basis-state semantics of the literal two-pass window ripple. -/
 theorem run_controlledWindowRipple
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) (state : BasisState)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    run (controlledWindowRipple mode control targets addends carry dirty) state =
+    (carry scratch : Wire) (state : BasisState)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch)
+    (hclean : state scratch = false) :
+    run (controlledWindowRipple mode control targets addends carry scratch) state =
       controlledWindowRippleState mode control targets addends carry state := by
+  have hmiddleClean :
+      rippleFirstState mode control targets addends carry state scratch = false := by
+    rw [rippleFirstState_preservesScratch mode control targets addends carry scratch
+      state hlayouts]
+    exact hclean
   rw [controlledWindowRipple, run_append,
-    run_rippleFirstPass mode control targets addends carry dirty state hlayouts,
-    run_rippleSecondPass mode control targets addends carry dirty _ hlayouts]
+    run_rippleFirstPass mode control targets addends carry scratch state hlayouts hclean,
+    run_rippleSecondPass mode control targets addends carry scratch _ hlayouts hmiddleClean]
   rfl
 
 private theorem rippleFirstPass_HPFree
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) :
-    HPFree (rippleFirstPass mode control targets addends carry dirty) := by
+    (carry scratch : Wire) :
+    HPFree (rippleFirstPass mode control targets addends carry scratch) := by
   induction targets generalizing addends with
   | nil => cases addends <;> simp [rippleFirstPass]
   | cons target targets ih =>
@@ -749,8 +849,8 @@ private theorem rippleFirstPass_HPFree
 
 private theorem rippleSecondPass_HPFree
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) :
-    HPFree (rippleSecondPass mode control targets addends carry dirty) := by
+    (carry scratch : Wire) :
+    HPFree (rippleSecondPass mode control targets addends carry scratch) := by
   induction targets generalizing addends with
   | nil => cases addends <;> simp [rippleSecondPass]
   | cons target targets ih =>
@@ -762,17 +862,17 @@ private theorem rippleSecondPass_HPFree
 @[simp]
 theorem controlledWindowRipple_HPFree
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) :
-    HPFree (controlledWindowRipple mode control targets addends carry dirty) := by
+    (carry scratch : Wire) :
+    HPFree (controlledWindowRipple mode control targets addends carry scratch) := by
   simp [controlledWindowRipple, rippleFirstPass_HPFree,
     rippleSecondPass_HPFree]
 
 private theorem rippleFirstPass_wellFormed
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
     CircuitWellFormed
-      (rippleFirstPass mode control targets addends carry dirty) := by
+      (rippleFirstPass mode control targets addends carry scratch) := by
   induction targets generalizing addends with
   | nil =>
       cases addends with
@@ -790,21 +890,21 @@ private theorem rippleFirstPass_wellFormed
               · cases mode with
                 | add =>
                     change CircuitWellFormed
-                      (controlledMajDirty control target addend carry dirty)
-                    exact controlledMajDirty_wellFormed
-                      control target addend carry dirty hhead
+                      (controlledMaj control target addend carry scratch)
+                    exact controlledMaj_wellFormed
+                      control target addend carry scratch hhead
                 | sub =>
                     change CircuitWellFormed
-                      (controlledUmaInvDirty control target addend carry dirty)
-                    exact controlledUmaInvDirty_wellFormed
-                      control target addend carry dirty hhead
+                      (controlledUmaInv control target addend carry scratch)
+                    exact controlledUmaInv_wellFormed
+                      control target addend carry scratch hhead
 
 private theorem rippleSecondPass_wellFormed
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
     CircuitWellFormed
-      (rippleSecondPass mode control targets addends carry dirty) := by
+      (rippleSecondPass mode control targets addends carry scratch) := by
   induction targets generalizing addends with
   | nil =>
       cases addends with
@@ -821,37 +921,37 @@ private theorem rippleSecondPass_wellFormed
               · cases mode with
                 | add =>
                     change CircuitWellFormed
-                      (controlledUmaDirty control target addend carry dirty)
-                    exact controlledUmaDirty_wellFormed
-                      control target addend carry dirty hhead
+                      (controlledUma control target addend carry scratch)
+                    exact controlledUma_wellFormed
+                      control target addend carry scratch hhead
                 | sub =>
                     change CircuitWellFormed
-                      (controlledMajInvDirty control target addend carry dirty)
-                    exact controlledMajInvDirty_wellFormed
-                      control target addend carry dirty hhead
+                      (controlledMajInv control target addend carry scratch)
+                    exact controlledMajInv_wellFormed
+                      control target addend carry scratch hhead
               · exact ih addends htail
 
 theorem controlledWindowRipple_wellFormed
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
     CircuitWellFormed
-      (controlledWindowRipple mode control targets addends carry dirty) := by
+      (controlledWindowRipple mode control targets addends carry scratch) := by
   rw [controlledWindowRipple, circuitWellFormed_append]
-  exact ⟨rippleFirstPass_wellFormed mode control targets addends carry dirty hlayouts,
-    rippleSecondPass_wellFormed mode control targets addends carry dirty hlayouts⟩
+  exact ⟨rippleFirstPass_wellFormed mode control targets addends carry scratch hlayouts,
+    rippleSecondPass_wellFormed mode control targets addends carry scratch hlayouts⟩
 
 /-- Complete named support of a two-pass ripple block. -/
 def controlledWindowRippleSupport (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) : List Wire :=
-  control :: targets ++ addends ++ [carry, dirty]
+    (carry scratch : Wire) : List Wire :=
+  control :: targets ++ addends ++ [carry, scratch]
 
 private theorem rippleFirstPass_usesOnly
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) :
+    (carry scratch : Wire) :
     PaperCircuitUsesOnly
-      (controlledWindowRippleSupport control targets addends carry dirty)
-      (rippleFirstPass mode control targets addends carry dirty) := by
+      (controlledWindowRippleSupport control targets addends carry scratch)
+      (rippleFirstPass mode control targets addends carry scratch) := by
   induction targets generalizing addends with
   | nil => cases addends <;> simp [rippleFirstPass, PaperCircuitUsesOnly]
   | cons target targets ih =>
@@ -867,15 +967,15 @@ private theorem rippleFirstPass_usesOnly
             aesop
           · cases mode with
             | add =>
-                apply (controlledMajDirty_usesOnly
-                  control target addend carry dirty).mono
+                apply (controlledMaj_usesOnly
+                  control target addend carry scratch).mono
                 intro wire hwire
                 simp only [controlledWindowRippleSupport, List.mem_cons,
                   List.mem_append] at hwire ⊢
                 aesop
             | sub =>
-                apply (controlledUmaInvDirty_usesOnly
-                  control target addend carry dirty).mono
+                apply (controlledUmaInv_usesOnly
+                  control target addend carry scratch).mono
                 intro wire hwire
                 simp only [controlledWindowRippleSupport, List.mem_cons,
                   List.mem_append] at hwire ⊢
@@ -883,10 +983,10 @@ private theorem rippleFirstPass_usesOnly
 
 private theorem rippleSecondPass_usesOnly
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) :
+    (carry scratch : Wire) :
     PaperCircuitUsesOnly
-      (controlledWindowRippleSupport control targets addends carry dirty)
-      (rippleSecondPass mode control targets addends carry dirty) := by
+      (controlledWindowRippleSupport control targets addends carry scratch)
+      (rippleSecondPass mode control targets addends carry scratch) := by
   induction targets generalizing addends with
   | nil => cases addends <;> simp [rippleSecondPass, PaperCircuitUsesOnly]
   | cons target targets ih =>
@@ -897,15 +997,15 @@ private theorem rippleSecondPass_usesOnly
           apply PaperCircuitUsesOnly.append
           · cases mode with
             | add =>
-                apply (controlledUmaDirty_usesOnly
-                  control target addend carry dirty).mono
+                apply (controlledUma_usesOnly
+                  control target addend carry scratch).mono
                 intro wire hwire
                 simp only [controlledWindowRippleSupport, List.mem_cons,
                   List.mem_append] at hwire ⊢
                 aesop
             | sub =>
-                apply (controlledMajInvDirty_usesOnly
-                  control target addend carry dirty).mono
+                apply (controlledMajInv_usesOnly
+                  control target addend carry scratch).mono
                 intro wire hwire
                 simp only [controlledWindowRippleSupport, List.mem_cons,
                   List.mem_append] at hwire ⊢
@@ -916,74 +1016,77 @@ private theorem rippleSecondPass_usesOnly
               List.mem_append] at hwire ⊢
             aesop
 
-/-- The exact two-pass circuit stays inside its declared control, data, carry, and borrowed
-dirty-wire footprint. -/
+/-- The exact two-pass circuit stays inside its declared control, data, carry, and clean-scratch
+footprint. -/
 theorem controlledWindowRipple_usesOnly
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) :
+    (carry scratch : Wire) :
     PaperCircuitUsesOnly
-      (controlledWindowRippleSupport control targets addends carry dirty)
-      (controlledWindowRipple mode control targets addends carry dirty) := by
+      (controlledWindowRippleSupport control targets addends carry scratch)
+      (controlledWindowRipple mode control targets addends carry scratch) := by
   apply PaperCircuitUsesOnly.append
-  · exact rippleFirstPass_usesOnly mode control targets addends carry dirty
-  · exact rippleSecondPass_usesOnly mode control targets addends carry dirty
+  · exact rippleFirstPass_usesOnly mode control targets addends carry scratch
+  · exact rippleSecondPass_usesOnly mode control targets addends carry scratch
 
 /-- Every wire outside the named ripple footprint is unchanged. -/
 theorem controlledWindowRipple_preservesOutside
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire) (state : BasisState) (wire : Wire)
+    (carry scratch : Wire) (state : BasisState) (wire : Wire)
     (hwire : wire ∉
-      controlledWindowRippleSupport control targets addends carry dirty) :
-    run (controlledWindowRipple mode control targets addends carry dirty) state wire =
+      controlledWindowRippleSupport control targets addends carry scratch) :
+    run (controlledWindowRipple mode control targets addends carry scratch) state wire =
       state wire :=
   PaperCircuitUsesOnly.preservesOutside
-    (controlledWindowRipple_usesOnly mode control targets addends carry dirty)
+    (controlledWindowRipple_usesOnly mode control targets addends carry scratch)
     state hwire
 
 private theorem run_rippleFirstCell_protected
-    (mode : RippleMode) (control target addend carry dirty wire : Wire)
+    (mode : RippleMode) (control target addend carry scratch wire : Wire)
     (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup)
-    (hprotected : wire = control ∨ wire = dirty) :
-    run (rippleFirstCell mode control target addend carry dirty) state wire =
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false)
+    (hprotected : wire = control ∨ wire = scratch) :
+    run (rippleFirstCell mode control target addend carry scratch) state wire =
       state wire := by
-  rw [run_rippleFirstCell mode control target addend carry dirty state hnd]
-  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryDirty⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+  rw [run_rippleFirstCell mode control target addend carry scratch state hnd hclean]
+  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryScratch⟩ :=
+    cell_nodup_parts control target addend carry scratch hnd
   rcases hprotected with rfl | rfl
   · simp only [writeRippleCell]
     rw [upd_other _ carry _ hcc, upd_other _ addend _ hca,
       upd_other _ target _ hct]
   · simp only [writeRippleCell]
-    rw [upd_other _ carry _ (Ne.symm hcarryDirty),
+    rw [upd_other _ carry _ (Ne.symm hcarryScratch),
       upd_other _ addend _ (Ne.symm had),
       upd_other _ target _ (Ne.symm htd)]
 
 private theorem run_rippleSecondCell_protected
-    (mode : RippleMode) (control target addend carry dirty wire : Wire)
+    (mode : RippleMode) (control target addend carry scratch wire : Wire)
     (state : BasisState)
-    (hnd : [control, target, addend, carry, dirty].Nodup)
-    (hprotected : wire = control ∨ wire = dirty) :
-    run (rippleSecondCell mode control target addend carry dirty) state wire =
+    (hnd : [control, target, addend, carry, scratch].Nodup)
+    (hclean : state scratch = false)
+    (hprotected : wire = control ∨ wire = scratch) :
+    run (rippleSecondCell mode control target addend carry scratch) state wire =
       state wire := by
-  rw [run_rippleSecondCell mode control target addend carry dirty state hnd]
-  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryDirty⟩ :=
-    cell_nodup_parts control target addend carry dirty hnd
+  rw [run_rippleSecondCell mode control target addend carry scratch state hnd hclean]
+  obtain ⟨hct, hca, hcc, hcd, hta, htc, htd, hac, had, hcarryScratch⟩ :=
+    cell_nodup_parts control target addend carry scratch hnd
   rcases hprotected with rfl | rfl
   · simp only [writeRippleCell]
     rw [upd_other _ carry _ hcc, upd_other _ addend _ hca,
       upd_other _ target _ hct]
   · simp only [writeRippleCell]
-    rw [upd_other _ carry _ (Ne.symm hcarryDirty),
+    rw [upd_other _ carry _ (Ne.symm hcarryScratch),
       upd_other _ addend _ (Ne.symm had),
       upd_other _ target _ (Ne.symm htd)]
 
 private theorem run_rippleFirstPass_protected
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty wire : Wire) (state : BasisState)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty)
-    (hprotected : wire = control ∨ wire = dirty) :
-    run (rippleFirstPass mode control targets addends carry dirty) state wire =
+    (carry scratch wire : Wire) (state : BasisState)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch)
+    (hclean : state scratch = false)
+    (hprotected : wire = control ∨ wire = scratch) :
+    run (rippleFirstPass mode control targets addends carry scratch) state wire =
       state wire := by
   induction targets generalizing addends state with
   | nil =>
@@ -996,17 +1099,26 @@ private theorem run_rippleFirstPass_protected
       | cons addend addends =>
           cases hlayouts with
           | cons hhead htail =>
+              have hmiddleClean :
+                  run (rippleFirstPass mode control targets addends carry scratch)
+                      state scratch = false := by
+                rw [run_rippleFirstPass mode control targets addends carry scratch state
+                  htail hclean,
+                  rippleFirstState_preservesScratch mode control targets addends carry
+                    scratch state htail]
+                exact hclean
               rw [rippleFirstPass, run_append,
-                run_rippleFirstCell_protected mode control target addend carry dirty
-                  wire _ hhead hprotected,
-                ih addends state htail]
+                run_rippleFirstCell_protected mode control target addend carry scratch
+                  wire _ hhead hmiddleClean hprotected,
+                ih addends state htail hclean]
 
 private theorem run_rippleSecondPass_protected
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty wire : Wire) (state : BasisState)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty)
-    (hprotected : wire = control ∨ wire = dirty) :
-    run (rippleSecondPass mode control targets addends carry dirty) state wire =
+    (carry scratch wire : Wire) (state : BasisState)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch)
+    (hclean : state scratch = false)
+    (hprotected : wire = control ∨ wire = scratch) :
+    run (rippleSecondPass mode control targets addends carry scratch) state wire =
       state wire := by
   induction targets generalizing addends state with
   | nil =>
@@ -1019,33 +1131,50 @@ private theorem run_rippleSecondPass_protected
       | cons addend addends =>
           cases hlayouts with
           | cons hhead htail =>
+              have hnextClean :
+                  run (rippleSecondCell mode control target addend carry scratch)
+                      state scratch = false := by
+                rw [run_rippleSecondCell mode control target addend carry scratch state
+                  hhead hclean,
+                  writeRippleCell_preservesScratch control target addend carry scratch
+                    _ state hhead]
+                exact hclean
               rw [rippleSecondPass, run_append,
-                ih addends _ htail,
-                run_rippleSecondCell_protected mode control target addend carry dirty
-                  wire state hhead hprotected]
+                ih addends _ htail hnextClean,
+                run_rippleSecondCell_protected mode control target addend carry scratch
+                  wire state hhead hclean hprotected]
 
-/-- The location control and the borrowed dirty wire are restored exactly. -/
+/-- The location control is preserved and the clean production scratch wire is restored. -/
 theorem controlledWindowRipple_protected
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty wire : Wire) (state : BasisState)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty)
-    (hprotected : wire = control ∨ wire = dirty) :
-    run (controlledWindowRipple mode control targets addends carry dirty) state wire =
+    (carry scratch wire : Wire) (state : BasisState)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch)
+    (hclean : state scratch = false)
+    (hprotected : wire = control ∨ wire = scratch) :
+    run (controlledWindowRipple mode control targets addends carry scratch) state wire =
       state wire := by
+  have hmiddleClean :
+      run (rippleFirstPass mode control targets addends carry scratch) state scratch =
+        false := by
+    rw [run_rippleFirstPass mode control targets addends carry scratch state hlayouts
+      hclean,
+      rippleFirstState_preservesScratch mode control targets addends carry scratch state
+        hlayouts]
+    exact hclean
   rw [controlledWindowRipple, run_append,
-    run_rippleSecondPass_protected mode control targets addends carry dirty wire _
-      hlayouts hprotected,
-    run_rippleFirstPass_protected mode control targets addends carry dirty wire state
-      hlayouts hprotected]
+    run_rippleSecondPass_protected mode control targets addends carry scratch wire _
+      hlayouts hmiddleClean hprotected,
+    run_rippleFirstPass_protected mode control targets addends carry scratch wire state
+      hlayouts hclean hprotected]
 
 private theorem rippleFirstPass_toffoliCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    eeaToffoliCount (rippleFirstPass mode control targets addends carry dirty) =
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
+    eeaToffoliCount (rippleFirstPass mode control targets addends carry scratch) =
       match mode with
-      | .add => 4 * targets.length
-      | .sub => 5 * targets.length := by
+      | .add => 3 * targets.length
+      | .sub => 4 * targets.length := by
   induction targets generalizing addends with
   | nil =>
       cases addends with
@@ -1063,12 +1192,12 @@ private theorem rippleFirstPass_toffoliCount
 
 private theorem rippleSecondPass_toffoliCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    eeaToffoliCount (rippleSecondPass mode control targets addends carry dirty) =
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
+    eeaToffoliCount (rippleSecondPass mode control targets addends carry scratch) =
       match mode with
-      | .add => 5 * targets.length
-      | .sub => 4 * targets.length := by
+      | .add => 4 * targets.length
+      | .sub => 3 * targets.length := by
   induction targets generalizing addends with
   | nil =>
       cases addends with
@@ -1084,24 +1213,25 @@ private theorem rippleSecondPass_toffoliCount
                 ih addends htail]
               cases mode <;> simp [rippleSecondCell] <;> omega
 
-/-- Nine Toffolis per physical lane: four for C3X in one pass and five in the other. -/
+/-- Seven Toffolis per physical lane, matching the paper and the pinned production path: three in
+the MAJ pass and four in the UMA pass (or the inverse order for subtraction). -/
 theorem controlledWindowRipple_toffoliCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
     eeaToffoliCount
-        (controlledWindowRipple mode control targets addends carry dirty) =
-      9 * targets.length := by
+        (controlledWindowRipple mode control targets addends carry scratch) =
+      7 * targets.length := by
   rw [controlledWindowRipple, eeaToffoliCount_append,
-    rippleFirstPass_toffoliCount mode control targets addends carry dirty hlayouts,
-    rippleSecondPass_toffoliCount mode control targets addends carry dirty hlayouts]
+    rippleFirstPass_toffoliCount mode control targets addends carry scratch hlayouts,
+    rippleSecondPass_toffoliCount mode control targets addends carry scratch hlayouts]
   cases mode <;> simp [← Nat.add_mul]
 
 private theorem rippleFirstPass_cnotCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    eeaCnotCount (rippleFirstPass mode control targets addends carry dirty) =
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
+    eeaCnotCount (rippleFirstPass mode control targets addends carry scratch) =
       2 * targets.length := by
   induction targets generalizing addends with
   | nil =>
@@ -1120,9 +1250,9 @@ private theorem rippleFirstPass_cnotCount
 
 private theorem rippleSecondPass_cnotCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    eeaCnotCount (rippleSecondPass mode control targets addends carry dirty) =
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
+    eeaCnotCount (rippleSecondPass mode control targets addends carry scratch) =
       2 * targets.length := by
   induction targets generalizing addends with
   | nil =>
@@ -1141,24 +1271,24 @@ private theorem rippleSecondPass_cnotCount
 
 theorem controlledWindowRipple_cnotCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
     eeaCnotCount
-        (controlledWindowRipple mode control targets addends carry dirty) =
+        (controlledWindowRipple mode control targets addends carry scratch) =
       4 * targets.length := by
   rw [controlledWindowRipple, eeaCnotCount_append,
-    rippleFirstPass_cnotCount mode control targets addends carry dirty hlayouts,
-    rippleSecondPass_cnotCount mode control targets addends carry dirty hlayouts]
+    rippleFirstPass_cnotCount mode control targets addends carry scratch hlayouts,
+    rippleSecondPass_cnotCount mode control targets addends carry scratch hlayouts]
   omega
 
 private theorem rippleFirstPass_tCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    ShorECDLP.tCount (rippleFirstPass mode control targets addends carry dirty) =
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
+    ShorECDLP.tCount (rippleFirstPass mode control targets addends carry scratch) =
       match mode with
-      | .add => 28 * targets.length
-      | .sub => 35 * targets.length := by
+      | .add => 21 * targets.length
+      | .sub => 28 * targets.length := by
   induction targets generalizing addends with
   | nil =>
       cases addends with
@@ -1175,12 +1305,12 @@ private theorem rippleFirstPass_tCount
 
 private theorem rippleSecondPass_tCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
-    ShorECDLP.tCount (rippleSecondPass mode control targets addends carry dirty) =
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
+    ShorECDLP.tCount (rippleSecondPass mode control targets addends carry scratch) =
       match mode with
-      | .add => 35 * targets.length
-      | .sub => 28 * targets.length := by
+      | .add => 28 * targets.length
+      | .sub => 21 * targets.length := by
   induction targets generalizing addends with
   | nil =>
       cases addends with
@@ -1195,17 +1325,17 @@ private theorem rippleSecondPass_tCount
               rw [rippleSecondPass, tCount_append, ih addends htail]
               cases mode <;> simp [rippleSecondCell] <;> omega
 
-/-- Constructor-derived 63-T cost per active physical lane. -/
+/-- Constructor-derived 49-T cost per physical lane. -/
 theorem controlledWindowRipple_tCount
     (mode : RippleMode) (control : Wire) (targets addends : List Wire)
-    (carry dirty : Wire)
-    (hlayouts : RippleLaneLayouts control targets addends carry dirty) :
+    (carry scratch : Wire)
+    (hlayouts : RippleLaneLayouts control targets addends carry scratch) :
     ShorECDLP.tCount
-        (controlledWindowRipple mode control targets addends carry dirty) =
-      63 * targets.length := by
+        (controlledWindowRipple mode control targets addends carry scratch) =
+      49 * targets.length := by
   rw [controlledWindowRipple, tCount_append,
-    rippleFirstPass_tCount mode control targets addends carry dirty hlayouts,
-    rippleSecondPass_tCount mode control targets addends carry dirty hlayouts]
+    rippleFirstPass_tCount mode control targets addends carry scratch hlayouts,
+    rippleSecondPass_tCount mode control targets addends carry scratch hlayouts]
   cases mode <;> simp [← Nat.add_mul]
 
 end ShorECDLP.Paper2607_13816

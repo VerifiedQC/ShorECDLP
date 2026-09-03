@@ -293,6 +293,83 @@ theorem dirtyC3X_cnotCount
     (first second third target dirty : Wire) :
     eeaCnotCount (dirtyC3X first second third target dirty) = 0 := rfl
 
+/-! ## Clean-v-chain three-controlled X -/
+
+/-- The three-control specialization of the pinned production supplement's clean `mcx_vchain`:
+compute the conjunction of the first two controls, use it with the third control, then restore the
+clean scratch bit. -/
+def cleanC3X
+    (first second third target scratch : Wire) : Circuit :=
+  [.CCX first second scratch, .CCX third scratch target,
+    .CCX first second scratch]
+
+/-- Exact basis-state action of the production clean-v-chain construction. -/
+theorem run_cleanC3X
+    (first second third target scratch : Wire) (state : BasisState)
+    (hnd : [first, second, third, target, scratch].Nodup)
+    (hclean : state scratch = false) :
+    run (cleanC3X first second third target scratch) state =
+      state[target ↦ Bool.xor (state target)
+        (state first && state second && state third)] := by
+  obtain ⟨_, hfTarget, hfs, hsTarget, hss, hthirdScratch,
+    _, hscratchTarget⟩ :=
+    nodupFive_parts first second third target scratch hnd
+  have htargetScratch : target ≠ scratch := Ne.symm hscratchTarget
+  funext wire
+  by_cases hwtarget : wire = target
+  · subst wire
+    cases hf : state first <;> cases hs : state second <;>
+      cases ht : state third <;> cases hout : state target <;>
+      simp [cleanC3X, run, applyGate, upd, hfTarget, hfs,
+        hsTarget, hss, hthirdScratch,
+        hscratchTarget, htargetScratch, hclean, hf, hs, ht, hout]
+  · by_cases hws : wire = scratch
+    · subst wire
+      cases hf : state first <;> cases hs : state second <;>
+        cases ht : state third <;> cases hout : state target <;>
+        simp [cleanC3X, run, applyGate, upd, hfTarget, hfs,
+          hsTarget, hss, hthirdScratch,
+          hscratchTarget, htargetScratch, hclean, hf, hs, ht, hout]
+    · simp [cleanC3X, run, applyGate, upd, hwtarget, hws]
+
+/-- The clean-v-chain construction is physically well formed on five distinct wires. -/
+theorem cleanC3X_wellFormed
+    (first second third target scratch : Wire)
+    (hnd : [first, second, third, target, scratch].Nodup) :
+    CircuitWellFormed (cleanC3X first second third target scratch) := by
+  obtain ⟨hfs, _, hfScratch, _, hsScratch, hthirdScratch,
+    hthirdTarget, hscratchTarget⟩ :=
+    nodupFive_parts first second third target scratch hnd
+  simp [cleanC3X, CircuitWellFormed, Gate.WellFormed,
+    hfs, hfScratch, hsScratch, hthirdScratch, hthirdTarget, hscratchTarget]
+
+@[simp]
+theorem cleanC3X_HPFree
+    (first second third target scratch : Wire) :
+    HPFree (cleanC3X first second third target scratch) := by
+  simp [cleanC3X]
+
+theorem cleanC3X_usesOnly
+    (first second third target scratch : Wire) :
+    PaperCircuitUsesOnly [first, second, third, target, scratch]
+      (cleanC3X first second third target scratch) := by
+  simp [PaperCircuitUsesOnly, PaperGateUsesOnly, cleanC3X, gateWires]
+
+@[simp]
+theorem cleanC3X_tCount
+    (first second third target scratch : Wire) :
+    tCount (cleanC3X first second third target scratch) = 21 := rfl
+
+@[simp]
+theorem cleanC3X_toffoliCount
+    (first second third target scratch : Wire) :
+    eeaToffoliCount (cleanC3X first second third target scratch) = 3 := rfl
+
+@[simp]
+theorem cleanC3X_cnotCount
+    (first second third target scratch : Wire) :
+    eeaCnotCount (cleanC3X first second third target scratch) = 0 := rfl
+
 /-! ## Controlled circular shift -/
 
 /-- Values read from named wires in list order. -/

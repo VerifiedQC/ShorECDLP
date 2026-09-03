@@ -162,6 +162,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.paperPhaseTrace_fieldsNonoverlap
 #print axioms ShorECDLP.Paper2607_13816.run_controlledSwap
 #print axioms ShorECDLP.Paper2607_13816.run_dirtyC3X
+#print axioms ShorECDLP.Paper2607_13816.run_cleanC3X
 #print axioms ShorECDLP.Paper2607_13816.run_controlledRotateLeftOne_values
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_correct
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_wellFormed
@@ -174,10 +175,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_tCount
-#print axioms ShorECDLP.Paper2607_13816.run_controlledMajDirty
-#print axioms ShorECDLP.Paper2607_13816.run_controlledUmaDirty
-#print axioms ShorECDLP.Paper2607_13816.run_controlledMajInvDirty
-#print axioms ShorECDLP.Paper2607_13816.run_controlledUmaInvDirty
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMaj
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUma
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMajInv
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUmaInv
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMaj_state
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUma_state
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMajInv_state
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUmaInv_state
 #print axioms ShorECDLP.Paper2607_13816.run_controlledWindowRipple
 #print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_usesOnly
@@ -222,8 +227,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 198 ]]; then
-  printf 'expected one hundred ninety-eight #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 203 ]]; then
+  printf 'expected two hundred three #print axioms results\n' >&2
   exit 1
 fi
 

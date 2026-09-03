@@ -374,19 +374,21 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first dependency-closed construction unit is implemented on the current review
-head. It contains the literal Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
+**Status:** the first dependency-closed construction unit is merged. It contains standalone exact
+Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
 named-wire locality, physical well-formedness, and constructor-derived resource equations. The
 unary traversal coherently refines its full compute/uncompute reference and uses exactly one
 measurement and seven T gates per internal decision node. The next dependency-closed unit now
-implements the literal dirty-ancilla MAJ/UMA cells, their prepared-slice two-pass ripple core, and
-the borrowed-work XOR normal form used by the two length decoders. These blocks have direct
-whole-basis-state semantics, arbitrary dirty-wire restoration, named locality, physical
-well-formedness, and exact constructor-derived Toffoli/CNOT/T formulas. Concrete dual-endpoint
-unary scans, upper/lower zero-map production, complete length blocks, and the indexed four-phase
-step remain open within Phase 5.
+implements the pinned production path's clean-v-chain MAJ/UMA cells and prepared-slice two-pass
+ripple core, plus a per-bit borrowed-work XOR normal form for the later length decoders. The ripple
+has direct whole-basis-state semantics, clean-scratch restoration, named locality, physical
+well-formedness, and the paper's exact seven-Toffoli / 49-T formula per lane. The borrowed writer's
+four-CNOT-per-set-bit count is local only and is not a production aggregate until the grouped
+write/zero-map/write/zero-map composition is proved. Concrete dual-endpoint unary scans,
+upper/lower zero-map production, complete length blocks, and the indexed four-phase step remain
+open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -565,9 +567,10 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #62, Phase-5 circuit unit 1:** merged at `d1f94940`; exact bit primitives, controlled shifts
   and increment, measurement-assisted path-AND erasure, and coherently refined pruned unary
   iteration.
-- **PR #63, Phase-5 circuit unit 2:** current implementation/review unit; literal controlled
-  MAJ/UMA ripple arithmetic and borrowed-work length-update kernels. Concrete endpoint scans,
-  zero maps, full length blocks, and the indexed step remain open.
+- **PR #63, Phase-5 circuit unit 2:** current implementation/review unit; pinned-production clean
+  MAJ/UMA ripple arithmetic and per-bit borrowed-work length-update kernels. The latter are not yet
+  an aggregate count. Concrete endpoint scans, zero maps, full length blocks, and the indexed step
+  remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.

@@ -9,9 +9,9 @@ register as arbitrary dirty storage.  Algebraically, one selected bit is impleme
 `CX dirty target; CX selector dirty; CX dirty target; CX selector dirty`.
 
 The dirty value cancels, the selector is XORed into the target, and both borrowed/control
-wires are restored.  This file proves that identity once, lifts it to encoded constants and
-lists of decoder lanes, and exposes the exact locality, well-formedness, and resource formulas
-needed by the upper/lower zero-map circuits.
+wires are restored.  This file proves that identity once and lifts it to encoded constants and
+lists of decoder lanes.  These are local normal-form formulas only: the production aggregate
+still requires the grouped write/zero-map/write/zero-map composition from Figures 12--13.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -473,6 +473,8 @@ theorem borrowedXorWriter_restoresDirty
   have hnd := hlayout lane hlane lane.dirty hmem
   simp at hnd
 
+/-- Exact CNOT count of the per-lane normal form.  This is not yet the CNOT count of the grouped
+production writer/zero-map sandwich from Figures 12--13. -/
 theorem borrowedXorWriter_cnotCount
     (targets : List Wire) (lanes : List BorrowedWriteLane) :
     eeaCnotCount (borrowedXorWriter targets lanes) =
