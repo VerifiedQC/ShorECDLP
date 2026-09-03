@@ -5,10 +5,11 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--3 paper foundation below are on
-`main@3fd38b4f8de01505028ef80c55ba6bed728ffb84`. PR #56 → PR #57 → PR #58 → PR #59 → PR #60
-landed the source split, adaptive Kraus semantics, coherent-refinement bridge, measurement-based
-uncomputation, and pure EEA model; Phase 4 is the current implementation/review unit. A `✓` means a
+**Status snapshot.** The verified Naive result and merged Phase-0--4 paper foundation below are on
+`main@553f41be6fe2336e5816cd54b76805a0b9d05c5f`. PR #56 → PR #57 → PR #58 → PR #59 → PR #60
+→ PR #61 landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
+measurement-based uncomputation, pure EEA model, and indexed EEA bounds/windows; Phase 5 is the
+current implementation/review unit. A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
 
@@ -336,7 +337,7 @@ borrowed epoch bit so terminal padding is a reversible identity at the exposed E
 **Gate:** all nonzero 256-bit field inputs terminate in 1,620 steps and every pruned gate location
 is proved unreachable.
 
-**Status:** implemented on the current review unit. An exact four-row rational potential
+**Status:** merged via PR #61. An exact four-row rational potential
 certificate proves quotient-bit weight at most 405, hence at most 1,620 microsteps, uniformly over
 every `1 <= x < p`; no floating-point evaluation or input enumeration appears in the theorem.
 Every positive schedule index has a reachable active-or-padding witness. Padding is a multiple of
@@ -371,6 +372,15 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
+
+**Status:** the first dependency-closed construction unit is implemented on the current review
+head. It contains the literal Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
+the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
+pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
+named-wire locality, physical well-formedness, and constructor-derived resource equations. The
+unary traversal coherently refines its full compute/uncompute reference and uses exactly one
+measurement and seven T gates per internal decision node. Windowed arithmetic, length updates, and
+the indexed four-phase step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -542,10 +552,13 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #60, Phase-3 pure EEA model:** merged at `3fd38b4f`; circuit-free quotient recurrence, packed
   canonical-boundary geometry and value capacity, active-step left inverse, termination, modular
   inverse, and quotient-level terminal stuttering.
-- **Phase 4, exact EEA bound/windows:** current implementation/review unit; exact 1,620-step bound,
+- **PR #61, Phase-4 exact EEA bound/windows:** merged at `553f41be`; exact 1,620-step bound,
   indexed active/padding reachability, borrowed terminal epoch, noncanonical frame packing, and
   certified active windows. The pinned generator remainder interval is retained only as reference;
   the concrete boundary includes the proved one-lane ordering correction.
+- **PR #62, Phase-5 circuit unit 1:** current implementation/review unit; exact bit primitives,
+  controlled shifts and increment, measurement-assisted path-AND erasure, and coherently refined
+  pruned unary iteration. Windowed arithmetic, length updates, and the indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -580,5 +593,4 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--2 are merged. Phase 3 is implemented from that reviewed foundation and is the current
-review unit.
+Phases 0--4 are merged. Phase 5 circuit unit 1 is the current review unit on that foundation.

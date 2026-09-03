@@ -160,6 +160,20 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.PaperActiveFrame.windowCertificate
 #print axioms ShorECDLP.Paper2607_13816.secp256k1_activeWindowCertificate_of_le
 #print axioms ShorECDLP.Paper2607_13816.paperPhaseTrace_fieldsNonoverlap
+#print axioms ShorECDLP.Paper2607_13816.run_controlledSwap
+#print axioms ShorECDLP.Paper2607_13816.run_dirtyC3X
+#print axioms ShorECDLP.Paper2607_13816.run_controlledRotateLeftOne_values
+#print axioms ShorECDLP.Paper2607_13816.controlledIncrement_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledIncrement_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledIncrement_tCount
+#print axioms ShorECDLP.Paper2607_13816.measuredAndCorrection_phase
+#print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_coherent
+#print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.run_unaryIterationUnitary
+#print axioms ShorECDLP.Paper2607_13816.unaryIteration_coherent
+#print axioms ShorECDLP.Paper2607_13816.unaryIteration_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.unaryIteration_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.unaryIteration_tCount
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -191,8 +205,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 167 ]]; then
-  printf 'expected one hundred sixty-seven #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 181 ]]; then
+  printf 'expected one hundred eighty-one #print axioms results\n' >&2
   exit 1
 fi
 
