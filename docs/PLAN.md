@@ -379,8 +379,13 @@ the supplement's controlled increment, reusable measurement-assisted path-AND er
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
 named-wire locality, physical well-formedness, and constructor-derived resource equations. The
 unary traversal coherently refines its full compute/uncompute reference and uses exactly one
-measurement and seven T gates per internal decision node. Windowed arithmetic, length updates, and
-the indexed four-phase step remain open within Phase 5.
+measurement and seven T gates per internal decision node. The next dependency-closed unit now
+implements the literal dirty-ancilla MAJ/UMA cells, their prepared-slice two-pass ripple core, and
+the borrowed-work XOR normal form used by the two length decoders. These blocks have direct
+whole-basis-state semantics, arbitrary dirty-wire restoration, named locality, physical
+well-formedness, and exact constructor-derived Toffoli/CNOT/T formulas. Concrete dual-endpoint
+unary scans, upper/lower zero-map production, complete length blocks, and the indexed four-phase
+step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 

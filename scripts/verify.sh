@@ -174,6 +174,23 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMajDirty
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUmaDirty
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMajInvDirty
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUmaInvDirty
+#print axioms ShorECDLP.Paper2607_13816.run_controlledWindowRipple
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_protected
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_borrowedXorBit
+#print axioms ShorECDLP.Paper2607_13816.run_borrowedXorWriter_state
+#print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_restoresDirty
+#print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_cnotCount
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -205,8 +222,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 181 ]]; then
-  printf 'expected one hundred eighty-one #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 198 ]]; then
+  printf 'expected one hundred ninety-eight #print axioms results\n' >&2
   exit 1
 fi
 
