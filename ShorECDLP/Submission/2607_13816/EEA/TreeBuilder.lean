@@ -152,8 +152,9 @@ theorem buildAt_eq_none_iff
         rw [hempty] at hmember
         simp at hmember
 
-/-- Certificate for the exact source construction.  At each candidate bit, an empty half is
-pruned; a node using that bit is emitted precisely when both aligned halves are inhabited. -/
+/-- Certificate for `buildAt`'s block-scan construction.  At each candidate bit, an empty half is
+pruned and a node is emitted precisely when both aligned halves are inhabited.  When obtained via
+`build_sourceBuilt` at base zero, it certifies the source construction. -/
 inductive SourceBuilt (indexA indexB : Nat → Wire) (labels : Finset Nat) :
     Nat → Nat → DualUnaryActionTree → Prop where
   | leaf (base : Nat) (hbase : base ∈ labels) :
@@ -417,8 +418,8 @@ theorem build_indexBWires
     ∃ bit, bit < width ∧ wire = indexB bit :=
   (build_sourceBuilt indexA indexB width labels tree hbuild).indexBWires hwire
 
-/-- The separate top-special endpoint bit is outside the main pruned tree whenever register
-indices map injectively to wires. -/
+/-- The bit at the explicit build width is absent from the corresponding A-index bank whenever
+register indices map injectively to wires. -/
 theorem build_topIndexA_not_mem
     (indexA indexB : Nat → Wire)
     (width : Nat) (labels : Finset Nat)
@@ -432,6 +433,8 @@ theorem build_topIndexA_not_mem
   have : width = bit := hinjective heq
   omega
 
+/-- The bit at the explicit build width is absent from the corresponding B-index bank whenever
+register indices map injectively to wires. -/
 theorem build_topIndexB_not_mem
     (indexA indexB : Nat → Wire)
     (width : Nat) (labels : Finset Nat)
