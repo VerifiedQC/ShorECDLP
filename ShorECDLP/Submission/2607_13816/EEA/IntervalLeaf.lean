@@ -48,20 +48,22 @@ theorem wireAnd_upd_not_mem
 def mcxVChainTail (accumulator : Wire) :
     List Wire → Wire → List Wire → Circuit
   | [], _, _ => []
-  | [control], target, _ => [.CCX accumulator control target]
+  | [control], target, _ => [.CCX control accumulator target]
   | control :: nextControl :: controls, target, scratch :: scratches =>
-      [.CCX accumulator control scratch] ++
+      [.CCX control accumulator scratch] ++
         mcxVChainTail scratch (nextControl :: controls) target scratches ++
-        [.CCX accumulator control scratch]
+        [.CCX control accumulator scratch]
   | _ :: _ :: _, _, [] => []
 
 /-- Literal coherent `mcx_vchain` from the pinned generator.  Extra scratch wires are ignored;
-the first `controls.length - 2` wires are used and restored. -/
+the first `controls.length - 2` wires are used and restored.  Outside that capacity premise, the
+total Lean fallback does not model Python's exception; source-fidelity, correctness,
+well-formedness, and resource claims are capacity-restricted. -/
 def mcxVChain : List Wire → Wire → List Wire → Circuit
   | [], target, _ => [.X target]
   | [control], target, _ => [.CX control target]
   | first :: second :: controls, target, scratches =>
-      mcxVChainTail first (second :: controls) target scratches
+      mcxVChainTail second (first :: controls) target scratches
 
 /-- Every physical role supplied to a v-chain is distinct. -/
 def McxVChainLayout (controls : List Wire) (target : Wire)
@@ -207,9 +209,9 @@ private theorem run_mcxVChainTail
                 exact (List.nodup_cons.mp htail).1 (by simp [equality])
               have hscratchFalse : state scratch = false :=
                 hclean scratch (by simp)
-              let first := applyGate (.CCX accumulator control scratch) state
+              let first := applyGate (.CCX control accumulator scratch) state
               have hfirst : first =
-                  state[scratch ↦ state accumulator && state control] := by
+                  state[scratch ↦ state control && state accumulator] := by
                 funext wire
                 by_cases hwire : wire = scratch
                 · subst wire
@@ -238,7 +240,7 @@ private theorem run_mcxVChainTail
                     wireAnd controls state := by
                 rw [wireAnd_upd_not_mem _ _ _ _ hscratchTailControls]
               rw [mcxVChainTail, run_append, run_append]
-              change run [.CCX accumulator control scratch]
+              change run [.CCX control accumulator scratch]
                 (run (mcxVChainTail scratch (nextControl :: controls)
                   target scratches) first) = _
               rw [hchild]
@@ -297,13 +299,16 @@ theorem run_mcxVChain
           · simp [mcxVChain, wireAnd, run, applyGate, upd, hwire]
       | cons second controls =>
           have htailLayout :
-              (first :: (second :: controls) ++ target :: scratches).Nodup := by
-            simpa [McxVChainLayout, List.cons_append] using hlayout
+              (second :: (first :: controls) ++ target :: scratches).Nodup := by
+            simp only [McxVChainLayout, List.cons_append, List.nodup_cons,
+              List.mem_cons, List.mem_append, not_or] at hlayout ⊢
+            aesop
           have htailEnough :
-              (second :: controls).length - 1 ≤ scratches.length := by
+              (first :: controls).length - 1 ≤ scratches.length := by
             simpa using henough
-          simpa [mcxVChain, wireAnd] using
-            run_mcxVChainTail first (second :: controls) target scratches state
+          simpa [mcxVChain, wireAnd, Bool.and_comm, Bool.and_left_comm,
+            Bool.and_assoc] using
+            run_mcxVChainTail second (first :: controls) target scratches state
               (by simp) htailEnough htailLayout hclean
 
 private theorem mcxVChainTail_HPFree
@@ -331,7 +336,7 @@ theorem mcxVChain_HPFree
       cases controls with
       | nil => simp [mcxVChain]
       | cons second controls =>
-          exact mcxVChainTail_HPFree first (second :: controls) target scratches
+          exact mcxVChainTail_HPFree second (first :: controls) target scratches
 
 private theorem mcxVChainTail_usesOnly
     (accumulator : Wire) (controls : List Wire) (target : Wire)
@@ -351,7 +356,7 @@ private theorem mcxVChainTail_usesOnly
               have hgate : PaperCircuitUsesOnly
                   (accumulator :: control :: nextControl :: controls ++
                     target :: scratch :: scratches)
-                  (Gate.CCX accumulator control scratch :: []) := by
+                  (Gate.CCX control accumulator scratch :: []) := by
                 simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
               have hchild : PaperCircuitUsesOnly
                   (accumulator :: control :: nextControl :: controls ++
@@ -365,10 +370,10 @@ private theorem mcxVChainTail_usesOnly
               change PaperCircuitUsesOnly
                 (accumulator :: control :: nextControl :: controls ++
                   target :: scratch :: scratches)
-                ((Gate.CCX accumulator control scratch :: []) ++
+                ((Gate.CCX control accumulator scratch :: []) ++
                   (mcxVChainTail scratch (nextControl :: controls)
                     target scratches ++
-                      (Gate.CCX accumulator control scratch :: [])))
+                      (Gate.CCX control accumulator scratch :: [])))
               exact hgate.append (hchild.append hgate)
 
 theorem mcxVChain_usesOnly
@@ -382,8 +387,11 @@ theorem mcxVChain_usesOnly
       | nil =>
           simp [mcxVChain, PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
       | cons second controls =>
-          simpa [List.cons_append] using
-            mcxVChainTail_usesOnly first (second :: controls) target scratches
+          apply (mcxVChainTail_usesOnly second (first :: controls)
+            target scratches).mono
+          intro wire hwire
+          simp only [List.mem_cons, List.mem_append] at hwire ⊢
+          aesop
 
 private theorem mcxVChainTail_wellFormed
     (accumulator : Wire) (controls : List Wire) (target : Wire)
@@ -413,7 +421,7 @@ private theorem mcxVChainTail_wellFormed
             exact (List.nodup_cons.mp (List.nodup_cons.mp hroles).2).1
               (by simp [equality])
           simp [mcxVChainTail, CircuitWellFormed, Gate.WellFormed,
-            haccControl, haccTarget, hcontrolTarget]
+            haccControl, Ne.symm haccControl, haccTarget, hcontrolTarget]
       | cons nextControl controls =>
           cases scratches with
           | nil =>
@@ -441,8 +449,9 @@ private theorem mcxVChainTail_wellFormed
                 intro equality
                 exact (List.nodup_cons.mp
                   (List.nodup_cons.mp hfirstRoles).2).1 (by simp [equality])
-              have hgate : Gate.WellFormed (.CCX accumulator control scratch) := by
-                simp [Gate.WellFormed, haccControl, haccScratch, hcontrolScratch]
+              have hgate : Gate.WellFormed (.CCX control accumulator scratch) := by
+                simp [Gate.WellFormed, haccControl, Ne.symm haccControl,
+                  haccScratch, hcontrolScratch]
               rw [mcxVChainTail, circuitWellFormed_append,
                 circuitWellFormed_append]
               exact ⟨⟨by simpa [CircuitWellFormed] using hgate,
@@ -464,10 +473,12 @@ theorem mcxVChain_wellFormed
             exact (List.nodup_cons.mp hlayout).1 (by simp [equality])
           simp [mcxVChain, CircuitWellFormed, Gate.WellFormed, hne]
       | cons second controls =>
-          apply mcxVChainTail_wellFormed first (second :: controls) target scratches
+          apply mcxVChainTail_wellFormed second (first :: controls) target scratches
           · simp
           · simpa using henough
-          · simpa [McxVChainLayout, List.cons_append] using hlayout
+          · simp only [McxVChainLayout, List.cons_append, List.nodup_cons,
+              List.mem_cons, List.mem_append, not_or] at hlayout ⊢
+            aesop
 
 /-- Constructor-derived coherent Toffoli cost of a clean v-chain. -/
 def mcxVChainToffoliCost : Nat → Nat
@@ -521,7 +532,7 @@ theorem mcxVChain_toffoliCount
       | nil => rfl
       | cons second controls =>
           rw [mcxVChain]
-          rw [mcxVChainTail_toffoliCount first (second :: controls) target scratches
+          rw [mcxVChainTail_toffoliCount second (first :: controls) target scratches
             (by simp) (by simpa using henough)]
           simp [mcxVChainToffoliCost]
           omega
@@ -554,7 +565,7 @@ theorem mcxVChain_cnotCount
       cases controls with
       | nil => rfl
       | cons second controls =>
-          exact mcxVChainTail_cnotCount first (second :: controls)
+          exact mcxVChainTail_cnotCount second (first :: controls)
             target scratches
 
 private theorem mcxVChainTail_tCount_eq
@@ -593,7 +604,7 @@ theorem mcxVChain_tCount
       | nil => rfl
       | cons second controls =>
           rw [mcxVChain, mcxVChainTail_tCount_eq,
-            mcxVChainTail_toffoliCount first (second :: controls)
+            mcxVChainTail_toffoliCount second (first :: controls)
               target scratches (by simp) (by simpa using henough)]
           simp [mcxVChainToffoliCost]
           omega
