@@ -803,16 +803,37 @@ theorem controlledIncrement_tCount
 
 /-- Addition of one modulo the register width, with the exact gate order of
 `inc_mod2n_uncontrolled` in the pinned supplement.  A width-`n` word consumes the first
-`n - 1` clean wires; outside that capacity the total Lean definition falls back to `[]`,
-whereas the Python generator raises. -/
+`n - 1` clean wires and ignores any excess.  Below that capacity the total Lean fallback does
+not model the Python generator's exception; every source-semantics and resource claim is therefore
+capacity-restricted. -/
 def uncontrolledIncrement : List Wire → List Wire → Circuit
   | [], _ => []
   | [bit], _ => [.X bit]
   | low :: next :: rest, firstCarry :: carries =>
       [.CX low firstCarry] ++
-        incrementTail (next :: rest) firstCarry carries ++
+        incrementTail (next :: rest) firstCarry (carries.take rest.length) ++
         [.CX low firstCarry, .X low]
   | _ :: _ :: _, [] => []
+
+/-- Extra carry wires are observationally absent, matching the source's prefix selection. -/
+theorem uncontrolledIncrement_ignoresExcess
+    (low next firstCarry : Wire) (rest carries : List Wire) :
+    uncontrolledIncrement (low :: next :: rest) (firstCarry :: carries) =
+      uncontrolledIncrement (low :: next :: rest)
+        (firstCarry :: carries.take rest.length) := by
+  simp [uncontrolledIncrement, List.take_take]
+
+/- Width-two regression: a surplus wire is ignored and the high-bit CNOT remains present. -/
+example (low high firstCarry extra : Wire) :
+    uncontrolledIncrement [low, high] ([firstCarry, extra]) =
+      [.CX low firstCarry, .CX firstCarry high, .CX low firstCarry, .X low] := by
+  rfl
+
+/- Under-capacity regression: Lean's total partial stream is explicitly outside source claims. -/
+example (b₀ b₁ b₂ b₃ carry : Wire) :
+    uncontrolledIncrement [b₀, b₁, b₂, b₃] ([carry]) =
+      [.CX b₀ carry, .CX b₀ carry, .X b₀] := by
+  rfl
 
 /-- The exact uncontrolled increment changes only its target word, adds one modulo the
 word width, and restores every clean carry wire. -/
@@ -844,6 +865,10 @@ theorem uncontrolledIncrement_correct
           | cons firstCarry carries =>
               have htailLength : (next :: rest).length = carries.length + 1 := by
                 simpa using hlength
+              have hrestLength : rest.length = carries.length := by
+                simpa using htailLength
+              have htake : carries.take rest.length = carries := by
+                simp [hrestLength]
               have hword :
                   (low :: next :: rest ++ firstCarry :: carries).Nodup := by
                 simpa [List.cons_append] using hnd
@@ -936,7 +961,7 @@ theorem uncontrolledIncrement_correct
                   exact (List.nodup_cons.mp hinner).1
                     (List.mem_append_left carries hwire)
                 simp [after, run, applyGate, upd, hwLow, hwCarry]
-              rw [uncontrolledIncrement, run_append, run_append]
+              rw [uncontrolledIncrement, htake, run_append, run_append]
               change
                 wireValues (low :: next :: rest) after =
                     incrementBits true
@@ -965,6 +990,37 @@ theorem uncontrolledIncrement_correct
                   rw [hafterWire, hmiddleWire]
                   simp [first, run, applyGate, upd, hwCarry]
 
+/-- Source-domain correctness with a possibly larger caller-owned carry bank.  Only the required
+prefix participates in the circuit and every supplied carry remains clean. -/
+theorem uncontrolledIncrement_correct_of_capacity
+    (low next firstCarry : Wire) (rest carries : List Wire)
+    (state : BasisState)
+    (hcapacity : rest.length ≤ carries.length)
+    (hnd : ((low :: next :: rest) ++ (firstCarry :: carries)).Nodup)
+    (hclean : Clean (firstCarry :: carries) state) :
+    let after := run
+      (uncontrolledIncrement (low :: next :: rest) (firstCarry :: carries)) state
+    wireValues (low :: next :: rest) after =
+        incrementBits true (wireValues (low :: next :: rest) state) ∧
+      ∀ wire, wire ∉ low :: next :: rest → after wire = state wire := by
+  let usedCarries := firstCarry :: carries.take rest.length
+  have husedSublist : usedCarries.Sublist (firstCarry :: carries) := by
+    exact (List.take_sublist rest.length carries).cons₂ firstCarry
+  have husedLength :
+      (low :: next :: rest).length = usedCarries.length + 1 := by
+    simp [usedCarries, List.length_take, Nat.min_eq_left hcapacity]
+  have husedNodup :
+      ((low :: next :: rest) ++ usedCarries).Nodup := by
+    exact (husedSublist.append_left (low :: next :: rest)).nodup hnd
+  have husedClean : Clean usedCarries state := by
+    intro wire hwire
+    exact hclean wire (husedSublist.subset hwire)
+  have hcorrect := uncontrolledIncrement_correct
+    (low :: next :: rest) usedCarries state
+    husedLength husedNodup husedClean
+  rw [uncontrolledIncrement_ignoresExcess low next firstCarry rest carries]
+  exact hcorrect
+
 @[simp]
 theorem uncontrolledIncrement_HPFree
     (register carries : List Wire) :
@@ -972,10 +1028,16 @@ theorem uncontrolledIncrement_HPFree
   cases register with
   | nil => simp [uncontrolledIncrement]
   | cons low tail =>
-      cases tail <;> cases carries <;>
-        simp [uncontrolledIncrement, incrementTail_HPFree]
+      cases tail with
+      | nil => simp [uncontrolledIncrement]
+      | cons next rest =>
+          cases carries with
+          | nil => simp [uncontrolledIncrement]
+          | cons firstCarry carries =>
+              simp [uncontrolledIncrement, incrementTail_HPFree]
 
-/-- Exact support of the source uncontrolled increment. -/
+/-- Named support bound for the source uncontrolled increment.  An excess carry suffix is
+permitted in this conservative caller-owned set but does not occur in the circuit. -/
 theorem uncontrolledIncrement_usesOnly
     (register carries : List Wire) :
     PaperCircuitUsesOnly (register ++ carries)
@@ -996,14 +1058,15 @@ theorem uncontrolledIncrement_usesOnly
               · apply PaperCircuitUsesOnly.append
                 · simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
                 · apply (incrementTail_usesOnly
-                    (next :: rest) firstCarry carries).mono
+                    (next :: rest) firstCarry
+                      (carries.take rest.length)).mono
                   intro wire hwire
                   simp only [List.mem_cons, List.mem_append] at hwire ⊢
                   rcases hwire with (rfl | rfl | hrest) | hcarries
                   · exact Or.inr (Or.inl rfl)
                   · exact Or.inl (Or.inr (Or.inl rfl))
                   · exact Or.inl (Or.inr (Or.inr hrest))
-                  · exact Or.inr (Or.inr hcarries)
+                  · exact Or.inr (Or.inr (List.mem_of_mem_take hcarries))
               · intro gate hgate
                 simp only [List.mem_cons, List.not_mem_nil, or_false] at hgate
                 rcases hgate with rfl | rfl
@@ -1029,7 +1092,7 @@ theorem uncontrolledIncrement_wellFormed
                 simpa [List.cons_append] using hnd
               have hlow := (List.nodup_cons.mp hword).1
               have htail := (List.nodup_cons.mp hword).2
-              have hinner :
+              have hinnerFull :
                   (firstCarry :: next :: rest ++ carries).Nodup := by
                 have hperm :
                     ((next :: rest) ++ firstCarry :: carries).Perm
@@ -1038,6 +1101,15 @@ theorem uncontrolledIncrement_wellFormed
                     (List.perm_middle (l₁ := next :: rest)
                       (l₂ := carries) (a := firstCarry))
                 exact htail.perm hperm
+              have hinner :
+                  (firstCarry :: next :: rest ++
+                    carries.take rest.length).Nodup := by
+                apply List.Sublist.nodup
+                  (l₂ := firstCarry :: next :: rest ++ carries)
+                · simpa [List.cons_append] using
+                    (List.take_sublist rest.length carries).append_left
+                      (firstCarry :: next :: rest)
+                · exact hinnerFull
               have hlowCarry : low ≠ firstCarry := by
                 intro equality
                 exact hlow (by simp [equality])
@@ -1069,7 +1141,12 @@ theorem uncontrolledIncrement_toffoliCount
           | cons firstCarry carries =>
               have htailLength : (next :: rest).length = carries.length + 1 := by
                 simpa using hlength
-              rw [uncontrolledIncrement, eeaToffoliCount_append,
+              have hrestLength : rest.length = carries.length := by
+                simpa using htailLength
+              have htake : carries.take rest.length = carries := by
+                simp [hrestLength]
+              rw [uncontrolledIncrement, htake,
+                eeaToffoliCount_append,
                 eeaToffoliCount_append,
                 incrementTail_toffoliCount _ _ _ htailLength]
               simp [eeaToffoliCount]
@@ -1085,7 +1162,12 @@ theorem uncontrolledIncrement_cnotCount
   | cons firstCarry carries =>
       have htailLength : (next :: rest).length = carries.length + 1 := by
         simpa using hlength
-      rw [uncontrolledIncrement, eeaCnotCount_append,
+      have hrestLength : rest.length = carries.length := by
+        simpa using htailLength
+      have htake : carries.take rest.length = carries := by
+        simp [hrestLength]
+      rw [uncontrolledIncrement, htake,
+        eeaCnotCount_append,
         eeaCnotCount_append, incrementTail_cnotCount _ _ _ htailLength]
       simp [eeaCnotCount]
       omega
@@ -1111,7 +1193,12 @@ theorem uncontrolledIncrement_tCount
           | cons firstCarry carries =>
               have htailLength : (next :: rest).length = carries.length + 1 := by
                 simpa using hlength
-              rw [uncontrolledIncrement, tCount_append, tCount_append,
+              have hrestLength : rest.length = carries.length := by
+                simpa using htailLength
+              have htake : carries.take rest.length = carries := by
+                simp [hrestLength]
+              rw [uncontrolledIncrement, htake,
+                tCount_append, tCount_append,
                 incrementTail_tCount _ _ _ htailLength]
               simp [tCost]
 

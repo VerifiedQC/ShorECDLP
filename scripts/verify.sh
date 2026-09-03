@@ -168,6 +168,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_tCount
 #print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_correct
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_correct_of_capacity
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_ignoresExcess
 #print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.uncontrolledIncrement_toffoliCount
@@ -379,8 +381,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 355 ]]; then
-  printf 'expected three hundred fifty-five #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 357 ]]; then
+  printf 'expected three hundred fifty-seven #print axioms results\n' >&2
   exit 1
 fi
 

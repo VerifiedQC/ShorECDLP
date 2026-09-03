@@ -620,8 +620,10 @@ They are equal only if Phase 11 proves the required reuse.
 - **Phase-5 circuit unit 7 (current):** source affine endpoint layer: uncontrolled increment,
   literal Cuccaro add/sub, clean constant add/subtract, `const - x`, and exact endpoint
   preparation/restoration, with direct word semantics, full shared-scratch cleanup, locality,
-  well-formedness, and coherent resource equations. Zero maps, complete length blocks, the inverse
-  aggregate, and the indexed step remain open.
+  well-formedness, and coherent resource equations. These direct contracts are Boolean-word
+  recurrences; their Nat/mod-`2^w` interpretation and the formal prepare/restore round trip around
+  the traversal remain complete-interval obligations. Zero maps, complete length blocks, the
+  inverse aggregate, and the indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.

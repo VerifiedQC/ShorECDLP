@@ -7,7 +7,9 @@ This module implements the literal no-overflow Cuccaro adder, constant add/subtr
 uncontrolled increment, and `const - register` transform used by the pinned supplement's
 interval and length blocks.  Registers are little-endian.  All executable definitions are
 total; theorems that claim source fidelity and semantics carry the generator's width and clean
-scratch premises explicitly.
+scratch premises explicitly.  In particular, the positive production widths reproduce the
+source constructors; at width zero Lean deliberately returns the empty circuit, while Python's
+Cuccaro constructor indexes bit zero and is outside its domain.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -563,7 +565,7 @@ theorem run_cuccaroSub_after_add
 
 /-- Classical execution of a circuit adjoint followed by the original well-formed circuit also
 restores the complete basis state. -/
-theorem run_run_adjoint_classical
+private theorem run_run_adjoint_classical
     (circuit : Circuit) (hwellFormed : CircuitWellFormed circuit)
     (state : BasisState) :
     run circuit (run circuit.adjoint state) = state := by
