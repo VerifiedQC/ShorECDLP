@@ -295,8 +295,9 @@ Module: `Submission/2607_13816/EEA/Model.lean`.
 
 Define the paper's remainder/coefficient recurrence, quotient bits, four phases, sign, iteration
 parity, lengths, and circular shift. Relate it to packed Work1 `(t,q,r)` and shifted Work2
-`(t',r')`. Prove field non-overlap, the `x > p/2` correction, invariant preservation,
-reversibility, terminal inverse, and identity padding.
+`(t',r')`. At canonical quotient boundaries, prove ordered in-range spans, actual value capacity,
+and field non-overlap. Prove the `x > p/2` correction, invariant preservation, an active-step left
+inverse, terminal inverse, and quotient-level terminal stuttering.
 
 **Gate:** for every `1 <= x < p`, the extracted value is `x⁻¹ mod p`; small tests agree with the
 pinned generator but are not used as proofs.
@@ -306,13 +307,18 @@ quotient iteration; `paperPhaseTrace` exposes the four logical frames, while Pha
 ownership of the 1,620-step bit-serial schedule and active windows. The state records quotient
 bits, sign/parity, dynamic lengths, circular shift, and the logical values sharing each `(n+3)`-bit
 work register. The proved invariant gives packed-field non-overlap, strict remainder/coefficient
-progress, `r*t + r'*t' = p`, coprimality, and the two parity-dependent `ZMod p` identities.
-Initialization proves the `x > p/2` correction; each step preserves the invariant and has a
-constructive left inverse; the terminating run reaches `(r,r',t) = (1,0,p)`; its extracted
-coefficient multiplies every `1 <= x < p` to one modulo prime `p`; and every post-terminal logical
-slot is identity. Kernel-reduced checks match all three terminal vectors pinned in `REFERENCE.md`.
+progress, `r*t + r'*t' = p`, coprimality, and the two parity-dependent `ZMod p` identities. Its
+packing theorem is boundary-only and additionally proves that every stored value fits its ordered,
+in-range span. Initialization proves the `x > p/2` correction; each active nonterminal step
+preserves the invariant and has a constructive left inverse; the terminating run reaches
+`(r,r',t) = (1,0,p)`; its extracted coefficient multiplies every `1 <= x < p` to one modulo prime
+`p`; and every post-terminal quotient-level slot stutters. This total stuttering abstraction is
+not injective across the final active/terminal boundary. Phase 4/5 explicitly own intermediate
+frame representability, indexed reachability, and the paper's borrowed padding epoch before any
+reversible fixed-horizon circuit refinement is claimed. Kernel-reduced checks match all three
+terminal vectors pinned in `REFERENCE.md`.
 The exact local gate is green: 3,063 warning-fatal jobs, 72/72 source closure, 151 targeted
-disclosures, and all 5,940 reachable declarations within the standard axiom allowlist.
+disclosures, and all 5,941 reachable declarations within the standard axiom allowlist.
 
 ### Phase 4 — exact step bound and active windows
 
@@ -323,7 +329,9 @@ Modules:
 
 Certify the 1,620-step secp256k1 schedule without trusting floating point. Use an exact rational
 certificate for the algebraic growth bound, then prove every reachable location lies within the
-paper's static window at each step and every post-terminal step is identity.
+paper's static window at each step. Define the indexed active/padding discriminator, prove the
+noncanonical phase-frame values fit their physical spans when reached, and account for the paper's
+borrowed epoch bit so terminal padding is a reversible identity at the exposed EEA boundary.
 
 **Gate:** all nonzero 256-bit field inputs terminate in 1,620 steps and every pruned gate location
 is proved unreachable.
@@ -335,10 +343,12 @@ Area: `Submission/2607_13816/EEA/`.
 Implement circular shifts, unary iteration, location-controlled sign/quotient swap,
 location-controlled ripple add/subtract, borrowed-work length updates, and the optimized four-phase
 step. Each block gets direct semantics, unaffected-wire and work-restoration theorems,
-well-formedness, locality, and a closed resource formula.
+well-formedness, locality, and a closed resource formula. Its refinement domain is the indexed
+reachable active/padding state from Phase 4, including the borrowed epoch discriminator; it must not
+claim that the unindexed stuttering `paperStep` is injective on every invariant boundary.
 
-**Gate:** the adaptive step coherently implements the Phase-3 logical step for every invariant
-state; counts are symbolic over the active window.
+**Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
+active/padding state; counts are symbolic over the active window.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -508,7 +518,8 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #59, Phase-2 measurement uncomputation:** merged at `b1e6cd85`; rebuilt from merged Phase-1
   semantics under `Submission/2607_13816/Canary/` with no stale pre-split prototype carried forward.
 - **Phase 3, pure EEA model:** current review unit; circuit-free quotient recurrence, packed
-  boundary invariant, reversibility, termination, modular inverse, and identity padding.
+  canonical-boundary geometry and value capacity, active-step left inverse, termination, modular
+  inverse, and quotient-level terminal stuttering. Indexed reversible padding remains Phase 4/5.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.

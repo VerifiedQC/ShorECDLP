@@ -14,6 +14,12 @@ This file is the circuit-free specification for Sections 3.1--3.3 of arXiv:2607.
 logical phases which the later bit-serial circuit refines; the exact 1,620-microstep schedule is
 deliberately deferred to `EEA.Bounds` and `EEA.Windows`.
 
+The packed-view theorem applies at canonical quotient boundaries and certifies both span geometry
+and value capacity.  Intermediate-frame packing, indexed reachability, and the borrowed epoch bit
+which makes terminal padding reversible belong to the Phase-4/5 refinement.  Accordingly, this
+file proves a left inverse only for active nonterminal quotient steps; its total logical step
+stutters after termination and is not claimed to be injective.
+
 The coefficients are stored as nonnegative magnitudes.  `iter` records their alternating sign,
 exactly as in the supplemental generator.  At a canonical iteration boundary we maintain
 
@@ -196,6 +202,10 @@ structure BitSpan where
 def BitSpan.Disjoint (a b : BitSpan) : Prop :=
   a.stop ≤ b.start ∨ b.stop ≤ a.start
 
+/-- A natural value fits in a well-formed half-open span inside a register of the given width. -/
+def BitSpan.Carries (a : BitSpan) (width value : ℕ) : Prop :=
+  a.start ≤ a.stop ∧ a.stop ≤ width ∧ a.start + value.size ≤ a.stop
+
 /-- The two `(n+3)`-bit packed work-register views.
 
 Work1 stores little-endian `t`, a separator bit, big-endian `q`, and big-endian `r`.  Work2 stores
@@ -227,14 +237,17 @@ def packedView (p : ℕ) (s : EEAState) : PackedView :=
     work2RPrime := ⟨width - s.lRPrime, width⟩
     work2Shift := s.shift % width }
 
-/-- All live fields fit and the two logical partitions are pairwise disjoint. -/
+/-- At a canonical quotient boundary, all live values fit in well-formed spans and the two logical
+partitions are pairwise disjoint.  Intermediate `paperPhaseTrace` frames are only conceptual in
+Phase 3; their physical representability belongs to the indexed Phase-4/5 refinement. -/
 def PackedView.FieldsNonoverlap (v : PackedView) : Prop :=
   v.work2Shift < v.width ∧
-    v.work1T.stop ≤ v.width ∧
-    v.work1Q.stop ≤ v.width ∧
-    v.work1R.stop ≤ v.width ∧
-    v.work2TPrime.stop ≤ v.width ∧
-    v.work2RPrime.stop ≤ v.width ∧
+    v.work2Value.shift % v.width = v.work2Shift ∧
+    v.work1T.Carries v.width v.work1Value.t ∧
+    v.work1Q.Carries v.width v.work1Value.q ∧
+    v.work1R.Carries v.width v.work1Value.r ∧
+    v.work2TPrime.Carries v.width v.work2Value.tPrime ∧
+    v.work2RPrime.Carries v.width v.work2Value.rPrime ∧
     v.work1T.Disjoint v.work1Q ∧
     v.work1T.Disjoint v.work1R ∧
     v.work1Q.Disjoint v.work1R ∧
@@ -357,7 +370,7 @@ private theorem coprime_remainder {a b : ℕ} (h : a.Coprime b) :
     _ = a.gcd b := Nat.gcd_comm _ _
     _ = 1 := h
 
-/-- A nonterminal quotient iteration preserves the mathematical and packed-boundary invariant. -/
+/-- A quotient slot preserves the mathematical boundary invariant; terminal slots stutter. -/
 theorem paperStep_preservesInvariant {p x : ℕ} {s : EEAState}
     (h : PaperInvariant p x s) : PaperInvariant p x (paperStep s) := by
   by_cases hterminal : s.rPrime = 0
@@ -480,36 +493,57 @@ theorem paperStep_preservesInvariant {p x : ℕ} {s : EEAState}
     · change (s.t : ZMod p) * (x : ZMod p) = (s.rPrime : ZMod p)
       exact holdT
 
-/-- The dynamic lengths in every invariant boundary give a valid `(n+3)`-bit packing.  The Work2
-rotation is a permutation of its already disjoint logical partition, so it is represented only by
-the reduced circular offset. -/
+/-- If two factors and their product are bounded by `p`, their binary lengths fit together with one
+guard bit. -/
+private theorem size_add_size_le_of_mul_le {a b p : ℕ} (ha : a ≤ p) (hb : b ≤ p)
+    (hab : a * b ≤ p) : a.size + b.size ≤ p.size + 1 := by
+  by_cases ha0 : a = 0
+  · subst a
+    have hsize := Nat.size_le_size hb
+    simpa only [Nat.size_zero, Nat.zero_add] using le_trans hsize (Nat.le_add_right _ _)
+  by_cases hb0 : b = 0
+  · subst b
+    have hsize := Nat.size_le_size ha
+    simpa only [Nat.size_zero, Nat.add_zero] using le_trans hsize (Nat.le_add_right _ _)
+  have haSize : 0 < a.size := Nat.size_pos.mpr (Nat.pos_of_ne_zero ha0)
+  have hbSize : 0 < b.size := Nat.size_pos.mpr (Nat.pos_of_ne_zero hb0)
+  have haPow : 2 ^ (a.size - 1) ≤ a :=
+    Nat.lt_size.mp (by omega)
+  have hbPow : 2 ^ (b.size - 1) ≤ b :=
+    Nat.lt_size.mp (by omega)
+  by_contra hsize
+  have hexponent : p.size ≤ (a.size - 1) + (b.size - 1) := by omega
+  have hpow : 2 ^ p.size ≤ 2 ^ ((a.size - 1) + (b.size - 1)) :=
+    Nat.pow_le_pow_right (by decide) hexponent
+  rw [pow_add] at hpow
+  have htooLarge : 2 ^ p.size ≤ p :=
+    le_trans hpow (le_trans (Nat.mul_le_mul haPow hbPow) hab)
+  exact (Nat.not_lt_of_ge htooLarge) (Nat.lt_size_self p)
+
+/-- The dynamic lengths in every invariant canonical boundary give a valid `(n+3)`-bit packing:
+every span is ordered and in range, every logical value fits its span, and the live fields are
+disjoint.  The Work2 rotation is represented by its reduced circular offset. -/
 theorem packedFields_nonoverlap {p x : ℕ} {s : EEAState}
     (h : PaperInvariant p x s) : (packedView p s).FieldsNonoverlap := by
-  have htSize : s.t.size ≤ p.size := Nat.size_le_size h.t_le
-  have hrpSize : s.rPrime.size ≤ p.size := Nat.size_le_size h.rPrime_le
-  rcases h.canonical with ⟨_, hlq, hshift, _, _, hlt, hlrp⟩
-  simp only [packedView, PackedView.FieldsNonoverlap, BitSpan.Disjoint]
-  rw [hlt, hlrp, hlq, hshift]
+  have hrt : s.r * s.t ≤ p := by
+    rw [← h.magnitude_identity]
+    exact Nat.le_add_right _ _
+  have hrptp : s.rPrime * s.tPrime ≤ p := by
+    rw [← h.magnitude_identity]
+    exact Nat.le_add_left _ _
+  have hwork1Capacity : s.r.size + s.t.size ≤ p.size + 1 :=
+    size_add_size_le_of_mul_le h.r_le h.t_le hrt
+  have hwork2Capacity : s.rPrime.size + s.tPrime.size ≤ p.size + 1 :=
+    size_add_size_le_of_mul_le h.rPrime_le h.tPrime_le hrptp
+  rcases h.canonical with ⟨hq, hlq, hshift, _, _, hlt, hlrp⟩
+  simp only [packedView, PackedView.FieldsNonoverlap, BitSpan.Carries, BitSpan.Disjoint,
+    EEAState.work1, EEAState.work2]
+  rw [hq, hlt, hlrp, hlq, hshift]
   have hwidth : 0 < p.size + 3 := by omega
   have hshiftBound : 0 % (p.size + 3) < p.size + 3 := Nat.mod_lt _ hwidth
   simp only [Nat.zero_mod]
-  constructor
-  · omega
-  constructor
-  · omega
-  constructor
-  · omega
-  constructor
-  · omega
-  constructor
-  · omega
-  constructor
-  · omega
-  constructor
-  · omega
-  constructor
-  · omega
-  constructor <;> omega
+  simp
+  omega
 
 /-- The inverse boundary transformation.  On reachable states the old quotient and coefficient
 are recovered by Euclidean division of the new coefficient pair, so no quotient history is kept. -/
@@ -532,8 +566,10 @@ def paperUnstep (s : EEAState) : EEAState :=
     sign := false
     iter := !s.iter }
 
-/-- One logical quotient step is injective on the invariant domain, with `paperUnstep` as a
-concrete left inverse. -/
+/-- On a nonterminal invariant boundary, `paperUnstep` is a concrete left inverse of the active
+quotient step.  This does not assert injectivity of total `paperStep`: its final active step and a
+terminal stuttering slot collide.  Phase 4/5 must add the indexed reachability and borrowed padding
+epoch used by the paper before refining this abstraction to a reversible fixed-horizon circuit. -/
 theorem paperStep_reversible_onInvariant {p x : ℕ} {s : EEAState}
     (h : PaperInvariant p x s) (hnonterminal : s.rPrime ≠ 0) :
     paperUnstep (paperStep s) = s := by
@@ -612,7 +648,9 @@ def paperRunFor : ℕ → EEAState → EEAState
   | 0, s => s
   | fuel + 1, s => paperRunFor fuel (paperStep s)
 
-/-- Once terminal, every remaining fixed-horizon slot is the identity padding operation. -/
+/-- At quotient-boundary level, once terminal every remaining fixed-horizon slot stutters.  This is
+not yet a reversible padded-step contract; the indexed borrowed-epoch refinement is a Phase-4/5
+obligation. -/
 theorem paperRun_padding_is_id {s : EEAState} (hterminal : s.rPrime = 0) (padding : ℕ) :
     paperRunFor padding s = s := by
   induction padding with
