@@ -351,10 +351,12 @@ before that increment.
 The implementation boundary is therefore `certifiedActiveWindows`, which retains one additional
 lower remainder lane and leaves the other four generator intervals unchanged. Kernel-checked
 containment covers every active remainder interval, quotient/sign selector, coefficient prefix,
-and both endpoint length decoders under the exact indexed reachability witness. Phase 5 must use
-the certified window; no resource theorem may claim the narrower remainder interval.
+and both endpoint length decoders under the exact indexed reachability witness. The coefficient
+certificate follows the concrete selector exactly: Phase 3 ends at `ell_t + 1`, while Phase 4 ends
+at `n + 3 - ell_r' - ell_s`. Phase 5 must use the certified window; no resource theorem may claim
+the narrower remainder interval.
 The exact local gate is green: 3,065 warning-fatal jobs, 74/74 source closure, 167 targeted
-disclosures, and all 6,433 reachable declarations within the standard axiom allowlist.
+disclosures, and all 6,449 reachable declarations within the standard axiom allowlist.
 
 ### Phase 5 — one EEA step as a circuit
 
@@ -542,7 +544,7 @@ They are equal only if Phase 11 proves the required reuse.
   inverse, and quotient-level terminal stuttering.
 - **Phase 4, exact EEA bound/windows:** current implementation/review unit; exact 1,620-step bound,
   indexed active/padding reachability, borrowed terminal epoch, noncanonical frame packing, and
-  certified active windows. The generator-exact remainder interval is retained only as reference;
+  certified active windows. The pinned generator remainder interval is retained only as reference;
   the concrete boundary includes the proved one-lane ordering correction.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;

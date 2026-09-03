@@ -46,25 +46,29 @@ private def lengthTWindowNumerator (n T : ℕ) : ℤ :=
 private def lengthRPrimeWindowNumerator (T : ℕ) : ℤ :=
   1323 * (250 * (T : ℤ) - 727)
 
-/-- Generator-exact window for remainder add/subtract. -/
+/-! The five rational formulas below reproduce the supplemental generator exactly on the pinned
+secp256k1 grid `n = 256`, `1 <= T <= 1620`.  No parametric equality to the generator's
+floating-point evaluation is claimed outside that fixed artifact. -/
+
+/-- Exact rational window formula for remainder add/subtract. -/
 def remainderWindow (n T : ℕ) : ActiveWindow :=
   ⟨min (ceilDivAtLeastOne (rWindowNumerator n T) 1758250 + 2) (n + 3), n + 3⟩
 
-/-- Generator-exact window for the quotient/sign swap. -/
+/-- Exact rational window formula for the quotient/sign swap. -/
 def quotientSwapWindow (n T : ℕ) : ActiveWindow :=
   ⟨min (ceilDivAtLeastOne (swapWindowNumerator n T) 1096750 + 1) (n + 2),
     max 1 (min (T / 2 + 2) (n + 2))⟩
 
-/-- Generator-exact prefix window for coefficient add/subtract. -/
+/-- Exact rational prefix-window formula for coefficient add/subtract. -/
 def coefficientWindow (n T : ℕ) : ActiveWindow :=
   ⟨1, max 1 (min (T / 4 + 2) (n + 1))⟩
 
-/-- Generator-exact window for the old `l_t` length update. -/
+/-- Exact rational window formula for the old `l_t` length update. -/
 def lengthTWindow (n T : ℕ) : ActiveWindow :=
   ⟨min (ceilDivAtLeastOne (lengthTWindowNumerator n T) 766000) (n + 3),
     max 1 (min (T / 4 + 3) (n + 2))⟩
 
-/-- Generator-exact window for the updated `l_r'` length update.  The supplemental implementation
+/-- Exact rational window formula for the updated `l_r'` length update.  The supplemental implementation
 keeps its safe upper endpoint at the full Work-register width. -/
 def lengthRPrimeWindow (n T : ℕ) : ActiveWindow :=
   ⟨min (ceilDivAtLeastOne (lengthRPrimeWindowNumerator T) 2089000 + 2) (n + 3),
@@ -88,7 +92,7 @@ def activeWindows (n T : ℕ) : EEAWindows where
 /-- Certified remainder window for the concrete gate order.  The supplemental circuit executes
 the phase-two remainder add/subtract immediately before incrementing `l_q`, whereas Appendix A.2
 derives its lower endpoint from the post-increment length.  Retaining one additional lower lane is
-the minimal conservative repair.  The other four windows are generator-exact. -/
+the minimal conservative repair.  The other four rational formulas are unchanged. -/
 def certifiedRemainderWindow (n T : ℕ) : ActiveWindow :=
   ⟨min (ceilDivAtLeastOne (rWindowNumerator n T) 1758250 + 1) (n + 3), n + 3⟩
 
@@ -348,8 +352,15 @@ def PaperActiveFrame.swapLocation {p x T : ℕ} (frame : PaperActiveFrame p x T)
   frame.boundary.t.size +
     swapQuotientLength (paperQuotient frame.boundary).size frame.within + 1
 
-def PaperActiveFrame.coefficientRight {p x T : ℕ} (frame : PaperActiveFrame p x T) : ℕ :=
-  frame.boundary.t.size + 1
+/-- Full prefix endpoint prepared for coefficient arithmetic.  Phase 3 uses `ell_t + 1`;
+Phase 4 uses `n + 3 - ell_r' - ell_s`, with the pre-arithmetic shift value inherited from the
+preceding microstep. -/
+def PaperActiveFrame.coefficientRight {p x T n : ℕ} (frame : PaperActiveFrame p x T) : ℕ :=
+  if frame.within ≤ 3 * (paperQuotient frame.boundary).size then
+    frame.boundary.t.size + 1
+  else
+    n + 3 - frame.boundary.rPrime.size -
+      (4 * (paperQuotient frame.boundary).size - frame.within + 1)
 
 def PaperActiveFrame.lengthTRight {p x T n : ℕ} (frame : PaperActiveFrame p x T) : ℕ :=
   n + 3 - frame.boundary.rPrime.size
@@ -537,30 +548,6 @@ theorem PaperActiveFrame.quotientSwapWindow_contains {p x T n : ℕ}
     · omega
     · omega
 
-/-- Every active coefficient add/subtract prefix is inside its exact static window. -/
-theorem PaperActiveFrame.coefficientWindow_covers {p x T n : ℕ}
-    (frame : PaperActiveFrame p x T) (hp : p.Prime) (hx : 1 ≤ x) (hxp : x < p)
-    (hpN : p < 2 ^ n) :
-    (coefficientWindow n T).Covers 1 frame.coefficientRight := by
-  have htPos := frame.tSize_pos hp hx hxp
-  have htN := frame.tSize_le_modulusBits hp hx hxp hpN
-  have htSpent := frame.tSize_le_spent_add_one hp hx hxp
-  have hquarterRaw := congrArg (fun value : ℕ => value / 4) frame.time_eq
-  have hquarter : T / 4 = frame.spent + frame.within / 4 := by
-    calc
-      T / 4 = (4 * frame.spent + frame.within) / 4 := by simpa only using hquarterRaw
-      _ = frame.spent + frame.within / 4 := by
-        simpa using Nat.mul_add_div (m := 4) (by norm_num) frame.spent frame.within
-  simp only [ActiveWindow.Covers, coefficientWindow, PaperActiveFrame.coefficientRight]
-  constructor
-  · simp
-  constructor
-  · omega
-  · apply le_trans _ (le_max_right 1 _)
-    apply le_min
-    · omega
-    · omega
-
 private theorem PaperActiveFrame.rPrimeSize_add_tSize_le {p x T n : ℕ}
     (frame : PaperActiveFrame p x T) (hp : p.Prime) (hx : 1 ≤ x) (hxp : x < p)
     (hpN : p < 2 ^ n) :
@@ -632,6 +619,56 @@ private theorem PaperActiveFrame.modulusBits_le_spent_add_quotientSize_add_rPrim
         frame.boundary.rPrime.size) := hpLower.trans hpUpper
   have hexponents := (Nat.pow_lt_pow_iff_right (by decide : 1 < 2)).mp hpowers
   omega
+
+/-- Every active coefficient add/subtract prefix is inside its exact static window, including the
+phase-4 endpoint selected from `n + 3 - ell_r' - ell_s`. -/
+theorem PaperActiveFrame.coefficientWindow_covers {p x T n : ℕ}
+    (frame : PaperActiveFrame p x T) (hp : p.Prime) (hx : 1 ≤ x) (hxp : x < p)
+    (hpLower : 2 ^ (n - 1) < p) (hpN : p < 2 ^ n) :
+    (coefficientWindow n T).Covers 1 (frame.coefficientRight (n := n)) := by
+  have hinvariant := frame.reachable.invariant hp hx hxp
+  have hqPos := frame.quotientSize_pos hp hx hxp
+  have hrpPos : 1 ≤ frame.boundary.rPrime.size :=
+    Nat.size_pos.mpr (Nat.pos_of_ne_zero frame.nonterminal)
+  have htPos := frame.tSize_pos hp hx hxp
+  have htN := frame.tSize_le_modulusBits hp hx hxp hpN
+  have htSpent := frame.tSize_le_spent_add_one hp hx hxp
+  have hqRp : (paperQuotient frame.boundary).size + frame.boundary.rPrime.size ≤ n + 1 := by
+    apply size_add_size_le_of_mul_lt_pow (Nat.size_pos.mp hqPos)
+      (Nat.size_pos.mp hrpPos)
+    calc
+      paperQuotient frame.boundary * frame.boundary.rPrime ≤ frame.boundary.r := by
+        simpa [paperQuotient] using Nat.div_mul_le_self frame.boundary.r frame.boundary.rPrime
+      _ ≤ p := hinvariant.r_le
+      _ < 2 ^ n := hpN
+  have hbits := frame.modulusBits_le_spent_add_quotientSize_add_rPrimeSize
+    hp hx hxp hpLower
+  have hquarterRaw := congrArg (fun value : ℕ => value / 4) frame.time_eq
+  have hquarter : T / 4 = frame.spent + frame.within / 4 := by
+    calc
+      T / 4 = (4 * frame.spent + frame.within) / 4 := by simpa only using hquarterRaw
+      _ = frame.spent + frame.within / 4 := by
+        simpa using Nat.mul_add_div (m := 4) (by norm_num) frame.spent frame.within
+  simp only [ActiveWindow.Covers, coefficientWindow, PaperActiveFrame.coefficientRight]
+  split_ifs with hphaseThree
+  · constructor
+    · simp
+    constructor
+    · omega
+    · apply le_trans _ (le_max_right 1 _)
+      apply le_min <;> omega
+  · have hphaseFour : 3 * (paperQuotient frame.boundary).size < frame.within := by omega
+    have hshiftPos : 1 ≤
+        4 * (paperQuotient frame.boundary).size - frame.within + 1 := by omega
+    have hshiftLe :
+        4 * (paperQuotient frame.boundary).size - frame.within + 1 ≤
+          (paperQuotient frame.boundary).size := by omega
+    constructor
+    · simp
+    constructor
+    · omega
+    · apply le_trans _ (le_max_right 1 _)
+      apply le_min <;> omega
 
 private theorem lengthTWindow_core {p x T n : ℕ}
     (frame : PaperActiveFrame p x T) (hp : p.Prime) (hx : 1 ≤ x) (hxp : x < p)
@@ -735,7 +772,7 @@ structure PaperActiveWindowCertificate {p x T : ℕ} (n : ℕ)
     frame.within ≤ 3 * (paperQuotient frame.boundary).size →
     (quotientSwapWindow n T).Contains frame.swapLocation
   coefficient : 2 * (paperQuotient frame.boundary).size < frame.within →
-    (coefficientWindow n T).Covers 1 frame.coefficientRight
+    (coefficientWindow n T).Covers 1 (frame.coefficientRight (n := n))
   lengthT : frame.within = 4 * (paperQuotient frame.boundary).size →
     (lengthTWindow n T).Covers frame.boundary.t.size (frame.lengthTRight (n := n))
   lengthRPrime : frame.within = 4 * (paperQuotient frame.boundary).size →
@@ -748,7 +785,7 @@ theorem PaperActiveFrame.windowCertificate {p x T n : ℕ}
   remainder hactive := frame.certifiedRemainderWindow_covers hp hx hxp hpN hactive
   quotientSwap hstart hstop :=
     frame.quotientSwapWindow_contains hp hx hxp hpN hstart hstop
-  coefficient _ := frame.coefficientWindow_covers hp hx hxp hpN
+  coefficient _ := frame.coefficientWindow_covers hp hx hxp hpLower hpN
   lengthT hend := frame.lengthTWindow_covers hp hx hxp hpLower hpN hend
   lengthRPrime hend := frame.lengthRPrimeWindow_covers hp hx hxp hpN hend
 
@@ -945,5 +982,43 @@ example : activeWindows 256 1620 =
   norm_num [activeWindows, remainderWindow, quotientSwapWindow, coefficientWindow,
     lengthTWindow, lengthRPrimeWindow, ceilDivAtLeastOne, ceilDiv, rWindowNumerator,
     swapWindowNumerator, lengthTWindowNumerator, lengthRPrimeWindowNumerator, Int.toNat]
+
+/- The review witness which caught the Phase-4 endpoint distinction: for input one, the first
+256-bit quotient's last microstep selects lane 257, not the Phase-3 endpoint at lane two. -/
+private theorem secp256k1PSize : ShorECDLP.p.size = 256 := by
+  apply Nat.le_antisymm
+  · exact Nat.size_le.mpr (by norm_num [ShorECDLP.p])
+  · have : 255 < ShorECDLP.p.size :=
+      Nat.lt_size.mpr (by norm_num [ShorECDLP.p])
+    omega
+
+private theorem secp256k1OneQuotientSize :
+    (paperQuotient (paperInitial ShorECDLP.p 1)).size = 256 := by
+  rw [show paperQuotient (paperInitial ShorECDLP.p 1) = ShorECDLP.p by
+    norm_num [paperQuotient, paperInitial, correctedInput, ShorECDLP.p]]
+  exact secp256k1PSize
+
+private def secp256k1OnePhaseFourFrame : PaperActiveFrame ShorECDLP.p 1 1024 where
+  spent := 0
+  boundary := paperInitial ShorECDLP.p 1
+  reachable := PaperBoundaryReachable.initial
+  nonterminal := by norm_num [paperInitial, correctedInput, ShorECDLP.p]
+  within := 1024
+  within_pos := by norm_num
+  within_le := by
+    rw [secp256k1OneQuotientSize]
+  time_eq := by norm_num
+
+private theorem secp256k1OnePhaseFourEndpoint :
+    secp256k1OnePhaseFourFrame.coefficientRight (n := 256) = 257 := by
+  rw [PaperActiveFrame.coefficientRight]
+  dsimp only [secp256k1OnePhaseFourFrame]
+  rw [secp256k1OneQuotientSize]
+  norm_num [paperInitial, correctedInput, ShorECDLP.p]
+
+example : (coefficientWindow 256 1024).Covers 1
+    (secp256k1OnePhaseFourFrame.coefficientRight (n := 256)) := by
+  rw [secp256k1OnePhaseFourEndpoint]
+  norm_num [ActiveWindow.Covers, coefficientWindow]
 
 end ShorECDLP.Paper2607_13816
