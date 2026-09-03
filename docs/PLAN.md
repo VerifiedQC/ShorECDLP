@@ -5,11 +5,11 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-1 paper foundation below
-are on `main@d1f94940917b1134571ca0006683b8b2b5633b57`. PR #56 → PR #57 → PR #58 → PR #59
-→ PR #60 → PR #61 → PR #62 landed the source split, adaptive Kraus semantics,
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-2 paper foundation below
+are on `main@3eae43e956a25e4630df399f2abb18f895a035fd`. PR #56 → PR #57 → PR #58 → PR #59
+→ PR #60 → PR #61 → PR #62 → PR #63 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and the first concrete circuit unit; Phase 5 circuit unit 2 is the current
+bounds/windows, and the first two concrete circuit units; Phase 5 circuit unit 3 is the current
 implementation/review unit. A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -374,14 +374,14 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first dependency-closed construction unit is merged. It contains standalone exact
-Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
+**Status:** the first two dependency-closed construction units are merged. PR #62 contains
+standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
 named-wire locality, physical well-formedness, and constructor-derived resource equations. The
 unary traversal coherently refines its full compute/uncompute reference and uses exactly one
-measurement and seven T gates per internal decision node. The next dependency-closed unit now
-implements the pinned coherent `_apply_cell` specialization (`MEASUREMENT_UNCOMPUTE = False`) and
+measurement and seven T gates per internal decision node. PR #63 implements the pinned coherent
+`_apply_cell` specialization (`MEASUREMENT_UNCOMPUTE = False`) and
 its prepared-slice two-pass MAJ/UMA ripple core, plus a per-bit borrowed-work XOR normal form for
 the later length decoders. The ripple has direct whole-basis-state semantics, clean-scratch
 restoration, named locality, and physical well-formedness. Its seven-Toffoli-per-lane equation
@@ -389,9 +389,14 @@ matches the paper; the separate 49-T equation is only the repository Framework's
 this coherent reference circuit. A later adaptive aggregate must bind and count the actual coherent
 or measurement-uncompute realization it composes. The borrowed writer's
 four-CNOT-per-set-bit count is local only and is not a production aggregate until the grouped
-write/zero-map/write/zero-map composition is proved. Concrete dual-endpoint unary scans,
-upper/lower zero-map production, complete length blocks, and the indexed four-phase step remain
-open within Phase 5.
+write/zero-map/write/zero-map composition is proved. PR #64, the current review unit, generalizes
+the pruned unary decoder to circuit-valued leaf actions in zero-subtree-first (`inc`) and
+one-subtree-first (`dec`) order on a caller-supplied tree, while preserving decoder wires and
+coherently refining the corresponding full unitary traversal. The concrete supplement construction
+from sorted/deduplicated labels by highest-varying-bit splits—and its certificate that these local
+branch orders induce numeric increasing/decreasing label order—remains open for the composition
+unit, together with synchronized dual-endpoint scans, upper/lower zero-map production, complete
+length blocks, and the indexed four-phase step.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -570,11 +575,16 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #62, Phase-5 circuit unit 1:** merged at `d1f94940`; exact bit primitives, controlled shifts
   and increment, measurement-assisted path-AND erasure, and coherently refined pruned unary
   iteration.
-- **PR #63, Phase-5 circuit unit 2:** current implementation/review unit; pinned coherent
+- **PR #63, Phase-5 circuit unit 2:** merged at `3eae43e9`; pinned coherent
   `_apply_cell` MAJ/UMA ripple arithmetic and per-bit borrowed-work length-update kernels. Seven
   Toffolis per lane matches the paper; 49 T is only the Framework-derived coherent-circuit cost.
-  Neither that T equation nor the borrowed-writer equation is yet an adaptive aggregate. Concrete
-  endpoint scans, zero maps, full length blocks, and the indexed step remain open.
+  Neither that T equation nor the borrowed-writer equation is yet an adaptive aggregate.
+- **PR #64, Phase-5 circuit unit 3:** current implementation/review unit; circuit-valued pruned
+  unary traversal in zero-subtree-first (`inc`) and one-subtree-first (`dec`) order on a
+  caller-supplied tree, with decoder restoration, physical well-formedness, coherent refinement,
+  and constructor-derived resource equations. The supplement's concrete sorted/deduplicated-label,
+  highest-varying-bit tree builder and its numeric-order certificate remain open, as do synchronized
+  dual-endpoint scans, zero maps, full length blocks, and the indexed step.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -609,5 +619,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit unit 1 are merged. Phase 5 circuit unit 2 is the current review unit
-on that foundation.
+Phases 0--4 and Phase 5 circuit units 1--2 are merged. Phase 5 circuit unit 3 is the current review
+unit on that foundation.
