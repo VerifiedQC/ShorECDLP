@@ -6,6 +6,7 @@ import ShorECDLP.Framework.InstructionSet
 import ShorECDLP.Framework.CostModel
 import ShorECDLP.Framework.BasisState
 import ShorECDLP.Framework.Classical.Semantics
+import ShorECDLP.Framework.Quantum.Adaptive
 import ShorECDLP.Framework.Quantum.Measurement
 import ShorECDLP.Framework.Repetition
 import ShorECDLP.Math.All
