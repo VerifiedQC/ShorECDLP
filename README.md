@@ -47,6 +47,8 @@ Toolchain: `leanprover/lean4:v4.28.0`; Mathlib pinned to the same revision as
 
 ## Status
 
-M0 — project skeleton (instruction set + Toffoli cost model), builds green.
-Roadmap: M1 field arithmetic → M2 point addition → M3 scalar multiplication + oracle →
-M4 quantum semantics + end-to-end correctness → M5 submission spec.
+The Naive secp256k1 submission is complete and machine-verified end to end, including correctness,
+success probability, T-count, and a qubit-capacity bound for the same program. The independent
+arXiv:2607.13816v2 implementation has its source split and coherent adaptive semantics in the open
+PR #56 → PR #57 → PR #58 stack; the remaining construction phases are tracked in
+[the implementation plan](docs/PLAN.md).

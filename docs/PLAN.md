@@ -507,9 +507,9 @@ Every implementation PR must pass:
 7. small differential tests against the pinned supplement where applicable;
 8. hosted CI and independent exact-head review before merge.
 
-Explicit stop/go reviews occur after coherent semantics (Phase 2), EEA model/windows (Phase 4),
-concrete inversion (Phase 6), total point addition (Phase 9), full window/lifetime scheduling
-(Phase 11), and the final contract (Phase 12).
+Explicit stop/go reviews occur after measurement-based uncomputation (Phase 2), EEA model/windows
+(Phase 4), concrete inversion (Phase 6), total point addition (Phase 9), full window/lifetime
+scheduling (Phase 11), and the final contract (Phase 12).
 
 ## 10. Approved implementation decisions
 
