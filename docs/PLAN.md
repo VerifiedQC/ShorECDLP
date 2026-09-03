@@ -589,12 +589,14 @@ They are equal only if Phase 11 proves the required reuse.
   unary traversal in zero-subtree-first (`inc`) and one-subtree-first (`dec`) order on a
   caller-supplied tree, with decoder restoration, physical well-formedness, coherent refinement,
   and constructor-derived resource equations.
-- **Phase-5 circuit unit 4:** current implementation/review unit; synchronized dual-endpoint
-  traversal on a caller-supplied tree, with the exact A-then-B compute, paired branch switches,
-  B-then-A cleanup, paired decoder restoration, coherent refinement, and constructor-derived
-  resource equations. The supplement's concrete sorted/deduplicated-label, highest-varying-bit tree
-  builder and its numeric-order certificate remain open, as do zero maps, full length blocks, and
-  the indexed step.
+- **PR #65, Phase-5 circuit unit 4:** merged at `de9fff8f`; synchronized dual-endpoint traversal
+  on a caller-supplied tree, with the exact A-then-B compute, paired branch switches, B-then-A
+  cleanup, paired decoder restoration, coherent refinement, and constructor-derived resource
+  equations.
+- **PR #66, Phase-5 circuit unit 5:** current implementation/review unit; concrete
+  sorted/deduplicated-label, highest-varying-bit tree construction with numeric forward/reverse
+  order, recursive source-shape, path-depth, index-wire, and top-bit-exclusion certificates. The
+  arithmetic leaves, zero maps, full length blocks, and indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -629,5 +631,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--3 are merged. Phase 5 circuit unit 4 is the current review
+Phases 0--4 and Phase 5 circuit units 1--4 are merged. Phase 5 circuit unit 5 is the current review
 unit on that foundation.
