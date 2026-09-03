@@ -5,11 +5,11 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result below is the
-`main@2e87a3cc048840232c2f3919a2a269f2783ea50e` baseline. The approved Phase-0/1 implementation
-exists in the open dependency stack PR #56 → PR #57 → PR #58 as of 2026-09-03; it is not yet on
-`main`. A `✓` means a declaration is root-reachable and covered by the repository verifier on the
-stated baseline or exact PR head. “Target” is not a proved claim.
+**Status snapshot.** The verified Naive result and merged Phase-0/1 paper foundation below are on
+`main@66062cbf6072a815e982ca3b133e0ebfce73af34`. PR #56 → PR #57 → PR #58 landed the source
+split, adaptive Kraus semantics, and coherent-refinement bridge; Phase 2 is the current PR #59. A
+`✓` means a declaration is root-reachable and covered by the repository verifier on the stated
+baseline or exact PR head. “Target” is not a proved claim.
 
 ## 1. Current verified result
 
