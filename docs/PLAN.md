@@ -5,10 +5,11 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** This document describes `main@2e87a3cc048840232c2f3919a2a269f2783ea50e`
-and the approved source-layout direction as of 2026-09-02. A `✓` means the declaration is
-root-reachable and covered by the repository verifier on that baseline. “Target” is not a proved
-claim. The source relocation and paper implementation described below have not yet landed.
+**Status snapshot.** The verified Naive result below is the
+`main@2e87a3cc048840232c2f3919a2a269f2783ea50e` baseline. The approved Phase-0/1 implementation
+exists in the open dependency stack PR #56 → PR #57 → PR #58 as of 2026-09-03; it is not yet on
+`main`. A `✓` means a declaration is root-reachable and covered by the repository verifier on the
+stated baseline or exact PR head. “Target” is not a proved claim.
 
 ## 1. Current verified result
 
@@ -43,10 +44,10 @@ The proof chain is complete and standard-axiom-only:
 This construction will be called the **Naive** submission after the source split. “Naive” describes
 its arithmetic and allocation strategy, not its proof status.
 
-## 2. Target source architecture
+## 2. Source architecture
 
-The repository will contain two isolated implementations over one small semantic framework and one
-pure mathematical layer:
+The adopted architecture contains two isolated implementations over one small semantic framework
+and one pure mathematical layer:
 
 ```text
 ShorECDLP/
@@ -223,7 +224,7 @@ A paper phase is complete only when all applicable conditions hold for the same 
 
 ## 6. Dependency-ordered roadmap
 
-### Phase 0 — source split and specification reconciliation
+### Phase 0 — source split and specification reconciliation (implemented; awaiting merge)
 
 Perform the relocation in Section 2.3 without changing current program or theorem meaning. Record
 the exact paper schedule/layout, pin small differential tests, freeze the resource vocabulary, and
@@ -232,7 +233,13 @@ quarantine the unresolved paper claims in Section 7.
 **Gate:** parent/head public declarations and axioms agree; Math, Framework, Naive, and
 `2607_13816` import checks pass; both submissions are root-reachable.
 
-### Phase 1 — adaptive semantics and coherent refinement
+**Status:** PR #56 implements the path-only relocation and paper-reference reconciliation. All 63
+moved modules preserve their declaration/proof source modulo imports and comments; all 1,801 public
+declarations have identical parent/head printed signatures and axiom dependencies. The warning-
+fatal build, 67/67 source closure, four textual/compiler-resolved import-direction gates, 103
+targeted disclosures, exhaustive 5,236-declaration standard-only audit, and hosted CI are green.
+
+### Phase 1 — adaptive semantics and coherent refinement (implemented; awaiting merge)
 
 Modules:
 
@@ -245,6 +252,15 @@ Born-mass preservation, coherent composition, extension to supported superpositi
 probability equivalence.
 
 **Gate:** coherent refinement—not basis-only behavior—composes across all later arithmetic.
+
+**Status:** PR #57 adds the separate adaptive Kraus-instrument semantics and PR #58 adds
+coefficient-aligned coherent refinement. The proved surface includes exact X-reset behavior and
+cleanliness, arbitrary-state Born-mass preservation, chronological sequencing without transcript
+deduplication, extension from valid basis inputs to supported superpositions, coherent
+unitary/sequential composition, and equality of arbitrary final computational-basis event
+probabilities after summing internal transcripts. Exact local and hosted gates are green (3,058 /
+3,059 warning-fatal jobs, 68/69 source files, 109/120 disclosures, and 5,344/5,396 exhaustively
+audited declarations with only the standard axiom allowlist).
 
 ### Phase 2 — measurement-based uncomputation
 
@@ -459,11 +475,18 @@ They are equal only if Phase 11 proves the required reuse.
 
 ## 8. Active branch disposition
 
-- **PR #54, adaptive foundation:** frozen at
-  `252232b9ca6d3c5575003883315b9dd8209fc339` pending approval of this roadmap. If the adaptive
-  architecture is accepted, it becomes Phase 1a after the Phase-0 source split is reconciled.
-- **Unpublished measurement-uncompute canary:** local only; do not commit or publish it before this
-  plan is approved. After approval it belongs under `Submission/2607_13816/Canary/`.
+- **PR #55, roadmap:** its approved plan content is incorporated into PR #56; the sibling PR is
+  superseded once that integration is published.
+- **PR #56, Phase 0:** source split, import gates, and pinned paper reference; code/API review is
+  green, with the plan-integration delta awaiting review.
+- **PR #57, Phase 1a:** Phase-0-reconciled adaptive foundation; proof/code review is green, with the
+  restacked exact-head delta awaiting review.
+- **PR #58, Phase 1b:** coherent refinement and final-event equivalence; proof/code review is green,
+  with the restacked exact-head delta awaiting review.
+- **PR #54, former adaptive foundation:** closed as superseded by the reconciled PR #57.
+- **Unpublished measurement-uncompute canary:** local only. After the Phase-0/1 stack lands, rebuild
+  it from the reviewed semantics under `Submission/2607_13816/Canary/`; do not publish the stale
+  pre-split tree.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -487,19 +510,16 @@ Explicit stop/go reviews occur after coherent semantics (Phase 2), EEA model/win
 concrete inversion (Phase 6), total point addition (Phase 9), full window/lifetime scheduling
 (Phase 11), and the final contract (Phase 12).
 
-## 10. Decisions still required before implementation resumes
+## 10. Approved implementation decisions
 
-The `Math/`, `Submission/Naive/`, and `Submission/2607_13816/` source split is adopted. The remaining
-choices are:
+Runzhou approved the five roadmap choices on 2026-09-02:
 
-1. keep the Phase-0 relocation path-only, or also rename the current public API into a
-   `ShorECDLP.Naive` namespace; recommendation: path-only first;
-2. accept separate adaptive-instrument semantics plus coherent refinement and allow PR #54 to
-   become Phase 1a; recommendation: accept;
-3. require total group-law point addition even if the real bound exceeds 835; recommendation:
-   require totality;
-4. keep 835 qubits, 28 windows, and `2^30.88` Toffolis as provisional until one program proves
-   them; recommendation: keep provisional; and
-5. keep PR #53 unmerged as a fallback until EEA reaches Phase 6; recommendation: keep unmerged.
+1. the Phase-0 relocation is path-only; existing public declaration namespaces remain stable;
+2. adaptive programs use a separate Kraus-instrument semantics with a coherent-refinement bridge;
+3. point addition must implement the total group law even if the honest bound exceeds 835;
+4. 835 qubits, 28 windows, and `2^30.88` Toffolis remain provisional until one explicit program
+   derives them; and
+5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Implementation remains paused until these choices, or a revised scope, are approved.
+Phases 0 and 1 are implemented in the open stack described above. Phase 2 starts from the reviewed
+and merged Phase-1 semantics; no stale pre-split canary is carried forward.
