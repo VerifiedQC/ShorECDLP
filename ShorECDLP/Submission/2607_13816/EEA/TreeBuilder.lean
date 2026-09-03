@@ -13,8 +13,10 @@ the supplement's highest-varying-bit split without trusting the Python builder.
 
 The public certificates prove that every requested in-range label occurs exactly once, leaf order
 is the sorted deduplicated label list, `.inc` visits that list forward, `.dec` visits it backward,
-and every stored index wire comes from a strictly smaller bit position.  The last fact also keeps
-the source's separately handled top bit outside the main pruned tree.
+and every stored index wire comes from a strictly smaller bit position.  For the source's
+top-special range, the last fact keeps the separately handled top bit out of its corresponding
+index bank, including the singleton-main-tree edge case.  Cross-bank separation remains a later
+full-register layout obligation.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -541,6 +543,56 @@ theorem buildSource_pathDepth_le
     (hbuild : buildSource indexA indexB labels = some tree) :
     tree.pathDepth ≤ sourceWidth labels :=
   build_pathDepth_le indexA indexB (sourceWidth labels) labels tree hbuild
+
+/-- In the source's top-special interval, the main labels are `0, ..., 2^depth - 1` and the
+separately handled endpoint bit is `depth`.  That bit is absent from the corresponding A-index
+bank, including `depth = 0`, where the main tree is the singleton leaf zero. -/
+theorem buildSource_topSpecial_indexA_not_mem
+    (indexA indexB : Nat → Wire)
+    (depth : Nat) (tree : DualUnaryActionTree)
+    (hbuild : buildSource indexA indexB (Finset.range (2 ^ depth)) = some tree)
+    (hinjective : Function.Injective indexA) :
+    indexA depth ∉ tree.indexAWires := by
+  cases depth with
+  | zero =>
+      simp [buildSource, sourceWidth, build, buildAt, combine] at hbuild
+      subst tree
+      simp [DualUnaryActionTree.indexAWires]
+  | succ depth =>
+      intro hmem
+      obtain ⟨bit, hbit, heq⟩ := build_indexAWires indexA indexB
+        (sourceWidth (Finset.range (2 ^ (depth + 1))))
+        (Finset.range (2 ^ (depth + 1))) tree hbuild hmem
+      have hwidth : sourceWidth (Finset.range (2 ^ (depth + 1))) ≤ depth + 1 :=
+        sourceWidth_le _ _ (Nat.succ_pos depth) (by
+          intro label hlabel
+          simpa using hlabel)
+      have : depth + 1 = bit := hinjective heq
+      omega
+
+/-- B-index-bank counterpart of `buildSource_topSpecial_indexA_not_mem`. -/
+theorem buildSource_topSpecial_indexB_not_mem
+    (indexA indexB : Nat → Wire)
+    (depth : Nat) (tree : DualUnaryActionTree)
+    (hbuild : buildSource indexA indexB (Finset.range (2 ^ depth)) = some tree)
+    (hinjective : Function.Injective indexB) :
+    indexB depth ∉ tree.indexBWires := by
+  cases depth with
+  | zero =>
+      simp [buildSource, sourceWidth, build, buildAt, combine] at hbuild
+      subst tree
+      simp [DualUnaryActionTree.indexBWires]
+  | succ depth =>
+      intro hmem
+      obtain ⟨bit, hbit, heq⟩ := build_indexBWires indexA indexB
+        (sourceWidth (Finset.range (2 ^ (depth + 1))))
+        (Finset.range (2 ^ (depth + 1))) tree hbuild hmem
+      have hwidth : sourceWidth (Finset.range (2 ^ (depth + 1))) ≤ depth + 1 :=
+        sourceWidth_le _ _ (Nat.succ_pos depth) (by
+          intro label hlabel
+          simpa using hlabel)
+      have : depth + 1 = bit := hinjective heq
+      omega
 
 /-- Width-explicit list wrapper: Python's `sorted(set(labels))` is `labels.toFinset.sort`. -/
 def buildFromList (indexA indexB : Nat → Wire)

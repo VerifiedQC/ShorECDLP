@@ -401,8 +401,10 @@ supplement construction from a deduplicated label set by scanning aligned power-
 the highest candidate bit downward, pruning empty halves, and emitting a node only when both halves
 survive. Its certificates identify `.inc` with the sorted labels and `.dec` with their reverse,
 bound path depth and index-wire positions, and keep the separately handled top bit outside the main
-tree. The top-special arithmetic-leaf bridge, upper/lower zero-map production, complete length
-blocks, and the indexed four-phase step remain open within Phase 5.
+tree's corresponding index bank, including the singleton-main-tree case. Cross-bank exclusion
+remains a full-register layout obligation. The top-special arithmetic-leaf bridge, upper/lower
+zero-map production, complete length blocks, and the indexed four-phase step remain open within
+Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -595,7 +597,8 @@ They are equal only if Phase 11 proves the required reuse.
   equations.
 - **PR #66, Phase-5 circuit unit 5:** current implementation/review unit; concrete
   sorted/deduplicated-label, highest-varying-bit tree construction with numeric forward/reverse
-  order, recursive source-shape, path-depth, index-wire, and top-bit-exclusion certificates. The
+  order, recursive source-shape, path-depth, index-wire, and corresponding-bank source-top-bit
+  exclusion certificates. Cross-bank exclusion remains a full-register layout obligation; the
   arithmetic leaves, zero maps, full length blocks, and indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;

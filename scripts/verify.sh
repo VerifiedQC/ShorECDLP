@@ -222,6 +222,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_visitLabels_inc
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_visitLabels_dec
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_pathDepth_le
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_topSpecial_indexA_not_mem
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_topSpecial_indexB_not_mem
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSourceFromList_visitLabels_inc
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSourceFromList_visitLabels_dec
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSourceFromList_highestVaryingBit_regression
@@ -277,8 +279,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 253 ]]; then
-  printf 'expected two hundred fifty-three #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 255 ]]; then
+  printf 'expected two hundred fifty-five #print axioms results\n' >&2
   exit 1
 fi
 
