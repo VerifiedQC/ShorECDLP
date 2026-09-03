@@ -3,6 +3,8 @@ import ShorECDLP.Submission.«2607_13816».EEA.BitCircuits
 import ShorECDLP.Submission.«2607_13816».EEA.Increment
 import ShorECDLP.Submission.«2607_13816».EEA.MeasuredAnd
 import ShorECDLP.Submission.«2607_13816».EEA.UnaryIteration
+import ShorECDLP.Submission.«2607_13816».EEA.Ripple
+import ShorECDLP.Submission.«2607_13816».EEA.LengthUpdate
 import ShorECDLP.Submission.«2607_13816».EEA.Windows
 
 /-!

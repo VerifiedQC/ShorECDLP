@@ -162,6 +162,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.paperPhaseTrace_fieldsNonoverlap
 #print axioms ShorECDLP.Paper2607_13816.run_controlledSwap
 #print axioms ShorECDLP.Paper2607_13816.run_dirtyC3X
+#print axioms ShorECDLP.Paper2607_13816.run_cleanC3X
 #print axioms ShorECDLP.Paper2607_13816.run_controlledRotateLeftOne_values
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_correct
 #print axioms ShorECDLP.Paper2607_13816.controlledIncrement_wellFormed
@@ -174,6 +175,27 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.unaryIteration_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMaj
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUma
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMajInv
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUmaInv
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMaj_state
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUma_state
+#print axioms ShorECDLP.Paper2607_13816.run_controlledMajInv_state
+#print axioms ShorECDLP.Paper2607_13816.run_controlledUmaInv_state
+#print axioms ShorECDLP.Paper2607_13816.run_controlledWindowRipple
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_protected
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWindowRipple_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_borrowedXorBit
+#print axioms ShorECDLP.Paper2607_13816.run_borrowedXorWriter_state
+#print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_restoresDirty
+#print axioms ShorECDLP.Paper2607_13816.borrowedXorWriter_cnotCount
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -205,8 +227,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 181 ]]; then
-  printf 'expected one hundred eighty-one #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 203 ]]; then
+  printf 'expected two hundred three #print axioms results\n' >&2
   exit 1
 fi
 
