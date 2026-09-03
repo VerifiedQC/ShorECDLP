@@ -233,9 +233,10 @@ quarantine the unresolved paper claims in Section 7.
 **Gate:** parent/head public declarations and axioms agree; Math, Framework, Naive, and
 `2607_13816` import checks pass; both submissions are root-reachable.
 
-**Status:** PR #56 implements the path-only relocation and paper-reference reconciliation. All 63
-moved modules preserve their declaration/proof source modulo imports and comments; all 1,801 public
-declarations have identical parent/head printed signatures and axiom dependencies. The warning-
+**Status:** PR #56 implements the path-only relocation and paper-reference reconciliation. All 55
+relocated code-bearing modules preserve their declaration/proof source modulo imports and comments;
+the 8 retained Framework modules complete the 63-module baseline, and all 1,801 public declarations
+have identical parent/head printed signatures and axiom dependencies. The warning-
 fatal build, 67/67 source closure, four textual/compiler-resolved import-direction gates, 103
 targeted disclosures, exhaustive 5,236-declaration standard-only audit, and hosted CI are green.
 
