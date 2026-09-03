@@ -186,6 +186,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.unaryAction_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.unaryAction_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.unaryAction_tCount
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_preservesDecoder
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_clean
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAnd_coherent
+#print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAnd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAnd_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAnd_tCount
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_coherent
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_tCount
 #print axioms ShorECDLP.Paper2607_13816.run_controlledMaj
 #print axioms ShorECDLP.Paper2607_13816.run_controlledUma
 #print axioms ShorECDLP.Paper2607_13816.run_controlledMajInv
@@ -238,8 +253,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 214 ]]; then
-  printf 'expected two hundred fourteen #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 229 ]]; then
+  printf 'expected two hundred twenty-nine #print axioms results\n' >&2
   exit 1
 fi
 
