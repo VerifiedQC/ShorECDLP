@@ -201,6 +201,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_tCount
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.mem_optionLabels_buildAt
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildAt_eq_none_iff
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildAt_sourceBuilt
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.SourceBuilt.pathDepth_le
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.SourceBuilt.indexAWires
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.SourceBuilt.indexBWires
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.build_labels_eq_sort
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.build_exists
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.build_topIndexA_not_mem
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.build_topIndexB_not_mem
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.build_visitLabels_inc
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.build_visitLabels_dec
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildFromList_visitLabels_inc
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildFromList_visitLabels_dec
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.label_lt_two_pow_sourceWidth
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.sourceWidth_le
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_exists
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_labels_eq_sort
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_visitLabels_inc
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_visitLabels_dec
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSource_pathDepth_le
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSourceFromList_visitLabels_inc
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSourceFromList_visitLabels_dec
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildSourceFromList_highestVaryingBit_regression
 #print axioms ShorECDLP.Paper2607_13816.run_controlledMaj
 #print axioms ShorECDLP.Paper2607_13816.run_controlledUma
 #print axioms ShorECDLP.Paper2607_13816.run_controlledMajInv
@@ -253,8 +277,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 229 ]]; then
-  printf 'expected two hundred twenty-nine #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 253 ]]; then
+  printf 'expected two hundred fifty-three #print axioms results\n' >&2
   exit 1
 fi
 

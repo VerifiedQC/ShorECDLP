@@ -5,11 +5,11 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-3 paper foundation below
-are on `main@74d869475e7c080a4444b43e89886fb3c0b0e913`. PR #56 → PR #57 → PR #58 → PR #59
-→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 landed the source split, adaptive Kraus semantics,
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-4 paper foundation below
+are on `main@de9fff8fea3d452841b94bc8798a947b98c7bb6d`. PR #56 → PR #57 → PR #58 → PR #59
+→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and the first three concrete circuit units; Phase 5 circuit unit 4 is the current
+bounds/windows, and the first four concrete circuit units; Phase 5 circuit unit 5 is the current
 implementation/review unit. A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -374,7 +374,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first three dependency-closed construction units are merged. PR #62 contains
+**Status:** the first four dependency-closed construction units are merged. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -392,14 +392,17 @@ four-CNOT-per-set-bit count is local only and is not a production aggregate unti
 write/zero-map/write/zero-map composition is proved. PR #64 generalizes
 the pruned unary decoder to circuit-valued leaf actions in zero-subtree-first (`inc`) and
 one-subtree-first (`dec`) order on a caller-supplied tree, while preserving decoder wires and
-coherently refining the corresponding full unitary traversal. The concrete supplement construction
-from sorted/deduplicated labels by highest-varying-bit splits—and its certificate that these local
-branch orders induce numeric increasing/decreasing label order—remains open. The current fourth
-unit composes two decoder stacks over the same caller-supplied tree in the supplement's exact local
+coherently refining the corresponding full unitary traversal. PR #65 composes two decoder stacks
+over the same caller-supplied tree in the supplement's exact local
 order: compute A then B, traverse each subtree with both equality controls, reverse the switches,
 and erase B then A. It proves paired decoder restoration, physical well-formedness, coherent
-refinement, and exact leaf-sum resource equations. The concrete tree builder, upper/lower zero-map
-production, complete length blocks, and the indexed four-phase step remain open within Phase 5.
+refinement, and exact leaf-sum resource equations. The current fifth unit implements the concrete
+supplement construction from a deduplicated label set by scanning aligned power-of-two blocks from
+the highest candidate bit downward, pruning empty halves, and emitting a node only when both halves
+survive. Its certificates identify `.inc` with the sorted labels and `.dec` with their reverse,
+bound path depth and index-wire positions, and keep the separately handled top bit outside the main
+tree. The top-special arithmetic-leaf bridge, upper/lower zero-map production, complete length
+blocks, and the indexed four-phase step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
