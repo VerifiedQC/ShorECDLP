@@ -924,6 +924,47 @@ theorem restoreIntervalEndpoints_wellFormed
     cuccaroSub_wellFormed lengthT lengthQ carry htqLength
       (endpoint_cuccaro_layout _ _ _ _ _ hlayout)⟩
 
+private theorem intervalEndpointRun_injective
+    (circuit : Circuit) (hwellFormed : CircuitWellFormed circuit) :
+    Function.Injective (run circuit) := by
+  intro first second heq
+  have heq' := congrArg (run circuit.adjoint) heq
+  rw [run_adjoint_run_classical circuit hwellFormed first,
+    run_adjoint_run_classical circuit hwellFormed second] at heq'
+  exact heq'
+
+/-- Preparation also reverses restoration when the restored endpoint scratch is clean.  This
+direction is obtained from the already proved source-order round trip and injectivity of every
+well-formed classical circuit; no claim that the two literal streams are syntactic adjoints is
+needed. -/
+theorem run_prepareIntervalEndpoints_after_restore
+    (lengthT lengthQ lengthS scratch : List Wire) (carry : Wire)
+    (modulusBits offset : Nat) (state : BasisState)
+    (htqLength : lengthT.length = lengthQ.length)
+    (hqWidth : lengthQ.length ≤ scratch.length)
+    (hsWidth : lengthS.length ≤ scratch.length)
+    (hsPositive : 0 < lengthS.length)
+    (hlayout : IntervalEndpointLayout lengthT lengthQ lengthS scratch carry)
+    (hcleanAfter : Clean (scratch ++ [carry])
+      (run (restoreIntervalEndpoints lengthT lengthQ lengthS scratch carry
+        modulusBits offset) state)) :
+    run (prepareIntervalEndpoints lengthT lengthQ lengthS scratch carry
+        modulusBits offset)
+      (run (restoreIntervalEndpoints lengthT lengthQ lengthS scratch carry
+        modulusBits offset) state) = state := by
+  let restore := restoreIntervalEndpoints lengthT lengthQ lengthS scratch carry
+    modulusBits offset
+  let prepare := prepareIntervalEndpoints lengthT lengthQ lengthS scratch carry
+    modulusBits offset
+  apply intervalEndpointRun_injective restore
+    (restoreIntervalEndpoints_wellFormed lengthT lengthQ lengthS scratch carry
+      modulusBits offset htqLength hqWidth hsWidth hlayout)
+  change run restore (run prepare (run restore state)) = run restore state
+  rw [show run restore (run prepare (run restore state)) = run restore state by
+    exact run_restoreIntervalEndpoints_after_prepare lengthT lengthQ lengthS scratch
+      carry modulusBits offset (run restore state) htqLength hqWidth hsWidth hsPositive
+      hlayout hcleanAfter]
+
 /-- Closed coherent Toffoli formula shared by preparation and restoration. -/
 def intervalEndpointToffoliFormula
     (lengthT lengthQ lengthS : Nat) : Nat :=
