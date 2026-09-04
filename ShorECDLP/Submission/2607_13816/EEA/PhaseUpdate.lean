@@ -11,7 +11,7 @@ The generic block takes the exact list of wires used by each zero test.  The pro
 appends the borrowed shift-epoch discriminator to the low shift word and conjugates that test by
 the two source `X` gates, so terminal-padding wrap cannot look like encoded zero.
 
-The coherent circuit and its measurement-uncomputed realization use the same gate sequence.  In
+The coherent circuit and its measurement-uncomputed realization use the same source block order.  In
 the adaptive term only the internal cleanup of each multi-controlled equality test is replaced by
 the global measurement-uncomputation choice; the phase/sign core stays unitary.
 -/
@@ -991,19 +991,6 @@ private theorem phaseUpdateState_preserves_scratch
     upd_other _ registers.phase2 _ (Ne.symm hp2Wire),
     upd_other _ registers.phase1 _ (Ne.symm hp1Wire)]
 
-/-- The same clean boundary is available after the phase update, so the enclosing indexed step
-may safely reuse the source scratch block. -/
-private theorem phaseUpdateUnitary_ready
-    (registers : PhaseUpdateRegisters) (state : BasisState)
-    (hlayout : PhaseUpdateLayout registers)
-    (hready : PhaseUpdateReady registers state) :
-    PhaseUpdateReady registers
-      (Classical.run (phaseUpdateUnitary registers) state) := by
-  rw [run_phaseUpdateUnitary registers state hlayout hready]
-  intro wire hwire
-  rw [phaseUpdateState_preserves_scratch registers state hlayout hwire]
-  exact hready wire hwire
-
 private theorem phaseUpdateCore_usesOnly (registers : PhaseUpdateRegisters) :
     PaperCircuitUsesOnly
       [registers.phase1, registers.phase2, registers.sign,
@@ -1061,19 +1048,6 @@ private theorem phaseUpdateUnitary_usesOnly (registers : PhaseUpdateRegisters) :
           simp [PhaseUpdateRegisters.allWires, PhaseUpdateRegisters.scratch])
   · exact phaseUpdateCleanupTests_usesOnly registers
 
-/-- Wires outside the phase-update register block are untouched. -/
-private theorem phaseUpdateUnitary_preservesOutside
-    (registers : PhaseUpdateRegisters) (state : BasisState) {wire : Wire}
-    (hwire : wire ∉ registers.allWires) :
-    Classical.run (phaseUpdateUnitary registers) state wire = state wire :=
-  (phaseUpdateUnitary_usesOnly registers).preservesOutside state hwire
-
-@[simp]
-private theorem phaseUpdateUnitary_HPFree (registers : PhaseUpdateRegisters) :
-    HPFree (phaseUpdateUnitary registers) := by
-  simp [phaseUpdateUnitary, phaseUpdateForwardTests, phaseUpdateCleanupTests,
-    phaseUpdateCore]
-
 private theorem phaseUpdateCore_wellFormed
     (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
     CircuitWellFormed (phaseUpdateCore registers) := by
@@ -1082,152 +1056,7 @@ private theorem phaseUpdateCore_wellFormed
     or_false, not_or] at hnd
   simp_all [phaseUpdateCore, CircuitWellFormed, Gate.WellFormed, Ne.symm]
 
-private theorem phaseUpdateForwardTests_wellFormed
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    CircuitWellFormed (phaseUpdateForwardTests registers) := by
-  rw [phaseUpdateForwardTests, circuitWellFormed_append,
-    circuitWellFormed_append]
-  exact ⟨⟨mcxVChain_wellFormed registers.lengthQ registers.zeroQ
-      registers.equalityScratch hlayout.q_capacity hlayout.qChain,
-    mcxVChain_wellFormed registers.lengthRPrime registers.zeroRPrime
-      registers.equalityScratch hlayout.rPrime_capacity hlayout.rPrimeChain⟩,
-    mcxVChain_wellFormed registers.lengthS registers.zeroS
-      registers.equalityScratch hlayout.s_capacity hlayout.sChain⟩
-
-private theorem phaseUpdateCleanupTests_wellFormed
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    CircuitWellFormed (phaseUpdateCleanupTests registers) := by
-  rw [phaseUpdateCleanupTests, circuitWellFormed_append,
-    circuitWellFormed_append]
-  exact ⟨⟨mcxVChain_wellFormed registers.lengthS registers.zeroS
-      registers.equalityScratch hlayout.s_capacity hlayout.sChain,
-    mcxVChain_wellFormed registers.lengthRPrime registers.zeroRPrime
-      registers.equalityScratch hlayout.rPrime_capacity hlayout.rPrimeChain⟩,
-    mcxVChain_wellFormed registers.lengthQ registers.zeroQ
-      registers.equalityScratch hlayout.q_capacity hlayout.qChain⟩
-
-private theorem phaseUpdateUnitary_wellFormed
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    CircuitWellFormed (phaseUpdateUnitary registers) := by
-  rw [phaseUpdateUnitary, circuitWellFormed_append,
-    circuitWellFormed_append]
-  exact ⟨⟨phaseUpdateForwardTests_wellFormed registers hlayout,
-    phaseUpdateCore_wellFormed registers hlayout⟩,
-    phaseUpdateCleanupTests_wellFormed registers hlayout⟩
-
-@[simp]
-private theorem phaseUpdateUnitary_toffoliCount
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    eeaToffoliCount (phaseUpdateUnitary registers) =
-      2 * (mcxVChainToffoliCost registers.lengthQ.length +
-        mcxVChainToffoliCost registers.lengthRPrime.length +
-        mcxVChainToffoliCost registers.lengthS.length) + 4 := by
-  have hq := mcxVChain_toffoliCount registers.lengthQ registers.zeroQ
-    registers.equalityScratch hlayout.q_capacity
-  have hr := mcxVChain_toffoliCount registers.lengthRPrime registers.zeroRPrime
-    registers.equalityScratch hlayout.rPrime_capacity
-  have hs := mcxVChain_toffoliCount registers.lengthS registers.zeroS
-    registers.equalityScratch hlayout.s_capacity
-  have hforward : eeaToffoliCount (phaseUpdateForwardTests registers) =
-      mcxVChainToffoliCost registers.lengthQ.length +
-        mcxVChainToffoliCost registers.lengthRPrime.length +
-        mcxVChainToffoliCost registers.lengthS.length := by
-    rw [phaseUpdateForwardTests, eeaToffoliCount_append,
-      eeaToffoliCount_append, hq, hr, hs]
-  have hcleanup : eeaToffoliCount (phaseUpdateCleanupTests registers) =
-      mcxVChainToffoliCost registers.lengthS.length +
-        mcxVChainToffoliCost registers.lengthRPrime.length +
-        mcxVChainToffoliCost registers.lengthQ.length := by
-    rw [phaseUpdateCleanupTests, eeaToffoliCount_append,
-      eeaToffoliCount_append, hs, hr, hq]
-  rw [phaseUpdateUnitary, eeaToffoliCount_append,
-    eeaToffoliCount_append, hforward, hcleanup]
-  change _ + 4 + _ = _
-  omega
-
-@[simp]
-private theorem phaseUpdateUnitary_cnotCount
-    (registers : PhaseUpdateRegisters) :
-    eeaCnotCount (phaseUpdateUnitary registers) =
-      2 * (mcxVChainCnotCost registers.lengthQ.length +
-        mcxVChainCnotCost registers.lengthRPrime.length +
-        mcxVChainCnotCost registers.lengthS.length) + 6 := by
-  have hq := mcxVChain_cnotCount registers.lengthQ registers.zeroQ
-    registers.equalityScratch
-  have hr := mcxVChain_cnotCount registers.lengthRPrime registers.zeroRPrime
-    registers.equalityScratch
-  have hs := mcxVChain_cnotCount registers.lengthS registers.zeroS
-    registers.equalityScratch
-  have hforward : eeaCnotCount (phaseUpdateForwardTests registers) =
-      mcxVChainCnotCost registers.lengthQ.length +
-        mcxVChainCnotCost registers.lengthRPrime.length +
-        mcxVChainCnotCost registers.lengthS.length := by
-    rw [phaseUpdateForwardTests, eeaCnotCount_append,
-      eeaCnotCount_append, hq, hr, hs]
-  have hcleanup : eeaCnotCount (phaseUpdateCleanupTests registers) =
-      mcxVChainCnotCost registers.lengthS.length +
-        mcxVChainCnotCost registers.lengthRPrime.length +
-        mcxVChainCnotCost registers.lengthQ.length := by
-    rw [phaseUpdateCleanupTests, eeaCnotCount_append,
-      eeaCnotCount_append, hs, hr, hq]
-  rw [phaseUpdateUnitary, eeaCnotCount_append,
-    eeaCnotCount_append, hforward, hcleanup]
-  change _ + 6 + _ = _
-  omega
-
-@[simp]
-private theorem phaseUpdateUnitary_tCount
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    ShorECDLP.tCount (phaseUpdateUnitary registers) =
-      7 * (2 * (mcxVChainToffoliCost registers.lengthQ.length +
-        mcxVChainToffoliCost registers.lengthRPrime.length +
-        mcxVChainToffoliCost registers.lengthS.length) + 4) := by
-  have hq := mcxVChain_tCount registers.lengthQ registers.zeroQ
-    registers.equalityScratch hlayout.q_capacity
-  have hr := mcxVChain_tCount registers.lengthRPrime registers.zeroRPrime
-    registers.equalityScratch hlayout.rPrime_capacity
-  have hs := mcxVChain_tCount registers.lengthS registers.zeroS
-    registers.equalityScratch hlayout.s_capacity
-  have hforward : ShorECDLP.tCount (phaseUpdateForwardTests registers) =
-      7 * mcxVChainToffoliCost registers.lengthQ.length +
-        7 * mcxVChainToffoliCost registers.lengthRPrime.length +
-        7 * mcxVChainToffoliCost registers.lengthS.length := by
-    rw [phaseUpdateForwardTests, tCount_append, tCount_append, hq, hr, hs]
-  have hcleanup : ShorECDLP.tCount (phaseUpdateCleanupTests registers) =
-      7 * mcxVChainToffoliCost registers.lengthS.length +
-        7 * mcxVChainToffoliCost registers.lengthRPrime.length +
-        7 * mcxVChainToffoliCost registers.lengthQ.length := by
-    rw [phaseUpdateCleanupTests, tCount_append, tCount_append, hs, hr, hq]
-  rw [phaseUpdateUnitary, tCount_append, tCount_append, hforward, hcleanup]
-  change _ + 28 + _ = _
-  omega
-
-/-! ## Global measurement-uncomputation realization -/
-
-private def phaseUpdateForwardTestsAdaptive
-    (registers : PhaseUpdateRegisters) : Quantum.AdaptiveCircuit :=
-  ((mcxVChainAdaptive registers.lengthQ registers.zeroQ
-      registers.equalityScratch).seq
-    (mcxVChainAdaptive registers.lengthRPrime registers.zeroRPrime
-      registers.equalityScratch)).seq
-    (mcxVChainAdaptive registers.lengthS registers.zeroS
-      registers.equalityScratch)
-
-private def phaseUpdateCleanupTestsAdaptive
-    (registers : PhaseUpdateRegisters) : Quantum.AdaptiveCircuit :=
-  ((mcxVChainAdaptive registers.lengthS registers.zeroS
-      registers.equalityScratch).seq
-    (mcxVChainAdaptive registers.lengthRPrime registers.zeroRPrime
-      registers.equalityScratch)).seq
-    (mcxVChainAdaptive registers.lengthQ registers.zeroQ
-      registers.equalityScratch)
-
-/-- The literal adaptive source term: only internal v-chain cleanup is measured. -/
-private def phaseUpdateAdaptive
-    (registers : PhaseUpdateRegisters) : Quantum.AdaptiveCircuit :=
-  ((phaseUpdateForwardTestsAdaptive registers).seq
-    (.unitary (phaseUpdateCore registers) .done)).seq
-      (phaseUpdateCleanupTestsAdaptive registers)
+/-! ## Shared measurement-uncomputation helpers -/
 
 private theorem phaseUpdate_mcx_preservesEqualityClean
     (registers : PhaseUpdateRegisters) (controls : List Wire) (target : Wire)
@@ -1260,26 +1089,6 @@ private theorem phaseUpdateForwardTests_preservesEqualityClean
         registers.zeroRPrime _ hlayout.rPrime_capacity hlayout.rPrimeChain hrNot
           (phaseUpdate_mcx_preservesEqualityClean registers registers.lengthQ
             registers.zeroQ state hlayout.q_capacity hlayout.qChain hqNot hclean))
-
-private theorem phaseUpdateCleanupTests_preservesEqualityClean
-    (registers : PhaseUpdateRegisters) (state : BasisState)
-    (hlayout : PhaseUpdateLayout registers)
-    (hclean : Clean registers.equalityScratch state) :
-    Clean registers.equalityScratch
-      (Classical.run (phaseUpdateCleanupTests registers) state) := by
-  have hqNot := hlayout.namedScratch_not_equality
-    (wire := registers.zeroQ) (by simp)
-  have hrNot := hlayout.namedScratch_not_equality
-    (wire := registers.zeroRPrime) (by simp)
-  have hsNot := hlayout.namedScratch_not_equality
-    (wire := registers.zeroS) (by simp)
-  rw [phaseUpdateCleanupTests, Classical.run_append, Classical.run_append]
-  exact phaseUpdate_mcx_preservesEqualityClean registers registers.lengthQ
-    registers.zeroQ _ hlayout.q_capacity hlayout.qChain hqNot
-      (phaseUpdate_mcx_preservesEqualityClean registers registers.lengthRPrime
-        registers.zeroRPrime _ hlayout.rPrime_capacity hlayout.rPrimeChain hrNot
-          (phaseUpdate_mcx_preservesEqualityClean registers registers.lengthS
-            registers.zeroS state hlayout.s_capacity hlayout.sChain hsNot hclean))
 
 private theorem phaseUpdateCore_preservesEqualityClean
     (registers : PhaseUpdateRegisters) (state : BasisState)
@@ -1346,185 +1155,6 @@ private theorem phaseUpdate_coherent_seq_circuits
   intro state _
   exact (Quantum.run_append firstCircuit secondCircuit (Quantum.ket state)).symm
 
-private theorem phaseUpdateForwardTestsAdaptive_coherent
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    Quantum.CoherentlyImplementsOn
-      (phaseUpdateForwardTestsAdaptive registers)
-      (Quantum.run (phaseUpdateForwardTests registers))
-      (fun state ↦ Clean registers.equalityScratch state) := by
-  let qCircuit := mcxVChain registers.lengthQ registers.zeroQ
-    registers.equalityScratch
-  let rCircuit := mcxVChain registers.lengthRPrime registers.zeroRPrime
-    registers.equalityScratch
-  let sCircuit := mcxVChain registers.lengthS registers.zeroS
-    registers.equalityScratch
-  let qAdaptive := mcxVChainAdaptive registers.lengthQ registers.zeroQ
-    registers.equalityScratch
-  let rAdaptive := mcxVChainAdaptive registers.lengthRPrime registers.zeroRPrime
-    registers.equalityScratch
-  let sAdaptive := mcxVChainAdaptive registers.lengthS registers.zeroS
-    registers.equalityScratch
-  have hq := mcxVChainAdaptive_coherent registers.lengthQ registers.zeroQ
-    registers.equalityScratch hlayout.q_capacity hlayout.qChain
-  have hr := mcxVChainAdaptive_coherent registers.lengthRPrime
-    registers.zeroRPrime registers.equalityScratch hlayout.rPrime_capacity
-      hlayout.rPrimeChain
-  have hs := mcxVChainAdaptive_coherent registers.lengthS registers.zeroS
-    registers.equalityScratch hlayout.s_capacity hlayout.sChain
-  have hqPreserves : ∀ state, Clean registers.equalityScratch state →
-      Clean registers.equalityScratch (Classical.run qCircuit state) := by
-    intro state hclean
-    exact phaseUpdate_mcx_preservesEqualityClean registers registers.lengthQ
-      registers.zeroQ state hlayout.q_capacity hlayout.qChain
-        (hlayout.namedScratch_not_equality (wire := registers.zeroQ) (by simp))
-        hclean
-  have hqr := phaseUpdate_coherent_seq_circuits hq hr
-    (mcxVChain_HPFree registers.lengthQ registers.zeroQ
-      registers.equalityScratch) hqPreserves
-  have hqrPreserves : ∀ state, Clean registers.equalityScratch state →
-      Clean registers.equalityScratch
-        (Classical.run (qCircuit ++ rCircuit) state) := by
-    intro state hclean
-    rw [Classical.run_append]
-    exact phaseUpdate_mcx_preservesEqualityClean registers
-      registers.lengthRPrime registers.zeroRPrime _ hlayout.rPrime_capacity
-      hlayout.rPrimeChain
-      (hlayout.namedScratch_not_equality
-        (wire := registers.zeroRPrime) (by simp))
-      (hqPreserves state hclean)
-  have hall := phaseUpdate_coherent_seq_circuits hqr hs
-    (by simp) hqrPreserves
-  simpa [phaseUpdateForwardTestsAdaptive, phaseUpdateForwardTests,
-    qCircuit, rCircuit, sCircuit, qAdaptive, rAdaptive, sAdaptive] using hall
-
-private theorem phaseUpdateCleanupTestsAdaptive_coherent
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    Quantum.CoherentlyImplementsOn
-      (phaseUpdateCleanupTestsAdaptive registers)
-      (Quantum.run (phaseUpdateCleanupTests registers))
-      (fun state ↦ Clean registers.equalityScratch state) := by
-  let sCircuit := mcxVChain registers.lengthS registers.zeroS
-    registers.equalityScratch
-  let rCircuit := mcxVChain registers.lengthRPrime registers.zeroRPrime
-    registers.equalityScratch
-  let qCircuit := mcxVChain registers.lengthQ registers.zeroQ
-    registers.equalityScratch
-  have hs := mcxVChainAdaptive_coherent registers.lengthS registers.zeroS
-    registers.equalityScratch hlayout.s_capacity hlayout.sChain
-  have hr := mcxVChainAdaptive_coherent registers.lengthRPrime
-    registers.zeroRPrime registers.equalityScratch hlayout.rPrime_capacity
-      hlayout.rPrimeChain
-  have hq := mcxVChainAdaptive_coherent registers.lengthQ registers.zeroQ
-    registers.equalityScratch hlayout.q_capacity hlayout.qChain
-  have hsPreserves : ∀ state, Clean registers.equalityScratch state →
-      Clean registers.equalityScratch (Classical.run sCircuit state) := by
-    intro state hclean
-    exact phaseUpdate_mcx_preservesEqualityClean registers registers.lengthS
-      registers.zeroS state hlayout.s_capacity hlayout.sChain
-        (hlayout.namedScratch_not_equality (wire := registers.zeroS) (by simp))
-        hclean
-  have hsr := phaseUpdate_coherent_seq_circuits hs hr
-    (mcxVChain_HPFree registers.lengthS registers.zeroS
-      registers.equalityScratch) hsPreserves
-  have hsrPreserves : ∀ state, Clean registers.equalityScratch state →
-      Clean registers.equalityScratch
-        (Classical.run (sCircuit ++ rCircuit) state) := by
-    intro state hclean
-    rw [Classical.run_append]
-    exact phaseUpdate_mcx_preservesEqualityClean registers
-      registers.lengthRPrime registers.zeroRPrime _ hlayout.rPrime_capacity
-      hlayout.rPrimeChain
-      (hlayout.namedScratch_not_equality
-        (wire := registers.zeroRPrime) (by simp))
-      (hsPreserves state hclean)
-  have hall := phaseUpdate_coherent_seq_circuits hsr hq
-    (by simp) hsrPreserves
-  simpa [phaseUpdateCleanupTestsAdaptive, phaseUpdateCleanupTests,
-    sCircuit, rCircuit, qCircuit] using hall
-
-private theorem phaseUpdateAdaptive_coherent_equalityClean
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    Quantum.CoherentlyImplementsOn
-      (phaseUpdateAdaptive registers)
-      (Quantum.run (phaseUpdateUnitary registers))
-      (fun state ↦ Clean registers.equalityScratch state) := by
-  have hforward := phaseUpdateForwardTestsAdaptive_coherent registers hlayout
-  have hcore := Quantum.CoherentlyImplementsOn.unitary
-    (phaseUpdateCore registers)
-      (fun state ↦ Clean registers.equalityScratch state)
-  have hforwardCore := phaseUpdate_coherent_seq_circuits hforward hcore
-    (by simp [phaseUpdateForwardTests])
-    (fun state hclean ↦
-      phaseUpdateForwardTests_preservesEqualityClean registers state hlayout hclean)
-  have hcleanup := phaseUpdateCleanupTestsAdaptive_coherent registers hlayout
-  have hprefixPreserves : ∀ state, Clean registers.equalityScratch state →
-      Clean registers.equalityScratch
-        (Classical.run
-          (phaseUpdateForwardTests registers ++ phaseUpdateCore registers)
-          state) := by
-    intro state hclean
-    rw [Classical.run_append]
-    exact phaseUpdateCore_preservesEqualityClean registers _ hlayout
-      (phaseUpdateForwardTests_preservesEqualityClean registers state
-        hlayout hclean)
-  have hall := phaseUpdate_coherent_seq_circuits hforwardCore hcleanup
-    (by simp [phaseUpdateForwardTests, phaseUpdateCore]) hprefixPreserves
-  simpa [phaseUpdateAdaptive, phaseUpdateUnitary] using hall
-
-/-- Every adaptive branch is coefficient-aligned with the exact coherent phase-update circuit
-on the source clean boundary. -/
-private theorem phaseUpdateAdaptive_coherent
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    Quantum.CoherentlyImplementsOn
-      (phaseUpdateAdaptive registers)
-      (Quantum.run (phaseUpdateUnitary registers))
-      (PhaseUpdateReady registers) := by
-  rcases phaseUpdateAdaptive_coherent_equalityClean registers hlayout with
-    ⟨coefficients, haligned, hmass⟩
-  refine ⟨coefficients, ?_, hmass⟩
-  exact haligned.imp fun branch coefficient hbranch state hready ↦
-    hbranch state (by
-      intro wire hwire
-      exact hready wire (by simp [PhaseUpdateRegisters.scratch, hwire]))
-
-private theorem phaseUpdateForwardTestsAdaptive_wellFormed
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    (phaseUpdateForwardTestsAdaptive registers).WellFormed := by
-  rw [phaseUpdateForwardTestsAdaptive]
-  exact Quantum.AdaptiveCircuit.WellFormed.seq
-    (Quantum.AdaptiveCircuit.WellFormed.seq
-      (mcxVChainAdaptive_wellFormed registers.lengthQ registers.zeroQ
-        registers.equalityScratch hlayout.q_capacity hlayout.qChain)
-      (mcxVChainAdaptive_wellFormed registers.lengthRPrime
-        registers.zeroRPrime registers.equalityScratch hlayout.rPrime_capacity
-          hlayout.rPrimeChain))
-    (mcxVChainAdaptive_wellFormed registers.lengthS registers.zeroS
-      registers.equalityScratch hlayout.s_capacity hlayout.sChain)
-
-private theorem phaseUpdateCleanupTestsAdaptive_wellFormed
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    (phaseUpdateCleanupTestsAdaptive registers).WellFormed := by
-  rw [phaseUpdateCleanupTestsAdaptive]
-  exact Quantum.AdaptiveCircuit.WellFormed.seq
-    (Quantum.AdaptiveCircuit.WellFormed.seq
-      (mcxVChainAdaptive_wellFormed registers.lengthS registers.zeroS
-        registers.equalityScratch hlayout.s_capacity hlayout.sChain)
-      (mcxVChainAdaptive_wellFormed registers.lengthRPrime
-        registers.zeroRPrime registers.equalityScratch hlayout.rPrime_capacity
-          hlayout.rPrimeChain))
-    (mcxVChainAdaptive_wellFormed registers.lengthQ registers.zeroQ
-      registers.equalityScratch hlayout.q_capacity hlayout.qChain)
-
-private theorem phaseUpdateAdaptive_wellFormed
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    (phaseUpdateAdaptive registers).WellFormed := by
-  rw [phaseUpdateAdaptive]
-  exact Quantum.AdaptiveCircuit.WellFormed.seq
-    (Quantum.AdaptiveCircuit.WellFormed.seq
-      (phaseUpdateForwardTestsAdaptive_wellFormed registers hlayout)
-      ⟨phaseUpdateCore_wellFormed registers hlayout, trivial⟩)
-    (phaseUpdateCleanupTestsAdaptive_wellFormed registers hlayout)
-
 private theorem phaseUpdateAdaptive_measurementCount_seq
     (first second : Quantum.AdaptiveCircuit) :
     (first.seq second).measurementCount =
@@ -1551,70 +1181,6 @@ private theorem phaseUpdateAdaptive_tCount_seq
   | xMeasureReset target onFalse onTrue ihFalse ihTrue =>
       simp [Quantum.AdaptiveCircuit.seq, Quantum.AdaptiveCircuit.tCount,
         ihFalse, ihTrue, Nat.add_max_add_right]
-
-@[simp]
-private theorem phaseUpdateAdaptive_measurementCount
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    (phaseUpdateAdaptive registers).measurementCount =
-      2 * (mcxVChainMeasurementCost registers.lengthQ.length +
-        mcxVChainMeasurementCost registers.lengthRPrime.length +
-        mcxVChainMeasurementCost registers.lengthS.length) := by
-  have hq := mcxVChainAdaptive_measurementCount registers.lengthQ
-    registers.zeroQ registers.equalityScratch hlayout.q_capacity
-  have hr := mcxVChainAdaptive_measurementCount registers.lengthRPrime
-    registers.zeroRPrime registers.equalityScratch hlayout.rPrime_capacity
-  have hs := mcxVChainAdaptive_measurementCount registers.lengthS
-    registers.zeroS registers.equalityScratch hlayout.s_capacity
-  have hforward :
-      (phaseUpdateForwardTestsAdaptive registers).measurementCount =
-        mcxVChainMeasurementCost registers.lengthQ.length +
-          mcxVChainMeasurementCost registers.lengthRPrime.length +
-          mcxVChainMeasurementCost registers.lengthS.length := by
-    rw [phaseUpdateForwardTestsAdaptive,
-      phaseUpdateAdaptive_measurementCount_seq,
-      phaseUpdateAdaptive_measurementCount_seq, hq, hr, hs]
-  have hcleanup :
-      (phaseUpdateCleanupTestsAdaptive registers).measurementCount =
-        mcxVChainMeasurementCost registers.lengthS.length +
-          mcxVChainMeasurementCost registers.lengthRPrime.length +
-          mcxVChainMeasurementCost registers.lengthQ.length := by
-    rw [phaseUpdateCleanupTestsAdaptive,
-      phaseUpdateAdaptive_measurementCount_seq,
-      phaseUpdateAdaptive_measurementCount_seq, hs, hr, hq]
-  rw [phaseUpdateAdaptive, phaseUpdateAdaptive_measurementCount_seq,
-    phaseUpdateAdaptive_measurementCount_seq, hforward, hcleanup]
-  change _ + 0 + _ = _
-  omega
-
-@[simp]
-private theorem phaseUpdateAdaptive_tCount
-    (registers : PhaseUpdateRegisters) (hlayout : PhaseUpdateLayout registers) :
-    (phaseUpdateAdaptive registers).tCount =
-      7 * (2 * (mcxVChainAdaptiveToffoliCost registers.lengthQ.length +
-        mcxVChainAdaptiveToffoliCost registers.lengthRPrime.length +
-        mcxVChainAdaptiveToffoliCost registers.lengthS.length) + 4) := by
-  have hq := mcxVChainAdaptive_tCount registers.lengthQ registers.zeroQ
-    registers.equalityScratch hlayout.q_capacity
-  have hr := mcxVChainAdaptive_tCount registers.lengthRPrime
-    registers.zeroRPrime registers.equalityScratch hlayout.rPrime_capacity
-  have hs := mcxVChainAdaptive_tCount registers.lengthS registers.zeroS
-    registers.equalityScratch hlayout.s_capacity
-  have hforward : (phaseUpdateForwardTestsAdaptive registers).tCount =
-      7 * mcxVChainAdaptiveToffoliCost registers.lengthQ.length +
-        7 * mcxVChainAdaptiveToffoliCost registers.lengthRPrime.length +
-        7 * mcxVChainAdaptiveToffoliCost registers.lengthS.length := by
-    rw [phaseUpdateForwardTestsAdaptive, phaseUpdateAdaptive_tCount_seq,
-      phaseUpdateAdaptive_tCount_seq, hq, hr, hs]
-  have hcleanup : (phaseUpdateCleanupTestsAdaptive registers).tCount =
-      7 * mcxVChainAdaptiveToffoliCost registers.lengthS.length +
-        7 * mcxVChainAdaptiveToffoliCost registers.lengthRPrime.length +
-        7 * mcxVChainAdaptiveToffoliCost registers.lengthQ.length := by
-    rw [phaseUpdateCleanupTestsAdaptive, phaseUpdateAdaptive_tCount_seq,
-      phaseUpdateAdaptive_tCount_seq, hs, hr, hq]
-  rw [phaseUpdateAdaptive, phaseUpdateAdaptive_tCount_seq,
-    phaseUpdateAdaptive_tCount_seq, hforward, hcleanup]
-  change _ + 28 + _ = _
-  omega
 
 /-! ## Production borrowed-epoch specialization -/
 
@@ -2489,21 +2055,6 @@ private theorem phaseUpdateEpochForwardTests_preservesEqualityClean
   rw [run_phaseUpdateEpochForwardTests_eq registers shiftEpoch state hlayout]
   exact phaseUpdateEpochX_preservesEqualityClean registers shiftEpoch _ hlayout
     (phaseUpdateForwardTests_preservesEqualityClean
-      (registers.withShiftEpoch shiftEpoch)
-      (toggleShiftEpoch shiftEpoch state) hlayout
-      (phaseUpdateEpochX_preservesEqualityClean registers shiftEpoch state
-        hlayout hclean))
-
-private theorem phaseUpdateEpochCleanupTests_preservesEqualityClean
-    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
-    (state : BasisState)
-    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch)
-    (hclean : Clean registers.equalityScratch state) :
-    Clean registers.equalityScratch
-      (Classical.run (phaseUpdateEpochCleanupTests registers shiftEpoch) state) := by
-  rw [run_phaseUpdateEpochCleanupTests_eq registers shiftEpoch state hlayout]
-  exact phaseUpdateEpochX_preservesEqualityClean registers shiftEpoch _ hlayout
-    (phaseUpdateCleanupTests_preservesEqualityClean
       (registers.withShiftEpoch shiftEpoch)
       (toggleShiftEpoch shiftEpoch state) hlayout
       (phaseUpdateEpochX_preservesEqualityClean registers shiftEpoch state
