@@ -411,8 +411,6 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.rippleFirstCell_preservesScratch
 #print axioms ShorECDLP.Paper2607_13816.rippleSecondCell_preservesScratch
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_preservesOn
-#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_preservesScratch
-#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_preservesScratch
 #print axioms ShorECDLP.Paper2607_13816.intervalTree_built
 #print axioms ShorECDLP.Paper2607_13816.intervalTree_visitLabels_inc
 #print axioms ShorECDLP.Paper2607_13816.intervalTree_visitLabels_dec
@@ -459,8 +457,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 435 ]]; then
-  printf 'expected four hundred thirty-five #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 433 ]]; then
+  printf 'expected four hundred thirty-three #print axioms results\n' >&2
   exit 1
 fi
 

@@ -1494,27 +1494,6 @@ theorem dualUnaryActionUnitary_preservesOn
     controlA controlB ancillasA ancillasB dynamicWires protectedWires state hlayout
     hleaf hdynamic hroles hcleanA hcleanB
 
-/-- Common specialization where the decoder roles themselves are the protected interface. -/
-theorem dualUnaryActionUnitary_preserves
-    (order : UnaryOrder) (leafAction : Nat → Wire → Wire → Circuit)
-    (tree : DualUnaryActionTree) (controlA controlB : Wire)
-    (ancillasA ancillasB protectedWires : List Wire)
-    (state : BasisState)
-    (hlayout : tree.Layout controlA controlB ancillasA ancillasB)
-    (hleaf : DualUnaryLeafPreserves leafAction protectedWires)
-    (hroles : ∀ wire,
-      wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
-        wire ∈ protectedWires)
-    (hcleanA : Clean ancillasA state)
-    (hcleanB : Clean ancillasB state) :
-    ∀ wire, wire ∈ protectedWires →
-      run (dualUnaryActionUnitary order leafAction tree
-        controlA controlB ancillasA ancillasB) state wire = state wire :=
-  dualUnaryActionUnitary_preservesOn order leafAction tree controlA controlB
-    ancillasA ancillasB protectedWires protectedWires state hlayout
-    (fun label _ ↦ hleaf label)
-    hroles hroles hcleanA hcleanB
-
 /-- Direct whole-state semantics of the coherent synchronized traversal.  The theorem exposes the
 exact ordered paired-leaf execution while proving that both temporary decoder stacks are restored. -/
 theorem run_dualUnaryActionUnitary_as_runLeafState
