@@ -1886,9 +1886,9 @@ theorem controlledRotateRightTwo_tCount
 
 /-! ## Gate-independent word updates -/
 
-/-- Write a Boolean word back to a list of physical wires.  This is a specification-side state
-operation, not a circuit constructor.  It is public because the exported shift-state contract is
-defined in terms of this operation. -/
+/-- Write a Boolean word back to a list of physical wires.  This private specification-side state
+operation is not a circuit constructor; the exported shift-state contract hides it behind the
+top-level word-value equations. -/
 private def writeWireValues : List Wire → List Bool → BasisState → BasisState
   | wire :: wires, bit :: bits, state =>
       (writeWireValues wires bits state)[wire ↦ bit]
