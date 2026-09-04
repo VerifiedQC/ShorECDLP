@@ -5,14 +5,15 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-9 paper foundation below
-are on `main@fc9436c982c665a8769b986042416a1eadb0cbc0`. PR #56 → PR #57 → PR #58 → PR #59
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-10 paper foundation below
+are on `main@4e7cad8b5123d87bb6db49922ecc14724cb1e77e`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
-→ PR #69 → PR #70 landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
-measurement-based uncomputation, pure EEA model, indexed EEA bounds/windows, and the first nine
-concrete circuit units. Phase 5 circuit unit 10 (PR #71), the source inverse interval aggregate and its
-clean-boundary whole-state round trip, is current. Proving that the forward output satisfies that
-boundary from indexed endpoint/range reachability, then composing the four-phase step, remain open.
+→ PR #69 → PR #70 → PR #71 landed the source split, adaptive Kraus semantics,
+coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
+bounds/windows, and ten concrete circuit units ending with the exact inverse interval aggregate.
+Phase 5 circuit unit 11 (PR #72) is current; it proves complete scratch restoration for the forward
+and inverse coherent/unitary interval wrappers and removes the former output-readiness premise from
+both whole-state round trips. The indexed four-phase step remains open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -377,7 +378,8 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first eight dependency-closed construction units are merged. PR #62 contains
+**Status:** the first ten dependency-closed construction units are merged; the eleventh is current
+in PR #72. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -436,16 +438,18 @@ the certified tree, and a closed five-lane physical allocation proves that the c
 inhabited. Pinned regressions cover the singleton and two-lane edge cases, a nontrivial 8-bit
 top-special instance, and the production-shaped 257-lane instance; their adaptive measurement/T
 counts are respectively `2/315`, `4/462`, `34/987`, and `1598/18319`. Output
-scratch restoration is deliberately not claimed at this boundary: it depends on the indexed
-reachable endpoint/range invariant that the later four-phase step will supply. The tenth unit now
-adds the pinned source inverse as the same exact wrapper at the opposite ripple mode. Its two-sided
-whole-state round-trip theorems use `IntervalReady` at both wrapper boundaries, prove the literal
-endpoint streams reverse each other without pretending they are syntactic adjoints, and prove the
-opposite-mode dual traversals and top-special leaves implement the coherent body's adjoint. The
-inverse adaptive realization reuses the forward coherent-refinement proof and has exactly the same
-Toffoli, CNOT, T, and measurement formulas, including the closed five-lane regression. The indexed
-reachable endpoint/range theorem that supplies output `IntervalReady`, and the resulting
-four-phase step, remain open within Phase 5.
+scratch restoration was left open at that boundary. The tenth unit adds the pinned source inverse
+as the same exact wrapper at the opposite ripple mode, proves the literal endpoint streams reverse
+each other without pretending they are syntactic adjoints, and proves the opposite-mode dual
+traversals and top-special leaves implement the coherent body's adjoint. The inverse adaptive
+realization reuses the forward coherent-refinement proof and has exactly the same Toffoli, CNOT, T,
+and measurement formulas, including the closed five-lane regression. The eleventh unit closes the
+scratch invariant directly at the interval boundary: dirty-scratch Cuccaro half-cell pairs and
+opposite tree traversals restore every non-target lane, the sign update is transported through the
+sign-disjoint second traversal, and the separately handled top pair is composed using the physical
+lane separation. Consequently both forward and inverse coherent/unitary wrappers derive output
+`IntervalReady` from the sole input premise, and the two whole-state round-trip theorems no longer
+assume cleanup at the output boundary. The indexed four-phase step remains open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -668,12 +672,18 @@ They are equal only if Phase 11 proves the required reuse.
   a kernel-checked five-lane layout witness rules out vacuous physical contracts. The inverse
   wrapper and the indexed reachable-state theorem needed to prove output scratch cleanup remain
   open.
-- **Phase-5 circuit unit 10 (PR #71, current):** exact source inverse interval aggregate, defined by the
-  source's opposite ripple-mode specialization of the same wrapper. It adds two-sided complete-state
-  round trips under clean input/output wrapper boundaries, the reverse endpoint identity needed for
-  that proof, coherent and adaptive contracts, and matching constructor-derived resource equations.
-  The indexed reachable-state theorem must next prove the forward output boundary before the
-  four-phase step can consume the round trip.
+- **PR #71, Phase-5 circuit unit 10:** merged at `4e7cad8b`; exact source inverse interval
+  aggregate, defined by the source's opposite ripple-mode specialization of the same wrapper. It
+  adds two-sided complete-state round trips under clean input/output wrapper boundaries, the
+  reverse endpoint identity needed for that proof, coherent and adaptive contracts, and matching
+  constructor-derived resource equations. Output scratch restoration remained open at that
+  boundary.
+- **Phase-5 circuit unit 11 (PR #72, current):** the complete interval scratch-restoration proof.
+  Dirty-state paired ripple cells and opposite tree traversals restore every non-target lane; the
+  concrete sign/main/top layout transports that cancellation through the full body. Both
+  coherent/unitary wrapper directions now derive output `IntervalReady` from input alone, so
+  neither whole-state round trip retains the former output-readiness premise. The indexed
+  four-phase step remains open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -708,7 +718,8 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--9 are merged. Phase 5 circuit unit 10 (PR #71), the exact inverse
-interval aggregate, is current on that foundation. Its round trip deliberately exposes the
-forward-output `IntervalReady` premise; the indexed reachable endpoint/range theorem that proves
-that premise, followed by the indexed four-phase step, remains open.
+Phases 0--4 and Phase 5 circuit units 1--10 are merged. Phase 5 circuit unit 11, the complete
+interval scratch-restoration proof, is current on that foundation. Its forward and inverse
+coherent/unitary wrappers derive output `IntervalReady` internally and remove the former
+intermediate output-readiness premise from both round-trip theorems. The indexed four-phase step
+remains open.

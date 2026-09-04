@@ -1,5 +1,5 @@
 import ShorECDLP.Submission.«2607_13816».EEA.Endpoint
-import ShorECDLP.Submission.«2607_13816».EEA.IntervalLeaf
+import ShorECDLP.Submission.«2607_13816».EEA.IntervalCleanup
 import Mathlib.Data.Nat.Bitwise
 
 /-!
@@ -134,6 +134,18 @@ private theorem intervalTree_label_lt_laneCount
   · simp [intervalMainLabels, hspecial] at hmain
     exact hmain
 
+private theorem intervalTree_label_ne_topRelative
+    (registers : IntervalRegisters) (k K label : Nat)
+    (hspecial : intervalHasTopSpecial k K = true)
+    (hlabel : label ∈ (intervalTree registers k K).labels) :
+    label ≠ intervalTopRelative k K := by
+  rw [intervalTree_labels] at hlabel
+  have hmain : label ∈ intervalMainLabels k K := by
+    simpa using hlabel
+  have hlt : label < intervalLaneCount k K - 1 := by
+    simpa [intervalMainLabels, hspecial] using hmain
+  exact Nat.ne_of_lt (by simpa [intervalTopRelative] using hlt)
+
 /-- Tight number of simultaneously live decoder paths, computed from the concrete source tree. -/
 def intervalTreeDepth (registers : IntervalRegisters) (k K : Nat) : Nat :=
   (intervalTree registers k K).pathDepth
@@ -201,6 +213,16 @@ def IntervalRegisters.allWires (registers : IntervalRegisters) : List Wire :=
       (registers.lengthT ++ (registers.lengthQ ++
         (registers.lengthS ++ registers.scratch)))))
 
+private def intervalNonSignTail (registers : IntervalRegisters) : List Wire :=
+  registers.work1 ++ (registers.work2 ++
+    (registers.lengthT ++ (registers.lengthQ ++
+      (registers.lengthS ++ registers.scratch))))
+
+private def intervalFixedWires (registers : IntervalRegisters) : List Wire :=
+  [registers.control, registers.sign] ++
+    (registers.lengthT ++ (registers.lengthQ ++
+      (registers.lengthS ++ registers.scratch)))
+
 /-- Exact source register sizes plus the component layouts induced by the physical lanes. -/
 structure IntervalLayout (registers : IntervalRegisters) (k K : Nat)
     (target : IntervalTarget) : Prop where
@@ -240,6 +262,27 @@ structure IntervalLayout (registers : IntervalRegisters) (k K : Nat)
 /-- All shared scratch roles start clean. -/
 def IntervalReady (registers : IntervalRegisters) (state : BasisState) : Prop :=
   Clean registers.scratch state
+
+private theorem intervalControl_ne_sign
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    registers.control ≠ registers.sign := by
+  have hphysical := hlayout.physical
+  rw [IntervalRegisters.allWires] at hphysical
+  have hnot := (List.nodup_cons.mp (List.nodup_append.mp hphysical).1).1
+  intro equality
+  exact hnot (by simp [equality])
+
+private theorem intervalNonSignTail_ne_sign
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target)
+    {wire : Wire} (hwire : wire ∈ intervalNonSignTail registers) :
+    wire ≠ registers.sign := by
+  have hphysical := hlayout.physical
+  rw [IntervalRegisters.allWires] at hphysical
+  have hcross := (List.nodup_append.mp hphysical).2.2
+  intro equality
+  exact (hcross registers.sign (by simp) wire hwire) equality.symm
 
 private theorem intervalEndpointWidth_le_scratch
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
@@ -375,6 +418,136 @@ private theorem intervalAddendAt_mem_allWires
       rw [IntervalRegisters.allWires]
       exact List.mem_append_right _ (List.mem_append_left _ hmem)
 
+private theorem intervalWork1_nodup
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    registers.work1.Nodup := by
+  have hphysical := hlayout.physical
+  rw [IntervalRegisters.allWires] at hphysical
+  exact (List.nodup_append.mp
+    (List.nodup_append.mp hphysical).2.1).1
+
+private theorem intervalWork2_nodup
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    registers.work2.Nodup := by
+  have hphysical := hlayout.physical
+  rw [IntervalRegisters.allWires] at hphysical
+  have hafterControls := (List.nodup_append.mp hphysical).2.1
+  have hafterWork1 := (List.nodup_append.mp hafterControls).2.1
+  exact (List.nodup_append.mp hafterWork1).1
+
+private theorem intervalWork1_disjoint_work2
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    List.Disjoint registers.work1 registers.work2 := by
+  have hphysical := hlayout.physical
+  rw [IntervalRegisters.allWires] at hphysical
+  have hafterControls := (List.nodup_append.mp hphysical).2.1
+  have hcross := (List.nodup_append.mp hafterControls).2.2
+  intro wire hwork1 hwork2
+  exact (hcross wire hwork1 wire (List.mem_append_left _ hwork2)) rfl
+
+private theorem intervalTargetAt_injective
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target)
+    {first second : Nat}
+    (hfirst : first < intervalLaneCount k K)
+    (hsecond : second < intervalLaneCount k K) :
+    registers.targetAt target first = registers.targetAt target second →
+      first = second := by
+  intro equality
+  cases target with
+  | work1 =>
+      have hfirstBound : first < registers.work1.length := by
+        simpa [hlayout.work1_length] using hfirst
+      have hsecondBound : second < registers.work1.length := by
+        simpa [hlayout.work1_length] using hsecond
+      simp only [IntervalRegisters.targetAt] at equality
+      rw [List.getD_eq_getElem registers.work1 0 hfirstBound,
+        List.getD_eq_getElem registers.work1 0 hsecondBound] at equality
+      exact (intervalWork1_nodup registers k K .work1 hlayout).getElem_inj_iff.mp equality
+  | work2 =>
+      have hfirstBound : first < registers.work2.length := by
+        simpa [hlayout.work2_length] using hfirst
+      have hsecondBound : second < registers.work2.length := by
+        simpa [hlayout.work2_length] using hsecond
+      simp only [IntervalRegisters.targetAt] at equality
+      rw [List.getD_eq_getElem registers.work2 0 hfirstBound,
+        List.getD_eq_getElem registers.work2 0 hsecondBound] at equality
+      exact (intervalWork2_nodup registers k K .work2 hlayout).getElem_inj_iff.mp equality
+
+private theorem intervalTargetAt_ne_addendAt
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target)
+    {targetLabel addendLabel : Nat}
+    (htarget : targetLabel < intervalLaneCount k K)
+    (haddend : addendLabel < intervalLaneCount k K) :
+    registers.targetAt target targetLabel ≠
+      registers.addendAt target addendLabel := by
+  have hdisjoint := intervalWork1_disjoint_work2 registers k K target hlayout
+  cases target with
+  | work1 =>
+      have htargetBound : targetLabel < registers.work1.length := by
+        simpa [hlayout.work1_length] using htarget
+      have haddendBound : addendLabel < registers.work2.length := by
+        simpa [hlayout.work2_length] using haddend
+      have htargetMem := list_getD_mem registers.work1 targetLabel 0 htargetBound
+      have haddendMem := list_getD_mem registers.work2 addendLabel 0 haddendBound
+      exact fun equality ↦ by
+        change registers.work1.getD targetLabel 0 =
+          registers.work2.getD addendLabel 0 at equality
+        exact hdisjoint htargetMem (equality.symm ▸ haddendMem)
+  | work2 =>
+      have htargetBound : targetLabel < registers.work2.length := by
+        simpa [hlayout.work2_length] using htarget
+      have haddendBound : addendLabel < registers.work1.length := by
+        simpa [hlayout.work1_length] using haddend
+      have htargetMem := list_getD_mem registers.work2 targetLabel 0 htargetBound
+      have haddendMem := list_getD_mem registers.work1 addendLabel 0 haddendBound
+      exact fun equality ↦ by
+        change registers.work2.getD targetLabel 0 =
+          registers.work1.getD addendLabel 0 at equality
+        exact hdisjoint haddendMem (equality ▸ htargetMem)
+
+private theorem intervalTargetAt_not_mem_fixed
+    (registers : IntervalRegisters) (k K label : Nat)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target)
+    (hlabel : label < intervalLaneCount k K) :
+    registers.targetAt target label ∉ intervalFixedWires registers := by
+  have hphysical := hlayout.physical
+  rw [IntervalRegisters.allWires] at hphysical
+  obtain ⟨hcontrols, htail, hcontrolsTail⟩ := List.nodup_append.mp hphysical
+  cases target with
+  | work1 =>
+      have hbound : label < registers.work1.length := by
+        simpa [hlayout.work1_length] using hlabel
+      have htarget := list_getD_mem registers.work1 label 0 hbound
+      obtain ⟨hwork1, hafterWork1, hwork1Tail⟩ := List.nodup_append.mp htail
+      change registers.work1.getD label 0 ∉ intervalFixedWires registers
+      intro hfixed
+      rw [intervalFixedWires] at hfixed
+      rcases List.mem_append.mp hfixed with hcontrol | hrest
+      · exact hcontrolsTail _ hcontrol _
+          (List.mem_append_left _ htarget) rfl
+      · exact hwork1Tail _ htarget _
+          (List.mem_append_right registers.work2 hrest) rfl
+  | work2 =>
+      have hbound : label < registers.work2.length := by
+        simpa [hlayout.work2_length] using hlabel
+      have htarget := list_getD_mem registers.work2 label 0 hbound
+      obtain ⟨hwork1, hafterWork1, hwork1Tail⟩ := List.nodup_append.mp htail
+      obtain ⟨hwork2, hafterWork2, hwork2Tail⟩ :=
+        List.nodup_append.mp hafterWork1
+      change registers.work2.getD label 0 ∉ intervalFixedWires registers
+      intro hfixed
+      rw [intervalFixedWires] at hfixed
+      rcases List.mem_append.mp hfixed with hcontrol | hrest
+      · exact hcontrolsTail _ hcontrol _
+          (List.mem_append_right registers.work1
+            (List.mem_append_left _ htarget)) rfl
+      · exact hwork2Tail _ htarget _ hrest rfl
+
 private theorem intervalDecoder_mem_allWires
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
@@ -423,6 +596,68 @@ private theorem intervalDecoder_mem_allWires
   · have hscratch : wire ∈ registers.scratch :=
       List.mem_of_mem_drop (List.mem_of_mem_take hleftPath)
     simp [IntervalRegisters.allWires, hscratch]
+
+private theorem intervalDecoder_ne_sign
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target)
+    {wire : Wire}
+    (hwire : wire ∈ (intervalTree registers k K).decoderWires registers.control
+      registers.control (registers.rightPaths k K) (registers.leftPaths k K)) :
+    wire ≠ registers.sign := by
+  simp only [DualUnaryActionTree.decoderWires, List.mem_append,
+    List.mem_dedup, List.mem_cons, List.not_mem_nil, or_false] at hwire
+  rcases hwire with hcontrol | hindexA | hindexB | hrightPath | hleftPath
+  · rcases hcontrol with rfl | rfl <;>
+      exact intervalControl_ne_sign registers k K target hlayout
+  · obtain ⟨bit, hbit, rfl⟩ := DualUnaryActionTree.build_indexAWires
+      registers.rightIndex registers.leftIndex
+      (DualUnaryActionTree.sourceWidth (intervalMainLabels k K).toFinset)
+      (intervalMainLabels k K).toFinset (intervalTree registers k K) (by
+        simpa [DualUnaryActionTree.buildSourceFromList,
+          DualUnaryActionTree.buildSource] using intervalTree_built registers k K)
+      (by simpa using hindexA)
+    have hbound : bit < registers.lengthS.length :=
+      lt_of_lt_of_le hbit hlayout.right_index_capacity
+    have hmem := list_getD_mem registers.lengthS bit 0 hbound
+    apply intervalNonSignTail_ne_sign registers k K target hlayout
+    change registers.lengthS.getD bit 0 ∈ intervalNonSignTail registers
+    exact List.mem_append_right registers.work1
+      (List.mem_append_right registers.work2
+        (List.mem_append_right registers.lengthT
+          (List.mem_append_right registers.lengthQ
+            (List.mem_append_left registers.scratch hmem))))
+  · obtain ⟨bit, hbit, rfl⟩ := DualUnaryActionTree.build_indexBWires
+      registers.rightIndex registers.leftIndex
+      (DualUnaryActionTree.sourceWidth (intervalMainLabels k K).toFinset)
+      (intervalMainLabels k K).toFinset (intervalTree registers k K) (by
+        simpa [DualUnaryActionTree.buildSourceFromList,
+          DualUnaryActionTree.buildSource] using intervalTree_built registers k K)
+      (by simpa using hindexB)
+    have hbound : bit < registers.lengthQ.length :=
+      lt_of_lt_of_le hbit hlayout.left_index_capacity
+    have hmem := list_getD_mem registers.lengthQ bit 0 hbound
+    apply intervalNonSignTail_ne_sign registers k K target hlayout
+    change registers.lengthQ.getD bit 0 ∈ intervalNonSignTail registers
+    exact List.mem_append_right registers.work1
+      (List.mem_append_right registers.work2
+        (List.mem_append_right registers.lengthT
+          (List.mem_append_left (registers.lengthS ++ registers.scratch) hmem)))
+  · have hscratch : wire ∈ registers.scratch :=
+      List.mem_of_mem_take hrightPath
+    apply intervalNonSignTail_ne_sign registers k K target hlayout
+    exact List.mem_append_right registers.work1
+      (List.mem_append_right registers.work2
+        (List.mem_append_right registers.lengthT
+          (List.mem_append_right registers.lengthQ
+            (List.mem_append_right registers.lengthS hscratch))))
+  · have hscratch : wire ∈ registers.scratch :=
+      List.mem_of_mem_drop (List.mem_of_mem_take hleftPath)
+    apply intervalNonSignTail_ne_sign registers k K target hlayout
+    exact List.mem_append_right registers.work1
+      (List.mem_append_right registers.work2
+        (List.mem_append_right registers.lengthT
+          (List.mem_append_right registers.lengthQ
+            (List.mem_append_right registers.lengthS hscratch))))
 
 private theorem intervalScratch_mem_allWires
     (registers : IntervalRegisters) {wire : Wire}
@@ -557,6 +792,88 @@ private theorem intervalLeftTop_mem_allWires
     exact List.mem_append_right _ (List.mem_append_right _
       (List.mem_append_right _ (List.mem_append_left _ hmem)))
 
+private theorem intervalTargetAt_ne_sign
+    (registers : IntervalRegisters) (k K label : Nat)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target)
+    (hlabel : label < intervalLaneCount k K) :
+    registers.targetAt target label ≠ registers.sign := by
+  cases target with
+  | work1 =>
+      have hbound : label < registers.work1.length := by
+        simpa [hlayout.work1_length] using hlabel
+      have hmem := list_getD_mem registers.work1 label 0 hbound
+      apply intervalNonSignTail_ne_sign registers k K .work1 hlayout
+      exact List.mem_append_left _ hmem
+  | work2 =>
+      have hbound : label < registers.work2.length := by
+        simpa [hlayout.work2_length] using hlabel
+      have hmem := list_getD_mem registers.work2 label 0 hbound
+      apply intervalNonSignTail_ne_sign registers k K .work2 hlayout
+      exact List.mem_append_right registers.work1 (List.mem_append_left _ hmem)
+
+private theorem intervalAddendAt_ne_sign
+    (registers : IntervalRegisters) (k K label : Nat)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target)
+    (hlabel : label < intervalLaneCount k K) :
+    registers.addendAt target label ≠ registers.sign := by
+  cases target with
+  | work1 =>
+      have hbound : label < registers.work2.length := by
+        simpa [hlayout.work2_length] using hlabel
+      have hmem := list_getD_mem registers.work2 label 0 hbound
+      apply intervalNonSignTail_ne_sign registers k K .work1 hlayout
+      exact List.mem_append_right registers.work1 (List.mem_append_left _ hmem)
+  | work2 =>
+      have hbound : label < registers.work1.length := by
+        simpa [hlayout.work1_length] using hlabel
+      have hmem := list_getD_mem registers.work1 label 0 hbound
+      apply intervalNonSignTail_ne_sign registers k K .work2 hlayout
+      exact List.mem_append_left _ hmem
+
+private theorem intervalRightTop_ne_sign
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    registers.rightTop k K ≠ registers.sign := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · have hmem := list_getD_mem registers.lengthS (intervalTopBit k K) 0
+      (hlayout.right_top_capacity hspecial)
+    rw [IntervalRegisters.rightTop, if_pos hspecial]
+    apply intervalNonSignTail_ne_sign registers k K target hlayout
+    exact List.mem_append_right registers.work1
+      (List.mem_append_right registers.work2
+        (List.mem_append_right registers.lengthT
+          (List.mem_append_right registers.lengthQ
+            (List.mem_append_left registers.scratch hmem))))
+  · have hbound : 0 < registers.lengthT.length :=
+      lt_of_lt_of_le (by decide) hlayout.lengthT_two_le
+    have hmem := list_getD_mem registers.lengthT 0 0 hbound
+    rw [IntervalRegisters.rightTop, if_neg hspecial]
+    apply intervalNonSignTail_ne_sign registers k K target hlayout
+    exact List.mem_append_right registers.work1
+      (List.mem_append_right registers.work2
+        (List.mem_append_left _ hmem))
+
+private theorem intervalLeftTop_ne_sign
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    registers.leftTop k K ≠ registers.sign := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · have hmem := list_getD_mem registers.lengthQ (intervalTopBit k K) 0
+      (hlayout.left_top_capacity hspecial)
+    rw [IntervalRegisters.leftTop, if_pos hspecial]
+    apply intervalNonSignTail_ne_sign registers k K target hlayout
+    exact List.mem_append_right registers.work1
+      (List.mem_append_right registers.work2
+        (List.mem_append_right registers.lengthT
+          (List.mem_append_left _ hmem)))
+  · have hbound : 1 < registers.lengthT.length := hlayout.lengthT_two_le
+    have hmem := list_getD_mem registers.lengthT 1 0 hbound
+    rw [IntervalRegisters.leftTop, if_neg hspecial]
+    apply intervalNonSignTail_ne_sign registers k K target hlayout
+    exact List.mem_append_right registers.work1
+      (List.mem_append_right registers.work2
+        (List.mem_append_left _ hmem))
+
 private theorem intervalEndpointSupport_mem_allWires
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
@@ -676,6 +993,109 @@ private theorem intervalTopSpecialSupport_mem_allWires
       assumption
   · exact intervalScratch_mem_allWires registers
       (List.mem_of_mem_take heq)
+
+private theorem intervalSign_not_mem_topSpecialSupport
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    registers.sign ∉
+      topSpecialLeafSupport registers.control registers.control
+        registers.lengthS registers.lengthQ (registers.accumulator k K)
+        (registers.targetAt target (intervalTopRelative k K))
+        (registers.addendAt target (intervalTopRelative k K))
+        (registers.carry k K) (registers.cellScratch k K)
+        (registers.cellScratch k K) (registers.equalityScratch k K) := by
+  intro hwire
+  simp only [topSpecialLeafSupport, List.mem_append, List.mem_dedup,
+    List.mem_cons, List.not_mem_nil, or_false] at hwire
+  have hlabel := intervalTopRelative_lt_laneCount k K hlayout.k_le_K
+  rcases hwire with ((((hroot | hs) | hq) | hroles) | heq)
+  · rcases hroot with hroot | hroot <;>
+      exact (intervalControl_ne_sign registers k K target hlayout) hroot.symm
+  · exact (intervalNonSignTail_ne_sign registers k K target hlayout
+      (List.mem_append_right registers.work1
+        (List.mem_append_right registers.work2
+          (List.mem_append_right registers.lengthT
+            (List.mem_append_right registers.lengthQ
+              (List.mem_append_left registers.scratch hs)))))) rfl
+  · exact (intervalNonSignTail_ne_sign registers k K target hlayout
+      (List.mem_append_right registers.work1
+        (List.mem_append_right registers.work2
+          (List.mem_append_right registers.lengthT
+            (List.mem_append_left (registers.lengthS ++ registers.scratch) hq))))) rfl
+  · rcases hroles with haccumulator | htarget | haddend | hcarry | hcell | heqFlag
+    · exact (intervalScratch_ne_sign registers k K target hlayout
+        (haccumulator ▸ intervalAccumulator_mem_scratch registers k K target hlayout))
+        haccumulator.symm
+    · exact (intervalTargetAt_ne_sign registers k K (intervalTopRelative k K)
+        target hlayout hlabel) htarget.symm
+    · exact (intervalAddendAt_ne_sign registers k K (intervalTopRelative k K)
+        target hlayout hlabel) haddend.symm
+    · exact (intervalScratch_ne_sign registers k K target hlayout
+        (hcarry ▸ intervalCarry_mem_scratch registers k K target hlayout)) hcarry.symm
+    · exact (intervalScratch_ne_sign registers k K target hlayout
+        (hcell ▸ intervalCellScratch_mem_scratch registers k K target hlayout)) hcell.symm
+    · exact (intervalScratch_ne_sign registers k K target hlayout
+        (heqFlag ▸ intervalCellScratch_mem_scratch registers k K target hlayout))
+        heqFlag.symm
+  · have hscratch : registers.sign ∈ registers.scratch := List.mem_of_mem_take heq
+    exact (intervalScratch_ne_sign registers k K target hlayout hscratch) rfl
+
+private theorem intervalMainTarget_not_mem_topSpecialSupport
+    (registers : IntervalRegisters) (k K label : Nat)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target)
+    (hspecial : intervalHasTopSpecial k K = true)
+    (hlabel : label ∈ (intervalTree registers k K).labels) :
+    registers.targetAt target label ∉
+      topSpecialLeafSupport registers.control registers.control
+        registers.lengthS registers.lengthQ (registers.accumulator k K)
+        (registers.targetAt target (intervalTopRelative k K))
+        (registers.addendAt target (intervalTopRelative k K))
+        (registers.carry k K) (registers.cellScratch k K)
+        (registers.cellScratch k K) (registers.equalityScratch k K) := by
+  have hlabelBound := intervalTree_label_lt_laneCount registers k K label hlabel
+  have htopBound := intervalTopRelative_lt_laneCount k K hlayout.k_le_K
+  have hfixed := intervalTargetAt_not_mem_fixed registers k K label target hlayout hlabelBound
+  have hneTop := intervalTree_label_ne_topRelative registers k K label hspecial hlabel
+  have hneTarget : registers.targetAt target label ≠
+      registers.targetAt target (intervalTopRelative k K) := by
+    intro equality
+    exact hneTop (intervalTargetAt_injective registers k K target hlayout
+      hlabelBound htopBound equality)
+  have hneAddend : registers.targetAt target label ≠
+      registers.addendAt target (intervalTopRelative k K) :=
+    intervalTargetAt_ne_addendAt registers k K target hlayout hlabelBound htopBound
+  intro hwire
+  simp only [topSpecialLeafSupport, List.mem_append, List.mem_dedup,
+    List.mem_cons, List.not_mem_nil, or_false] at hwire
+  rcases hwire with ((((hroot | hs) | hq) | hroles) | heq)
+  · apply hfixed
+    rcases hroot with hroot | hroot <;> rw [hroot] <;>
+      simp [intervalFixedWires]
+  · exact hfixed (by simp [intervalFixedWires, hs])
+  · exact hfixed (by simp [intervalFixedWires, hq])
+  · rcases hroles with haccumulator | htarget | haddend | hcarry | hcell | heqFlag
+    · apply hfixed
+      rw [haccumulator]
+      simp [intervalFixedWires,
+        intervalAccumulator_mem_scratch registers k K target hlayout]
+    · exact hneTarget htarget
+    · exact hneAddend haddend
+    · apply hfixed
+      rw [hcarry]
+      simp [intervalFixedWires,
+        intervalCarry_mem_scratch registers k K target hlayout]
+    · apply hfixed
+      rw [hcell]
+      simp [intervalFixedWires,
+        intervalCellScratch_mem_scratch registers k K target hlayout]
+    · apply hfixed
+      rw [heqFlag]
+      simp [intervalFixedWires,
+        intervalCellScratch_mem_scratch registers k K target hlayout]
+  · apply hfixed
+    have hscratch : registers.targetAt target label ∈ registers.scratch :=
+      List.mem_of_mem_take heq
+    simp [intervalFixedWires, hscratch]
 
 private theorem intervalEqualityScratch_outsideLeafRoles
     (registers : IntervalRegisters) (k K label : Nat)
@@ -922,6 +1342,33 @@ private theorem intervalTopSecond_usesOnly
     exact intervalTopSpecialSupport_mem_allWires registers k K target hlayout
   · simp [intervalTopSecond, hspecial, PaperCircuitUsesOnly]
 
+private theorem intervalTopSecond_avoidsSignAndMainTargets
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    PaperCircuitAvoids
+      (registers.sign ::
+        (intervalTree registers k K).labels.map (registers.targetAt target))
+      (intervalTopSecond registers k K mode target) := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopSecond, if_pos hspecial]
+    apply PaperCircuitAvoids.ofUsesOnly
+      (topSpecialSecondLeaf_usesOnly mode (intervalTopRelative k K)
+        registers.lengthS registers.lengthQ (registers.accumulator k K)
+        (registers.targetAt target (intervalTopRelative k K))
+        (registers.addendAt target (intervalTopRelative k K))
+        (registers.carry k K) (registers.cellScratch k K)
+        (registers.cellScratch k K) (registers.equalityScratch k K)
+        registers.control registers.control)
+    rw [List.disjoint_left]
+    intro wire hprotected hsupport
+    rcases List.mem_cons.mp hprotected with hsign | htarget
+    · subst wire
+      exact intervalSign_not_mem_topSpecialSupport registers k K target hlayout hsupport
+    · obtain ⟨label, hlabel, rfl⟩ := List.mem_map.mp htarget
+      exact intervalMainTarget_not_mem_topSpecialSupport registers k K label target
+        hlayout hspecial hlabel hsupport
+  · simp [intervalTopSecond, hspecial, PaperCircuitAvoids]
+
 private theorem intervalTraversal_usesOnly
     (second : Bool) (registers : IntervalRegisters) (k K : Nat)
     (mode : RippleMode) (target : IntervalTarget)
@@ -1007,6 +1454,112 @@ private theorem intervalTraversal_usesOnly
     (intervalDecoder_mem_allWires registers k K target hlayout) hleaf
   cases second <;>
     simpa [leafAction, intervalFirstTraversal, intervalSecondTraversal] using huses
+
+private theorem intervalTraversal_avoidsSign
+    (second : Bool) (registers : IntervalRegisters) (k K : Nat)
+    (mode : RippleMode) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    PaperCircuitAvoids [registers.sign]
+      (if second then
+        intervalSecondTraversal mode (intervalHasTopSpecial k K)
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.carry k K)
+          (registers.cellScratch k K) (registers.targetAt target)
+          (registers.addendAt target) (intervalTree registers k K)
+          registers.control registers.control (registers.rightPaths k K)
+          (registers.leftPaths k K)
+      else
+        intervalFirstTraversal mode (intervalHasTopSpecial k K)
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.carry k K)
+          (registers.cellScratch k K) (registers.targetAt target)
+          (registers.addendAt target) (intervalTree registers k K)
+          registers.control registers.control (registers.rightPaths k K)
+          (registers.leftPaths k K)) := by
+  let tree := intervalTree registers k K
+  let decoder := tree.decoderWires registers.control registers.control
+    (registers.rightPaths k K) (registers.leftPaths k K)
+  let leafAction := if second then
+      (fun label rightControl leftControl ↦
+        intervalSecondLeaf mode (intervalHasTopSpecial k K)
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.targetAt target label)
+          (registers.addendAt target label) (registers.carry k K)
+          (registers.cellScratch k K) label rightControl leftControl)
+    else
+      (fun label rightControl leftControl ↦
+        intervalFirstLeaf mode (intervalHasTopSpecial k K)
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.targetAt target label)
+          (registers.addendAt target label) (registers.carry k K)
+          (registers.cellScratch k K) label rightControl leftControl)
+  have hdecoder : ∀ wire, wire ∈ decoder → wire ∉ [registers.sign] := by
+    intro wire hwire hsign
+    simp only [List.mem_singleton] at hsign
+    subst wire
+    exact (intervalDecoder_ne_sign registers k K target hlayout
+      (by simpa [tree, decoder] using hwire)) rfl
+  have hleaf : ∀ label, label ∈ tree.labels →
+      ∀ rightControl, rightControl ∈ decoder →
+      ∀ leftControl, leftControl ∈ decoder →
+        PaperCircuitAvoids [registers.sign]
+          (leafAction label rightControl leftControl) := by
+    intro label hlabel rightControl hright leftControl hleft
+    have hlabelBound := intervalTree_label_lt_laneCount registers k K label
+      (by simpa [tree] using hlabel)
+    have hdisjoint : List.Disjoint [registers.sign]
+        (intervalLeafSupport rightControl leftControl
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.targetAt target label)
+          (registers.addendAt target label) (registers.carry k K)
+          (registers.cellScratch k K)) := by
+      intro wire hsign hsupport
+      simp only [List.mem_singleton] at hsign
+      subst wire
+      simp only [intervalLeafSupport, List.mem_append, List.mem_dedup,
+        List.mem_cons, List.not_mem_nil, or_false] at hsupport
+      rcases hsupport with hcontrol | hrole
+      · rcases hcontrol with hcontrol | hcontrol
+        · exact (intervalDecoder_ne_sign registers k K target hlayout
+            (by simpa [tree, decoder] using hright)) hcontrol.symm
+        · exact (intervalDecoder_ne_sign registers k K target hlayout
+            (by simpa [tree, decoder] using hleft)) hcontrol.symm
+      · rcases hrole with hrightTop | hleftTop | haccumulator | htarget |
+          haddend | hcarry | hscratch
+        · exact (intervalRightTop_ne_sign registers k K target hlayout) hrightTop.symm
+        · exact (intervalLeftTop_ne_sign registers k K target hlayout) hleftTop.symm
+        · exact (intervalScratch_ne_sign registers k K target hlayout
+            (intervalAccumulator_mem_scratch registers k K target hlayout))
+            haccumulator.symm
+        · exact (intervalTargetAt_ne_sign registers k K label target hlayout hlabelBound)
+            htarget.symm
+        · exact (intervalAddendAt_ne_sign registers k K label target hlayout hlabelBound)
+            haddend.symm
+        · exact (intervalScratch_ne_sign registers k K target hlayout
+            (intervalCarry_mem_scratch registers k K target hlayout)) hcarry.symm
+        · exact (intervalScratch_ne_sign registers k K target hlayout
+            (intervalCellScratch_mem_scratch registers k K target hlayout)) hscratch.symm
+    by_cases hsecond : second = true
+    · simp only [leafAction, if_pos hsecond]
+      exact PaperCircuitAvoids.ofUsesOnly
+        (intervalSecondLeaf_usesOnly mode (intervalHasTopSpecial k K)
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.targetAt target label)
+          (registers.addendAt target label) (registers.carry k K)
+          (registers.cellScratch k K) label rightControl leftControl) hdisjoint
+    · simp only [leafAction, if_neg hsecond]
+      exact PaperCircuitAvoids.ofUsesOnly
+        (intervalFirstLeaf_usesOnly mode (intervalHasTopSpecial k K)
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.targetAt target label)
+          (registers.addendAt target label) (registers.carry k K)
+          (registers.cellScratch k K) label rightControl leftControl) hdisjoint
+  have havoid := dualUnaryActionUnitary_avoids
+    (if second then .inc else .dec) leafAction tree registers.control registers.control
+    (registers.rightPaths k K) (registers.leftPaths k K)
+    (protectedWires := [registers.sign]) hlayout.traversal.1 hdecoder hleaf
+  cases second <;>
+    simpa [tree, leafAction, intervalFirstTraversal, intervalSecondTraversal] using havoid
 
 private theorem intervalSignUpdate_usesOnly
     (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool)
@@ -1233,6 +1786,18 @@ private theorem intervalSignUpdate_preservesScratch
       simp [intervalSignUpdate, Classical.run, Classical.applyGate,
         upd_other _ _ _ hne]
 
+private theorem intervalSignUpdate_agreesOutsideSign
+    (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool)
+    (state : BasisState) :
+    AgreesOutside [registers.sign]
+      (run (intervalSignUpdate registers k K signUpdate) state) state := by
+  intro wire hwire
+  simp only [List.mem_singleton] at hwire
+  cases signUpdate with
+  | false => rfl
+  | true =>
+      simp [intervalSignUpdate, Classical.run, Classical.applyGate, upd, hwire]
+
 private theorem intervalPaths_clean_of_topScratch
     (registers : IntervalRegisters) (k K : Nat) (state : BasisState)
     (hclean : Clean
@@ -1245,6 +1810,95 @@ private theorem intervalPaths_clean_of_topScratch
   · intro wire hwire
     exact hclean wire (List.mem_cons_of_mem _
       (intervalLeftPaths_mem_equalityScratch registers k K wire hwire))
+
+private theorem intervalMainTraversals_pair_preservesOutsideTargets
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target) :
+    AgreesOutside
+      ((intervalTree registers k K).labels.map (registers.targetAt target))
+      (run
+        (intervalFirstTraversal mode (intervalHasTopSpecial k K)
+            (registers.rightTop k K) (registers.leftTop k K)
+            (registers.accumulator k K) (registers.carry k K)
+            (registers.cellScratch k K) (registers.targetAt target)
+            (registers.addendAt target) (intervalTree registers k K)
+            registers.control registers.control (registers.rightPaths k K)
+            (registers.leftPaths k K) ++
+          intervalSecondTraversal mode (intervalHasTopSpecial k K)
+            (registers.rightTop k K) (registers.leftTop k K)
+            (registers.accumulator k K) (registers.carry k K)
+            (registers.cellScratch k K) (registers.targetAt target)
+            (registers.addendAt target) (intervalTree registers k K)
+            registers.control registers.control (registers.rightPaths k K)
+            (registers.leftPaths k K)) state)
+      state := by
+  apply intervalTraversals_pair_preservesOutsideTargets mode
+    (intervalHasTopSpecial k K) (registers.rightTop k K)
+    (registers.leftTop k K) (registers.accumulator k K)
+    (registers.carry k K) (registers.cellScratch k K)
+    (registers.targetAt target) (registers.addendAt target)
+    (intervalTree registers k K) registers.control registers.control
+    (registers.rightPaths k K) (registers.leftPaths k K) state hlayout.traversal
+  · rw [intervalTree_labels]
+    exact Finset.sort_nodup _ _
+  · intro label hlabel other hother hne
+    have hlabelBound := intervalTree_label_lt_laneCount registers k K label hlabel
+    have hotherBound := intervalTree_label_lt_laneCount registers k K other hother
+    have htargetNe : registers.targetAt target other ≠
+        registers.targetAt target label := by
+      intro equality
+      exact hne (intervalTargetAt_injective registers k K target hlayout
+        hotherBound hlabelBound equality)
+    have haddendNe : registers.targetAt target other ≠
+        registers.addendAt target label :=
+      intervalTargetAt_ne_addendAt registers k K target hlayout
+        hotherBound hlabelBound
+    have hroles := (hlayout.traversal.2 other hother).1
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+      or_false, not_or] at hroles
+    simp only [List.mem_cons, List.not_mem_nil, or_false, not_or]
+    aesop
+
+private theorem intervalTop_pair_preservesOutsideTarget
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hclean : Clean
+      (registers.cellScratch k K :: registers.equalityScratch k K) state) :
+    AgreesOutside [registers.targetAt target (intervalTopRelative k K)]
+      (run (intervalTopFirst registers k K mode target ++
+        intervalTopSecond registers k K mode target) state)
+      state := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopFirst, if_pos hspecial, intervalTopSecond, if_pos hspecial]
+    apply topSpecialLeaf_pair_preservesOutsideTarget mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control state (hlayout.topSpecial hspecial) hclean
+    have hlabel := intervalTopRelative_lt_laneCount k K hlayout.k_le_K
+    have htargetFixed := intervalTargetAt_not_mem_fixed registers k K
+      (intervalTopRelative k K) target hlayout hlabel
+    intro hsupport
+    apply htargetFixed
+    simp only [List.mem_cons, List.mem_append] at hsupport
+    rcases hsupport with (hcontrol | haccumulator | hregister) | hcell | hequality
+    · rw [hcontrol]
+      simp [intervalFixedWires]
+    · rw [haccumulator]
+      simp [intervalFixedWires,
+        intervalAccumulator_mem_scratch registers k K target hlayout]
+    · simp [intervalFixedWires, hregister]
+    · rw [hcell]
+      simp [intervalFixedWires,
+        intervalCellScratch_mem_scratch registers k K target hlayout]
+    · have hscratch : registers.targetAt target (intervalTopRelative k K) ∈
+          registers.scratch := List.mem_of_mem_take hequality
+      simp [intervalFixedWires, hscratch]
+  · simp [intervalTopFirst, intervalTopSecond, hspecial, AgreesOutside]
 
 /-- Complete direct state action of the forward source interval.  Endpoint transforms remain
 bound to their already-certified circuit actions; the top lane, both ordered tree traversals, and
@@ -2802,6 +3456,189 @@ private theorem intervalAddSubBodyUnitary_wellFormed
       (registers.rightPaths k K) (registers.leftPaths k K) hlayout.traversal⟩,
     intervalTopSecond_wellFormed registers k K mode target hlayout⟩
 
+private theorem intervalAddSubBodyUnitary_preservesOutsideChanges
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hclean : Clean
+      (registers.cellScratch k K :: registers.equalityScratch k K) state) :
+    AgreesOutside
+      ((registers.sign ::
+          (intervalTree registers k K).labels.map (registers.targetAt target)) ++
+        [registers.targetAt target (intervalTopRelative k K)])
+      (run (intervalAddSubBodyUnitary registers k K mode signUpdate target) state)
+      state := by
+  let topFirst := intervalTopFirst registers k K mode target
+  let first := intervalFirstTraversal mode (intervalHasTopSpecial k K)
+    (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+    (registers.carry k K) (registers.cellScratch k K)
+    (registers.targetAt target) (registers.addendAt target)
+    (intervalTree registers k K) registers.control registers.control
+    (registers.rightPaths k K) (registers.leftPaths k K)
+  let sign := intervalSignUpdate registers k K signUpdate
+  let second := intervalSecondTraversal mode (intervalHasTopSpecial k K)
+    (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+    (registers.carry k K) (registers.cellScratch k K)
+    (registers.targetAt target) (registers.addendAt target)
+    (intervalTree registers k K) registers.control registers.control
+    (registers.rightPaths k K) (registers.leftPaths k K)
+  let topSecond := intervalTopSecond registers k K mode target
+  let afterTop := run topFirst state
+  let afterFirst := run first afterTop
+  let afterSign := run sign afterFirst
+  let afterSecond := run second afterSign
+  have hsign : AgreesOutside [registers.sign] afterSign afterFirst := by
+    simpa only [afterSign, sign] using
+      intervalSignUpdate_agreesOutsideSign registers k K signUpdate afterFirst
+  have hsecondSign : AgreesOutside [registers.sign]
+      afterSecond (run second afterFirst) := by
+    change AgreesOutside [registers.sign]
+      (run second afterSign) (run second afterFirst)
+    have havoid := intervalTraversal_avoidsSign true registers k K mode target hlayout
+    simpa only [second] using havoid.run_agreesOutside hsign
+  have hmain : AgreesOutside
+      ((intervalTree registers k K).labels.map (registers.targetAt target))
+      (run second (run first afterTop)) afterTop := by
+    simpa only [first, second, Classical.run_append] using
+      intervalMainTraversals_pair_preservesOutsideTargets registers k K mode target
+        afterTop hlayout
+  have hthroughMain : AgreesOutside
+      (registers.sign ::
+        (intervalTree registers k K).labels.map (registers.targetAt target))
+      afterSecond afterTop := by
+    intro wire hwire
+    simp only [List.mem_cons, not_or] at hwire
+    rw [hsecondSign wire (by simpa using hwire.1)]
+    exact hmain wire hwire.2
+  have htopTransport : AgreesOutside
+      (registers.sign ::
+        (intervalTree registers k K).labels.map (registers.targetAt target))
+      (run topSecond afterSecond) (run topSecond afterTop) := by
+    have havoid := intervalTopSecond_avoidsSignAndMainTargets registers k K mode target
+      hlayout
+    simpa only [topSecond] using havoid.run_agreesOutside hthroughMain
+  have htopPair : AgreesOutside
+      [registers.targetAt target (intervalTopRelative k K)]
+      (run topSecond afterTop) state := by
+    simpa only [topFirst, topSecond, afterTop, Classical.run_append] using
+      intervalTop_pair_preservesOutsideTarget registers k K mode target state hlayout hclean
+  have hcombined : AgreesOutside
+      ((registers.sign ::
+          (intervalTree registers k K).labels.map (registers.targetAt target)) ++
+        [registers.targetAt target (intervalTopRelative k K)])
+      (run topSecond afterSecond) state := by
+    intro wire hwire
+    simp only [List.mem_append, not_or] at hwire
+    rw [htopTransport wire hwire.1]
+    exact htopPair wire hwire.2
+  simpa only [intervalAddSubBodyUnitary, topFirst, first, sign, second, topSecond,
+    afterTop, afterFirst, afterSign, afterSecond, Classical.run_append] using hcombined
+
+private theorem intervalScratch_not_mem_bodyChanges
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target)
+    {wire : Wire} (hscratch : wire ∈ registers.scratch) :
+    wire ∉
+      ((registers.sign ::
+          (intervalTree registers k K).labels.map (registers.targetAt target)) ++
+        [registers.targetAt target (intervalTopRelative k K)]) := by
+  intro hchanged
+  rcases List.mem_append.mp hchanged with hmain | htop
+  · rcases List.mem_cons.mp hmain with hsign | htargets
+    · exact (intervalScratch_ne_sign registers k K target hlayout hscratch) hsign
+    obtain ⟨label, hlabel, equality⟩ := List.mem_map.mp htargets
+    have hbound := intervalTree_label_lt_laneCount registers k K label hlabel
+    cases target with
+    | work1 =>
+        apply intervalScratch_not_mem_work1 registers k K .work1 hlayout hscratch
+        exact equality ▸ list_getD_mem registers.work1 label 0 (by
+          rw [hlayout.work1_length]
+          exact hbound)
+    | work2 =>
+        apply intervalScratch_not_mem_work2 registers k K .work2 hlayout hscratch
+        exact equality ▸ list_getD_mem registers.work2 label 0 (by
+          rw [hlayout.work2_length]
+          exact hbound)
+  · simp only [List.mem_singleton] at htop
+    have hbound := intervalTopRelative_lt_laneCount k K hlayout.k_le_K
+    cases target with
+    | work1 =>
+        apply intervalScratch_not_mem_work1 registers k K .work1 hlayout hscratch
+        exact htop.symm ▸ list_getD_mem registers.work1 (intervalTopRelative k K) 0
+          (by rw [hlayout.work1_length]; exact hbound)
+    | work2 =>
+        apply intervalScratch_not_mem_work2 registers k K .work2 hlayout hscratch
+        exact htop.symm ▸ list_getD_mem registers.work2 (intervalTopRelative k K) 0
+          (by rw [hlayout.work2_length]; exact hbound)
+
+private theorem intervalAddSubBodyUnitary_cleanScratch
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hready : IntervalReady registers state) :
+    Clean registers.scratch
+      (run (intervalAddSubBodyUnitary registers k K mode signUpdate target) state) := by
+  have htop : Clean
+      (registers.cellScratch k K :: registers.equalityScratch k K) state := by
+    intro wire hwire
+    exact hready wire
+      (intervalTopScratch_mem_scratch registers k K target hlayout wire hwire)
+  have hbody := intervalAddSubBodyUnitary_preservesOutsideChanges registers k K mode
+    signUpdate target state hlayout htop
+  intro wire hwire
+  rw [hbody wire
+    (intervalScratch_not_mem_bodyChanges registers k K target hlayout hwire)]
+  exact hready wire hwire
+
+/-- The complete forward interval restores its entire shared scratch bank from the sole input
+`IntervalReady` premise. -/
+theorem intervalAddSubUnitary_ready
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hready : IntervalReady registers state) :
+    IntervalReady registers
+      (run (intervalAddSubUnitary registers n k K mode signUpdate target) state) := by
+  let prepare := prepareIntervalEndpoints registers.lengthT registers.lengthQ
+    registers.lengthS registers.endpointScratch (registers.carry k K) n k
+  let body := intervalAddSubBodyUnitary registers k K mode signUpdate target
+  let restore := restoreIntervalEndpoints registers.lengthT registers.lengthQ
+    registers.lengthS registers.endpointScratch (registers.carry k K) n k
+  let prepared := run prepare state
+  let afterBody := run body prepared
+  have hprepared : IntervalReady registers prepared := by
+    simpa only [IntervalReady, prepare, prepared] using
+      intervalPrepare_cleanScratch registers n k K target state hlayout hready
+  have hafterBody : Clean registers.scratch afterBody := by
+    simpa only [body, afterBody] using
+      intervalAddSubBodyUnitary_cleanScratch registers k K mode signUpdate target
+        prepared hlayout hprepared
+  have hendpoint : Clean
+      (registers.endpointScratch ++ [registers.carry k K]) afterBody := by
+    intro wire hwire
+    apply hafterBody wire
+    rcases List.mem_append.mp hwire with hscratch | hcarry
+    · exact List.mem_of_mem_take hscratch
+    · simp only [List.mem_singleton] at hcarry
+      subst wire
+      exact intervalCarry_mem_scratch registers k K target hlayout
+  have hrestore := restoreIntervalEndpoints_correct registers.lengthT registers.lengthQ
+    registers.lengthS registers.endpointScratch (registers.carry k K) n k afterBody
+    hlayout.lengthT_eq_lengthQ
+    (intervalLengthQ_le_endpointScratch registers k K target hlayout)
+    (intervalLengthS_le_endpointScratch registers k K target hlayout)
+    (intervalLengthS_positive registers k K target hlayout) hlayout.endpoints hendpoint
+  have hshape :
+      run (intervalAddSubUnitary registers n k K mode signUpdate target) state =
+        run restore afterBody := by
+    simp only [intervalAddSubUnitary, intervalAddSubBodyUnitary, prepare, body, restore,
+      prepared, afterBody, Classical.run_append]
+  intro wire hwire
+  rw [hshape, hrestore.2.2.2.2 wire
+    (intervalScratch_not_mem_lengthQ registers k K target hlayout hwire)
+    (intervalScratch_not_mem_lengthS registers k K target hlayout hwire)]
+  exact hafterBody wire hwire
+
 private theorem run_intervalAddSubBodyUnitary_inverse_eq_adjoint
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
     (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
@@ -2970,6 +3807,18 @@ theorem run_intervalAddSubInverseUnitary_state
   exact run_intervalAddSubUnitary_state registers n k K mode.inverse signUpdate target
     state hlayout hready
 
+/-- The inverse-mode specialization restores the same complete shared scratch bank. -/
+theorem intervalAddSubInverseUnitary_ready
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hready : IntervalReady registers state) :
+    IntervalReady registers
+      (run (intervalAddSubInverseUnitary registers n k K mode signUpdate target) state) := by
+  simpa [intervalAddSubInverseUnitary] using
+    intervalAddSubUnitary_ready registers n k K mode.inverse signUpdate target state
+      hlayout hready
+
 theorem intervalAddSubInverse_coherent
     (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
     (signUpdate : Bool) (target : IntervalTarget)
@@ -3071,16 +3920,13 @@ private theorem intervalReady_endpointClean
     subst wire
     exact intervalCarry_mem_scratch registers k K target hlayout
 
-/-- The source inverse restores the complete basis state after the forward block whenever both
-wrapper boundaries satisfy `IntervalReady`.  The second premise is the exact cleanup obligation
-that the later indexed reachable-state invariant must discharge. -/
+/-- The source inverse restores the complete basis state after the forward block from the sole
+input `IntervalReady` premise. -/
 theorem run_intervalAddSubInverseUnitary_after_forward
     (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
     (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
     (hlayout : IntervalLayout registers k K target)
-    (hready : IntervalReady registers state)
-    (hreadyAfter : IntervalReady registers
-      (run (intervalAddSubUnitary registers n k K mode signUpdate target) state)) :
+    (hready : IntervalReady registers state) :
     run (intervalAddSubInverseUnitary registers n k K mode signUpdate target)
         (run (intervalAddSubUnitary registers n k K mode signUpdate target) state) =
       state := by
@@ -3114,7 +3960,8 @@ theorem run_intervalAddSubInverseUnitary_after_forward
       Classical.run_append]
   have hreadyOutput : IntervalReady registers output := by
     rw [← hforward]
-    exact hreadyAfter
+    exact intervalAddSubUnitary_ready registers n k K mode signUpdate target state
+      hlayout hready
   have houtputEndpoint :
       Clean (registers.endpointScratch ++ [registers.carry k K]) output :=
     intervalReady_endpointClean registers k K target output hlayout hreadyOutput
@@ -3165,16 +4012,13 @@ theorem run_intervalAddSubUnitary_after_inverse
     (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
     (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
     (hlayout : IntervalLayout registers k K target)
-    (hready : IntervalReady registers state)
-    (hreadyAfter : IntervalReady registers
-      (run (intervalAddSubInverseUnitary registers n k K mode signUpdate target) state)) :
+    (hready : IntervalReady registers state) :
     run (intervalAddSubUnitary registers n k K mode signUpdate target)
         (run (intervalAddSubInverseUnitary registers n k K mode signUpdate target) state) =
       state := by
   simpa [intervalAddSubInverseUnitary] using
     (run_intervalAddSubInverseUnitary_after_forward registers n k K mode.inverse
-      signUpdate target state hlayout hready (by
-        simpa [intervalAddSubInverseUnitary] using hreadyAfter))
+      signUpdate target state hlayout hready)
 
 /-! ## Closed physical witness and pinned-source resource regressions -/
 

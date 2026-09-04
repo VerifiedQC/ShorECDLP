@@ -414,6 +414,24 @@ private theorem dualUnaryNode_parts
     hpathBRestA, hpathBRestB,
     hcontrolAPathB, hindexAPathB, hcontrolBPathA, hindexBPathA⟩
 
+/-- The pairwise wire inequalities supplied by the local layout of an inhabited dual-tree node.
+This is the structural projection needed by proofs that compose opposite ordered traversals. -/
+theorem DualUnaryActionTree.Layout.nodeParts
+    (indexBitA indexBitB controlA controlB pathA pathB : Wire)
+    (zero one : DualUnaryActionTree) (restA restB : List Wire)
+    (hlocal :
+      (DualUnaryActionTree.decoderWires
+        (.node indexBitA indexBitB zero one)
+        controlA controlB (pathA :: restA) (pathB :: restB)).Nodup) :
+    controlA ≠ indexBitA ∧ controlA ≠ pathA ∧ indexBitA ≠ pathA ∧
+    controlB ≠ indexBitB ∧ controlB ≠ pathB ∧ indexBitB ≠ pathB ∧
+    pathA ≠ pathB ∧ pathA ∉ restA ∧ pathA ∉ restB ∧
+    pathB ∉ restA ∧ pathB ∉ restB ∧
+    controlA ≠ pathB ∧ indexBitA ≠ pathB ∧
+    controlB ≠ pathA ∧ indexBitB ≠ pathA :=
+  dualUnaryNode_parts indexBitA indexBitB controlA controlB pathA pathB
+    zero one restA restB hlocal
+
 private theorem dualZero_decoder_subset
     (indexBitA indexBitB controlA controlB pathA pathB : Wire)
     (zero one : DualUnaryActionTree) (restA restB : List Wire) :
