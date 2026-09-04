@@ -196,6 +196,13 @@ The following are deliberately not available as proof premises:
    worst-case proof. Phase 4 must prove the uniform 1,620-step bound independently.
 5. The generator uses floating-point evaluations to choose active-window endpoints. Lean will
    replace them with exact integer/rational inequalities before window pruning is trusted.
+6. At the pinned commit, `set_measurement_uncompute` calls
+   `clear_gate_construction_caches()`, but that function omits the memoized
+   `phase_update_inverse_gate`. Constructing the coherent inverse before switching modes can
+   therefore reuse a stale 98-CCX/zero-measurement block instead of the intended
+   54-CCX/44-measurement block. The Lean definitions and source regressions model fresh,
+   fixed-mode construction (equivalently, an explicit `phase_update_inverse_gate.cache_clear()`),
+   not this buggy cross-mode cache reuse.
 
 ## Frozen resource vocabulary
 
