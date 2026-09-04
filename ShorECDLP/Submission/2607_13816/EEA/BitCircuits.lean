@@ -89,6 +89,50 @@ theorem PaperCircuitUsesOnly.preservesOutside
       | P direction exponent target =>
           rfl
 
+/-- A local circuit's output on its support depends only on the input values on that support. -/
+theorem PaperCircuitUsesOnly.run_congrOn
+    {support : List Wire} {circuit : Circuit}
+    (huses : PaperCircuitUsesOnly support circuit)
+    (left right : BasisState)
+    (hagree : ∀ wire, wire ∈ support → left wire = right wire) :
+    ∀ wire, wire ∈ support →
+      run circuit left wire = run circuit right wire := by
+  induction circuit generalizing left right with
+  | nil => exact hagree
+  | cons gate circuit ih =>
+      have hgate := huses gate (by simp)
+      have htail : PaperCircuitUsesOnly support circuit := by
+        intro next hnext
+        exact huses next (by simp [hnext])
+      apply ih htail
+      intro wire hwire
+      cases gate with
+      | X target =>
+          by_cases hwt : wire = target
+          · subst wire
+            simp [Classical.applyGate, upd,
+              hagree target (hgate target (by simp [gateWires]))]
+          · simpa [Classical.applyGate, upd, hwt] using hagree wire hwire
+      | H target =>
+          exact hagree wire hwire
+      | CX control target =>
+          by_cases hwt : wire = target
+          · subst wire
+            simp [Classical.applyGate, upd,
+              hagree target (hgate target (by simp [gateWires])),
+              hagree control (hgate control (by simp [gateWires]))]
+          · simpa [Classical.applyGate, upd, hwt] using hagree wire hwire
+      | CCX first second target =>
+          by_cases hwt : wire = target
+          · subst wire
+            simp [Classical.applyGate, upd,
+              hagree target (hgate target (by simp [gateWires])),
+              hagree first (hgate first (by simp [gateWires])),
+              hagree second (hgate second (by simp [gateWires]))]
+          · simpa [Classical.applyGate, upd, hwt] using hagree wire hwire
+      | P direction exponent target =>
+          exact hagree wire hwire
+
 /-- Submission-side Toffoli count for the paper construction. -/
 def eeaToffoliCount (circuit : Circuit) : Nat :=
   (circuit.map fun gate => match gate with

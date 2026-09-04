@@ -10,7 +10,10 @@ import ShorECDLP.Submission.«2607_13816».EEA.Ripple
 import ShorECDLP.Submission.«2607_13816».EEA.IntervalLeaf
 import ShorECDLP.Submission.«2607_13816».EEA.LengthUpdate
 import ShorECDLP.Submission.«2607_13816».EEA.Affine
+import ShorECDLP.Submission.«2607_13816».EEA.WordNat
 import ShorECDLP.Submission.«2607_13816».EEA.Endpoint
+import ShorECDLP.Submission.«2607_13816».EEA.ZeroMap
+import ShorECDLP.Submission.«2607_13816».EEA.LengthBlocks
 import ShorECDLP.Submission.«2607_13816».EEA.Windows
 
 /-!

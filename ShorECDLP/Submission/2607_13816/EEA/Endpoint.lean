@@ -1,4 +1,4 @@
-import ShorECDLP.Submission.«2607_13816».EEA.Affine
+import ShorECDLP.Submission.«2607_13816».EEA.WordNat
 
 /-!
 # Source affine endpoint transforms
@@ -163,6 +163,19 @@ private theorem endpoint_wireValues_congr
       exact ⟨h wire (by simp), ih (fun next hnext ↦
         h next (by simp [hnext]))⟩
 
+private theorem endpoint_wireValues_eq_at
+    (wires : List Wire) (left right : BasisState)
+    (hvalues : wireValues wires left = wireValues wires right)
+    (wire : Wire) (hwire : wire ∈ wires) :
+    left wire = right wire := by
+  induction wires with
+  | nil => simp at hwire
+  | cons head tail ih =>
+      simp only [wireValues, List.map_cons, List.cons.injEq] at hvalues
+      rcases List.mem_cons.mp hwire with rfl | hwire
+      · exact hvalues.1
+      · exact ih hvalues.2 hwire
+
 /-- Gate-independent left endpoint word. -/
 def intervalLeftBits
     (lengthT lengthQ : List Bool) (offset : Nat) : List Bool :=
@@ -189,6 +202,57 @@ def restoredIntervalRightBits
   constMinusBits
     (cuccaroAddBits false (constantBits lengthS.length offset) lengthS)
     (modulusBits + 2)
+
+@[simp]
+theorem intervalLeftBits_length
+    (lengthT lengthQ : List Bool) (offset : Nat)
+    (hlength : lengthT.length = lengthQ.length) :
+    (intervalLeftBits lengthT lengthQ offset).length = lengthQ.length := by
+  have hsum :
+      (cuccaroAddBits false lengthT lengthQ).length = lengthQ.length :=
+    (cuccaroAddBits_length false lengthT lengthQ hlength).trans hlength
+  have hfour :
+      (cuccaroAddBits false (constantBits lengthQ.length 4)
+        (cuccaroAddBits false lengthT lengthQ)).length = lengthQ.length := by
+    rw [cuccaroAddBits_length]
+    · simp
+    · simp [hsum]
+  unfold intervalLeftBits
+  rw [cuccaroSubBits_length]
+  · simp
+  · simp [hfour]
+
+@[simp]
+theorem intervalRightBits_length
+    (lengthS : List Bool) (modulusBits offset : Nat) :
+    (intervalRightBits lengthS modulusBits offset).length = lengthS.length := by
+  unfold intervalRightBits
+  rw [cuccaroSubBits_length]
+  · simp
+  · simp
+
+/-- The literal left-endpoint restoration word undoes preparation. -/
+theorem restoredIntervalLeftBits_intervalLeftBits
+    (lengthT lengthQ : List Bool) (offset : Nat)
+    (hlength : lengthT.length = lengthQ.length) :
+    restoredIntervalLeftBits lengthT
+      (intervalLeftBits lengthT lengthQ offset) offset = lengthQ := by
+  unfold restoredIntervalLeftBits
+  rw [intervalLeftBits_length _ _ _ hlength]
+  unfold intervalLeftBits
+  rw [cuccaroAddBits_subBits]
+  all_goals simp [hlength, cuccaroAddBits_length]
+
+/-- The literal right-endpoint restoration word undoes preparation. -/
+theorem restoredIntervalRightBits_intervalRightBits
+    (lengthS : List Bool) (modulusBits offset : Nat) :
+    restoredIntervalRightBits
+      (intervalRightBits lengthS modulusBits offset) modulusBits offset = lengthS := by
+  unfold restoredIntervalRightBits
+  rw [intervalRightBits_length]
+  unfold intervalRightBits
+  rw [cuccaroAddBits_subBits]
+  all_goals simp [constMinusBits_involutive]
 
 /-- Literal preparation stream from `lc_interval_addsub_unary_gate`. -/
 def prepareIntervalEndpoints
@@ -704,6 +768,55 @@ theorem restoreIntervalEndpoints_correct
     rw [haddQ.2.2 wire hq]
     change run (addConstant lengthS sScratch carry offset) state wire = state wire
     rw [haddS.2.2 wire hs]
+
+/-- The literal restoration stream reverses preparation on the complete basis state. -/
+theorem run_restoreIntervalEndpoints_after_prepare
+    (lengthT lengthQ lengthS scratch : List Wire) (carry : Wire)
+    (modulusBits offset : Nat) (state : BasisState)
+    (htqLength : lengthT.length = lengthQ.length)
+    (hqWidth : lengthQ.length ≤ scratch.length)
+    (hsWidth : lengthS.length ≤ scratch.length)
+    (hsPositive : 0 < lengthS.length)
+    (hlayout : IntervalEndpointLayout lengthT lengthQ lengthS scratch carry)
+    (hclean : Clean (scratch ++ [carry]) state) :
+    run (restoreIntervalEndpoints lengthT lengthQ lengthS scratch carry
+          modulusBits offset)
+        (run (prepareIntervalEndpoints lengthT lengthQ lengthS scratch carry
+          modulusBits offset) state) = state := by
+  let prepared := run
+    (prepareIntervalEndpoints lengthT lengthQ lengthS scratch carry
+      modulusBits offset) state
+  have hprepare := prepareIntervalEndpoints_correct lengthT lengthQ lengthS
+    scratch carry modulusBits offset state htqLength hqWidth hsWidth hsPositive
+    hlayout hclean
+  let restored := run
+    (restoreIntervalEndpoints lengthT lengthQ lengthS scratch carry
+      modulusBits offset) prepared
+  have hrestore := restoreIntervalEndpoints_correct lengthT lengthQ lengthS
+    scratch carry modulusBits offset prepared htqLength hqWidth hsWidth hsPositive
+    hlayout hprepare.2.2.2.1
+  have ht : wireValues lengthT restored = wireValues lengthT state := by
+    rw [hrestore.1, hprepare.1]
+  have hq : wireValues lengthQ restored = wireValues lengthQ state := by
+    rw [hrestore.2.1, hprepare.1, hprepare.2.1]
+    exact restoredIntervalLeftBits_intervalLeftBits
+      (wireValues lengthT state) (wireValues lengthQ state) offset (by
+        simp [wireValues, htqLength])
+  have hs : wireValues lengthS restored = wireValues lengthS state := by
+    rw [hrestore.2.2.1, hprepare.2.2.1]
+    exact restoredIntervalRightBits_intervalRightBits
+      (wireValues lengthS state) modulusBits offset
+  change restored = state
+  funext wire
+  by_cases hwireQ : wire ∈ lengthQ
+  · exact endpoint_wireValues_eq_at lengthQ restored state hq wire hwireQ
+  · by_cases hwireS : wire ∈ lengthS
+    · exact endpoint_wireValues_eq_at lengthS restored state hs wire hwireS
+    · have houtRestore := hrestore.2.2.2.2 wire hwireQ hwireS
+      have houtPrepare := hprepare.2.2.2.2 wire hwireQ hwireS
+      change restored wire = prepared wire at houtRestore
+      change prepared wire = state wire at houtPrepare
+      exact houtRestore.trans houtPrepare
 
 theorem prepareIntervalEndpoints_usesOnly
     (lengthT lengthQ lengthS scratch : List Wire) (carry : Wire)

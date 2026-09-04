@@ -180,7 +180,7 @@ theorem borrowedXorConstant_HPFree
       by_cases hbit : value.testBit 0 <;>
         simp [borrowedXorConstant, hbit, ih]
 
-private theorem controlledXorConstant_preservesOutside
+theorem controlledXorConstant_preservesOutside
     (control : Wire) (targets : List Wire) (value : Nat)
     (state : BasisState) (wire : Wire) (hwire : wire ∉ targets) :
     run (controlledXorConstant control targets value) state wire = state wire := by
@@ -196,7 +196,7 @@ private theorem controlledXorConstant_preservesOutside
       · rw [controlledXorConstant, if_neg hbit, List.nil_append]
         exact ih (value / 2) state hwire.2
 
-private theorem controlledXorConstant_wellFormed
+theorem controlledXorConstant_wellFormed
     (control : Wire) (targets : List Wire) (value : Nat)
     (hlayout : ∀ target ∈ targets, control ≠ target) :
     CircuitWellFormed (controlledXorConstant control targets value) := by
@@ -277,6 +277,47 @@ def lowBitCount : Nat → Nat → Nat
   | 0, _ => 0
   | width + 1, value =>
       (if value.testBit 0 then 1 else 0) + lowBitCount width (value / 2)
+
+theorem controlledXorConstant_cnotCount
+    (control : Wire) (targets : List Wire) (value : Nat) :
+    eeaCnotCount (controlledXorConstant control targets value) =
+      lowBitCount targets.length value := by
+  induction targets generalizing value with
+  | nil => rfl
+  | cons target targets ih =>
+      by_cases hbit : value.testBit 0
+      · rw [controlledXorConstant, if_pos hbit, eeaCnotCount_append, ih]
+        simp [lowBitCount, hbit, eeaCnotCount]
+      · rw [controlledXorConstant, if_neg hbit]
+        simpa [lowBitCount, hbit] using ih (value / 2)
+
+@[simp]
+theorem controlledXorConstant_toffoliCount
+    (control : Wire) (targets : List Wire) (value : Nat) :
+    eeaToffoliCount (controlledXorConstant control targets value) = 0 := by
+  induction targets generalizing value with
+  | nil => rfl
+  | cons target targets ih =>
+      by_cases hbit : value.testBit 0
+      · rw [controlledXorConstant, if_pos hbit, eeaToffoliCount_append,
+          ih (value / 2)]
+        rfl
+      · rw [controlledXorConstant, if_neg hbit]
+        exact ih (value / 2)
+
+@[simp]
+theorem controlledXorConstant_tCount
+    (control : Wire) (targets : List Wire) (value : Nat) :
+    ShorECDLP.tCount (controlledXorConstant control targets value) = 0 := by
+  induction targets generalizing value with
+  | nil => rfl
+  | cons target targets ih =>
+      by_cases hbit : value.testBit 0
+      · rw [controlledXorConstant, if_pos hbit, tCount_append,
+          ih (value / 2)]
+        rfl
+      · rw [controlledXorConstant, if_neg hbit]
+        exact ih (value / 2)
 
 theorem borrowedXorConstant_cnotCount
     (dirty selector : Wire) (targets : List Wire) (value : Nat) :
@@ -503,29 +544,5 @@ theorem borrowedXorWriter_tCount
   | cons lane lanes ih =>
       simp [borrowedXorWriter, tCount_append,
         borrowedXorConstant_tCount, ih]
-
-/-! ## Exact telescoping values from the supplemental writers -/
-
-/-- Adjacent telescoping delta `Enc(j) XOR Enc(j-1)` for `j > k` in the
-highest-position writer. -/
-def highestPositionAdjacentDelta (j : Nat) : Nat :=
-  (j - 1) ^^^ (j - 2)
-
-/-- Bottom-lane delta `Enc(k) XOR Enc(0)`, where the truth-minus-one zero encoding is the
-all-ones `width`-bit word. -/
-def highestPositionBaseDelta (width k : Nat) : Nat :=
-  (k - 1) ^^^ (2 ^ width - 1)
-
-/-- `Enc(n+4-j) XOR Enc(n+4-(j+1))` for the right-length writer. -/
-def rightLengthDelta (n j : Nat) : Nat :=
-  (n + 3 - j) ^^^ (n + 3 - (j + 1))
-
-/-- Top-lane delta `Enc(length at K) XOR Enc(0)` for the right-length writer. -/
-def rightLengthBaseDelta (n width K : Nat) : Nat :=
-  (n + 3 - K) ^^^ (2 ^ width - 1)
-
-/-- Encoded right length stored for a lowest nonzero one-based position. -/
-def encodedRightLength (n position : Nat) : Nat :=
-  n + 3 - position
 
 end ShorECDLP.Paper2607_13816

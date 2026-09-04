@@ -5,12 +5,13 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-6 paper foundation below
-are on `main@73434f1f8b74d972c4e0a3b43e00570dcde0e46a`. PR #56 → PR #57 → PR #58 → PR #59
-→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 landed the source split, adaptive Kraus semantics,
-coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and the first six concrete circuit units; Phase 5 circuit unit 7 (affine endpoint
-preparation/restoration) is the current implementation unit. A `✓` means a
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-7 paper foundation below
+are on `main@7f4e9cb12a07944689e0ce5ab5bbd7f47af6da6b`. PR #56 → PR #57 → PR #58 → PR #59
+→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
+landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
+measurement-based uncomputation, pure EEA model, indexed EEA bounds/windows, and the first seven
+concrete circuit units. Phase 5 circuit unit 8 (zero maps and complete length blocks) is the current
+implementation unit in PR #69. A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
 
@@ -374,7 +375,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first six dependency-closed construction units are merged. PR #62 contains
+**Status:** the first seven dependency-closed construction units are merged. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -402,20 +403,25 @@ the highest candidate bit downward, pruning empty halves, and emitting a node on
 survive. Its certificates identify `.inc` with the sorted labels and `.dec` with their reverse,
 bound path depth and index-wire positions, and keep the separately handled top bit outside the main
 tree's corresponding index bank, including the singleton-main-tree case. Cross-bank exclusion
-remains a full-register layout obligation. PR #67, the current sixth unit, binds the source-shaped
+remains a full-register layout obligation. PR #67, the sixth unit, binds the source-shaped
 interval arithmetic leaves to the already-certified dual-traversal interface: each label receives
 a caller-supplied `qpair(j)` target/addend lane; the first ripple pass follows `.dec`, the second
 follows `.inc`; label zero is masked
 by the endpoint top bit; and the separately handled top label uses the supplement's direct
 equality-control stream while reusing the ripple cell's clean scratch. The same concrete terms have
 direct basis semantics, cleanup/locality and well-formedness contracts, adaptive coherent
-refinement, and constructor-derived local/traversal resource equations. The current seventh unit
+refinement, and constructor-derived local/traversal resource equations. PR #68, the seventh unit,
 implements the source's reusable uncontrolled increment, literal Cuccaro add/sub streams, clean
 constant add/subtract, `const - x`, and exact interval-endpoint preparation/restoration, with direct
 word semantics, full shared-scratch cleanup, locality, well-formedness, and constructor-derived
-coherent counts. The source-built tree and physical-lane instantiation in a complete interval
-block, upper/lower zero maps, complete length blocks, the inverse aggregate, and the indexed
-four-phase step remain open within Phase 5.
+coherent counts. The eighth unit in this tree implements the literal upper/lower dirty zero maps,
+the grouped write/map/write/map length writers, and both complete affine/write/write/affine length
+blocks. It proves their direct Boolean-word semantics, borrowed-bank and clean-scratch restoration,
+full outside-target locality, physical well-formedness, and constructor-derived Toffoli/CNOT/T
+equations. A separate Boolean-word-to-natural bridge gives the arithmetic meaning and involution
+of the affine word transforms, while the exact endpoint prepare/restore streams now have a full
+basis-state roundtrip theorem. The source-built tree and physical-lane instantiation in a complete
+interval block, the inverse aggregate, and the indexed four-phase step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -615,14 +621,19 @@ They are equal only if Phase 11 proves the required reuse.
   masked-zero main leaves and direct top-special leaves, caller-supplied per-label `qpair(j)` lanes
   in the `.dec`/`.inc` dual scans, shared equality/ripple scratch restoration, basis semantics,
   cleanup/locality, well-formedness, coherent refinement, and constructor-derived local/traversal
-  resource equations. Complete interval-block instantiation, endpoint transforms, zero maps, full
-  length blocks, the inverse aggregate, and indexed step remain open.
-- **Phase-5 circuit unit 7 (current):** source affine endpoint layer: uncontrolled increment,
+  resource equations. Complete interval-block instantiation remained open at that boundary.
+- **PR #68, Phase-5 circuit unit 7:** merged at `7f4e9cb1`; source affine endpoint layer:
+  uncontrolled increment,
   literal Cuccaro add/sub, clean constant add/subtract, `const - x`, and exact endpoint
   preparation/restoration, with direct word semantics, full shared-scratch cleanup, locality,
-  well-formedness, and coherent resource equations. These direct contracts are Boolean-word
-  recurrences; their Nat/mod-`2^w` interpretation and the formal prepare/restore round trip around
-  the traversal remain complete-interval obligations. Zero maps, complete length blocks, the
+  well-formedness, and coherent resource equations. Their Nat/mod-`2^w` interpretation and the
+  formal endpoint round trip remained open at that boundary.
+- **PR #69, Phase-5 circuit unit 8 (current):** Boolean-word-to-natural affine semantics, a full
+  endpoint prepare/restore basis-state round trip, literal upper/lower dirty zero maps, grouped
+  write/map/write/map length writers, and both complete affine/write/write/affine length blocks,
+  with direct semantics, borrowed-bank and scratch restoration, full outside-target locality,
+  physical well-formedness, and exact constructor-derived Toffoli/CNOT/T equations. The
+  source-built tree and physical register/lane instantiation in the complete interval wrapper, the
   inverse aggregate, and the indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
@@ -658,5 +669,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--6 are merged. Phase 5 circuit unit 7 is the current
-implementation unit on that foundation.
+Phases 0--4 and Phase 5 circuit units 1--7 are merged. Phase 5 circuit unit 8 is the current
+implementation unit in PR #69 on that foundation.

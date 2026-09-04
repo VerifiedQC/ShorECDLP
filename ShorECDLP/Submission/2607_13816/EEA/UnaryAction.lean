@@ -51,6 +51,34 @@ def labels : UnaryActionTree → List Nat
   | .leaf label => [label]
   | .node _ zero one => zero.labels ++ one.labels
 
+/-- Leaf labels in the dynamic order selected by the source traversal. -/
+def visitLabels : UnaryOrder → UnaryActionTree → List Nat
+  | _, .leaf label => [label]
+  | .inc, .node _ zero one => visitLabels .inc zero ++ visitLabels .inc one
+  | .dec, .node _ zero one => visitLabels .dec one ++ visitLabels .dec zero
+
+@[simp]
+theorem visitLabels_inc (tree : UnaryActionTree) :
+    tree.visitLabels .inc = tree.labels := by
+  induction tree with
+  | leaf => rfl
+  | node indexBit zero one ihZero ihOne =>
+      simp [visitLabels, labels, ihZero, ihOne]
+
+@[simp]
+theorem visitLabels_dec (tree : UnaryActionTree) :
+    tree.visitLabels .dec = tree.labels.reverse := by
+  induction tree with
+  | leaf => rfl
+  | node indexBit zero one ihZero ihOne =>
+      simp [visitLabels, labels, ihZero, ihOne]
+
+@[simp]
+theorem mem_visitLabels
+    (order : UnaryOrder) (tree : UnaryActionTree) (label : Nat) :
+    label ∈ tree.visitLabels order ↔ label ∈ tree.labels := by
+  cases order <;> simp
+
 /-- Sum a leaf-local resource function over the concrete dynamic controls used by a traversal. -/
 def leafCostSum
     (leafCost : Nat → Wire → Nat) :
@@ -67,6 +95,120 @@ def routeLabel : UnaryActionTree → BasisState → Nat
   | .node indexBit zero one, state =>
       if state indexBit then one.routeLabel state
       else zero.routeLabel state
+
+/-- Gate-independent execution model for a circuit-valued unary traversal.  It records the
+temporary path-bit values explicitly, but replaces each leaf circuit by its supplied classical
+state transformer.  The final update at an internal node is the semantic effect of reversing its
+computed path AND. -/
+def runLeafState
+    (order : UnaryOrder)
+    (leafState : Nat → Wire → BasisState → BasisState) :
+    UnaryActionTree → Wire → List Wire → BasisState → BasisState
+  | .leaf label, control, _, state => leafState label control state
+  | .node indexBit zero one, control, path :: rest, state =>
+      let first := state[path ↦ state control && !state indexBit]
+      match order with
+      | .inc =>
+          let afterZero := zero.runLeafState order leafState path rest first
+          let switched :=
+            afterZero[path ↦ Bool.xor (afterZero path) (afterZero control)]
+          let afterOne := one.runLeafState order leafState path rest switched
+          let switchedBack :=
+            afterOne[path ↦ Bool.xor (afterOne path) (afterOne control)]
+          switchedBack[path ↦ false]
+      | .dec =>
+          let switched :=
+            first[path ↦ Bool.xor (first path) (first control)]
+          let afterOne := one.runLeafState order leafState path rest switched
+          let switchedBack :=
+            afterOne[path ↦ Bool.xor (afterOne path) (afterOne control)]
+          let afterZero := zero.runLeafState order leafState path rest switchedBack
+          afterZero[path ↦ false]
+  | .node _ _ _, _, [], state => state
+
+/-- Gate-independent ordered leaf trace with decoder-path details erased.  `routeState` is frozen:
+its index bits choose the unique active leaf, while every leaf is still visited in source order.
+This is the useful semantic boundary for range scans, whose live accumulator changes at every
+leaf but whose equality pulse is active only on the routed boundary label. -/
+def runLogicalTree
+    (order : UnaryOrder)
+    (leafState : Nat → Bool → BasisState → BasisState) :
+    UnaryActionTree → Bool → BasisState → BasisState → BasisState
+  | .leaf label, active, _, state => leafState label active state
+  | .node indexBit zero one, active, routeState, state =>
+      let zeroActive := active && !routeState indexBit
+      let oneActive := active && routeState indexBit
+      match order with
+      | .inc =>
+          one.runLogicalTree order leafState oneActive routeState
+            (zero.runLogicalTree order leafState zeroActive routeState state)
+      | .dec =>
+          zero.runLogicalTree order leafState zeroActive routeState
+            (one.runLogicalTree order leafState oneActive routeState state)
+
+/-- Ordered labels paired with the Boolean equality pulse carried by their dynamic path wire. -/
+def visitPulses :
+    UnaryOrder → UnaryActionTree → Bool → BasisState → List (Nat × Bool)
+  | _, .leaf label, active, _ => [(label, active)]
+  | .inc, .node indexBit zero one, active, routeState =>
+      zero.visitPulses .inc (active && !routeState indexBit) routeState ++
+        one.visitPulses .inc (active && routeState indexBit) routeState
+  | .dec, .node indexBit zero one, active, routeState =>
+      one.visitPulses .dec (active && routeState indexBit) routeState ++
+        zero.visitPulses .dec (active && !routeState indexBit) routeState
+
+@[simp]
+theorem visitPulses_labels
+    (order : UnaryOrder) (tree : UnaryActionTree)
+    (active : Bool) (routeState : BasisState) :
+    (tree.visitPulses order active routeState).map Prod.fst =
+      tree.visitLabels order := by
+  induction tree generalizing order active with
+  | leaf => rfl
+  | node indexBit zero one ihZero ihOne =>
+      cases order <;>
+        simp [visitPulses, visitLabels, ihZero, ihOne]
+
+@[simp]
+theorem visitPulses_false
+    (order : UnaryOrder) (tree : UnaryActionTree) (routeState : BasisState) :
+    tree.visitPulses order false routeState =
+      (tree.visitLabels order).map fun label => (label, false) := by
+  induction tree generalizing order with
+  | leaf => rfl
+  | node indexBit zero one ihZero ihOne =>
+      cases order <;>
+        simp [visitPulses, visitLabels, ihZero, ihOne]
+
+private theorem map_routePulse_false_of_not_mem
+    (labels : List Nat) (route : Nat) (hroute : route ∉ labels) :
+    labels.map (fun label => (label, decide (label = route))) =
+      labels.map (fun label => (label, false)) := by
+  induction labels with
+  | nil => rfl
+  | cons label labels ih =>
+      simp only [List.mem_cons, not_or] at hroute
+      simp [Ne.symm hroute.1, ih hroute.2]
+
+/-- The decoder-erased recursion is exactly a left fold over its ordered leaf/pulse trace. -/
+theorem runLogicalTree_eq_foldl
+    (order : UnaryOrder)
+    (leafState : Nat → Bool → BasisState → BasisState)
+    (tree : UnaryActionTree) (active : Bool)
+    (routeState state : BasisState) :
+    tree.runLogicalTree order leafState active routeState state =
+      (tree.visitPulses order active routeState).foldl
+        (fun current pulse => leafState pulse.1 pulse.2 current) state := by
+  induction tree generalizing order active state with
+  | leaf => rfl
+  | node indexBit zero one ihZero ihOne =>
+      cases order with
+      | inc =>
+          simp only [runLogicalTree, visitPulses, List.foldl_append]
+          rw [← ihZero, ← ihOne]
+      | dec =>
+          simp only [runLogicalTree, visitPulses, List.foldl_append]
+          rw [← ihOne, ← ihZero]
 
 theorem routeLabel_mem_labels (tree : UnaryActionTree) (state : BasisState) :
     tree.routeLabel state ∈ tree.labels := by
@@ -98,6 +240,81 @@ theorem routeLabel_congr
       · exact ihOne hone
       · exact ihZero hzero
 
+/-- With duplicate-free labels, the pulse trace is true exactly at the routed leaf. -/
+theorem visitPulses_eq_route
+    (order : UnaryOrder) (tree : UnaryActionTree)
+    (active : Bool) (routeState : BasisState)
+    (hnodup : tree.labels.Nodup) :
+    tree.visitPulses order active routeState =
+      (tree.visitLabels order).map fun label =>
+        (label, active && decide (label = tree.routeLabel routeState)) := by
+  induction tree generalizing order active with
+  | leaf label =>
+      cases active <;> simp [visitPulses, visitLabels, routeLabel]
+  | node indexBit zero one ihZero ihOne =>
+      simp only [labels, List.nodup_append] at hnodup
+      obtain ⟨hzeroNodup, honeNodup, hcross⟩ := hnodup
+      cases active with
+      | false => simp [visitPulses_false]
+      | true =>
+          cases hbit : routeState indexBit with
+          | false =>
+              have hrmem : zero.routeLabel routeState ∈ zero.labels :=
+                routeLabel_mem_labels zero routeState
+              have hrnot : zero.routeLabel routeState ∉ one.labels := by
+                intro hone
+                exact hcross (zero.routeLabel routeState) hrmem
+                  (zero.routeLabel routeState) hone rfl
+              cases order with
+              | inc =>
+                  have hrnotVisit :
+                      zero.routeLabel routeState ∉ one.visitLabels .inc := by
+                    simpa using hrnot
+                  simp only [visitPulses, hbit, Bool.not_false, Bool.and_true,
+                    Bool.and_false, ihZero .inc true hzeroNodup,
+                    visitPulses_false, Bool.true_and]
+                  rw [← map_routePulse_false_of_not_mem
+                    (one.visitLabels .inc) (zero.routeLabel routeState) hrnotVisit]
+                  simp [visitLabels, routeLabel, hbit]
+              | dec =>
+                  have hrnotVisit :
+                      zero.routeLabel routeState ∉ one.visitLabels .dec := by
+                    simpa using hrnot
+                  simp only [visitPulses, hbit, Bool.not_false, Bool.and_true,
+                    Bool.and_false, ihZero .dec true hzeroNodup,
+                    visitPulses_false, Bool.true_and]
+                  rw [← map_routePulse_false_of_not_mem
+                    (one.visitLabels .dec) (zero.routeLabel routeState) hrnotVisit]
+                  simp [visitLabels, routeLabel, hbit]
+          | true =>
+              have hrmem : one.routeLabel routeState ∈ one.labels :=
+                routeLabel_mem_labels one routeState
+              have hrnot : one.routeLabel routeState ∉ zero.labels := by
+                intro hzero
+                exact hcross (one.routeLabel routeState) hzero
+                  (one.routeLabel routeState) hrmem rfl
+              cases order with
+              | inc =>
+                  have hrnotVisit :
+                      one.routeLabel routeState ∉ zero.visitLabels .inc := by
+                    simpa using hrnot
+                  simp only [visitPulses, hbit, Bool.not_true, Bool.and_false,
+                    Bool.and_true, visitPulses_false,
+                    ihOne .inc true honeNodup, Bool.true_and]
+                  rw [← map_routePulse_false_of_not_mem
+                    (zero.visitLabels .inc) (one.routeLabel routeState) hrnotVisit]
+                  simp [visitLabels, routeLabel, hbit]
+              | dec =>
+                  have hrnotVisit :
+                      one.routeLabel routeState ∉ zero.visitLabels .dec := by
+                    simpa using hrnot
+                  simp only [visitPulses, hbit, Bool.not_true, Bool.and_false,
+                    Bool.and_true, visitPulses_false,
+                    ihOne .dec true honeNodup, Bool.true_and]
+                  rw [← map_routePulse_false_of_not_mem
+                    (zero.visitLabels .dec) (one.routeLabel routeState) hrnotVisit]
+                  simp [visitLabels, routeLabel, hbit]
+
 /-- Decoder layout.  All index roles and the reusable path stack are distinct from the current
 control.  Index wires may occur at several tree nodes, hence the deduplication. -/
 inductive Layout : UnaryActionTree → Wire → List Wire → Prop where
@@ -116,7 +333,88 @@ inductive Layout : UnaryActionTree → Wire → List Wire → Prop where
       (hone : Layout one path rest) :
       Layout (.node indexBit zero one) control (path :: rest)
 
+theorem Layout.control_not_mem_ancillas
+    {tree : UnaryActionTree} {control : Wire} {ancillas : List Wire}
+    (hlayout : tree.Layout control ancillas) :
+    control ∉ ancillas := by
+  cases hlayout with
+  | leaf label control ancillas hlocal =>
+      exact (List.nodup_cons.mp hlocal).1
+  | node indexBit control path zero one rest hlocal hzero hone =>
+      simp only [List.nodup_cons] at hlocal
+      exact fun hmem => hlocal.1 (by simp [hmem])
+
 end UnaryActionTree
+
+/-- Two basis states agree away from a named decoder interface. -/
+def AgreesOutside (protectedWires : List Wire)
+    (left right : BasisState) : Prop :=
+  ∀ wire, wire ∉ protectedWires → left wire = right wire
+
+/-- A logical leaf trace does not change the erased decoder interface. -/
+def LogicalLeafPreserves
+    (leafState : Nat → Bool → BasisState → BasisState)
+    (protectedWires : List Wire) : Prop :=
+  ∀ label active state wire, wire ∈ protectedWires →
+    leafState label active state wire = state wire
+
+/-- A logical leaf trace cannot observe changes confined to the erased decoder interface, provided
+the caller-supplied stable root control still agrees.  The extra equality is needed by source
+leaves which read the external root control as data while ignoring transient decoder-path wires. -/
+def LogicalLeafRespectsOutside
+    (leafState : Nat → Bool → BasisState → BasisState)
+    (protectedWires : List Wire) (stableRoot : Wire) : Prop :=
+  ∀ label active left right, AgreesOutside protectedWires left right →
+    left stableRoot = right stableRoot →
+    AgreesOutside protectedWires
+      (leafState label active left) (leafState label active right)
+
+/-- The physical leaf state uses its dynamic path wire only through that wire's Boolean value. -/
+def UnaryLeafRunsLogically
+    (leafState : Nat → Wire → BasisState → BasisState)
+    (logicalLeafState : Nat → Bool → BasisState → BasisState)
+    (protectedWires : List Wire) : Prop :=
+  ∀ label control, control ∈ protectedWires → ∀ state,
+    leafState label control state =
+      logicalLeafState label (state control) state
+
+private theorem AgreesOutside.updateLeft
+    {protectedWires : List Wire} {left right : BasisState}
+    (h : AgreesOutside protectedWires left right)
+    (wire : Wire) (value : Bool) (hwire : wire ∈ protectedWires) :
+    AgreesOutside protectedWires (left[wire ↦ value]) right := by
+  intro other hother
+  rw [upd_other left wire value (by
+    intro equality
+    subst other
+    exact hother hwire)]
+  exact h other hother
+
+/-- Logical source-order execution preserves the declared decoder interface. -/
+theorem UnaryActionTree.runLogicalTree_preserves
+    (order : UnaryOrder)
+    (leafState : Nat → Bool → BasisState → BasisState)
+    (tree : UnaryActionTree) (active : Bool)
+    (routeState state : BasisState) (protectedWires : List Wire)
+    (hleaf : LogicalLeafPreserves leafState protectedWires) :
+    ∀ wire, wire ∈ protectedWires →
+      tree.runLogicalTree order leafState active routeState state wire =
+        state wire := by
+  induction tree generalizing active state with
+  | leaf label =>
+      intro wire hwire
+      exact hleaf label active state wire hwire
+  | node indexBit zero one ihZero ihOne =>
+      intro wire hwire
+      cases order with
+      | inc =>
+          rw [UnaryActionTree.runLogicalTree,
+            ihOne (active && routeState indexBit) _ wire hwire,
+            ihZero (active && !routeState indexBit) state wire hwire]
+      | dec =>
+          rw [UnaryActionTree.runLogicalTree,
+            ihZero (active && !routeState indexBit) _ wire hwire,
+            ihOne (active && routeState indexBit) state wire hwire]
 
 /-- Coherent reference: every path AND is reversed with its ordinary Toffoli circuit. -/
 def unaryActionUnitary
@@ -185,6 +483,13 @@ def UnaryLeafWellFormed
   ∀ label ∈ tree.labels, ∀ control ∈ protectedWires,
     CircuitWellFormed (leafAction label control)
 
+/-- Direct classical meaning of every circuit-valued leaf. -/
+def UnaryLeafRunsAs
+    (leafAction : Nat → Wire → Circuit)
+    (leafState : Nat → Wire → BasisState → BasisState) : Prop :=
+  ∀ label control state,
+    Classical.run (leafAction label control) state = leafState label control state
+
 private theorem unaryActionNode_parts
     (indexBit control path : Wire) (zero one : UnaryActionTree)
     (rest : List Wire)
@@ -216,6 +521,20 @@ private theorem unaryActionNode_parts
   have hip : indexBit ≠ path :=
     hcross indexBit hindexMem path (by simp)
   exact ⟨hci, hcp, hip, (List.nodup_cons.mp hancillas).1⟩
+
+private theorem unaryActionNode_index_ne_path
+    (indexBit control path : Wire) (zero one : UnaryActionTree)
+    (rest : List Wire)
+    (hlocal :
+      (control ::
+        ((UnaryActionTree.node indexBit zero one).indexWires.dedup ++
+          (path :: rest))).Nodup) :
+    ∀ wire, wire ∈ (UnaryActionTree.node indexBit zero one).indexWires →
+      wire ≠ path := by
+  intro wire hwire
+  have htail := (List.nodup_cons.mp hlocal).2
+  obtain ⟨_, _, hcross⟩ := List.nodup_append.mp htail
+  exact hcross wire (List.mem_dedup.mpr hwire) path (by simp)
 
 private theorem actionTree_indices_subset_node
     (indexBit : Wire) (zero one : UnaryActionTree) :
@@ -459,6 +778,581 @@ private theorem unaryActionUnitary_preservesProtected
             simp only [Classical.applyGate]
             rw [upd_other first path _ hwp, hfirst,
               upd_other state path _ hwp]
+
+/-- A unary traversal preserves any caller-declared protected interface that contains its
+decoder roles, provided every leaf preserves that same interface.  This strengthened form is
+used by source range scans whose leaf actions also share a live accumulator. -/
+theorem unaryActionUnitary_preserves
+    (order : UnaryOrder) (leafAction : Nat → Wire → Circuit)
+    (tree : UnaryActionTree) (control : Wire)
+    (ancillas protectedWires : List Wire)
+    (state : BasisState)
+    (hlayout : tree.Layout control ancillas)
+    (hleaf : UnaryLeafPreserves leafAction protectedWires)
+    (hroles : ∀ wire,
+      wire ∈ control :: tree.indexWires.dedup ++ ancillas →
+        wire ∈ protectedWires)
+    (hclean : Clean ancillas state) :
+    ∀ wire, wire ∈ protectedWires →
+      run (unaryActionUnitary order leafAction tree control ancillas) state wire =
+        state wire :=
+  unaryActionUnitary_preservesProtected order leafAction tree control ancillas
+    protectedWires state hlayout hleaf hroles hclean
+
+/-- Direct whole-state semantics of the coherent circuit-valued traversal.  The theorem exposes
+the exact ordered leaf-state execution while proving, rather than assuming, that every temporary
+path AND is restored. -/
+theorem run_unaryActionUnitary_as_runLeafState
+    (order : UnaryOrder)
+    (leafAction : Nat → Wire → Circuit)
+    (leafState : Nat → Wire → BasisState → BasisState)
+    (tree : UnaryActionTree) (control : Wire)
+    (ancillas protectedWires : List Wire)
+    (state : BasisState)
+    (hlayout : tree.Layout control ancillas)
+    (hruns : UnaryLeafRunsAs leafAction leafState)
+    (hleaf : UnaryLeafPreserves leafAction protectedWires)
+    (hroles : ∀ wire,
+      wire ∈ control :: tree.indexWires.dedup ++ ancillas →
+        wire ∈ protectedWires)
+    (hclean : Clean ancillas state) :
+    run (unaryActionUnitary order leafAction tree control ancillas) state =
+      tree.runLeafState order leafState control ancillas state := by
+  induction hlayout generalizing state with
+  | leaf label control ancillas hlocal =>
+      exact hruns label control state
+  | node indexBit control path zero one rest hlocal hzero hone ihZero ihOne =>
+      obtain ⟨hci, hcp, hip, hpathRest⟩ :=
+        unaryActionNode_parts indexBit control path zero one rest hlocal
+      have hpathFalse : state path = false := hclean path (by simp)
+      have hrestClean : Clean rest state := by
+        intro wire hwire
+        exact hclean wire (by simp [hwire])
+      let first := run (computeZeroAnd control indexBit path) state
+      have hfirst : first =
+          state[path ↦ state control && !state indexBit] := by
+        simpa only [first] using run_computeZeroAnd control indexBit path state
+          hci hcp hip hpathFalse
+      have hrestCleanFirst : Clean rest first := by
+        rw [hfirst]
+        intro wire hwire
+        rw [upd_other state path _ (by
+          intro equality
+          subst wire
+          exact hpathRest hwire)]
+        exact hrestClean wire hwire
+      have hzeroRoles : ∀ wire,
+          wire ∈ path :: zero.indexWires.dedup ++ rest →
+            wire ∈ protectedWires := by
+        intro wire hwire
+        exact hroles wire
+          (actionTree_zero_decoder_subset indexBit control path zero one rest
+            wire hwire)
+      have honeRoles : ∀ wire,
+          wire ∈ path :: one.indexWires.dedup ++ rest →
+            wire ∈ protectedWires := by
+        intro wire hwire
+        exact hroles wire
+          (actionTree_one_decoder_subset indexBit control path zero one rest
+            wire hwire)
+      cases order with
+      | inc =>
+          let afterZero :=
+            run (unaryActionUnitary .inc leafAction zero path rest) first
+          have hzeroState : afterZero =
+              zero.runLeafState .inc leafState path rest first := by
+            exact ihZero first hzeroRoles hrestCleanFirst
+          have hzeroPreserves : ∀ wire, wire ∈ protectedWires →
+              afterZero wire = first wire := by
+            intro wire hwire
+            exact unaryActionUnitary_preserves .inc leafAction zero path rest
+              protectedWires first hzero hleaf hzeroRoles hrestCleanFirst wire hwire
+          have hrestCleanAfterZero : Clean rest afterZero := by
+            intro wire hwire
+            rw [hzeroPreserves wire (hzeroRoles wire (by simp [hwire]))]
+            exact hrestCleanFirst wire hwire
+          let switched := applyGate (.CX control path) afterZero
+          have hrestCleanSwitched : Clean rest switched := by
+            intro wire hwire
+            have hwp : wire ≠ path := by
+              intro equality
+              subst wire
+              exact hpathRest hwire
+            change afterZero[path ↦ Bool.xor (afterZero path) (afterZero control)] wire = false
+            rw [upd_other afterZero path _ hwp]
+            exact hrestCleanAfterZero wire hwire
+          let afterOne :=
+            run (unaryActionUnitary .inc leafAction one path rest) switched
+          have honeState : afterOne =
+              one.runLeafState .inc leafState path rest switched := by
+            exact ihOne switched honeRoles hrestCleanSwitched
+          have honePreserves : ∀ wire, wire ∈ protectedWires →
+              afterOne wire = switched wire := by
+            intro wire hwire
+            exact unaryActionUnitary_preserves .inc leafAction one path rest
+              protectedWires switched hone hleaf honeRoles hrestCleanSwitched wire hwire
+          let switchedBack := applyGate (.CX control path) afterOne
+          have hready : ZeroAndComputed control indexBit path switchedBack := by
+            unfold ZeroAndComputed
+            have hcMem : control ∈ protectedWires := hroles control (by simp)
+            have hiMem : indexBit ∈ protectedWires := hroles indexBit (by
+              simp [UnaryActionTree.indexWires])
+            have hpMem : path ∈ protectedWires := hroles path (by simp)
+            simp only [switchedBack, Classical.applyGate]
+            simp only [upd_same, upd_other afterOne path _ hcp,
+              upd_other afterOne path _ hip]
+            rw [honePreserves control hcMem, honePreserves indexBit hiMem,
+              honePreserves path hpMem]
+            simp only [switched, Classical.applyGate]
+            simp only [upd_same, upd_other afterZero path _ hcp,
+              upd_other afterZero path _ hip]
+            rw [hzeroPreserves control hcMem, hzeroPreserves indexBit hiMem,
+              hzeroPreserves path hpMem]
+            simp [hfirst, upd, hcp, hip]
+          have hcleanup := run_computeZeroAnd_of_computed
+            control indexBit path switchedBack hci hcp hip hready
+          rw [unaryActionUnitary, Classical.run_append, Classical.run_append,
+            Classical.run_append, Classical.run_append, Classical.run_append]
+          change run (computeZeroAnd control indexBit path) switchedBack = _
+          rw [hcleanup]
+          simp only [UnaryActionTree.runLeafState]
+          simp only [switchedBack, Classical.applyGate, honeState, switched,
+            hzeroState, hfirst]
+      | dec =>
+          let switched := applyGate (.CX control path) first
+          have hrestCleanSwitched : Clean rest switched := by
+            intro wire hwire
+            have hwp : wire ≠ path := by
+              intro equality
+              subst wire
+              exact hpathRest hwire
+            change first[path ↦ Bool.xor (first path) (first control)] wire = false
+            rw [upd_other first path _ hwp]
+            exact hrestCleanFirst wire hwire
+          let afterOne :=
+            run (unaryActionUnitary .dec leafAction one path rest) switched
+          have honeState : afterOne =
+              one.runLeafState .dec leafState path rest switched := by
+            exact ihOne switched honeRoles hrestCleanSwitched
+          have honePreserves : ∀ wire, wire ∈ protectedWires →
+              afterOne wire = switched wire := by
+            intro wire hwire
+            exact unaryActionUnitary_preserves .dec leafAction one path rest
+              protectedWires switched hone hleaf honeRoles hrestCleanSwitched wire hwire
+          have hrestCleanAfterOne : Clean rest afterOne := by
+            intro wire hwire
+            rw [honePreserves wire (honeRoles wire (by simp [hwire]))]
+            exact hrestCleanSwitched wire hwire
+          let switchedBack := applyGate (.CX control path) afterOne
+          have hrestCleanSwitchedBack : Clean rest switchedBack := by
+            intro wire hwire
+            have hwp : wire ≠ path := by
+              intro equality
+              subst wire
+              exact hpathRest hwire
+            change afterOne[path ↦ Bool.xor (afterOne path) (afterOne control)] wire = false
+            rw [upd_other afterOne path _ hwp]
+            exact hrestCleanAfterOne wire hwire
+          let afterZero :=
+            run (unaryActionUnitary .dec leafAction zero path rest) switchedBack
+          have hzeroState : afterZero =
+              zero.runLeafState .dec leafState path rest switchedBack := by
+            exact ihZero switchedBack hzeroRoles hrestCleanSwitchedBack
+          have hzeroPreserves : ∀ wire, wire ∈ protectedWires →
+              afterZero wire = switchedBack wire := by
+            intro wire hwire
+            exact unaryActionUnitary_preserves .dec leafAction zero path rest
+              protectedWires switchedBack hzero hleaf hzeroRoles
+                hrestCleanSwitchedBack wire hwire
+          have hready : ZeroAndComputed control indexBit path afterZero := by
+            unfold ZeroAndComputed
+            have hcMem : control ∈ protectedWires := hroles control (by simp)
+            have hiMem : indexBit ∈ protectedWires := hroles indexBit (by
+              simp [UnaryActionTree.indexWires])
+            have hpMem : path ∈ protectedWires := hroles path (by simp)
+            rw [hzeroPreserves control hcMem, hzeroPreserves indexBit hiMem,
+              hzeroPreserves path hpMem]
+            simp only [switchedBack, Classical.applyGate]
+            simp only [upd_same, upd_other afterOne path _ hcp,
+              upd_other afterOne path _ hip]
+            rw [honePreserves control hcMem, honePreserves indexBit hiMem,
+              honePreserves path hpMem]
+            simp only [switched, Classical.applyGate]
+            simp [hfirst, upd, hcp, hip]
+          have hcleanup := run_computeZeroAnd_of_computed
+            control indexBit path afterZero hci hcp hip hready
+          rw [unaryActionUnitary, Classical.run_append, Classical.run_append,
+            Classical.run_append, Classical.run_append, Classical.run_append]
+          change run (computeZeroAnd control indexBit path) afterZero = _
+          rw [hcleanup]
+          simp only [UnaryActionTree.runLeafState]
+          simp only [hzeroState, switchedBack, Classical.applyGate, honeState,
+            switched, hfirst]
+
+private theorem runLeafState_agreesOutside_runLogicalTree
+    (order : UnaryOrder)
+    (leafAction : Nat → Wire → Circuit)
+    (leafState : Nat → Wire → BasisState → BasisState)
+    (logicalLeafState : Nat → Bool → BasisState → BasisState)
+    (tree : UnaryActionTree) (control stableRoot : Wire)
+    (ancillas protectedWires : List Wire)
+    (state routeState logicalState : BasisState) (active : Bool)
+    (hlayout : tree.Layout control ancillas)
+    (hruns : UnaryLeafRunsAs leafAction leafState)
+    (hlogical : UnaryLeafRunsLogically leafState logicalLeafState protectedWires)
+    (hleaf : UnaryLeafPreserves leafAction protectedWires)
+    (hlogicalPreserves : LogicalLeafPreserves logicalLeafState protectedWires)
+    (hlogicalOutside :
+      LogicalLeafRespectsOutside logicalLeafState protectedWires stableRoot)
+    (hroles : ∀ wire,
+      wire ∈ control :: tree.indexWires.dedup ++ ancillas →
+        wire ∈ protectedWires)
+    (houtside : AgreesOutside protectedWires state logicalState)
+    (hstableProtected : stableRoot ∈ protectedWires)
+    (hstableAncillas : stableRoot ∉ ancillas)
+    (hstable : state stableRoot = logicalState stableRoot)
+    (hcontrol : state control = active)
+    (hroute : ∀ wire, wire ∈ tree.indexWires →
+      state wire = routeState wire)
+    (hclean : Clean ancillas state) :
+    AgreesOutside protectedWires
+      (tree.runLeafState order leafState control ancillas state)
+      (tree.runLogicalTree order logicalLeafState active routeState logicalState) := by
+  induction hlayout generalizing state logicalState active with
+  | leaf label control ancillas hlocal =>
+      rw [UnaryActionTree.runLeafState, UnaryActionTree.runLogicalTree,
+        hlogical label control (hroles control (by simp)) state, hcontrol]
+      exact hlogicalOutside label active state logicalState houtside hstable
+  | node indexBit control path zero one rest hlocal hzero hone ihZero ihOne =>
+      obtain ⟨hci, hcp, hip, hpathRest⟩ :=
+        unaryActionNode_parts indexBit control path zero one rest hlocal
+      have hindexPath :=
+        unaryActionNode_index_ne_path indexBit control path zero one rest hlocal
+      have hpathProtected : path ∈ protectedWires := hroles path (by simp)
+      have hcontrolProtected : control ∈ protectedWires := hroles control (by simp)
+      have hindexProtected : indexBit ∈ protectedWires := hroles indexBit (by
+        simp [UnaryActionTree.indexWires])
+      have hstablePath : stableRoot ≠ path := by
+        intro equality
+        subst stableRoot
+        exact hstableAncillas (by simp)
+      have hstableRest : stableRoot ∉ rest := by
+        intro hmem
+        exact hstableAncillas (by simp [hmem])
+      have hzeroRoles : ∀ wire,
+          wire ∈ path :: zero.indexWires.dedup ++ rest →
+            wire ∈ protectedWires := by
+        intro wire hwire
+        exact hroles wire
+          (actionTree_zero_decoder_subset indexBit control path zero one rest
+            wire hwire)
+      have honeRoles : ∀ wire,
+          wire ∈ path :: one.indexWires.dedup ++ rest →
+            wire ∈ protectedWires := by
+        intro wire hwire
+        exact hroles wire
+          (actionTree_one_decoder_subset indexBit control path zero one rest
+            wire hwire)
+      let zeroActive := active && !routeState indexBit
+      let oneActive := active && routeState indexBit
+      let first := state[path ↦ state control && !state indexBit]
+      have hfirstOutside : AgreesOutside protectedWires first logicalState :=
+        houtside.updateLeft path _ hpathProtected
+      have hfirstStable : first stableRoot = logicalState stableRoot := by
+        simp only [first]
+        rw [upd_other state path _ hstablePath]
+        exact hstable
+      have hfirstClean : Clean rest first := by
+        intro wire hwire
+        simp only [first]
+        rw [upd_other state path _ (by
+          intro equality
+          subst wire
+          exact hpathRest hwire)]
+        exact hclean wire (by simp [hwire])
+      have hfirstPath : first path = zeroActive := by
+        simp only [first]
+        rw [upd_same, hcontrol,
+          hroute indexBit (by simp [UnaryActionTree.indexWires])]
+      have hfirstRoute : ∀ wire,
+          wire ∈ (UnaryActionTree.node indexBit zero one).indexWires →
+            first wire = routeState wire := by
+        intro wire hwire
+        simp only [first]
+        rw [upd_other state path _ (hindexPath wire hwire)]
+        exact hroute wire hwire
+      have hzeroRoute : ∀ wire, wire ∈ zero.indexWires →
+          first wire = routeState wire := by
+        intro wire hwire
+        exact hfirstRoute wire
+          (actionTree_indices_subset_node indexBit zero one wire hwire)
+      have honeRouteFirst : ∀ wire, wire ∈ one.indexWires →
+          first wire = routeState wire := by
+        intro wire hwire
+        exact hfirstRoute wire
+          (actionTree_one_indices_subset_node indexBit zero one wire hwire)
+      cases order with
+      | inc =>
+          let afterZero :=
+            zero.runLeafState .inc leafState path rest first
+          let logicalAfterZero :=
+            zero.runLogicalTree .inc logicalLeafState zeroActive routeState logicalState
+          have hzeroOutside :
+              AgreesOutside protectedWires afterZero logicalAfterZero := by
+            simpa only [afterZero, logicalAfterZero] using
+              ihZero first logicalState zeroActive hzeroRoles hfirstOutside
+                hstableRest hfirstStable hfirstPath hzeroRoute hfirstClean
+          have hzeroRun :
+              Classical.run
+                  (unaryActionUnitary .inc leafAction zero path rest) first =
+                afterZero := by
+            simpa only [afterZero] using
+              run_unaryActionUnitary_as_runLeafState .inc leafAction leafState
+                zero path rest protectedWires first hzero hruns hleaf
+                hzeroRoles hfirstClean
+          have hzeroPreserves : ∀ wire, wire ∈ protectedWires →
+              afterZero wire = first wire := by
+            intro wire hwire
+            rw [← hzeroRun]
+            exact unaryActionUnitary_preserves .inc leafAction zero path rest
+              protectedWires first hzero hleaf hzeroRoles hfirstClean wire hwire
+          have hlogicalZeroPreserves :
+              logicalAfterZero stableRoot = logicalState stableRoot := by
+            exact zero.runLogicalTree_preserves .inc logicalLeafState zeroActive
+              routeState logicalState protectedWires hlogicalPreserves
+                stableRoot hstableProtected
+          let switched :=
+            afterZero[path ↦ Bool.xor (afterZero path) (afterZero control)]
+          have hswitchedOutside :
+              AgreesOutside protectedWires switched logicalAfterZero :=
+            hzeroOutside.updateLeft path _ hpathProtected
+          have hswitchedStable :
+              switched stableRoot = logicalAfterZero stableRoot := by
+            simp only [switched]
+            rw [upd_other afterZero path _ hstablePath,
+              hzeroPreserves stableRoot hstableProtected,
+              hfirstStable, hlogicalZeroPreserves]
+          have hswitchedClean : Clean rest switched := by
+            intro wire hwire
+            simp only [switched]
+            rw [upd_other afterZero path _ (by
+              intro equality
+              subst wire
+              exact hpathRest hwire),
+              hzeroPreserves wire (hzeroRoles wire (by simp [hwire]))]
+            exact hfirstClean wire hwire
+          have hswitchedPath : switched path = oneActive := by
+            simp only [switched]
+            rw [upd_same,
+              hzeroPreserves path hpathProtected,
+              hzeroPreserves control hcontrolProtected,
+              hfirstPath]
+            simp only [first]
+            rw [upd_other state path _ hcp, hcontrol]
+            simp only [zeroActive, oneActive]
+            cases active <;> cases routeState indexBit <;> rfl
+          have honeRoute : ∀ wire, wire ∈ one.indexWires →
+              switched wire = routeState wire := by
+            intro wire hwire
+            have hparent :=
+              actionTree_one_indices_subset_node indexBit zero one wire hwire
+            simp only [switched]
+            rw [upd_other afterZero path _ (hindexPath wire hparent),
+              hzeroPreserves wire (hroles wire (by
+                simp [UnaryActionTree.indexWires, hwire])),
+              honeRouteFirst wire hwire]
+          let afterOne :=
+            one.runLeafState .inc leafState path rest switched
+          let logicalAfterOne :=
+            one.runLogicalTree .inc logicalLeafState oneActive routeState logicalAfterZero
+          have honeOutside :
+              AgreesOutside protectedWires afterOne logicalAfterOne := by
+            simpa only [afterOne, logicalAfterOne] using
+              ihOne switched logicalAfterZero oneActive honeRoles hswitchedOutside
+                hstableRest hswitchedStable hswitchedPath honeRoute
+                hswitchedClean
+          let switchedBack :=
+            afterOne[path ↦ Bool.xor (afterOne path) (afterOne control)]
+          have hbackOutside :
+              AgreesOutside protectedWires switchedBack logicalAfterOne :=
+            honeOutside.updateLeft path _ hpathProtected
+          have hfinalOutside :
+              AgreesOutside protectedWires
+                (switchedBack[path ↦ false]) logicalAfterOne :=
+            hbackOutside.updateLeft path false hpathProtected
+          simpa only [UnaryActionTree.runLeafState,
+            UnaryActionTree.runLogicalTree, zeroActive, oneActive,
+            first, afterZero, logicalAfterZero, switched,
+            afterOne, logicalAfterOne, switchedBack] using hfinalOutside
+      | dec =>
+          let switched :=
+            first[path ↦ Bool.xor (first path) (first control)]
+          have hswitchedOutside :
+              AgreesOutside protectedWires switched logicalState :=
+            hfirstOutside.updateLeft path _ hpathProtected
+          have hswitchedStable : switched stableRoot = logicalState stableRoot := by
+            simp only [switched]
+            rw [upd_other first path _ hstablePath]
+            exact hfirstStable
+          have hswitchedClean : Clean rest switched := by
+            intro wire hwire
+            simp only [switched]
+            rw [upd_other first path _ (by
+              intro equality
+              subst wire
+              exact hpathRest hwire)]
+            exact hfirstClean wire hwire
+          have hswitchedPath : switched path = oneActive := by
+            simp only [switched]
+            rw [upd_same, hfirstPath]
+            simp only [first]
+            rw [upd_other state path _ hcp, hcontrol]
+            simp only [zeroActive, oneActive]
+            cases active <;> cases routeState indexBit <;> rfl
+          have honeRoute : ∀ wire, wire ∈ one.indexWires →
+              switched wire = routeState wire := by
+            intro wire hwire
+            have hparent :=
+              actionTree_one_indices_subset_node indexBit zero one wire hwire
+            simp only [switched]
+            rw [upd_other first path _ (hindexPath wire hparent),
+              honeRouteFirst wire hwire]
+          let afterOne :=
+            one.runLeafState .dec leafState path rest switched
+          let logicalAfterOne :=
+            one.runLogicalTree .dec logicalLeafState oneActive routeState logicalState
+          have honeOutside :
+              AgreesOutside protectedWires afterOne logicalAfterOne := by
+            simpa only [afterOne, logicalAfterOne] using
+              ihOne switched logicalState oneActive honeRoles hswitchedOutside
+                hstableRest hswitchedStable hswitchedPath honeRoute
+                hswitchedClean
+          have honeRun :
+              Classical.run
+                  (unaryActionUnitary .dec leafAction one path rest) switched =
+                afterOne := by
+            simpa only [afterOne] using
+              run_unaryActionUnitary_as_runLeafState .dec leafAction leafState
+                one path rest protectedWires switched hone hruns hleaf
+                honeRoles hswitchedClean
+          have honePreserves : ∀ wire, wire ∈ protectedWires →
+              afterOne wire = switched wire := by
+            intro wire hwire
+            rw [← honeRun]
+            exact unaryActionUnitary_preserves .dec leafAction one path rest
+              protectedWires switched hone hleaf honeRoles hswitchedClean wire hwire
+          have hlogicalOnePreserves :
+              logicalAfterOne stableRoot = logicalState stableRoot := by
+            exact one.runLogicalTree_preserves .dec logicalLeafState oneActive
+              routeState logicalState protectedWires hlogicalPreserves
+                stableRoot hstableProtected
+          let switchedBack :=
+            afterOne[path ↦ Bool.xor (afterOne path) (afterOne control)]
+          have hbackOutside :
+              AgreesOutside protectedWires switchedBack logicalAfterOne :=
+            honeOutside.updateLeft path _ hpathProtected
+          have hbackStable :
+              switchedBack stableRoot = logicalAfterOne stableRoot := by
+            simp only [switchedBack]
+            rw [upd_other afterOne path _ hstablePath,
+              honePreserves stableRoot hstableProtected,
+              hswitchedStable, hlogicalOnePreserves]
+          have hbackClean : Clean rest switchedBack := by
+            intro wire hwire
+            simp only [switchedBack]
+            rw [upd_other afterOne path _ (by
+              intro equality
+              subst wire
+              exact hpathRest hwire),
+              honePreserves wire (honeRoles wire (by simp [hwire]))]
+            exact hswitchedClean wire hwire
+          have hbackPath : switchedBack path = zeroActive := by
+            simp only [switchedBack]
+            rw [upd_same,
+              honePreserves path hpathProtected,
+              honePreserves control hcontrolProtected,
+              hswitchedPath]
+            simp only [switched]
+            rw [upd_other first path _ hcp]
+            simp only [first]
+            rw [upd_other state path _ hcp, hcontrol]
+            simp only [zeroActive, oneActive]
+            cases active <;> cases routeState indexBit <;> rfl
+          have hzeroRouteBack : ∀ wire, wire ∈ zero.indexWires →
+              switchedBack wire = routeState wire := by
+            intro wire hwire
+            have hparent :=
+              actionTree_indices_subset_node indexBit zero one wire hwire
+            simp only [switchedBack]
+            rw [upd_other afterOne path _ (hindexPath wire hparent),
+              honePreserves wire (hroles wire (by
+                simp [UnaryActionTree.indexWires, hwire])),
+              show switched wire = first wire by
+                simp only [switched]
+                rw [upd_other first path _ (hindexPath wire hparent)],
+              hfirstRoute wire hparent]
+          let afterZero :=
+            zero.runLeafState .dec leafState path rest switchedBack
+          let logicalAfterZero :=
+            zero.runLogicalTree .dec logicalLeafState zeroActive routeState logicalAfterOne
+          have hzeroOutside :
+              AgreesOutside protectedWires afterZero logicalAfterZero := by
+            simpa only [afterZero, logicalAfterZero] using
+              ihZero switchedBack logicalAfterOne zeroActive hzeroRoles hbackOutside
+                hstableRest hbackStable hbackPath hzeroRouteBack hbackClean
+          have hfinalOutside :
+              AgreesOutside protectedWires
+                (afterZero[path ↦ false]) logicalAfterZero :=
+            hzeroOutside.updateLeft path false hpathProtected
+          simpa only [UnaryActionTree.runLeafState,
+            UnaryActionTree.runLogicalTree, zeroActive, oneActive,
+            first, switched, afterOne, logicalAfterOne,
+            switchedBack, afterZero, logicalAfterZero] using hfinalOutside
+
+/-- Direct decoder-erased semantics of a coherent circuit-valued traversal.  The frozen index
+state selects the active equality pulse, while the logical trace visits every leaf in exactly the
+same source order. -/
+theorem run_unaryActionUnitary_as_runLogicalTree
+    (order : UnaryOrder)
+    (leafAction : Nat → Wire → Circuit)
+    (leafState : Nat → Wire → BasisState → BasisState)
+    (logicalLeafState : Nat → Bool → BasisState → BasisState)
+    (tree : UnaryActionTree) (control : Wire)
+    (ancillas protectedWires : List Wire)
+    (state : BasisState)
+    (hlayout : tree.Layout control ancillas)
+    (hruns : UnaryLeafRunsAs leafAction leafState)
+    (hlogical : UnaryLeafRunsLogically leafState logicalLeafState protectedWires)
+    (hleaf : UnaryLeafPreserves leafAction protectedWires)
+    (hlogicalPreserves : LogicalLeafPreserves logicalLeafState protectedWires)
+    (hlogicalOutside :
+      LogicalLeafRespectsOutside logicalLeafState protectedWires control)
+    (hroles : ∀ wire,
+      wire ∈ control :: tree.indexWires.dedup ++ ancillas →
+        wire ∈ protectedWires)
+    (hclean : Clean ancillas state) :
+    Classical.run
+        (unaryActionUnitary order leafAction tree control ancillas) state =
+      tree.runLogicalTree order logicalLeafState (state control) state state := by
+  have hrun := run_unaryActionUnitary_as_runLeafState order leafAction leafState
+    tree control ancillas protectedWires state hlayout hruns hleaf hroles hclean
+  have houtside := runLeafState_agreesOutside_runLogicalTree order leafAction leafState
+    logicalLeafState tree control control ancillas protectedWires state state state
+    (state control) hlayout hruns hlogical hleaf hlogicalPreserves hlogicalOutside
+    hroles (by intro wire hwire; rfl) (hroles control (by simp))
+    hlayout.control_not_mem_ancillas rfl rfl (by intro wire hwire; rfl) hclean
+  have hphysical := unaryActionUnitary_preserves order leafAction tree control ancillas
+    protectedWires state hlayout hleaf hroles hclean
+  have hlogicalProtected := tree.runLogicalTree_preserves order logicalLeafState
+    (state control) state state protectedWires hlogicalPreserves
+  rw [hrun]
+  funext wire
+  by_cases hwire : wire ∈ protectedWires
+  · rw [show tree.runLeafState order leafState control ancillas state wire = state wire by
+        rw [← hrun]
+        exact hphysical wire hwire,
+      hlogicalProtected wire hwire]
+  · exact houtside wire hwire
 
 /-- The coherent traversal preserves its complete decoder interface whenever every leaf action
 does.  In particular, leaf actions may modify arithmetic data wires, but cannot corrupt the path

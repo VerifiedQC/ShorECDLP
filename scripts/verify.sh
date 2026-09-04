@@ -213,6 +213,63 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.restoreIntervalEndpoints_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.prepareIntervalEndpoints_tCount
 #print axioms ShorECDLP.Paper2607_13816.restoreIntervalEndpoints_tCount
+#print axioms ShorECDLP.Paper2607_13816.PaperCircuitUsesOnly.run_congrOn
+#print axioms ShorECDLP.Paper2607_13816.controlledXorConstant_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.controlledXorConstant_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.UnaryActionTree.runLogicalTree_eq_foldl
+#print axioms ShorECDLP.Paper2607_13816.run_unaryActionUnitary_as_runLogicalTree
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_preserves
+#print axioms ShorECDLP.Paper2607_13816.boolWordToNat_cuccaroAddBits
+#print axioms ShorECDLP.Paper2607_13816.boolWordToNat_incrementBits
+#print axioms ShorECDLP.Paper2607_13816.boolWordToNat_constantBits
+#print axioms ShorECDLP.Paper2607_13816.boolWordToNat_injective_of_length
+#print axioms ShorECDLP.Paper2607_13816.boolWordToNat_constMinusBits
+#print axioms ShorECDLP.Paper2607_13816.constMinusBits_involutive
+#print axioms ShorECDLP.Paper2607_13816.run_restoreIntervalEndpoints_after_prepare
+#print axioms ShorECDLP.Paper2607_13816.upperDirtyMapSeed_eq_xor_suffixZeroFlags
+#print axioms ShorECDLP.Paper2607_13816.lowerDirtyMapSeed_eq_xor_prefixZeroFlags
+#print axioms ShorECDLP.Paper2607_13816.run_rangeScanUnitary
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_correct
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_correct
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_preserves
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_preserves
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_clean
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_clean
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_dirtyConstantWrites_word
+#print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_wordAction
+#print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_wordAction
+#print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_restores
+#print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_restores
+#print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_preservesOutsideTarget
+#print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_preservesOutsideTarget
+#print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_tCount
+#print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_tCount
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_correct
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_correct
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_tCount
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_tCount
 #print axioms ShorECDLP.Paper2607_13816.measuredAndCorrection_phase
 #print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_coherent
 #print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_wellFormed
@@ -381,8 +438,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 357 ]]; then
-  printf 'expected three hundred fifty-seven #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 414 ]]; then
+  printf 'expected four hundred fourteen #print axioms results\n' >&2
   exit 1
 fi
 
