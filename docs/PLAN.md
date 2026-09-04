@@ -697,11 +697,16 @@ They are equal only if Phase 11 proves the required reuse.
   concrete sign/main/top layout transports that cancellation through the full body. Both
   coherent/unitary wrapper directions now derive output `IntervalReady` from input alone, so
   neither whole-state round trip retains the former intermediate output-readiness premise.
-- **Phase-5 circuit unit 12 (PR #73, current):** the exact forward borrowed-epoch phase-update controller,
-  with direct whole-state semantics and cleanup, locality/well-formedness, adaptive coherent
-  refinement, constructor-derived counts, and pinned small/production stream and resource
-  regressions. Its explicit inverse, the surrounding source step, and the indexed four-phase
-  correctness theorem remain open.
+- **PR #73, Phase-5 circuit unit 12:** merged at `7f52576d`; the exact forward borrowed-epoch
+  phase-update controller, with direct whole-state semantics and cleanup,
+  locality/well-formedness, adaptive coherent refinement, constructor-derived counts, and pinned
+  small/production stream and resource regressions.
+- **Phase-5 circuit unit 13 (PR #74, current):** the pinned explicit phase-update inverse. Its
+  coherent term is proved equal to the forward term's adjoint, while its separately defined
+  adaptive term retains measurement-uncomputed predicate cleanup. Direct inverse semantics,
+  scratch restoration, both whole-state round trips, locality/well-formedness, and equal
+  forward/inverse resource regressions are certified. The surrounding shifts, selectors,
+  coefficient-prefix update, and full indexed four-phase step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
