@@ -564,7 +564,6 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledDecrement_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.controlledDecrement_xCount
 #print axioms ShorECDLP.Paper2607_13816.controlledDecrement_tCount
-#print axioms ShorECDLP.Paper2607_13816.rightTwoCycles_flatten_perm
 #print axioms ShorECDLP.Paper2607_13816.run_controlledRotateRightTwo
 #print axioms ShorECDLP.Paper2607_13816.rotateRightTwoState_values
 #print axioms ShorECDLP.Paper2607_13816.run_controlledRotateRightTwo_values
@@ -599,7 +598,6 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_xCount
 #print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_tCount
-#print axioms ShorECDLP.Paper2607_13816.shiftRegisters_productionWidths
 #print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_productionResources
 #print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_productionResources
 #print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_source_regression
@@ -637,8 +635,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 613 ]]; then
-  printf 'expected six hundred thirteen #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 611 ]]; then
+  printf 'expected six hundred eleven #print axioms results\n' >&2
   exit 1
 fi
 

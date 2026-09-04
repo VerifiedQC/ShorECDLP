@@ -1,5 +1,7 @@
 import ShorECDLP.Submission.«2607_13816».EEA.Increment
 import Mathlib.Data.List.Rotate
+import Mathlib.Data.Finset.Card
+import Mathlib.Tactic.NormNum
 
 /-!
 # Algorithm-3 shift blocks
@@ -24,9 +26,9 @@ def decrementBits : Bool → List Bool → List Bool
       Bool.xor bit borrow :: decrementBits (!bit && borrow) bits
 
 /-- The pinned source's inner negative-control borrow chain. -/
-def decrementTail : List Wire → Wire → List Wire → Circuit
+private def decrementTail : List Wire → Wire → List Wire → Circuit
   | [], _, _ => []
-  | [bit], borrow, [] => [.CX borrow bit]
+  | [bit], borrow, _ => [.CX borrow bit]
   | bit :: next :: rest, borrow, nextBorrow :: borrows =>
       [.X bit, .CCX bit borrow nextBorrow, .X bit] ++
         decrementTail (next :: rest) nextBorrow borrows ++
@@ -34,12 +36,13 @@ def decrementTail : List Wire → Wire → List Wire → Circuit
   | _, _, _ => []
 
 /-- Controlled subtraction of one modulo `2^register.length`, with the exact gate order of
-`dec_mod2n_1ctrl` in the pinned supplement at its source precondition of exactly `n - 1` borrow
-wires.  The total Lean fallback returns an empty circuit at invalid arities rather than modeling
-the Python generator's exception; all source and semantic claims below impose the valid width. -/
+`dec_mod2n_1ctrl` in the pinned supplement whenever at least `n - 1` borrow wires are supplied;
+surplus wires are ignored.  The total Lean definition may emit a partial prefix when a longer word
+has too few borrow wires, whereas the Python generator raises an exception.  Source-fidelity and
+semantic theorems below therefore impose the exact-minimal valid capacity. -/
 def controlledDecrement : Wire → List Wire → List Wire → Circuit
   | _, [], _ => []
-  | control, [bit], [] => [.CX control bit]
+  | control, [bit], _ => [.CX control bit]
   | control, low :: next :: rest, firstBorrow :: borrows =>
       [.X low, .CCX control low firstBorrow, .X low, .CX control low] ++
         decrementTail (next :: rest) firstBorrow borrows ++
@@ -57,6 +60,17 @@ example (control b₀ b₁ b₂ c₀ c₁ : Wire) :
         .CX control b₀] := by
   rfl
 
+/- The source ignores a surplus ancilla even for its width-one base case. -/
+example (control bit extra : Wire) :
+    controlledDecrement control ([bit]) ([extra]) = [.CX control bit] := by
+  rfl
+
+/- A nontrivial surplus bank emits the same complete stream as the exact-minimal slice. -/
+example (control b₀ b₁ b₂ c₀ c₁ extra : Wire) :
+    controlledDecrement control ([b₀, b₁, b₂]) ([c₀, c₁, extra]) =
+      controlledDecrement control ([b₀, b₁, b₂]) ([c₀, c₁]) := by
+  rfl
+
 private theorem decrementTail_usesOnly
     (bits : List Wire) (borrow : Wire) (borrows : List Wire) :
     PaperCircuitUsesOnly (borrow :: bits ++ borrows)
@@ -66,12 +80,8 @@ private theorem decrementTail_usesOnly
   | cons bit tail ih =>
       cases tail with
       | nil =>
-          cases borrows with
-          | nil =>
-              simp [decrementTail, PaperCircuitUsesOnly,
-                PaperGateUsesOnly, gateWires]
-          | cons nextBorrow borrows =>
-              simp [decrementTail, PaperCircuitUsesOnly]
+          simp [decrementTail, PaperCircuitUsesOnly,
+            PaperGateUsesOnly, gateWires]
       | cons next rest =>
           cases borrows with
           | nil => simp [decrementTail, PaperCircuitUsesOnly]
@@ -108,12 +118,8 @@ theorem controlledDecrement_usesOnly
   | cons low tail =>
       cases tail with
       | nil =>
-          cases borrows with
-          | nil =>
-              simp [controlledDecrement, PaperCircuitUsesOnly,
-                PaperGateUsesOnly, gateWires]
-          | cons firstBorrow borrows =>
-              simp [controlledDecrement, PaperCircuitUsesOnly]
+          simp [controlledDecrement, PaperCircuitUsesOnly,
+            PaperGateUsesOnly, gateWires]
       | cons next rest =>
           cases borrows with
           | nil => simp [controlledDecrement, PaperCircuitUsesOnly]
@@ -601,12 +607,10 @@ private theorem decrementTail_wellFormed
   | cons bit tail ih =>
       cases tail with
       | nil =>
-          cases borrows with
-          | nil =>
-              have hborrow : borrow ≠ bit := by
-                simpa [List.nodup_cons] using (List.nodup_cons.mp hnd).1
-              simp [decrementTail, Gate.WellFormed, hborrow]
-          | cons nextBorrow borrows => simp [decrementTail]
+          have hborrow : borrow ≠ bit := by
+            intro equality
+            exact (List.nodup_cons.mp hnd).1 (by simp [equality])
+          simp [decrementTail, Gate.WellFormed, hborrow]
       | cons next rest =>
           cases borrows with
           | nil => simp [decrementTail]
@@ -656,12 +660,10 @@ theorem controlledDecrement_wellFormed
   | cons low tail =>
       cases tail with
       | nil =>
-          cases borrows with
-          | nil =>
-              have hcl : control ≠ low := by
-                simpa [List.nodup_cons] using (List.nodup_cons.mp hnd).1
-              simp [controlledDecrement, Gate.WellFormed, hcl]
-          | cons firstBorrow borrows => simp [controlledDecrement]
+          have hcl : control ≠ low := by
+            intro equality
+            exact (List.nodup_cons.mp hnd).1 (by simp [equality])
+          simp [controlledDecrement, Gate.WellFormed, hcl]
       | cons next rest =>
           cases borrows with
           | nil => simp [controlledDecrement]
@@ -898,20 +900,20 @@ theorem controlledDecrement_tCount
 /-! ## Source cycle decomposition for a right rotation by two -/
 
 /-- Entries at even positions, in increasing source-index order. -/
-def evenPositions : List α → List α
+private def evenPositions : List α → List α
   | [] => []
   | [value] => [value]
   | even :: _odd :: rest => even :: evenPositions rest
 
 /-- Entries at odd positions, in increasing source-index order. -/
-def oddPositions : List α → List α
+private def oddPositions : List α → List α
   | [] => []
   | [_] => []
   | _even :: odd :: rest => odd :: oddPositions rest
 
 /-- The cycles visited by `controlled_rotate_right_by_two` in the pinned source.  Odd-sized words
 have one cycle (`evens ++ odds`); even-sized words have the two parity cycles separately. -/
-def rightTwoCycles (register : List Wire) : List (List Wire) :=
+private def rightTwoCycles (register : List Wire) : List (List Wire) :=
   if register.length ≤ 2 then []
   else if register.length % 2 = 0 then
     [evenPositions register, oddPositions register]
@@ -919,7 +921,7 @@ def rightTwoCycles (register : List Wire) : List (List Wire) :=
     [evenPositions register ++ oddPositions register]
 
 /-- Pivot transpositions implementing one source permutation cycle. -/
-def controlledCycle (control : Wire) : List Wire → Circuit
+private def controlledCycle (control : Wire) : List Wire → Circuit
   | [] => []
   | _pivot :: [] => []
   | pivot :: next :: rest =>
@@ -932,7 +934,7 @@ def controlledRotateRightTwo (control : Wire) (register : List Wire) : Circuit :
   (rightTwoCycles register).flatMap (controlledCycle control)
 
 /-- The alternating parity lists contain every source entry exactly once. -/
-theorem evenPositions_append_oddPositions_perm (values : List α) :
+private theorem evenPositions_append_oddPositions_perm (values : List α) :
     (evenPositions values ++ oddPositions values).Perm values := by
   induction values using List.twoStepInduction with
   | nil => simp [evenPositions, oddPositions]
@@ -946,7 +948,7 @@ theorem evenPositions_append_oddPositions_perm (values : List α) :
 
 /-- Above the source's size-two no-op boundary, flattening the visited cycles is a permutation of
 the word. -/
-theorem rightTwoCycles_flatten_perm
+private theorem rightTwoCycles_flatten_perm
     (register : List Wire) (hsize : 2 < register.length) :
     (rightTwoCycles register).flatten.Perm register := by
   have hnotSmall : ¬register.length ≤ 2 := by omega
@@ -957,18 +959,18 @@ theorem rightTwoCycles_flatten_perm
       evenPositions_append_oddPositions_perm register
 
 /-- Pure basis-state swap used to state the direct semantics of a source permutation cycle. -/
-def swapWireState (left right : Wire) (state : BasisState) : BasisState :=
+private def swapWireState (left right : Wire) (state : BasisState) : BasisState :=
   state[left ↦ state right][right ↦ state left]
 
 /-- Apply the source cycle's pivot transpositions as a pure basis-state permutation. -/
-def applyRightTwoCycle : List Wire → BasisState → BasisState
+private def applyRightTwoCycle : List Wire → BasisState → BasisState
   | [], state => state
   | [_], state => state
   | pivot :: next :: rest, state =>
       applyRightTwoCycle (pivot :: rest) (swapWireState pivot next state)
 
 /-- Apply every source parity cycle in order. -/
-def applyRightTwoCycles : List (List Wire) → BasisState → BasisState
+private def applyRightTwoCycles : List (List Wire) → BasisState → BasisState
   | [], state => state
   | cycle :: cycles, state =>
       applyRightTwoCycles cycles (applyRightTwoCycle cycle state)
@@ -1043,7 +1045,7 @@ private theorem run_controlledCycle_cons
         simp [hc, ih _ hrecursive, swapWireState, upd, hcp, hcn]
 
 /-- Exact whole-state action of one pivot cycle. -/
-theorem run_controlledCycle
+private theorem run_controlledCycle
     (control : Wire) (cycle : List Wire) (state : BasisState)
     (hnd : (control :: cycle).Nodup) :
     run (controlledCycle control cycle) state =
@@ -1124,7 +1126,7 @@ private theorem controlledCycle_cons_usesOnly
         · exact Or.inr (Or.inr (Or.inr hitem))
 
 /-- One source permutation cycle touches only its control and cycle word. -/
-theorem controlledCycle_usesOnly (control : Wire) (cycle : List Wire) :
+private theorem controlledCycle_usesOnly (control : Wire) (cycle : List Wire) :
     PaperCircuitUsesOnly (control :: cycle) (controlledCycle control cycle) := by
   cases cycle with
   | nil => simp [controlledCycle, PaperCircuitUsesOnly]
@@ -1603,7 +1605,7 @@ private theorem controlledCycle_cons_HPFree
 
 /-- Every gate in one source permutation cycle is classical. -/
 @[simp]
-theorem controlledCycle_HPFree (control : Wire) (cycle : List Wire) :
+private theorem controlledCycle_HPFree (control : Wire) (cycle : List Wire) :
     HPFree (controlledCycle control cycle) := by
   cases cycle with
   | nil => simp [controlledCycle]
@@ -1666,7 +1668,7 @@ private theorem controlledCycle_cons_wellFormed
         ih hrecursive⟩
 
 /-- Physical well-formedness of one source permutation cycle. -/
-theorem controlledCycle_wellFormed
+private theorem controlledCycle_wellFormed
     (control : Wire) (cycle : List Wire)
     (hnd : (control :: cycle).Nodup) :
     CircuitWellFormed (controlledCycle control cycle) := by
@@ -1720,7 +1722,7 @@ private theorem controlledCycle_cons_toffoliCount
       omega
 
 /-- One Fredkin per non-pivot member of a source cycle. -/
-theorem controlledCycle_toffoliCount
+private theorem controlledCycle_toffoliCount
     (control : Wire) (cycle : List Wire) :
     eeaToffoliCount (controlledCycle control cycle) = cycle.length - 1 := by
   cases cycle with
@@ -1743,7 +1745,7 @@ private theorem controlledCycle_cons_cnotCount
       omega
 
 /-- Two CNOTs per Fredkin in a source cycle. -/
-theorem controlledCycle_cnotCount
+private theorem controlledCycle_cnotCount
     (control : Wire) (cycle : List Wire) :
     eeaCnotCount (controlledCycle control cycle) =
       2 * (cycle.length - 1) := by
@@ -1765,7 +1767,7 @@ private theorem controlledCycle_cons_tCount
       omega
 
 /-- Seven T gates per Fredkin in a source cycle. -/
-theorem controlledCycle_tCount
+private theorem controlledCycle_tCount
     (control : Wire) (cycle : List Wire) :
     tCount (controlledCycle control cycle) = 7 * (cycle.length - 1) := by
   cases cycle with
@@ -1779,7 +1781,7 @@ def rightTwoSwapCount (register : List Wire) : Nat :=
   ((rightTwoCycles register).map fun cycle => cycle.length - 1).sum
 
 /-- Odd source widths above two form one cycle and therefore use exactly `width - 1` swaps. -/
-theorem rightTwoSwapCount_of_odd
+private theorem rightTwoSwapCount_of_odd
     (register : List Wire) (hlarge : 2 < register.length)
     (hodd : register.length % 2 ≠ 0) :
     rightTwoSwapCount register = register.length - 1 := by
@@ -1851,7 +1853,7 @@ private theorem controlledCycle_cons_xCount
 
 /-- Source permutation cycles contain no standalone X gates. -/
 @[simp]
-theorem controlledCycle_xCount
+private theorem controlledCycle_xCount
     (control : Wire) (cycle : List Wire) :
     eeaXCount (controlledCycle control cycle) = 0 := by
   cases cycle with
@@ -1887,7 +1889,7 @@ theorem controlledRotateRightTwo_tCount
 /-- Write a Boolean word back to a list of physical wires.  This is a specification-side state
 operation, not a circuit constructor.  It is public because the exported shift-state contract is
 defined in terms of this operation. -/
-def writeWireValues : List Wire → List Bool → BasisState → BasisState
+private def writeWireValues : List Wire → List Bool → BasisState → BasisState
   | wire :: wires, bit :: bits, state =>
       (writeWireValues wires bits state)[wire ↦ bit]
   | _, _, state => state
@@ -1989,20 +1991,20 @@ private theorem rotateLeftOne_length (bits : List α) :
   cases bits <;> simp [rotateLeftOne]
 
 /-- Pure specification state for a controlled one-position left rotation. -/
-def rotateLeftWordState
+private def rotateLeftWordState
     (enabled : Bool) (register : List Wire) (state : BasisState) : BasisState :=
   writeWireValues register
     (if enabled then rotateLeftOne (wireValues register state)
       else wireValues register state) state
 
 /-- Pure specification state for a controlled increment. -/
-def incrementWordState
+private def incrementWordState
     (enabled : Bool) (register : List Wire) (state : BasisState) : BasisState :=
   writeWireValues register
     (incrementBits enabled (wireValues register state)) state
 
 /-- Pure specification state for a controlled decrement. -/
-def decrementWordState
+private def decrementWordState
     (enabled : Bool) (register : List Wire) (state : BasisState) : BasisState :=
   writeWireValues register
     (decrementBits enabled (wireValues register state)) state
@@ -2079,10 +2081,16 @@ def ShiftRegisters.scratch (registers : ShiftRegisters) : List Wire :=
   [registers.phase1IsZero, registers.both] ++
     registers.carries ++ registers.reserved
 
-/-- Exact physical support used by either shift circuit.  The three reserved source wires are
+/-- Declared physical support of the pre-shift circuit.  The three reserved source wires are
 allocated for the shared scratch layout but are deliberately absent from this list. -/
-def ShiftRegisters.usedWires (registers : ShiftRegisters) : List Wire :=
+def ShiftRegisters.preUsedWires (registers : ShiftRegisters) : List Wire :=
   [registers.phase1, registers.phase1IsZero, registers.phase2, registers.both] ++
+    registers.work ++ registers.lengthS ++ registers.carries
+
+/-- Declared physical support of the post-shift circuit.  Its unused `phase1IsZero` role and the
+three reserved source wires remain allocated but are deliberately absent from this list. -/
+def ShiftRegisters.postUsedWires (registers : ShiftRegisters) : List Wire :=
+  [registers.phase1, registers.phase2, registers.both] ++
     registers.work ++ registers.lengthS ++ registers.carries
 
 /-- A duplicate-free roster of every source-allocated physical role. -/
@@ -2101,7 +2109,7 @@ def ShiftReady (registers : ShiftRegisters) (state : BasisState) : Prop :=
   Clean registers.scratch state
 
 /-- Circuit-independent payload transition shared by both shift blocks. -/
-def shiftPayloadState
+private def shiftPayloadState
     (firstEnabled secondEnabled : Bool)
     (work lengthS : List Wire) (both : Wire)
     (state : BasisState) : BasisState :=
@@ -2773,49 +2781,49 @@ theorem run_postShiftUnitary
       registers.lengthS registers.both registers.carries state
       hlayout.carry_capacity hlayout.postBodyNodup hcleanBody
 
-/-- The pre-shift circuit uses exactly the declared non-reserved support. -/
+/-- The pre-shift circuit uses only the declared non-reserved support. -/
 theorem preShiftUnitary_usesOnly (registers : ShiftRegisters) :
-    PaperCircuitUsesOnly registers.usedWires (preShiftUnitary registers) := by
-  have hflag : PaperCircuitUsesOnly registers.usedWires
+    PaperCircuitUsesOnly registers.preUsedWires (preShiftUnitary registers) := by
+  have hflag : PaperCircuitUsesOnly registers.preUsedWires
       ([.X registers.phase1,
         .CX registers.phase1 registers.phase1IsZero,
         .X registers.phase1] : Circuit) := by
     simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires,
-      ShiftRegisters.usedWires]
-  have hbody : PaperCircuitUsesOnly registers.usedWires
+      ShiftRegisters.preUsedWires]
+  have hbody : PaperCircuitUsesOnly registers.preUsedWires
       (shiftBody registers.phase1IsZero registers.phase2 registers.work
         registers.lengthS registers.both registers.carries) := by
     apply
       (shiftBody_usesOnly registers.phase1IsZero registers.phase2 registers.work
         registers.lengthS registers.both registers.carries).mono
     intro wire hwire
-    simp only [ShiftRegisters.usedWires, List.mem_cons, List.mem_append]
+    simp only [ShiftRegisters.preUsedWires, List.mem_cons, List.mem_append]
       at hwire ⊢
     aesop
   simpa only [preShiftUnitary] using (hflag.append hbody).append hflag
 
 /-- The post-shift circuit uses only the declared non-reserved support. -/
 theorem postShiftUnitary_usesOnly (registers : ShiftRegisters) :
-    PaperCircuitUsesOnly registers.usedWires (postShiftUnitary registers) := by
+    PaperCircuitUsesOnly registers.postUsedWires (postShiftUnitary registers) := by
   simpa only [postShiftUnitary] using
     (shiftBody_usesOnly registers.phase1 registers.phase2 registers.work
       registers.lengthS registers.both registers.carries).mono (by
         intro wire hwire
-        simp only [ShiftRegisters.usedWires, List.mem_cons, List.mem_append]
+        simp only [ShiftRegisters.postUsedWires, List.mem_cons, List.mem_append]
           at hwire ⊢
         aesop)
 
-/-- Pre-shift leaves every wire outside its exact support unchanged. -/
+/-- Pre-shift leaves every wire outside its declared support unchanged. -/
 theorem preShiftUnitary_preservesOutside
     (registers : ShiftRegisters) (state : BasisState) {wire : Wire}
-    (hwire : wire ∉ registers.usedWires) :
+    (hwire : wire ∉ registers.preUsedWires) :
     run (preShiftUnitary registers) state wire = state wire :=
   (preShiftUnitary_usesOnly registers).preservesOutside state hwire
 
-/-- Post-shift leaves every wire outside its exact support unchanged. -/
+/-- Post-shift leaves every wire outside its declared support unchanged. -/
 theorem postShiftUnitary_preservesOutside
     (registers : ShiftRegisters) (state : BasisState) {wire : Wire}
-    (hwire : wire ∉ registers.usedWires) :
+    (hwire : wire ∉ registers.postUsedWires) :
     run (postShiftUnitary registers) state wire = state wire :=
   (postShiftUnitary_usesOnly registers).preservesOutside state hwire
 
@@ -3205,14 +3213,14 @@ theorem postShiftUnitary_tCount
   exact shiftBody_tCount registers.phase1 registers.phase2 registers.work
     registers.lengthS registers.both registers.carries hlayout.carry_capacity
 
-/-- The source's production widths allocate 13 scratch wires, touch 280 wires, and reserve 283
-physical roles in total. -/
-theorem shiftRegisters_productionWidths
+/-- Closed list-size arithmetic shared by the two production resource witnesses. -/
+private theorem shiftRegisters_productionWidths
     (registers : ShiftRegisters) (hlayout : ShiftLayout registers)
     (hwork : registers.work.length = 259)
     (hlength : registers.lengthS.length = 9) :
     registers.scratch.length = 13 ∧
-      registers.usedWires.length = 280 ∧
+      registers.preUsedWires.length = 280 ∧
+      registers.postUsedWires.length = 279 ∧
       registers.allWires.length = 283 := by
   have hcarries : registers.carries.length = 8 := by
     have hcapacity := hlayout.carry_capacity
@@ -3221,7 +3229,9 @@ theorem shiftRegisters_productionWidths
   constructor
   · simp [ShiftRegisters.scratch, hcarries, hlayout.reserved_size]
   constructor
-  · simp [ShiftRegisters.usedWires, hwork, hlength, hcarries]
+  · simp [ShiftRegisters.preUsedWires, hwork, hlength, hcarries]
+  constructor
+  · simp [ShiftRegisters.postUsedWires, hwork, hlength, hcarries]
   · simp [ShiftRegisters.allWires, hwork, hlength, hcarries,
       hlayout.reserved_size]
 
@@ -3358,6 +3368,56 @@ theorem postShiftUnitary_source_regression :
     controlledRotateRightTwo, rightTwoCycles, evenPositions, oddPositions,
     controlledCycle, controlledSwap, controlledDecrement, decrementTail]
 
+private theorem qubitCount_eq_length_of_exactSupport
+    {support : List Wire} {circuit : Circuit}
+    (hsupport : support.Nodup)
+    (huses : PaperCircuitUsesOnly support circuit)
+    (hcovers : ∀ wire, wire ∈ support → wire ∈ circuitWires circuit) :
+    qubitCount circuit = support.length := by
+  have hset : (circuitWires circuit).dedup.toFinset = support.toFinset := by
+    ext wire
+    simp only [List.mem_toFinset, List.mem_dedup]
+    constructor
+    · intro hwire
+      rcases List.mem_flatMap.mp hwire with ⟨gate, hgate, hrole⟩
+      exact huses gate hgate wire hrole
+    · exact hcovers wire
+  rw [qubitCount,
+    ← List.toFinset_card_of_nodup (List.nodup_dedup (circuitWires circuit)),
+    hset, List.toFinset_card_of_nodup hsupport]
+
+private theorem controlledRotateLeftOne_covers
+    (control : Wire) : ∀ register : List Wire,
+    2 ≤ register.length →
+      ∀ wire, wire ∈ control :: register →
+        wire ∈ circuitWires (controlledRotateLeftOne control register) := by
+  intro register
+  induction register with
+  | nil => simp
+  | cons first tail ih =>
+      cases tail with
+      | nil => simp
+      | cons second rest =>
+          intro _hlength wire hwire
+          rw [controlledRotateLeftOne]
+          rw [circuitWires, List.flatMap_append, List.mem_append]
+          rcases List.mem_cons.mp hwire with rfl | hwire
+          · left
+            simp [controlledSwap, gateWires]
+          rcases List.mem_cons.mp hwire with rfl | hwire
+          · left
+            simp [controlledSwap, gateWires]
+          cases rest with
+          | nil =>
+              have : wire = second := by simpa using hwire
+              subst wire
+              left
+              simp [controlledSwap, gateWires]
+          | cons third rest =>
+              right
+              apply ih (by simp) wire
+              exact List.mem_cons_of_mem control hwire
+
 private def preShiftSecp256k1Registers : ShiftRegisters where
   phase1 := 0
   phase2 := 1
@@ -3392,12 +3452,102 @@ private theorem postShiftSecp256k1Layout :
     by simp [postShiftSecp256k1Registers], ?_⟩
   decide
 
+set_option maxRecDepth 100000 in
+private theorem preShiftUnitary_secp256k1_qubitCount :
+    qubitCount (preShiftUnitary preShiftSecp256k1Registers) = 280 := by
+  rw [show 280 = preShiftSecp256k1Registers.preUsedWires.length by
+    simp [ShiftRegisters.preUsedWires, preShiftSecp256k1Registers]]
+  apply qubitCount_eq_length_of_exactSupport
+  · decide
+  · exact preShiftUnitary_usesOnly preShiftSecp256k1Registers
+  · intro wire hwire
+    change wire ∈
+      [0, 270, 1, 271] ++ List.range' 2 259 ++
+        List.range' 261 9 ++ List.range' 272 8 at hwire
+    simp only [List.mem_append, List.mem_cons, List.not_mem_nil] at hwire
+    rcases hwire with (((hfixed | hwork) | hlength) | hcarries)
+    · simp only [or_false] at hfixed
+      rcases hfixed with rfl | rfl | rfl | rfl <;>
+        simp [preShiftUnitary, preShiftSecp256k1Registers,
+          shiftBody, circuitWires, gateWires]
+    · have hrotate : wire ∈ circuitWires
+          (controlledRotateLeftOne 270 (List.range' 2 259)) :=
+        controlledRotateLeftOne_covers 270 (List.range' 2 259) (by simp)
+          wire (by simp [hwork])
+      simp only [preShiftUnitary, preShiftSecp256k1Registers, shiftBody,
+        circuitWires, List.flatMap_append, List.mem_append]
+      simp [circuitWires] at hrotate
+      aesop
+    · have hincrement : wire ∈ circuitWires
+          (controlledIncrement 270 (List.range' 261 9) (List.range' 272 8)) := by
+        norm_num [controlledIncrement, incrementTail, circuitWires,
+          gateWires, List.range'] at hlength ⊢
+        aesop
+      simp only [preShiftUnitary, preShiftSecp256k1Registers, shiftBody,
+        circuitWires, List.flatMap_append, List.mem_append]
+      simp [circuitWires] at hincrement
+      aesop
+    · have hincrement : wire ∈ circuitWires
+          (controlledIncrement 270 (List.range' 261 9) (List.range' 272 8)) := by
+        norm_num [controlledIncrement, incrementTail, circuitWires,
+          gateWires, List.range'] at hcarries ⊢
+        aesop
+      simp only [preShiftUnitary, preShiftSecp256k1Registers, shiftBody,
+        circuitWires, List.flatMap_append, List.mem_append]
+      simp [circuitWires] at hincrement
+      aesop
+
+set_option maxRecDepth 100000 in
+private theorem postShiftUnitary_secp256k1_qubitCount :
+    qubitCount (postShiftUnitary postShiftSecp256k1Registers) = 279 := by
+  rw [show 279 = postShiftSecp256k1Registers.postUsedWires.length by
+    simp [ShiftRegisters.postUsedWires, postShiftSecp256k1Registers]]
+  apply qubitCount_eq_length_of_exactSupport
+  · decide
+  · exact postShiftUnitary_usesOnly postShiftSecp256k1Registers
+  · intro wire hwire
+    change wire ∈
+      [0, 1, 270] ++ List.range' 2 259 ++
+        List.range' 261 9 ++ List.range' 271 8 at hwire
+    simp only [List.mem_append, List.mem_cons, List.not_mem_nil] at hwire
+    rcases hwire with (((hfixed | hwork) | hlength) | hcarries)
+    · simp only [or_false] at hfixed
+      rcases hfixed with rfl | rfl | rfl <;>
+        simp [postShiftUnitary, postShiftSecp256k1Registers,
+          shiftBody, circuitWires, gateWires]
+    · have hrotate : wire ∈ circuitWires
+          (controlledRotateLeftOne 0 (List.range' 2 259)) :=
+        controlledRotateLeftOne_covers 0 (List.range' 2 259) (by simp)
+          wire (by simp [hwork])
+      simp only [postShiftUnitary, postShiftSecp256k1Registers, shiftBody,
+        circuitWires, List.flatMap_append, List.mem_append]
+      simp [circuitWires] at hrotate
+      aesop
+    · have hincrement : wire ∈ circuitWires
+          (controlledIncrement 0 (List.range' 261 9) (List.range' 271 8)) := by
+        norm_num [controlledIncrement, incrementTail, circuitWires,
+          gateWires, List.range'] at hlength ⊢
+        aesop
+      simp only [postShiftUnitary, postShiftSecp256k1Registers, shiftBody,
+        circuitWires, List.flatMap_append, List.mem_append]
+      simp [circuitWires] at hincrement
+      aesop
+    · have hincrement : wire ∈ circuitWires
+          (controlledIncrement 0 (List.range' 261 9) (List.range' 271 8)) := by
+        norm_num [controlledIncrement, incrementTail, circuitWires,
+          gateWires, List.range'] at hcarries ⊢
+        aesop
+      simp only [postShiftUnitary, postShiftSecp256k1Registers, shiftBody,
+        circuitWires, List.flatMap_append, List.mem_append]
+      simp [circuitWires] at hincrement
+      aesop
+
 /-- Closed production pre-shift witness: the source allocates 283 physical roles, touches 280
 of them, restores all 13 scratch roles, and emits the exact constructor-derived resources. -/
 theorem preShiftUnitary_secp256k1_resources :
     preShiftSecp256k1Registers.scratch.length = 13 ∧
-      preShiftSecp256k1Registers.usedWires.length = 280 ∧
       preShiftSecp256k1Registers.allWires.length = 283 ∧
+      qubitCount (preShiftUnitary preShiftSecp256k1Registers) = 280 ∧
       eeaToffoliCount (preShiftUnitary preShiftSecp256k1Registers) = 566 ∧
       eeaCnotCount (preShiftUnitary preShiftSecp256k1Registers) = 1067 ∧
       eeaXCount (preShiftUnitary preShiftSecp256k1Registers) = 68 ∧
@@ -3406,18 +3556,20 @@ theorem preShiftUnitary_secp256k1_resources :
     simp [preShiftSecp256k1Registers]
   have hlength : preShiftSecp256k1Registers.lengthS.length = 9 := by
     simp [preShiftSecp256k1Registers]
-  obtain ⟨hscratch, hused, hall⟩ := shiftRegisters_productionWidths
+  obtain ⟨hscratch, _hpreUsed, _hpostUsed, hall⟩ := shiftRegisters_productionWidths
     preShiftSecp256k1Registers preShiftSecp256k1Layout hwork hlength
   obtain ⟨htoffoli, hcnot, hx, ht⟩ := preShiftUnitary_productionResources
     preShiftSecp256k1Registers preShiftSecp256k1Layout hwork hlength
-  exact ⟨hscratch, hused, hall, htoffoli, hcnot, hx, ht⟩
+  exact ⟨hscratch, hall, preShiftUnitary_secp256k1_qubitCount,
+    htoffoli, hcnot, hx, ht⟩
 
-/-- Closed production post-shift witness.  The four source-unused scratch roles are represented by
-`phase1IsZero :: reserved`; all 13 shared scratch roles are restored. -/
+/-- Closed production post-shift witness: the source allocates 283 physical roles, touches 279 of
+them, and restores all 13 shared scratch roles.  Its four unused roles are represented by
+`phase1IsZero :: reserved`. -/
 theorem postShiftUnitary_secp256k1_resources :
     postShiftSecp256k1Registers.scratch.length = 13 ∧
-      postShiftSecp256k1Registers.usedWires.length = 280 ∧
       postShiftSecp256k1Registers.allWires.length = 283 ∧
+      qubitCount (postShiftUnitary postShiftSecp256k1Registers) = 279 ∧
       eeaToffoliCount (postShiftUnitary postShiftSecp256k1Registers) = 566 ∧
       eeaCnotCount (postShiftUnitary postShiftSecp256k1Registers) = 1065 ∧
       eeaXCount (postShiftUnitary postShiftSecp256k1Registers) = 64 ∧
@@ -3426,11 +3578,12 @@ theorem postShiftUnitary_secp256k1_resources :
     simp [postShiftSecp256k1Registers]
   have hlength : postShiftSecp256k1Registers.lengthS.length = 9 := by
     simp [postShiftSecp256k1Registers]
-  obtain ⟨hscratch, hused, hall⟩ := shiftRegisters_productionWidths
+  obtain ⟨hscratch, _hpreUsed, _hpostUsed, hall⟩ := shiftRegisters_productionWidths
     postShiftSecp256k1Registers postShiftSecp256k1Layout hwork hlength
   obtain ⟨htoffoli, hcnot, hx, ht⟩ := postShiftUnitary_productionResources
     postShiftSecp256k1Registers postShiftSecp256k1Layout hwork hlength
-  exact ⟨hscratch, hused, hall, htoffoli, hcnot, hx, ht⟩
+  exact ⟨hscratch, hall, postShiftUnitary_secp256k1_qubitCount,
+    htoffoli, hcnot, hx, ht⟩
 
 /- Width-five source regression: the single cycle is `0,2,4,1,3`. -/
 example (control w₀ w₁ w₂ w₃ w₄ : Wire) :

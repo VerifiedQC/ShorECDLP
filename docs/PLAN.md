@@ -464,10 +464,11 @@ whole-state round trips, locality/well-formedness, and equal forward/inverse sym
 small/production resource regressions are all certified. The fourteenth unit implements the
 surrounding source-exact pre/post shifts: controlled
 decrement, the cycle-decomposed right-by-two rotation, and both complete wrappers. Direct
-whole-state semantics, all-scratch restoration, exact support and outside preservation,
+whole-state semantics, all-scratch restoration, declared-support locality and outside preservation,
 well-formedness, both adjoint round trips, literal small-source streams, and constructor-derived
 counts are certified. At `work_size = 259` and `shift_width = 9`, each source block allocates 283
-roles, touches 280, and restores all 13 scratch roles; pre-shift has `566 CCX`, `1067 CX`, `68 X`,
+roles and restores all 13 scratch roles. Same-term `qubitCount` witnesses prove that pre-shift
+touches exactly 280 roles and post-shift exactly 279; pre-shift has `566 CCX`, `1067 CX`, `68 X`,
 and `3962 T`, while post-shift has `566 CCX`, `1065 CX`, `64 X`, and `3962 T`. The quotient/sign selector,
 coefficient-prefix update, and indexed four-phase composition remain open within Phase 5.
 
@@ -717,7 +718,9 @@ They are equal only if Phase 11 proves the required reuse.
 - **Phase-5 circuit unit 14 (PR #75, current):** the exact pre/post shift layer: controlled
   decrement, cycle-decomposed right-by-two rotation, and both literal source wrappers, with direct
   whole-state semantics, complete scratch restoration, locality/well-formedness, two-sided
-  adjoint cancellation, literal source regressions, and exact production resources. The
+  adjoint cancellation, literal source regressions, and exact production resources. Both wrappers
+  allocate 283 roles and restore 13 scratch roles; same-term `qubitCount` witnesses certify exact
+  touched-wire counts of 280 for pre-shift and 279 for post-shift. The
   quotient/sign selector, coefficient-prefix update, and full indexed four-phase step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
