@@ -10,7 +10,7 @@ conjunctions are computed on the forward sweep and cleared on the reverse sweep.
 
 namespace ShorECDLP.Paper2607_13816
 
-open Classical
+open _root_.ShorECDLP.Classical
 
 /-- Boolean ripple specification for adding a single carry bit to an LSB-first word. -/
 def incrementBits : Bool → List Bool → List Bool
@@ -729,6 +729,22 @@ private theorem incrementTail_tCount
               simp [tCost]
               omega
 
+private theorem incrementTail_xCount
+    (bits : List Wire) (carry : Wire) (carries : List Wire) :
+    eeaXCount (incrementTail bits carry carries) = 0 := by
+  induction bits generalizing carry carries with
+  | nil => rfl
+  | cons bit tail ih =>
+      cases tail with
+      | nil => cases carries <;> rfl
+      | cons next rest =>
+          cases carries with
+          | nil => rfl
+          | cons nextCarry carries =>
+              rw [incrementTail, eeaXCount_append, eeaXCount_append,
+                ih nextCarry carries]
+              rfl
+
 /-- Exact Toffoli count: two carry-chain Toffolis per non-low bit. -/
 theorem controlledIncrement_toffoliCount
     (control : Wire) (register carries : List Wire)
@@ -798,6 +814,24 @@ theorem controlledIncrement_tCount
                 incrementTail_tCount _ _ _ htailLength]
               simp [tCost]
               omega
+
+/-- The source controlled increment contains no standalone X gates. -/
+@[simp]
+theorem controlledIncrement_xCount
+    (control : Wire) (register carries : List Wire) :
+    eeaXCount (controlledIncrement control register carries) = 0 := by
+  cases register with
+  | nil => rfl
+  | cons low tail =>
+      cases tail with
+      | nil => cases carries <;> rfl
+      | cons next rest =>
+          cases carries with
+          | nil => rfl
+          | cons firstCarry carries =>
+              rw [controlledIncrement, eeaXCount_append, eeaXCount_append,
+                incrementTail_xCount]
+              rfl
 
 /-! ## Literal uncontrolled increment used by endpoint affine transforms -/
 
