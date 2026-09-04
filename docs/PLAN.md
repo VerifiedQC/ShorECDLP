@@ -5,13 +5,15 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-7 paper foundation below
-are on `main@7f4e9cb12a07944689e0ce5ab5bbd7f47af6da6b`. PR #56 → PR #57 → PR #58 → PR #59
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-8 paper foundation below
+are on `main@deeeb945ce66267ee4d6fcd9a2c033af4b6c54ea`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
-landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
-measurement-based uncomputation, pure EEA model, indexed EEA bounds/windows, and the first seven
-concrete circuit units. Phase 5 circuit unit 8 (zero maps and complete length blocks) is the current
-implementation unit in PR #69. A `✓` means a
+→ PR #69 landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
+measurement-based uncomputation, pure EEA model, indexed EEA bounds/windows, and the first eight
+concrete circuit units. Phase 5 circuit unit 9 (the complete forward interval wrapper) is the
+current implementation unit in PR #70. Its output-scratch theorem still requires the indexed
+reachable endpoint/range invariant; the inverse aggregate and indexed four-phase step remain open.
+A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
 
@@ -684,5 +686,7 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--7 are merged. Phase 5 circuit unit 8 is the current
-implementation unit in PR #69 on that foundation.
+Phases 0--4 and Phase 5 circuit units 1--8 are merged. Phase 5 circuit unit 9, the complete forward
+interval wrapper, is current in PR #70 on that foundation. Its output-scratch theorem awaits the
+indexed reachable endpoint/range invariant; the inverse aggregate and indexed four-phase step
+remain open.
