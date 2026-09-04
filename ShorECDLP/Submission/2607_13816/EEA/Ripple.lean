@@ -628,6 +628,70 @@ def rippleSecondBits (mode : RippleMode)
   | .add => controlledUmaBits control bits
   | .sub => controlledMajInvBits control bits
 
+/-- Every first-pass cell restores its clean-v-chain work wire, even when that wire starts dirty. -/
+theorem rippleFirstCell_preservesScratch
+    (mode : RippleMode) (control target addend carry scratch : Wire)
+    (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup) :
+    run (rippleFirstCell mode control target addend carry scratch) state scratch =
+      state scratch := by
+  obtain ⟨_, _, _, _, _, _, htargetScratch, _, haddendScratch,
+    hcarryScratch⟩ := cell_nodup_parts control target addend carry scratch hnd
+  cases mode with
+  | add =>
+      let middle := run [.CX carry target, .CX carry addend] state
+      calc
+        run (rippleFirstCell .add control target addend carry scratch) state scratch =
+            run (cleanC3X control target addend carry scratch) middle scratch := rfl
+        _ = middle scratch :=
+          cleanC3X_preservesScratch control target addend carry scratch middle hnd
+        _ = state scratch := by
+          simp [middle, run, applyGate, upd, Ne.symm htargetScratch,
+            Ne.symm haddendScratch, Ne.symm hcarryScratch]
+  | sub =>
+      let middle := run
+        [.CX carry target, .CX carry addend, .CCX control addend target] state
+      calc
+        run (rippleFirstCell .sub control target addend carry scratch) state scratch =
+            run (cleanC3X control target addend carry scratch) middle scratch := rfl
+        _ = middle scratch :=
+          cleanC3X_preservesScratch control target addend carry scratch middle hnd
+        _ = state scratch := by
+          simp [middle, run, applyGate, upd, Ne.symm htargetScratch,
+            Ne.symm haddendScratch, Ne.symm hcarryScratch]
+
+/-- Every second-pass cell likewise restores its clean-v-chain work wire off-domain. -/
+theorem rippleSecondCell_preservesScratch
+    (mode : RippleMode) (control target addend carry scratch : Wire)
+    (state : BasisState)
+    (hnd : [control, target, addend, carry, scratch].Nodup) :
+    run (rippleSecondCell mode control target addend carry scratch) state scratch =
+      state scratch := by
+  obtain ⟨_, _, _, _, _, _, htargetScratch, _, haddendScratch,
+    hcarryScratch⟩ := cell_nodup_parts control target addend carry scratch hnd
+  cases mode with
+  | add =>
+      let middle := run (cleanC3X control target addend carry scratch) state
+      calc
+        run (rippleSecondCell .add control target addend carry scratch) state scratch =
+            run [.CCX control addend target, .CX carry addend, .CX carry target]
+              middle scratch := rfl
+        _ = middle scratch := by
+          simp [run, applyGate, upd, Ne.symm htargetScratch,
+            Ne.symm haddendScratch, Ne.symm hcarryScratch]
+        _ = state scratch :=
+          cleanC3X_preservesScratch control target addend carry scratch state hnd
+  | sub =>
+      let middle := run (cleanC3X control target addend carry scratch) state
+      calc
+        run (rippleSecondCell .sub control target addend carry scratch) state scratch =
+            run [.CX carry addend, .CX carry target] middle scratch := rfl
+        _ = middle scratch := by
+          simp [run, applyGate, upd, Ne.symm htargetScratch,
+            Ne.symm haddendScratch, Ne.symm hcarryScratch]
+        _ = state scratch :=
+          cleanC3X_preservesScratch control target addend carry scratch state hnd
+
 /-- First Figure-11 pass.  `targets` and `addends` are ordered from the high physical lane to
 the low one, so this recursion emits the gates from the list's end back to its head. -/
 def rippleFirstPass (mode : RippleMode) (control : Wire) :

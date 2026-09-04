@@ -271,6 +271,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_tCount
 #print axioms ShorECDLP.Paper2607_13816.measuredAndCorrection_phase
+#print axioms ShorECDLP.Paper2607_13816.measuredAndErase_coherent_uncompute
 #print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_coherent
 #print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.run_unaryIterationUnitary
@@ -304,6 +305,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_tCount
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveAction_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveAction_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveAction_tCount
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveAction_coherent_on
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.mem_optionLabels_buildAt
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildAt_eq_none_iff
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.buildAt_sourceBuilt
@@ -356,14 +361,38 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.mcxVChain_toffoliCount
 #print axioms ShorECDLP.Paper2607_13816.mcxVChain_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.mcxVChain_tCount
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.run_zeroMask_twice
 #print axioms ShorECDLP.Paper2607_13816.run_computeEqConst
 #print axioms ShorECDLP.Paper2607_13816.run_computeEqConst_twice
 #print axioms ShorECDLP.Paper2607_13816.computeEqConst_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.computeEqConst_tCount
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.run_toggleEqConstUnderControl
 #print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControl_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControl_tCount
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.cleanC3XAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.cleanC3XAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.cleanC3XAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.cleanC3XAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCellAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCellAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCellAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCellAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCellAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCellAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCellAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCellAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.run_endpointLeafToggle
 #print axioms ShorECDLP.Paper2607_13816.run_intervalFirstLeaf
 #print axioms ShorECDLP.Paper2607_13816.run_intervalSecondLeaf
@@ -375,6 +404,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondLeaf_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.intervalFirstLeaf_tCount
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondLeaf_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeafAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeafAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeafAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeafAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.run_topSpecialFirstLeaf
 #print axioms ShorECDLP.Paper2607_13816.run_topSpecialSecondLeaf
 #print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeaf_wellFormed
@@ -385,6 +422,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeaf_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeaf_tCount
 #print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeaf_tCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_HPFree
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_HPFree
 #print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_wellFormed
@@ -395,6 +440,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_preservesDecoder
 #print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_clean
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_clean
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_cleanWithScratch
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_cleanWithScratch
 #print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_coherent
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_coherent
 #print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_toffoliCount
@@ -407,6 +454,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.cleanC3X_preservesScratch
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCell_preservesScratch
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCell_preservesScratch
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_preservesOn
+#print axioms ShorECDLP.Paper2607_13816.intervalTree_built
+#print axioms ShorECDLP.Paper2607_13816.intervalTree_visitLabels_inc
+#print axioms ShorECDLP.Paper2607_13816.intervalTree_visitLabels_dec
+#print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubUnitary_state
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_coherent
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.intervalSourceComparisonLayout
+#print axioms ShorECDLP.Paper2607_13816.intervalSourceComparison_resources
+#print axioms ShorECDLP.Paper2607_13816.intervalSingleton_sourceResourceRegression
+#print axioms ShorECDLP.Paper2607_13816.intervalTopSpecialTwoLane_sourceResourceRegression
+#print axioms ShorECDLP.Paper2607_13816.intervalProduction_sourceResourceRegression
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -438,8 +509,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 414 ]]; then
-  printf 'expected four hundred fourteen #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 485 ]]; then
+  printf 'expected four hundred eighty-five #print axioms results\n' >&2
   exit 1
 fi
 

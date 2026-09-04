@@ -76,6 +76,31 @@ theorem measuredAndErase_coherent
   · simp
   · exact measuredAndCorrection_phase first second target hfs hft hst
 
+/-- On a computed AND, measurement/reset with the selected correction is a coherent replacement
+for the source's reverse Toffoli. -/
+theorem measuredAndErase_coherent_uncompute
+    (first second target : Wire)
+    (hfs : first ≠ second)
+    (hft : first ≠ target)
+    (hst : second ≠ target) :
+    CoherentlyImplementsOn
+      (measuredAndErase first second target)
+      (Quantum.run [.CCX first second target])
+      (PathAndComputed first second target) := by
+  apply (measuredAndErase_coherent first second target hfs hft hst).congrIdeal
+  intro state hcomputed
+  rw [clearRegisterMap_ket,
+    run_ket_agrees_classical [.CCX first second target] state (by simp)]
+  congr 1
+  funext wire
+  by_cases hwire : wire = target
+  · subst wire
+    unfold PathAndComputed at hcomputed
+    cases hfirst : state first <;> cases hsecond : state second <;>
+      simp [Classical.run, Classical.applyGate, clearRegister, upd,
+        hcomputed, hfirst, hsecond]
+  · simp [Classical.run, Classical.applyGate, clearRegister, upd, hwire]
+
 /-- Physical well-formedness of the one-AND adaptive erasure. -/
 theorem measuredAndErase_wellFormed
     (first second target : Wire)
