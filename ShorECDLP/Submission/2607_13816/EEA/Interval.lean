@@ -14,7 +14,8 @@ the corresponding `Work1`/`Work2` lane.  The executable order is exactly
 top-second; restore endpoints`.
 
 Both the coherent reference and the measurement-uncomputed adaptive program are exposed.  The
-inverse aggregate and the four-phase indexed EEA step remain later composition boundaries.
+source inverse aggregate is the same block with the opposite ripple mode; its whole-state round
+trip is certified at the clean boundary needed by the later four-phase indexed EEA step.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -2405,6 +2406,776 @@ theorem intervalAddSub_measurementCount
   by_cases hspecial : intervalHasTopSpecial k K = true <;>
     simp [intervalMeasurementFormula, hspecial] <;> omega
 
+/-! ## Source inverse aggregate -/
+
+/-- The source's `inverse=True` branch switches each ripple pass to the opposite arithmetic mode. -/
+def RippleMode.inverse : RippleMode → RippleMode
+  | .add => .sub
+  | .sub => .add
+
+@[simp]
+theorem RippleMode.inverse_inverse (mode : RippleMode) :
+    mode.inverse.inverse = mode := by
+  cases mode <;> rfl
+
+theorem rippleFirstCell_inverse_eq
+    (mode : RippleMode) (control target addend carry scratch : Wire) :
+    rippleFirstCell mode.inverse control target addend carry scratch =
+      (rippleSecondCell mode control target addend carry scratch).adjoint := by
+  cases mode <;>
+    simp [RippleMode.inverse, rippleFirstCell, rippleSecondCell,
+      controlledMaj, controlledUma, controlledMajInv, controlledUmaInv,
+      cleanC3X, Circuit.adjoint]
+
+theorem rippleSecondCell_inverse_eq
+    (mode : RippleMode) (control target addend carry scratch : Wire) :
+    rippleSecondCell mode.inverse control target addend carry scratch =
+      (rippleFirstCell mode control target addend carry scratch).adjoint := by
+  cases mode <;>
+    simp [RippleMode.inverse, rippleFirstCell, rippleSecondCell,
+      controlledMaj, controlledUma, controlledMajInv, controlledUmaInv,
+      cleanC3X, Circuit.adjoint]
+
+/-- Reversing a unary traversal exchanges its increasing and decreasing source orders. -/
+def UnaryOrder.reverse : UnaryOrder → UnaryOrder
+  | .inc => .dec
+  | .dec => .inc
+
+@[simp]
+theorem UnaryOrder.reverse_reverse (order : UnaryOrder) :
+    order.reverse.reverse = order := by
+  cases order <;> rfl
+
+@[simp]
+private theorem computeZeroAnd_adjoint
+    (control indexBit target : Wire) :
+    (computeZeroAnd control indexBit target).adjoint =
+      computeZeroAnd control indexBit target := by
+  simp [computeZeroAnd, Circuit.adjoint]
+
+theorem dualUnaryActionUnitary_reverse_eq_adjoint
+    (order : UnaryOrder)
+    (leafAction inverseLeafAction : Nat → Wire → Wire → Circuit)
+    (hleaf : ∀ label controlA controlB,
+      inverseLeafAction label controlA controlB =
+        (leafAction label controlA controlB).adjoint)
+    (tree : DualUnaryActionTree) (controlA controlB : Wire)
+    (ancillasA ancillasB : List Wire) :
+    dualUnaryActionUnitary order.reverse inverseLeafAction tree controlA controlB
+        ancillasA ancillasB =
+      (dualUnaryActionUnitary order leafAction tree controlA controlB
+        ancillasA ancillasB).adjoint := by
+  induction tree generalizing controlA controlB ancillasA ancillasB with
+  | leaf label =>
+      exact hleaf label controlA controlB
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      cases ancillasA with
+      | nil => simp [dualUnaryActionUnitary]
+      | cons pathA restA =>
+          cases ancillasB with
+          | nil => simp [dualUnaryActionUnitary]
+          | cons pathB restB =>
+              cases order <;>
+                simp only [UnaryOrder.reverse] at ihZero ihOne ⊢ <;>
+                simp [dualUnaryActionUnitary, circuit_adjoint_append,
+                  ihZero, ihOne]
+
+@[simp]
+private theorem endpointLeafToggle_adjoint
+    (topSpecial : Bool) (label : Nat)
+    (endpointTop control accumulator : Wire) :
+    (endpointLeafToggle topSpecial label endpointTop control accumulator).adjoint =
+      endpointLeafToggle topSpecial label endpointTop control accumulator := by
+  unfold endpointLeafToggle
+  split <;> simp [Circuit.adjoint]
+
+theorem intervalFirstLeaf_inverse_eq_adjoint_second
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator target addend carry scratch : Wire)
+    (label : Nat) (rightControl leftControl : Wire) :
+    intervalFirstLeaf mode.inverse topSpecial rightTop leftTop accumulator
+        target addend carry scratch label rightControl leftControl =
+      (intervalSecondLeaf mode topSpecial rightTop leftTop accumulator
+        target addend carry scratch label rightControl leftControl).adjoint := by
+  simp [intervalFirstLeaf, intervalSecondLeaf, circuit_adjoint_append,
+    rippleFirstCell_inverse_eq]
+
+theorem intervalSecondLeaf_inverse_eq_adjoint_first
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator target addend carry scratch : Wire)
+    (label : Nat) (rightControl leftControl : Wire) :
+    intervalSecondLeaf mode.inverse topSpecial rightTop leftTop accumulator
+        target addend carry scratch label rightControl leftControl =
+      (intervalFirstLeaf mode topSpecial rightTop leftTop accumulator
+        target addend carry scratch label rightControl leftControl).adjoint := by
+  simp [intervalFirstLeaf, intervalSecondLeaf, circuit_adjoint_append,
+    rippleSecondCell_inverse_eq]
+
+theorem intervalFirstTraversal_inverse_eq_adjoint_second
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire) :
+    intervalFirstTraversal mode.inverse topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths =
+      (intervalSecondTraversal mode topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths).adjoint := by
+  apply dualUnaryActionUnitary_reverse_eq_adjoint .inc
+  intro label controlA controlB
+  exact intervalFirstLeaf_inverse_eq_adjoint_second mode topSpecial
+    rightTop leftTop accumulator (targetAt label) (addendAt label)
+    carry scratch label controlA controlB
+
+theorem intervalSecondTraversal_inverse_eq_adjoint_first
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire) :
+    intervalSecondTraversal mode.inverse topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths =
+      (intervalFirstTraversal mode topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths).adjoint := by
+  apply dualUnaryActionUnitary_reverse_eq_adjoint .dec
+  intro label controlA controlB
+  exact intervalSecondLeaf_inverse_eq_adjoint_first mode topSpecial
+    rightTop leftTop accumulator (targetAt label) (addendAt label)
+    carry scratch label controlA controlB
+
+private theorem run_toggleEqConstUnderControl_twice
+    (root : Wire) (register : List Wire) (value : Nat)
+    (accumulator flag : Wire) (scratches : List Wire)
+    (state : BasisState)
+    (hlayout : EqControlLayout root register accumulator flag scratches)
+    (hclean : Clean (flag :: scratches) state) :
+    run (toggleEqConstUnderControl root register value accumulator flag scratches)
+        (run (toggleEqConstUnderControl root register value accumulator flag scratches)
+          state) = state := by
+  let circuit := toggleEqConstUnderControl root register value accumulator flag scratches
+  let after := run circuit state
+  have hfirst : after =
+      state[accumulator ↦ Bool.xor (state accumulator)
+        (state root && registerMatches register value state)] := by
+    exact run_toggleEqConstUnderControl root register value accumulator flag scratches
+      state hlayout hclean
+  have hcleanAfter : Clean (flag :: scratches) after := by
+    exact toggleEqConstUnderControl_clean root register value accumulator flag scratches
+      state hlayout hclean
+  have hsecond := run_toggleEqConstUnderControl root register value accumulator flag scratches
+    after hlayout hcleanAfter
+  change run circuit after = state
+  rw [hsecond, hfirst]
+  have haccRoot : accumulator ≠ root := by
+    intro h
+    subst root
+    simpa using (List.nodup_cons.mp hlayout.2).1
+  have haccRegister : accumulator ∉ register := by
+    intro h
+    exact (List.nodup_cons.mp (List.nodup_cons.mp hlayout.2).2).1 (by simp [h])
+  have hmatch :
+      registerMatches register value
+          state[accumulator ↦ Bool.xor (state accumulator)
+            (state root && registerMatches register value state)] =
+        registerMatches register value state := by
+    exact registerMatchesFrom_upd_not_mem register value 0 state accumulator _
+      haccRegister
+  funext wire
+  by_cases hwire : wire = accumulator
+  · subst wire
+    simp [upd, Ne.symm haccRoot, hmatch]
+  · simp [upd, hwire]
+
+private theorem run_toggleEqConstUnderControl_eq_adjoint
+    (root : Wire) (register : List Wire) (value : Nat)
+    (accumulator flag : Wire) (scratches : List Wire)
+    (state : BasisState)
+    (hlayout : EqControlLayout root register accumulator flag scratches)
+    (hclean : Clean (flag :: scratches) state) :
+    run (toggleEqConstUnderControl root register value accumulator flag scratches)
+        state =
+      run (toggleEqConstUnderControl root register value accumulator flag scratches).adjoint
+        state := by
+  let circuit := toggleEqConstUnderControl root register value accumulator flag scratches
+  have htwice := run_toggleEqConstUnderControl_twice root register value accumulator
+    flag scratches state hlayout hclean
+  have hadjoint := run_adjoint_run_classical circuit
+    (toggleEqConstUnderControl_wellFormed root register value accumulator flag scratches
+      hlayout) (run circuit state)
+  change run circuit state = run circuit.adjoint state
+  rw [htwice] at hadjoint
+  exact hadjoint.symm
+
+private theorem run_topSpecialFirstLeaf_inverse_eq_adjoint_second
+    (mode : RippleMode) (topValue : Nat)
+    (rightRegister leftRegister : List Wire)
+    (accumulator target addend carry rippleScratch eqFlag : Wire)
+    (eqScratches : List Wire) (rightRoot leftRoot : Wire)
+    (state : BasisState)
+    (hlayout : TopSpecialLeafLayout rightRoot leftRoot rightRegister leftRegister
+      accumulator target addend carry rippleScratch eqFlag eqScratches)
+    (hclean : Clean (eqFlag :: eqScratches) state) :
+    run (topSpecialFirstLeaf mode.inverse topValue rightRegister leftRegister
+        accumulator target addend carry rippleScratch eqFlag eqScratches
+        rightRoot leftRoot) state =
+      run (topSpecialSecondLeaf mode topValue rightRegister leftRegister
+        accumulator target addend carry rippleScratch eqFlag eqScratches
+        rightRoot leftRoot).adjoint state := by
+  have heq : eqFlag = rippleScratch := hlayout.2.2.2.1
+  subst eqFlag
+  let rightCircuit := toggleEqConstUnderControl rightRoot rightRegister topValue
+    accumulator rippleScratch eqScratches
+  let cellCircuit := rippleFirstCell mode.inverse accumulator target addend carry
+    rippleScratch
+  let afterRight := run rightCircuit state
+  let afterCell := run cellCircuit afterRight
+  have hrightClean : Clean (rippleScratch :: eqScratches) afterRight := by
+    exact toggleEqConstUnderControl_clean rightRoot rightRegister topValue
+      accumulator rippleScratch eqScratches state hlayout.1 hclean
+  have hcellClean : Clean (rippleScratch :: eqScratches) afterCell := by
+    intro wire hwire
+    rcases List.mem_cons.mp hwire with hhead | hwire
+    · subst wire
+      change run cellCircuit afterRight rippleScratch = false
+      rw [show run cellCircuit afterRight rippleScratch = afterRight rippleScratch by
+        exact rippleFirstCell_preservesScratch mode.inverse accumulator target addend carry
+          rippleScratch afterRight hlayout.2.2.1]
+      exact hrightClean rippleScratch (by simp)
+    · change run cellCircuit afterRight wire = false
+      rw [(rippleFirstCell_usesOnly mode.inverse accumulator target addend carry
+        rippleScratch).preservesOutside afterRight (by
+          have hdisjoint := hlayout.2.2.2.2
+          rw [List.disjoint_left] at hdisjoint
+          exact hdisjoint hwire)]
+      exact hrightClean wire (by simp [hwire])
+  rw [topSpecialFirstLeaf, topSpecialSecondLeaf,
+    circuit_adjoint_append, circuit_adjoint_append]
+  simp only [Classical.run_append]
+  rw [← run_toggleEqConstUnderControl_eq_adjoint rightRoot rightRegister topValue
+    accumulator rippleScratch eqScratches state hlayout.1 hclean]
+  rw [rippleFirstCell_inverse_eq]
+  simpa [afterCell, cellCircuit, afterRight, rightCircuit,
+    rippleFirstCell_inverse_eq] using
+    (run_toggleEqConstUnderControl_eq_adjoint leftRoot leftRegister topValue
+      accumulator rippleScratch eqScratches afterCell hlayout.2.1 hcellClean)
+
+private theorem run_topSpecialSecondLeaf_inverse_eq_adjoint_first
+    (mode : RippleMode) (topValue : Nat)
+    (rightRegister leftRegister : List Wire)
+    (accumulator target addend carry rippleScratch eqFlag : Wire)
+    (eqScratches : List Wire) (rightRoot leftRoot : Wire)
+    (state : BasisState)
+    (hlayout : TopSpecialLeafLayout rightRoot leftRoot rightRegister leftRegister
+      accumulator target addend carry rippleScratch eqFlag eqScratches)
+    (hclean : Clean (eqFlag :: eqScratches) state) :
+    run (topSpecialSecondLeaf mode.inverse topValue rightRegister leftRegister
+        accumulator target addend carry rippleScratch eqFlag eqScratches
+        rightRoot leftRoot) state =
+      run (topSpecialFirstLeaf mode topValue rightRegister leftRegister
+        accumulator target addend carry rippleScratch eqFlag eqScratches
+        rightRoot leftRoot).adjoint state := by
+  have heq : eqFlag = rippleScratch := hlayout.2.2.2.1
+  subst eqFlag
+  let leftCircuit := toggleEqConstUnderControl leftRoot leftRegister topValue
+    accumulator rippleScratch eqScratches
+  let cellCircuit := rippleSecondCell mode.inverse accumulator target addend carry
+    rippleScratch
+  let afterLeft := run leftCircuit state
+  let afterCell := run cellCircuit afterLeft
+  have hleftClean : Clean (rippleScratch :: eqScratches) afterLeft := by
+    exact toggleEqConstUnderControl_clean leftRoot leftRegister topValue
+      accumulator rippleScratch eqScratches state hlayout.2.1 hclean
+  have hcellClean : Clean (rippleScratch :: eqScratches) afterCell := by
+    intro wire hwire
+    rcases List.mem_cons.mp hwire with hhead | hwire
+    · subst wire
+      change run cellCircuit afterLeft rippleScratch = false
+      rw [show run cellCircuit afterLeft rippleScratch = afterLeft rippleScratch by
+        exact rippleSecondCell_preservesScratch mode.inverse accumulator target addend carry
+          rippleScratch afterLeft hlayout.2.2.1]
+      exact hleftClean rippleScratch (by simp)
+    · change run cellCircuit afterLeft wire = false
+      rw [(rippleSecondCell_usesOnly mode.inverse accumulator target addend carry
+        rippleScratch).preservesOutside afterLeft (by
+          have hdisjoint := hlayout.2.2.2.2
+          rw [List.disjoint_left] at hdisjoint
+          exact hdisjoint hwire)]
+      exact hleftClean wire (by simp [hwire])
+  rw [topSpecialSecondLeaf, topSpecialFirstLeaf,
+    circuit_adjoint_append, circuit_adjoint_append]
+  simp only [Classical.run_append]
+  rw [← run_toggleEqConstUnderControl_eq_adjoint leftRoot leftRegister topValue
+    accumulator rippleScratch eqScratches state hlayout.2.1 hclean]
+  rw [rippleSecondCell_inverse_eq]
+  simpa [afterCell, cellCircuit, afterLeft, leftCircuit,
+    rippleSecondCell_inverse_eq] using
+    (run_toggleEqConstUnderControl_eq_adjoint rightRoot rightRegister topValue
+      accumulator rippleScratch eqScratches afterCell hlayout.1 hcellClean)
+
+private theorem run_intervalTopFirst_inverse_eq_adjoint_second
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hclean : Clean
+      (registers.cellScratch k K :: registers.equalityScratch k K) state) :
+    run (intervalTopFirst registers k K mode.inverse target) state =
+      run (intervalTopSecond registers k K mode target).adjoint state := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopFirst, if_pos hspecial, intervalTopSecond, if_pos hspecial]
+    exact run_topSpecialFirstLeaf_inverse_eq_adjoint_second mode
+      (intervalTopRelative k K) registers.lengthS registers.lengthQ
+      (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control state (hlayout.topSpecial hspecial) hclean
+  · simp [intervalTopFirst, intervalTopSecond, hspecial]
+
+private theorem run_intervalTopSecond_inverse_eq_adjoint_first
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hclean : Clean
+      (registers.cellScratch k K :: registers.equalityScratch k K) state) :
+    run (intervalTopSecond registers k K mode.inverse target) state =
+      run (intervalTopFirst registers k K mode target).adjoint state := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopSecond, if_pos hspecial, intervalTopFirst, if_pos hspecial]
+    exact run_topSpecialSecondLeaf_inverse_eq_adjoint_first mode
+      (intervalTopRelative k K) registers.lengthS registers.lengthQ
+      (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control state (hlayout.topSpecial hspecial) hclean
+  · simp [intervalTopFirst, intervalTopSecond, hspecial]
+
+@[simp]
+private theorem intervalSignUpdate_adjoint
+    (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool) :
+    (intervalSignUpdate registers k K signUpdate).adjoint =
+      intervalSignUpdate registers k K signUpdate := by
+  cases signUpdate <;> simp [intervalSignUpdate, Circuit.adjoint]
+
+private def intervalAddSubBodyUnitary
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) : Circuit :=
+  intervalTopFirst registers k K mode target ++
+    intervalFirstTraversal mode (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.targetAt target) (registers.addendAt target)
+      (intervalTree registers k K) registers.control registers.control
+      (registers.rightPaths k K) (registers.leftPaths k K) ++
+    intervalSignUpdate registers k K signUpdate ++
+    intervalSecondTraversal mode (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.targetAt target) (registers.addendAt target)
+      (intervalTree registers k K) registers.control registers.control
+      (registers.rightPaths k K) (registers.leftPaths k K) ++
+    intervalTopSecond registers k K mode target
+
+private theorem intervalAddSubBodyUnitary_wellFormed
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    CircuitWellFormed
+      (intervalAddSubBodyUnitary registers k K mode signUpdate target) := by
+  simp only [intervalAddSubBodyUnitary, circuitWellFormed_append]
+  exact ⟨⟨⟨⟨
+    intervalTopFirst_wellFormed registers k K mode target hlayout,
+    intervalFirstTraversal_wellFormed mode (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.targetAt target) (registers.addendAt target)
+      (intervalTree registers k K) registers.control registers.control
+      (registers.rightPaths k K) (registers.leftPaths k K) hlayout.traversal⟩,
+    intervalSignUpdate_wellFormed registers k K signUpdate target hlayout⟩,
+    intervalSecondTraversal_wellFormed mode (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.targetAt target) (registers.addendAt target)
+      (intervalTree registers k K) registers.control registers.control
+      (registers.rightPaths k K) (registers.leftPaths k K) hlayout.traversal⟩,
+    intervalTopSecond_wellFormed registers k K mode target hlayout⟩
+
+private theorem run_intervalAddSubBodyUnitary_inverse_eq_adjoint
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hclean : Clean
+      (registers.cellScratch k K :: registers.equalityScratch k K) state) :
+    run (intervalAddSubBodyUnitary registers k K mode.inverse signUpdate target) state =
+      run (intervalAddSubBodyUnitary registers k K mode signUpdate target).adjoint state := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · let topFirstInv := intervalTopFirst registers k K mode.inverse target
+    let firstInv := intervalFirstTraversal mode.inverse (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.targetAt target) (registers.addendAt target)
+      (intervalTree registers k K) registers.control registers.control
+      (registers.rightPaths k K) (registers.leftPaths k K)
+    let sign := intervalSignUpdate registers k K signUpdate
+    let secondInv := intervalSecondTraversal mode.inverse (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.targetAt target) (registers.addendAt target)
+      (intervalTree registers k K) registers.control registers.control
+      (registers.rightPaths k K) (registers.leftPaths k K)
+    let afterTop := run topFirstInv state
+    let afterFirst := run firstInv afterTop
+    let afterSign := run sign afterFirst
+    let afterSecond := run secondInv afterSign
+    have hcleanTop : Clean
+        (registers.cellScratch k K :: registers.equalityScratch k K) afterTop := by
+      exact intervalTopFirst_cleanTopScratch registers k K mode.inverse target state
+        hlayout hclean
+    have hpathsTop := intervalPaths_clean_of_topScratch registers k K afterTop hcleanTop
+    have hcleanFirst : Clean
+        (registers.cellScratch k K :: registers.equalityScratch k K) afterFirst := by
+      intro wire hwire
+      change run firstInv afterTop wire = false
+      rw [show run firstInv afterTop wire = afterTop wire by
+        simpa only [firstInv] using
+          intervalTraversal_preservesTopScratch false registers k K mode.inverse target
+            hlayout hspecial afterTop hpathsTop.1 hpathsTop.2 wire hwire]
+      exact hcleanTop wire hwire
+    have hcleanSign : Clean
+        (registers.cellScratch k K :: registers.equalityScratch k K) afterSign := by
+      intro wire hwire
+      change run sign afterFirst wire = false
+      rw [show run sign afterFirst wire = afterFirst wire by
+        simpa only [sign] using
+          intervalSignUpdate_preservesScratch registers k K signUpdate target afterFirst
+            hlayout wire
+              (intervalTopScratch_mem_scratch registers k K target hlayout wire hwire)]
+      exact hcleanFirst wire hwire
+    have hpathsSign := intervalPaths_clean_of_topScratch registers k K afterSign hcleanSign
+    have hcleanSecond : Clean
+        (registers.cellScratch k K :: registers.equalityScratch k K) afterSecond := by
+      intro wire hwire
+      change run secondInv afterSign wire = false
+      rw [show run secondInv afterSign wire = afterSign wire by
+        simpa only [secondInv] using
+          intervalTraversal_preservesTopScratch true registers k K mode.inverse target
+            hlayout hspecial afterSign hpathsSign.1 hpathsSign.2 wire hwire]
+      exact hcleanSign wire hwire
+    have hafterSecond : afterSecond =
+        run (intervalFirstTraversal mode (intervalHasTopSpecial k K)
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.carry k K)
+          (registers.cellScratch k K) (registers.targetAt target)
+          (registers.addendAt target) (intervalTree registers k K)
+          registers.control registers.control (registers.rightPaths k K)
+          (registers.leftPaths k K)).adjoint
+          (run (intervalSignUpdate registers k K signUpdate)
+            (run (intervalSecondTraversal mode (intervalHasTopSpecial k K)
+              (registers.rightTop k K) (registers.leftTop k K)
+              (registers.accumulator k K) (registers.carry k K)
+              (registers.cellScratch k K) (registers.targetAt target)
+              (registers.addendAt target) (intervalTree registers k K)
+              registers.control registers.control (registers.rightPaths k K)
+              (registers.leftPaths k K)).adjoint
+              (run (intervalTopSecond registers k K mode target).adjoint state))) := by
+      simp only [afterSecond, afterSign, afterFirst, afterTop, secondInv, sign,
+        firstInv, topFirstInv]
+      rw [run_intervalTopFirst_inverse_eq_adjoint_second registers k K mode target
+        state hlayout hclean]
+      rw [intervalFirstTraversal_inverse_eq_adjoint_second]
+      rw [intervalSecondTraversal_inverse_eq_adjoint_first]
+    rw [intervalAddSubBodyUnitary, intervalAddSubBodyUnitary,
+      circuit_adjoint_append, circuit_adjoint_append,
+      circuit_adjoint_append, circuit_adjoint_append]
+    simp only [Classical.run_append]
+    rw [run_intervalTopFirst_inverse_eq_adjoint_second registers k K mode target state
+      hlayout hclean]
+    rw [intervalFirstTraversal_inverse_eq_adjoint_second]
+    rw [intervalSignUpdate_adjoint]
+    rw [intervalSecondTraversal_inverse_eq_adjoint_first]
+    rw [← hafterSecond]
+    exact run_intervalTopSecond_inverse_eq_adjoint_first registers k K mode target
+      afterSecond hlayout hcleanSecond
+  · simp [intervalAddSubBodyUnitary, intervalTopFirst, intervalTopSecond,
+      hspecial, circuit_adjoint_append,
+      intervalFirstTraversal_inverse_eq_adjoint_second,
+      intervalSecondTraversal_inverse_eq_adjoint_first]
+
+/-- Coherent source inverse: the pinned generator reuses the same interval wrapper with the
+opposite ripple mode. -/
+def intervalAddSubInverseUnitary
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) : Circuit :=
+  intervalAddSubUnitary registers n k K mode.inverse signUpdate target
+
+/-- Measurement-uncomputed source inverse, using the same inverse-mode specialization. -/
+def intervalAddSubInverse
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) : Quantum.AdaptiveCircuit :=
+  intervalAddSub registers n k K mode.inverse signUpdate target
+
+@[simp]
+theorem intervalAddSubInverseUnitary_HPFree
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) :
+    HPFree (intervalAddSubInverseUnitary registers n k K mode signUpdate target) := by
+  simp [intervalAddSubInverseUnitary]
+
+theorem intervalAddSubInverseUnitary_usesOnly
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    PaperCircuitUsesOnly registers.allWires
+      (intervalAddSubInverseUnitary registers n k K mode signUpdate target) := by
+  simpa [intervalAddSubInverseUnitary] using
+    intervalAddSubUnitary_usesOnly registers n k K mode.inverse signUpdate target hlayout
+
+theorem intervalAddSubInverseUnitary_preservesOutside
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    {wire : Wire} (hwire : wire ∉ registers.allWires) :
+    run (intervalAddSubInverseUnitary registers n k K mode signUpdate target) state wire =
+      state wire := by
+  exact PaperCircuitUsesOnly.preservesOutside
+    (intervalAddSubInverseUnitary_usesOnly registers n k K mode signUpdate target hlayout)
+    state hwire
+
+theorem intervalAddSubInverseUnitary_wellFormed
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    CircuitWellFormed
+      (intervalAddSubInverseUnitary registers n k K mode signUpdate target) := by
+  simpa [intervalAddSubInverseUnitary] using
+    intervalAddSubUnitary_wellFormed registers n k K mode.inverse signUpdate target hlayout
+
+theorem intervalAddSubInverse_wellFormed
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    (intervalAddSubInverse registers n k K mode signUpdate target).WellFormed := by
+  simpa [intervalAddSubInverse] using
+    intervalAddSub_wellFormed registers n k K mode.inverse signUpdate target hlayout
+
+theorem run_intervalAddSubInverseUnitary_state
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hready : IntervalReady registers state) :
+    run (intervalAddSubInverseUnitary registers n k K mode signUpdate target) state =
+      intervalAddSubState registers n k K mode.inverse signUpdate target state := by
+  exact run_intervalAddSubUnitary_state registers n k K mode.inverse signUpdate target
+    state hlayout hready
+
+theorem intervalAddSubInverse_coherent
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    CoherentlyImplementsOn
+      (intervalAddSubInverse registers n k K mode signUpdate target)
+      (Quantum.run
+        (intervalAddSubInverseUnitary registers n k K mode signUpdate target))
+      (IntervalReady registers) := by
+  simpa [intervalAddSubInverse, intervalAddSubInverseUnitary] using
+    intervalAddSub_coherent registers n k K mode.inverse signUpdate target hlayout
+
+@[simp]
+theorem intervalToffoliFormula_inverse
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode) :
+    intervalToffoliFormula registers k K mode.inverse =
+      intervalToffoliFormula registers k K mode := by
+  cases mode <;>
+    simp [RippleMode.inverse, intervalToffoliFormula,
+      rippleFirstCellToffoliCost, rippleSecondCellToffoliCost,
+      Nat.add_comm, Nat.add_left_comm, Nat.add_assoc]
+
+@[simp]
+theorem intervalCoherentTFormula_inverse
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode) :
+    intervalCoherentTFormula registers k K mode.inverse =
+      intervalCoherentTFormula registers k K mode := by
+  simp [intervalCoherentTFormula]
+
+@[simp]
+theorem intervalAdaptiveTFormula_inverse
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode) :
+    intervalAdaptiveTFormula registers k K mode.inverse =
+      intervalAdaptiveTFormula registers k K mode := by
+  cases mode <;>
+    simp [RippleMode.inverse, intervalAdaptiveTFormula,
+      rippleFirstCellToffoliCost, rippleSecondCellToffoliCost,
+      Nat.add_comm, Nat.add_left_comm, Nat.add_assoc]
+
+theorem intervalAddSubInverseUnitary_toffoliCount
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    eeaToffoliCount
+        (intervalAddSubInverseUnitary registers n k K mode signUpdate target) =
+      intervalToffoliFormula registers k K mode := by
+  rw [intervalAddSubInverseUnitary,
+    intervalAddSubUnitary_toffoliCount registers n k K mode.inverse signUpdate target
+      hlayout, intervalToffoliFormula_inverse]
+
+theorem intervalAddSubInverseUnitary_cnotCount
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    eeaCnotCount
+        (intervalAddSubInverseUnitary registers n k K mode signUpdate target) =
+      intervalCnotFormula registers k K signUpdate := by
+  exact intervalAddSubUnitary_cnotCount registers n k K mode.inverse signUpdate target hlayout
+
+theorem intervalAddSubInverse_tCount
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    (intervalAddSubInverse registers n k K mode signUpdate target).tCount =
+      intervalAdaptiveTFormula registers k K mode := by
+  rw [intervalAddSubInverse,
+    intervalAddSub_tCount registers n k K mode.inverse signUpdate target hlayout,
+    intervalAdaptiveTFormula_inverse]
+
+theorem intervalAddSubInverseUnitary_tCount
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    ShorECDLP.tCount
+        (intervalAddSubInverseUnitary registers n k K mode signUpdate target) =
+      intervalCoherentTFormula registers k K mode := by
+  rw [intervalAddSubInverseUnitary,
+    intervalAddSubUnitary_tCount registers n k K mode.inverse signUpdate target hlayout,
+    intervalCoherentTFormula_inverse]
+
+theorem intervalAddSubInverse_measurementCount
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget)
+    (hlayout : IntervalLayout registers k K target) :
+    (intervalAddSubInverse registers n k K mode signUpdate target).measurementCount =
+      intervalMeasurementFormula registers k K := by
+  exact intervalAddSub_measurementCount registers n k K mode.inverse signUpdate target hlayout
+
+private theorem intervalReady_endpointClean
+    (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+    (state : BasisState) (hlayout : IntervalLayout registers k K target)
+    (hready : IntervalReady registers state) :
+    Clean (registers.endpointScratch ++ [registers.carry k K]) state := by
+  intro wire hwire
+  apply hready wire
+  rcases List.mem_append.mp hwire with hscratch | hcarry
+  · exact List.mem_of_mem_take hscratch
+  · simp only [List.mem_singleton] at hcarry
+    subst wire
+    exact intervalCarry_mem_scratch registers k K target hlayout
+
+/-- The source inverse restores the complete basis state after the forward block whenever both
+wrapper boundaries satisfy `IntervalReady`.  The second premise is the exact cleanup obligation
+that the later indexed reachable-state invariant must discharge. -/
+theorem run_intervalAddSubInverseUnitary_after_forward
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hready : IntervalReady registers state)
+    (hreadyAfter : IntervalReady registers
+      (run (intervalAddSubUnitary registers n k K mode signUpdate target) state)) :
+    run (intervalAddSubInverseUnitary registers n k K mode signUpdate target)
+        (run (intervalAddSubUnitary registers n k K mode signUpdate target) state) =
+      state := by
+  let prepare := prepareIntervalEndpoints registers.lengthT registers.lengthQ
+    registers.lengthS registers.endpointScratch (registers.carry k K) n k
+  let body := intervalAddSubBodyUnitary registers k K mode signUpdate target
+  let bodyInverse :=
+    intervalAddSubBodyUnitary registers k K mode.inverse signUpdate target
+  let restore := restoreIntervalEndpoints registers.lengthT registers.lengthQ
+    registers.lengthS registers.endpointScratch (registers.carry k K) n k
+  let prepared := run prepare state
+  let afterBody := run body prepared
+  let output := run restore afterBody
+  have hforward :
+      run (intervalAddSubUnitary registers n k K mode signUpdate target) state =
+        output := by
+    rw [intervalAddSubUnitary]
+    simp only [Classical.run_append]
+    simp only [output, afterBody, body, intervalAddSubBodyUnitary, prepared,
+      prepare, restore, Classical.run_append]
+  have hinverse : ∀ input : BasisState,
+      Classical.run
+          (intervalAddSubInverseUnitary registers n k K mode signUpdate target) input =
+        run restore (run bodyInverse (run prepare input)) := by
+    intro input
+    change run (intervalAddSubUnitary registers n k K mode.inverse signUpdate target)
+      input = _
+    rw [intervalAddSubUnitary]
+    simp only [Classical.run_append]
+    simp only [bodyInverse, intervalAddSubBodyUnitary, prepare, restore,
+      Classical.run_append]
+  have hreadyOutput : IntervalReady registers output := by
+    rw [← hforward]
+    exact hreadyAfter
+  have houtputEndpoint :
+      Clean (registers.endpointScratch ++ [registers.carry k K]) output :=
+    intervalReady_endpointClean registers k K target output hlayout hreadyOutput
+  have hinner : run prepare output = afterBody := by
+    simpa [prepare, restore, output] using
+      (run_prepareIntervalEndpoints_after_restore registers.lengthT registers.lengthQ
+        registers.lengthS registers.endpointScratch (registers.carry k K) n k afterBody
+        hlayout.lengthT_eq_lengthQ
+        (intervalLengthQ_le_endpointScratch registers k K target hlayout)
+        (intervalLengthS_le_endpointScratch registers k K target hlayout)
+        (intervalLengthS_positive registers k K target hlayout) hlayout.endpoints
+        houtputEndpoint)
+  have hafterBodyScratch : Clean registers.scratch afterBody := by
+    have hclean := intervalPrepare_cleanScratch registers n k K target output hlayout
+      hreadyOutput
+    simpa only [prepare, hinner] using hclean
+  have hafterBodyTop : Clean
+      (registers.cellScratch k K :: registers.equalityScratch k K) afterBody := by
+    intro wire hwire
+    exact hafterBodyScratch wire
+      (intervalTopScratch_mem_scratch registers k K target hlayout wire hwire)
+  have hbodyInverse : run bodyInverse afterBody = prepared := by
+    have heq := run_intervalAddSubBodyUnitary_inverse_eq_adjoint registers k K mode
+      signUpdate target afterBody hlayout hafterBodyTop
+    rw [show run bodyInverse afterBody = run body.adjoint afterBody by
+      simpa only [bodyInverse, body] using heq]
+    simpa only [afterBody, body] using
+      (run_adjoint_run_classical body
+        (intervalAddSubBodyUnitary_wellFormed registers k K mode signUpdate target hlayout)
+        prepared)
+  have hinputEndpoint :
+      Clean (registers.endpointScratch ++ [registers.carry k K]) state :=
+    intervalReady_endpointClean registers k K target state hlayout hready
+  have houter : run restore prepared = state := by
+    simpa only [restore, prepare, prepared] using
+      (run_restoreIntervalEndpoints_after_prepare registers.lengthT registers.lengthQ
+        registers.lengthS registers.endpointScratch (registers.carry k K) n k state
+        hlayout.lengthT_eq_lengthQ
+        (intervalLengthQ_le_endpointScratch registers k K target hlayout)
+        (intervalLengthS_le_endpointScratch registers k K target hlayout)
+        (intervalLengthS_positive registers k K target hlayout) hlayout.endpoints
+        hinputEndpoint)
+  rw [hforward, hinverse, hinner, hbodyInverse, houter]
+
+/-- Symmetrically, the forward source block restores the complete basis state after its inverse
+at the same clean wrapper boundary. -/
+theorem run_intervalAddSubUnitary_after_inverse
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hready : IntervalReady registers state)
+    (hreadyAfter : IntervalReady registers
+      (run (intervalAddSubInverseUnitary registers n k K mode signUpdate target) state)) :
+    run (intervalAddSubUnitary registers n k K mode signUpdate target)
+        (run (intervalAddSubInverseUnitary registers n k K mode signUpdate target) state) =
+      state := by
+  simpa [intervalAddSubInverseUnitary] using
+    (run_intervalAddSubInverseUnitary_after_forward registers n k K mode.inverse
+      signUpdate target state hlayout hready (by
+        simpa [intervalAddSubInverseUnitary] using hreadyAfter))
+
 /-! ## Closed physical witness and pinned-source resource regressions -/
 
 /-- A nontrivial source-shaped allocation for the five-lane interval `[3,7]`.  Its four-label
@@ -2547,6 +3318,33 @@ theorem intervalSourceComparison_resources :
     rfl
   · rw [intervalAddSub_measurementCount intervalSourceComparisonRegisters 8 3 7
       .add true .work1 intervalSourceComparisonLayout]
+    rfl
+
+/-- The pinned inverse branch has the same closed resources while using the opposite ripple
+specialization inside the exact source wrapper. -/
+theorem intervalSourceComparison_inverseResources :
+    eeaToffoliCount
+        (intervalAddSubInverseUnitary intervalSourceComparisonRegisters 8 3 7
+          .add true .work1) = 175 ∧
+      eeaCnotCount
+        (intervalAddSubInverseUnitary intervalSourceComparisonRegisters 8 3 7
+          .add true .work1) = 203 ∧
+      (intervalAddSubInverse intervalSourceComparisonRegisters 8 3 7
+          .add true .work1).tCount = 987 ∧
+      (intervalAddSubInverse intervalSourceComparisonRegisters 8 3 7
+          .add true .work1).measurementCount = 34 := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [intervalAddSubInverseUnitary_toffoliCount intervalSourceComparisonRegisters
+      8 3 7 .add true .work1 intervalSourceComparisonLayout]
+    rfl
+  · rw [intervalAddSubInverseUnitary_cnotCount intervalSourceComparisonRegisters
+      8 3 7 .add true .work1 intervalSourceComparisonLayout]
+    rfl
+  · rw [intervalAddSubInverse_tCount intervalSourceComparisonRegisters
+      8 3 7 .add true .work1 intervalSourceComparisonLayout]
+    rfl
+  · rw [intervalAddSubInverse_measurementCount intervalSourceComparisonRegisters
+      8 3 7 .add true .work1 intervalSourceComparisonLayout]
     rfl
 
 /-- Pinned-source edge regression: one ordinary lane measures its one ripple cleanup per pass. -/

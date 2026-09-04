@@ -226,6 +226,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.boolWordToNat_constMinusBits
 #print axioms ShorECDLP.Paper2607_13816.constMinusBits_involutive
 #print axioms ShorECDLP.Paper2607_13816.run_restoreIntervalEndpoints_after_prepare
+#print axioms ShorECDLP.Paper2607_13816.run_prepareIntervalEndpoints_after_restore
 #print axioms ShorECDLP.Paper2607_13816.upperDirtyMapSeed_eq_xor_suffixZeroFlags
 #print axioms ShorECDLP.Paper2607_13816.lowerDirtyMapSeed_eq_xor_prefixZeroFlags
 #print axioms ShorECDLP.Paper2607_13816.run_rangeScanUnitary
@@ -464,6 +465,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubUnitary_state
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_preservesOutside
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_HPFree
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSub_wellFormed
@@ -473,8 +475,28 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_tCount
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSub_tCount
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSub_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.RippleMode.inverse_inverse
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_reverse_eq_adjoint
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_inverse_eq_adjoint_second
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_inverse_eq_adjoint_first
+#print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubInverseUnitary_state
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.intervalToffoliFormula_inverse
+#print axioms ShorECDLP.Paper2607_13816.intervalAdaptiveTFormula_inverse
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubInverseUnitary_after_forward
+#print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubUnitary_after_inverse
 #print axioms ShorECDLP.Paper2607_13816.intervalSourceComparisonLayout
 #print axioms ShorECDLP.Paper2607_13816.intervalSourceComparison_resources
+#print axioms ShorECDLP.Paper2607_13816.intervalSourceComparison_inverseResources
 #print axioms ShorECDLP.Paper2607_13816.intervalSingleton_sourceResourceRegression
 #print axioms ShorECDLP.Paper2607_13816.intervalTopSpecialTwoLane_sourceResourceRegression
 #print axioms ShorECDLP.Paper2607_13816.intervalProduction_sourceResourceRegression
@@ -509,8 +531,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 485 ]]; then
-  printf 'expected four hundred eighty-five #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 507 ]]; then
+  printf 'expected five hundred seven #print axioms results\n' >&2
   exit 1
 fi
 
