@@ -554,6 +554,58 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_small_resources
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_secp256k1_resources
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_secp256k1_resources
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_control
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_clean
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_HPFree
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_xCount
+#print axioms ShorECDLP.Paper2607_13816.controlledDecrement_tCount
+#print axioms ShorECDLP.Paper2607_13816.rightTwoCycles_flatten_perm
+#print axioms ShorECDLP.Paper2607_13816.run_controlledRotateRightTwo
+#print axioms ShorECDLP.Paper2607_13816.rotateRightTwoState_values
+#print axioms ShorECDLP.Paper2607_13816.run_controlledRotateRightTwo_values
+#print axioms ShorECDLP.Paper2607_13816.controlledRotateRightTwo_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.controlledRotateRightTwo_HPFree
+#print axioms ShorECDLP.Paper2607_13816.controlledRotateRightTwo_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledRotateRightTwo_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.controlledRotateRightTwo_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.controlledRotateRightTwo_xCount
+#print axioms ShorECDLP.Paper2607_13816.controlledRotateRightTwo_tCount
+#print axioms ShorECDLP.Paper2607_13816.run_preShiftUnitary
+#print axioms ShorECDLP.Paper2607_13816.run_postShiftUnitary
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_ready
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_ready
+#print axioms ShorECDLP.Paper2607_13816.run_preShiftUnitary_adjoint_after
+#print axioms ShorECDLP.Paper2607_13816.run_preShiftUnitary_after_adjoint
+#print axioms ShorECDLP.Paper2607_13816.run_postShiftUnitary_adjoint_after
+#print axioms ShorECDLP.Paper2607_13816.run_postShiftUnitary_after_adjoint
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_xCount
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_xCount
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.shiftRegisters_productionWidths
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_productionResources
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_productionResources
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_source_regression
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_source_regression
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_secp256k1_resources
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_secp256k1_resources
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -585,8 +637,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 561 ]]; then
-  printf 'expected five hundred sixty-one #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 613 ]]; then
+  printf 'expected six hundred thirteen #print axioms results\n' >&2
   exit 1
 fi
 

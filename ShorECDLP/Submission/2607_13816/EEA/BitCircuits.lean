@@ -22,7 +22,7 @@ counts.  No resource-only primitive or dependency on the Naive submission is int
 
 namespace ShorECDLP.Paper2607_13816
 
-open Classical
+open _root_.ShorECDLP.Classical
 
 /-- Every role of a gate is drawn from the declared physical support. -/
 def PaperGateUsesOnly (support : List Wire) (gate : Gate) : Prop :=
@@ -145,6 +145,12 @@ def eeaCnotCount (circuit : Circuit) : Nat :=
     | .CX _ _ => 1
     | _ => 0).sum
 
+/-- Submission-side Pauli-X count for the paper construction. -/
+def eeaXCount (circuit : Circuit) : Nat :=
+  (circuit.map fun gate => match gate with
+    | .X _ => 1
+    | _ => 0).sum
+
 theorem eeaToffoliCount_append (first second : Circuit) :
     eeaToffoliCount (first ++ second) =
       eeaToffoliCount first + eeaToffoliCount second := by
@@ -154,6 +160,11 @@ theorem eeaCnotCount_append (first second : Circuit) :
     eeaCnotCount (first ++ second) =
       eeaCnotCount first + eeaCnotCount second := by
   simp [eeaCnotCount, List.map_append]
+
+theorem eeaXCount_append (first second : Circuit) :
+    eeaXCount (first ++ second) =
+      eeaXCount first + eeaXCount second := by
+  simp [eeaXCount, List.map_append]
 
 /-- The supplemental generator's three-gate Fredkin decomposition. -/
 def controlledSwap (control left right : Wire) : Circuit :=
@@ -221,6 +232,10 @@ theorem controlledSwap_toffoliCount (control left right : Wire) :
 @[simp]
 theorem controlledSwap_cnotCount (control left right : Wire) :
     eeaCnotCount (controlledSwap control left right) = 2 := rfl
+
+@[simp]
+theorem controlledSwap_xCount (control left right : Wire) :
+    eeaXCount (controlledSwap control left right) = 0 := rfl
 
 /-- Exact three-controlled X using one dirty ancilla and four Toffolis. -/
 def dirtyC3X
@@ -673,6 +688,21 @@ theorem controlledRotateLeftOne_cnotCount
           simp
           omega
 
+/-- Adjacent Fredkin rotations contain no standalone X gates. -/
+@[simp]
+theorem controlledRotateLeftOne_xCount
+    (control : Wire) : ∀ register : List Wire,
+    eeaXCount (controlledRotateLeftOne control register) = 0 := by
+  intro register
+  induction register with
+  | nil => rfl
+  | cons first tail ih =>
+      cases tail with
+      | nil => rfl
+      | cons second rest =>
+          rw [controlledRotateLeftOne, eeaXCount_append,
+            controlledSwap_xCount, ih]
+
 /-- The T count follows structurally from one Toffoli per adjacent pair. -/
 theorem controlledRotateLeftOne_tCount
     (control : Wire) : ∀ register : List Wire,
@@ -774,6 +804,14 @@ theorem eeaCnotCount_adjoint (circuit : Circuit) :
       rw [circuit_adjoint_cons, eeaCnotCount_append, ih]
       cases gate <;> simp [eeaCnotCount, Nat.add_comm]
 
+theorem eeaXCount_adjoint (circuit : Circuit) :
+    eeaXCount circuit.adjoint = eeaXCount circuit := by
+  induction circuit with
+  | nil => rfl
+  | cons gate circuit ih =>
+      rw [circuit_adjoint_cons, eeaXCount_append, ih]
+      cases gate <;> simp [eeaXCount, Nat.add_comm]
+
 private theorem hpFree_adjoint_of_hpFree
     {circuit : Circuit} (hfree : HPFree circuit) :
     HPFree circuit.adjoint := by
@@ -835,6 +873,13 @@ theorem controlledRotateRightOne_cnotCount
       2 * (register.length - 1) := by
   rw [controlledRotateRightOne, eeaCnotCount_adjoint,
     controlledRotateLeftOne_cnotCount]
+
+@[simp]
+theorem controlledRotateRightOne_xCount
+    (control : Wire) (register : List Wire) :
+    eeaXCount (controlledRotateRightOne control register) = 0 := by
+  rw [controlledRotateRightOne, eeaXCount_adjoint,
+    controlledRotateLeftOne_xCount]
 
 theorem controlledRotateRightOne_tCount
     (control : Wire) (register : List Wire) :
