@@ -495,7 +495,7 @@ private def phaseUpdateState (registers : PhaseUpdateRegisters)
 /-- Gate-independent reverse transition on the three public phase/sign bits.  The zero
 predicates depend only on unchanged length metadata, so the source reconstructs them before
 running this Boolean update. -/
-def phaseUpdateInverseState (registers : PhaseUpdateRegisters)
+private def phaseUpdateInverseState (registers : PhaseUpdateRegisters)
     (state : BasisState) : BasisState :=
   let zeroQ := wireAnd registers.lengthQ state
   let zeroRPrime := wireAnd registers.lengthRPrime state
@@ -1033,7 +1033,7 @@ private theorem phaseUpdateState_preserves_scratch
     upd_other _ registers.phase2 _ (Ne.symm hp2Wire),
     upd_other _ registers.phase1 _ (Ne.symm hp1Wire)]
 
-theorem phaseUpdateInverseState_preserves_scratch
+private theorem phaseUpdateInverseState_preserves_scratch
     (registers : PhaseUpdateRegisters) (state : BasisState)
     (hlayout : PhaseUpdateLayout registers) {wire : Wire}
     (hwire : wire ∈ registers.scratch) :

@@ -529,7 +529,6 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_small_resources
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_secp256k1_resources
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_secp256k1_resources
-#print axioms ShorECDLP.Paper2607_13816.phaseUpdateInverseState_preserves_scratch
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_eq_adjoint
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochState_after_inverse
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseState_after_forward
@@ -586,7 +585,7 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 562 ]]; then
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 561 ]]; then
   printf 'expected five hundred sixty-two #print axioms results\n' >&2
   exit 1
 fi
