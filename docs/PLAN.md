@@ -379,7 +379,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 active/padding state; counts are symbolic over the active window.
 
 **Status:** the first fourteen dependency-closed construction units are merged; the fifteenth is
-the current quotient/sign-selector unit. PR #62 contains
+the current quotient/sign-selector unit in PR #76. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -730,7 +730,7 @@ They are equal only if Phase 11 proves the required reuse.
   adjoint cancellation, literal source regressions, and exact production resources. Both wrappers
   allocate 283 roles and restore 13 scratch roles; same-term `qubitCount` witnesses certify exact
   touched-wire counts of 280 for pre-shift and 279 for post-shift.
-- **Phase-5 circuit unit 15 (current):** Figure 9's exact location-controlled quotient/sign swap,
+- **PR #76, Phase-5 circuit unit 15 (current):** Figure 9's exact location-controlled quotient/sign swap,
   including affine preparation/restoration, a certified numeric route through the source-built
   unary tree, whole-state semantics and scratch restoration, locality/well-formedness, adaptive
   coherent refinement, symbolic resources, and a closed small-source regression. The
@@ -770,5 +770,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
 Phases 0--4 and Phase 5 circuit units 1--14 are merged through PR #75. Phase 5 circuit unit 15,
-the pinned Figure-9 quotient/sign selector, is current on that foundation. The coefficient-prefix
-update and full indexed four-phase step remain open.
+the pinned Figure-9 quotient/sign selector, is current in PR #76 on that foundation. The
+coefficient-prefix update and full indexed four-phase step remain open.
