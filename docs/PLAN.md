@@ -721,4 +721,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
 Phases 0--4 and Phase 5 circuit units 1--10 are merged. Phase 5 circuit unit 11, the complete
 interval scratch-restoration proof, is current on that foundation. Its forward and inverse
 coherent/unitary wrappers derive output `IntervalReady` internally and remove the former
-forward-output premise from both round-trip theorems. The indexed four-phase step remains open.
+intermediate output-readiness premise from both round-trip theorems. The indexed four-phase step
+remains open.
