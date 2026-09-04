@@ -429,7 +429,7 @@ theorem dirtyConstantWrites_tCount
 
 /-- Signed subtraction followed by the source's `width`-bit mask, expressed without saturating
 natural subtraction. -/
-def subtractModPowTwo (width value subtract : Nat) : Nat :=
+private def subtractModPowTwo (width value subtract : Nat) : Nat :=
   (value + 2 ^ width - subtract % 2 ^ width) % 2 ^ width
 
 /-- Source truth-minus-one encoding, including `0 ↦ -1 mod 2^width`. -/

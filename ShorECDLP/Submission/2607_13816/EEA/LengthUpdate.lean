@@ -545,28 +545,4 @@ theorem borrowedXorWriter_tCount
       simp [borrowedXorWriter, tCount_append,
         borrowedXorConstant_tCount, ih]
 
-/-! ## Exact telescoping values from the supplemental writers -/
-
-/-- Adjacent telescoping delta `Enc(j) XOR Enc(j-1)` for `j > k` in the
-highest-position writer. -/
-def highestPositionAdjacentDelta (j : Nat) : Nat :=
-  (j - 1) ^^^ (j - 2)
-
-/-- Bottom-lane delta `Enc(k) XOR Enc(0)`, where the truth-minus-one zero encoding is the
-all-ones `width`-bit word. -/
-def highestPositionBaseDelta (width k : Nat) : Nat :=
-  (k - 1) ^^^ (2 ^ width - 1)
-
-/-- `Enc(n+4-j) XOR Enc(n+4-(j+1))` for the right-length writer. -/
-def rightLengthDelta (n j : Nat) : Nat :=
-  (n + 3 - j) ^^^ (n + 3 - (j + 1))
-
-/-- Top-lane delta `Enc(length at K) XOR Enc(0)` for the right-length writer. -/
-def rightLengthBaseDelta (n width K : Nat) : Nat :=
-  (n + 3 - K) ^^^ (2 ^ width - 1)
-
-/-- Encoded right length stored for a lowest nonzero one-based position. -/
-def encodedRightLength (n position : Nat) : Nat :=
-  n + 3 - position
-
 end ShorECDLP.Paper2607_13816
