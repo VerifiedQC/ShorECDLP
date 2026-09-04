@@ -610,6 +610,34 @@ private def intervalTopSecond
       registers.control registers.control
   else []
 
+/-- Global measurement-uncompute realization of the separately handled first top lane. -/
+private def intervalTopFirstAdaptive
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) : Quantum.AdaptiveCircuit :=
+  if intervalHasTopSpecial k K then
+    topSpecialFirstLeafAdaptive mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control
+  else .unitary [] .done
+
+/-- Global measurement-uncompute realization of the separately handled second top lane. -/
+private def intervalTopSecondAdaptive
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) : Quantum.AdaptiveCircuit :=
+  if intervalHasTopSpecial k K then
+    topSpecialSecondLeafAdaptive mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control
+  else .unitary [] .done
+
 private def intervalSignUpdate
     (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool) : Circuit :=
   if signUpdate then [.CX (registers.carry k K) registers.sign] else []
@@ -796,7 +824,7 @@ private theorem intervalTraversal_preservesTopScratch
   have hleaf : DualUnaryLeafPreservesOn leafAction tree.labels decoder preserved := by
     intro label hlabel rightControl leftControl hright hleft next wire hwire
     rcases List.mem_append.mp hwire with hdecoder | htopScratch
-    · have houtside := (hlayout.traversal.2 label).2
+    · have houtside := (hlayout.traversal.2 label hlabel).2
       rw [DecoderOutsideIntervalRoles, List.disjoint_left] at houtside
       by_cases hsecond : second = true
       · simp only [leafAction, if_pos hsecond]
@@ -823,16 +851,16 @@ private theorem intervalTraversal_preservesTopScratch
             (registers.leftTop k K) (registers.accumulator k K)
             (registers.targetAt target label) (registers.addendAt target label)
             (registers.carry k K) (registers.cellScratch k K) label
-            rightControl leftControl decoder next (hlayout.traversal.2 label).1
-            (hlayout.traversal.2 label).2 hright hleft
+            rightControl leftControl decoder next (hlayout.traversal.2 label hlabel).1
+            (hlayout.traversal.2 label hlabel).2 hright hleft
         · simp only [leafAction, if_neg hsecond]
           exact intervalFirstLeaf_preservesScratch_of_decoder mode
             (intervalHasTopSpecial k K) (registers.rightTop k K)
             (registers.leftTop k K) (registers.accumulator k K)
             (registers.targetAt target label) (registers.addendAt target label)
             (registers.carry k K) (registers.cellScratch k K) label
-            rightControl leftControl decoder next (hlayout.traversal.2 label).1
-            (hlayout.traversal.2 label).2 hright hleft
+            rightControl leftControl decoder next (hlayout.traversal.2 label hlabel).1
+            (hlayout.traversal.2 label hlabel).2 hright hleft
       · have houtside := intervalEqualityScratch_outsideLeafRoles registers k K label
           target hlayout hspecial hlabel wire hequality
         by_cases hsecond : second = true
@@ -1386,27 +1414,29 @@ def intervalAddSub
     (signUpdate : Bool) (target : IntervalTarget) : Quantum.AdaptiveCircuit :=
   (Quantum.AdaptiveCircuit.unitary
       (prepareIntervalEndpoints registers.lengthT registers.lengthQ registers.lengthS
-          registers.endpointScratch (registers.carry k K) n k ++
-        intervalTopFirst registers k K mode target) .done).seq
-    ((intervalFirstTraversalAdaptive mode (intervalHasTopSpecial k K)
-        (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
-        (registers.carry k K) (registers.cellScratch k K)
-        (registers.targetAt target) (registers.addendAt target)
-        (intervalTree registers k K) registers.control registers.control
-        (registers.rightPaths k K) (registers.leftPaths k K)).seq
-      ((Quantum.AdaptiveCircuit.unitary
-          (intervalSignUpdate registers k K signUpdate) .done).seq
-        ((intervalSecondTraversalAdaptive mode (intervalHasTopSpecial k K)
-            (registers.rightTop k K) (registers.leftTop k K)
-            (registers.accumulator k K) (registers.carry k K)
-            (registers.cellScratch k K) (registers.targetAt target)
-            (registers.addendAt target) (intervalTree registers k K)
-            registers.control registers.control (registers.rightPaths k K)
-            (registers.leftPaths k K)).seq
-          (Quantum.AdaptiveCircuit.unitary
-            (intervalTopSecond registers k K mode target ++
-              restoreIntervalEndpoints registers.lengthT registers.lengthQ registers.lengthS
-                registers.endpointScratch (registers.carry k K) n k) .done))))
+        registers.endpointScratch (registers.carry k K) n k) .done).seq
+    ((intervalTopFirstAdaptive registers k K mode target).seq
+      ((intervalFirstTraversalAdaptive mode (intervalHasTopSpecial k K)
+          (registers.rightTop k K) (registers.leftTop k K)
+          (registers.accumulator k K) (registers.carry k K)
+          (registers.cellScratch k K) (registers.targetAt target)
+          (registers.addendAt target) (intervalTree registers k K)
+          registers.control registers.control (registers.rightPaths k K)
+          (registers.leftPaths k K)).seq
+        ((Quantum.AdaptiveCircuit.unitary
+            (intervalSignUpdate registers k K signUpdate) .done).seq
+          ((intervalSecondTraversalAdaptive mode (intervalHasTopSpecial k K)
+              (registers.rightTop k K) (registers.leftTop k K)
+              (registers.accumulator k K) (registers.carry k K)
+              (registers.cellScratch k K) (registers.targetAt target)
+              (registers.addendAt target) (intervalTree registers k K)
+              registers.control registers.control (registers.rightPaths k K)
+              (registers.leftPaths k K)).seq
+            ((intervalTopSecondAdaptive registers k K mode target).seq
+              (Quantum.AdaptiveCircuit.unitary
+                (restoreIntervalEndpoints registers.lengthT registers.lengthQ
+                  registers.lengthS registers.endpointScratch
+                  (registers.carry k K) n k) .done))))))
 
 @[simp]
 theorem intervalAddSubUnitary_HPFree
@@ -1450,6 +1480,38 @@ private theorem intervalTopSecond_wellFormed
       (registers.cellScratch k K) (registers.equalityScratch k K)
       registers.control registers.control (hlayout.topSpecial hspecial)
   · simp [intervalTopSecond, hspecial]
+
+private theorem intervalTopFirstAdaptive_wellFormed
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    (intervalTopFirstAdaptive registers k K mode target).WellFormed := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopFirstAdaptive, if_pos hspecial]
+    exact topSpecialFirstLeafAdaptive_wellFormed mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control (hlayout.topSpecial hspecial)
+  · simp [intervalTopFirstAdaptive, hspecial,
+      Quantum.AdaptiveCircuit.WellFormed]
+
+private theorem intervalTopSecondAdaptive_wellFormed
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    (intervalTopSecondAdaptive registers k K mode target).WellFormed := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopSecondAdaptive, if_pos hspecial]
+    exact topSpecialSecondLeafAdaptive_wellFormed mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control (hlayout.topSpecial hspecial)
+  · simp [intervalTopSecondAdaptive, hspecial,
+      Quantum.AdaptiveCircuit.WellFormed]
 
 private theorem intervalSignUpdate_wellFormed
     (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool)
@@ -1503,45 +1565,42 @@ theorem intervalAddSub_wellFormed
     (intervalAddSub registers n k K mode signUpdate target).WellFormed := by
   rw [intervalAddSub]
   apply Quantum.AdaptiveCircuit.WellFormed.seq
-  · exact ⟨by
-      rw [circuitWellFormed_append]
-      exact ⟨prepareIntervalEndpoints_wellFormed registers.lengthT registers.lengthQ
-          registers.lengthS registers.endpointScratch (registers.carry k K) n k
-          hlayout.lengthT_eq_lengthQ
-          (intervalLengthQ_le_endpointScratch registers k K target hlayout)
-          (intervalLengthS_le_endpointScratch registers k K target hlayout)
-          hlayout.endpoints,
-        intervalTopFirst_wellFormed registers k K mode target hlayout⟩,
-      trivial⟩
+  · exact ⟨prepareIntervalEndpoints_wellFormed registers.lengthT registers.lengthQ
+        registers.lengthS registers.endpointScratch (registers.carry k K) n k
+        hlayout.lengthT_eq_lengthQ
+        (intervalLengthQ_le_endpointScratch registers k K target hlayout)
+        (intervalLengthS_le_endpointScratch registers k K target hlayout)
+        hlayout.endpoints, trivial⟩
   · apply Quantum.AdaptiveCircuit.WellFormed.seq
-    · exact intervalFirstTraversalAdaptive_wellFormed mode (intervalHasTopSpecial k K)
-        (registers.rightTop k K) (registers.leftTop k K)
-        (registers.accumulator k K) (registers.carry k K)
-        (registers.cellScratch k K) (registers.targetAt target)
-        (registers.addendAt target) (intervalTree registers k K)
-        registers.control registers.control (registers.rightPaths k K)
-        (registers.leftPaths k K) hlayout.traversal
+    · exact intervalTopFirstAdaptive_wellFormed registers k K mode target hlayout
     · apply Quantum.AdaptiveCircuit.WellFormed.seq
-      · exact ⟨intervalSignUpdate_wellFormed registers k K signUpdate target hlayout,
-          trivial⟩
+      · exact intervalFirstTraversalAdaptive_wellFormed mode
+          (intervalHasTopSpecial k K) (registers.rightTop k K)
+          (registers.leftTop k K) (registers.accumulator k K)
+          (registers.carry k K) (registers.cellScratch k K)
+          (registers.targetAt target) (registers.addendAt target)
+          (intervalTree registers k K) registers.control registers.control
+          (registers.rightPaths k K) (registers.leftPaths k K) hlayout.traversal
       · apply Quantum.AdaptiveCircuit.WellFormed.seq
-        · exact intervalSecondTraversalAdaptive_wellFormed mode
-            (intervalHasTopSpecial k K) (registers.rightTop k K)
-            (registers.leftTop k K) (registers.accumulator k K)
-            (registers.carry k K) (registers.cellScratch k K)
-            (registers.targetAt target) (registers.addendAt target)
-            (intervalTree registers k K) registers.control registers.control
-            (registers.rightPaths k K) (registers.leftPaths k K) hlayout.traversal
-        · exact ⟨by
-            rw [circuitWellFormed_append]
-            exact ⟨intervalTopSecond_wellFormed registers k K mode target hlayout,
-              restoreIntervalEndpoints_wellFormed registers.lengthT registers.lengthQ
-                registers.lengthS registers.endpointScratch (registers.carry k K) n k
-                hlayout.lengthT_eq_lengthQ
-                (intervalLengthQ_le_endpointScratch registers k K target hlayout)
-                (intervalLengthS_le_endpointScratch registers k K target hlayout)
-                hlayout.endpoints⟩,
-          trivial⟩
+        · exact ⟨intervalSignUpdate_wellFormed registers k K signUpdate target hlayout,
+            trivial⟩
+        · apply Quantum.AdaptiveCircuit.WellFormed.seq
+          · exact intervalSecondTraversalAdaptive_wellFormed mode
+              (intervalHasTopSpecial k K) (registers.rightTop k K)
+              (registers.leftTop k K) (registers.accumulator k K)
+              (registers.carry k K) (registers.cellScratch k K)
+              (registers.targetAt target) (registers.addendAt target)
+              (intervalTree registers k K) registers.control registers.control
+              (registers.rightPaths k K) (registers.leftPaths k K) hlayout.traversal
+          · apply Quantum.AdaptiveCircuit.WellFormed.seq
+            · exact intervalTopSecondAdaptive_wellFormed registers k K mode target hlayout
+            · exact ⟨restoreIntervalEndpoints_wellFormed registers.lengthT
+                  registers.lengthQ registers.lengthS registers.endpointScratch
+                  (registers.carry k K) n k hlayout.lengthT_eq_lengthQ
+                  (intervalLengthQ_le_endpointScratch registers k K target hlayout)
+                  (intervalLengthS_le_endpointScratch registers k K target hlayout)
+                  hlayout.endpoints,
+                trivial⟩
 
 private theorem interval_coherent_seq_circuits
     {first second : Quantum.AdaptiveCircuit}
@@ -1564,6 +1623,61 @@ private theorem interval_coherent_seq_circuits
   intro state _
   exact (Quantum.run_append firstCircuit secondCircuit (ket state)).symm
 
+private theorem interval_coherent_strengthen
+    {program : Quantum.AdaptiveCircuit} {ideal : State →ₗ[ℂ] State}
+    {Valid Stronger : BasisState → Prop}
+    (hrefines : CoherentlyImplementsOn program ideal Valid)
+    (hsub : ∀ state, Stronger state → Valid state) :
+    CoherentlyImplementsOn program ideal Stronger := by
+  rcases hrefines with ⟨coefficients, haligned, hmass⟩
+  refine ⟨coefficients, ?_, hmass⟩
+  exact haligned.imp fun branch coefficient hbranch state hstate ↦
+    hbranch state (hsub state hstate)
+
+private theorem intervalTopFirstAdaptive_coherent
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    CoherentlyImplementsOn
+      (intervalTopFirstAdaptive registers k K mode target)
+      (Quantum.run (intervalTopFirst registers k K mode target))
+      (fun state ↦ intervalHasTopSpecial k K = true →
+        Clean (registers.cellScratch k K :: registers.equalityScratch k K) state) := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · simpa [intervalTopFirstAdaptive, intervalTopFirst, hspecial] using
+      topSpecialFirstLeafAdaptive_coherent mode (intervalTopRelative k K)
+        registers.lengthS registers.lengthQ (registers.accumulator k K)
+        (registers.targetAt target (intervalTopRelative k K))
+        (registers.addendAt target (intervalTopRelative k K))
+        (registers.carry k K) (registers.cellScratch k K)
+        (registers.cellScratch k K) (registers.equalityScratch k K)
+        registers.control registers.control (hlayout.topSpecial hspecial)
+  · simpa [intervalTopFirstAdaptive, intervalTopFirst, hspecial] using
+      CoherentlyImplementsOn.unitary ([] : Circuit)
+        (fun state ↦ intervalHasTopSpecial k K = true →
+          Clean (registers.cellScratch k K :: registers.equalityScratch k K) state)
+
+private theorem intervalTopSecondAdaptive_coherent
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    CoherentlyImplementsOn
+      (intervalTopSecondAdaptive registers k K mode target)
+      (Quantum.run (intervalTopSecond registers k K mode target))
+      (fun state ↦ intervalHasTopSpecial k K = true →
+        Clean (registers.cellScratch k K :: registers.equalityScratch k K) state) := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · simpa [intervalTopSecondAdaptive, intervalTopSecond, hspecial] using
+      topSpecialSecondLeafAdaptive_coherent mode (intervalTopRelative k K)
+        registers.lengthS registers.lengthQ (registers.accumulator k K)
+        (registers.targetAt target (intervalTopRelative k K))
+        (registers.addendAt target (intervalTopRelative k K))
+        (registers.carry k K) (registers.cellScratch k K)
+        (registers.cellScratch k K) (registers.equalityScratch k K)
+        registers.control registers.control (hlayout.topSpecial hspecial)
+  · simpa [intervalTopSecondAdaptive, intervalTopSecond, hspecial] using
+      CoherentlyImplementsOn.unitary ([] : Circuit)
+        (fun state ↦ intervalHasTopSpecial k K = true →
+          Clean (registers.cellScratch k K :: registers.equalityScratch k K) state)
+
 /-- Replacing the reverse decoder ANDs by X-measure/reset preserves the complete interval's
 coherent action on every basis input with clean shared scratch. -/
 theorem intervalAddSub_coherent
@@ -1576,11 +1690,14 @@ theorem intervalAddSub_coherent
       (IntervalReady registers) := by
   let Valid : BasisState → Prop := fun state ↦
     Clean (registers.rightPaths k K) state ∧
-      Clean (registers.leftPaths k K) state
-  let prefixCircuit :=
+      Clean (registers.leftPaths k K) state ∧
+      Clean [registers.cellScratch k K] state ∧
+      (intervalHasTopSpecial k K = true →
+        Clean (registers.cellScratch k K :: registers.equalityScratch k K) state)
+  let prepareCircuit :=
     prepareIntervalEndpoints registers.lengthT registers.lengthQ registers.lengthS
-        registers.endpointScratch (registers.carry k K) n k ++
-      intervalTopFirst registers k K mode target
+      registers.endpointScratch (registers.carry k K) n k
+  let topFirstCircuit := intervalTopFirst registers k K mode target
   let firstCircuit := intervalFirstTraversal mode (intervalHasTopSpecial k K)
     (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
     (registers.carry k K) (registers.cellScratch k K)
@@ -1594,13 +1711,21 @@ theorem intervalAddSub_coherent
     (registers.targetAt target) (registers.addendAt target)
     (intervalTree registers k K) registers.control registers.control
     (registers.rightPaths k K) (registers.leftPaths k K)
-  let suffixCircuit := intervalTopSecond registers k K mode target ++
+  let topSecondCircuit := intervalTopSecond registers k K mode target
+  let restoreCircuit :=
     restoreIntervalEndpoints registers.lengthT registers.lengthQ registers.lengthS
       registers.endpointScratch (registers.carry k K) n k
-  have hprefix : CoherentlyImplementsOn
-      (.unitary prefixCircuit .done) (Quantum.run prefixCircuit)
+  have hprepare : CoherentlyImplementsOn
+      (.unitary prepareCircuit .done) (Quantum.run prepareCircuit)
       (IntervalReady registers) :=
-    CoherentlyImplementsOn.unitary prefixCircuit (IntervalReady registers)
+    CoherentlyImplementsOn.unitary prepareCircuit (IntervalReady registers)
+  have htopFirst : CoherentlyImplementsOn
+      (intervalTopFirstAdaptive registers k K mode target)
+      (Quantum.run topFirstCircuit) Valid := by
+    apply interval_coherent_strengthen
+      (intervalTopFirstAdaptive_coherent registers k K mode target hlayout)
+    intro state hvalid
+    exact hvalid.2.2.2
   have hfirst : CoherentlyImplementsOn
       (intervalFirstTraversalAdaptive mode (intervalHasTopSpecial k K)
         (registers.rightTop k K) (registers.leftTop k K)
@@ -1609,14 +1734,16 @@ theorem intervalAddSub_coherent
         (registers.addendAt target) (intervalTree registers k K)
         registers.control registers.control (registers.rightPaths k K)
         (registers.leftPaths k K)) (Quantum.run firstCircuit) Valid := by
-    simpa only [firstCircuit, Valid] using
-      intervalFirstTraversal_coherent mode (intervalHasTopSpecial k K)
+    apply interval_coherent_strengthen
+      (intervalFirstTraversal_coherent mode (intervalHasTopSpecial k K)
         (registers.rightTop k K) (registers.leftTop k K)
         (registers.accumulator k K) (registers.carry k K)
         (registers.cellScratch k K) (registers.targetAt target)
         (registers.addendAt target) (intervalTree registers k K)
         registers.control registers.control (registers.rightPaths k K)
-        (registers.leftPaths k K) hlayout.traversal
+        (registers.leftPaths k K) hlayout.traversal)
+    intro state hvalid
+    exact ⟨hvalid.1, hvalid.2.1, hvalid.2.2.1⟩
   have hsign : CoherentlyImplementsOn
       (.unitary signCircuit .done) (Quantum.run signCircuit) Valid :=
     CoherentlyImplementsOn.unitary signCircuit Valid
@@ -1628,20 +1755,30 @@ theorem intervalAddSub_coherent
         (registers.addendAt target) (intervalTree registers k K)
         registers.control registers.control (registers.rightPaths k K)
         (registers.leftPaths k K)) (Quantum.run secondCircuit) Valid := by
-    simpa only [secondCircuit, Valid] using
-      intervalSecondTraversal_coherent mode (intervalHasTopSpecial k K)
+    apply interval_coherent_strengthen
+      (intervalSecondTraversal_coherent mode (intervalHasTopSpecial k K)
         (registers.rightTop k K) (registers.leftTop k K)
         (registers.accumulator k K) (registers.carry k K)
         (registers.cellScratch k K) (registers.targetAt target)
         (registers.addendAt target) (intervalTree registers k K)
         registers.control registers.control (registers.rightPaths k K)
-        (registers.leftPaths k K) hlayout.traversal
-  have hsuffix : CoherentlyImplementsOn
-      (.unitary suffixCircuit .done) (Quantum.run suffixCircuit) (fun _ ↦ True) :=
-    CoherentlyImplementsOn.unitary suffixCircuit (fun _ ↦ True)
-  have hprefixClassical : HPFree prefixCircuit := by
+        (registers.leftPaths k K) hlayout.traversal)
+    intro state hvalid
+    exact ⟨hvalid.1, hvalid.2.1, hvalid.2.2.1⟩
+  have htopSecond : CoherentlyImplementsOn
+      (intervalTopSecondAdaptive registers k K mode target)
+      (Quantum.run topSecondCircuit) Valid := by
+    apply interval_coherent_strengthen
+      (intervalTopSecondAdaptive_coherent registers k K mode target hlayout)
+    intro state hvalid
+    exact hvalid.2.2.2
+  have hrestore : CoherentlyImplementsOn
+      (.unitary restoreCircuit .done) (Quantum.run restoreCircuit) (fun _ ↦ True) :=
+    CoherentlyImplementsOn.unitary restoreCircuit (fun _ ↦ True)
+  have hprepareClassical : HPFree prepareCircuit := by simp [prepareCircuit]
+  have htopFirstClassical : HPFree topFirstCircuit := by
     by_cases hspecial : intervalHasTopSpecial k K = true <;>
-      simp [prefixCircuit, intervalTopFirst, hspecial]
+      simp [topFirstCircuit, intervalTopFirst, hspecial]
   have hfirstClassical : HPFree firstCircuit := by
     simp [firstCircuit]
   have hsignClassical : HPFree signCircuit := by
@@ -1649,60 +1786,122 @@ theorem intervalAddSub_coherent
       simp [signCircuit, intervalSignUpdate, hsign]
   have hsecondClassical : HPFree secondCircuit := by
     simp [secondCircuit]
-  have hprefixValid : ∀ state, IntervalReady registers state →
-      Valid (run prefixCircuit state) := by
+  have htopSecondClassical : HPFree topSecondCircuit := by
+    by_cases hspecial : intervalHasTopSpecial k K = true <;>
+      simp [topSecondCircuit, intervalTopSecond, hspecial]
+  have hprepareValid : ∀ state, IntervalReady registers state →
+      Valid (run prepareCircuit state) := by
     intro state hready
-    let prepared := run
-      (prepareIntervalEndpoints registers.lengthT registers.lengthQ registers.lengthS
-        registers.endpointScratch (registers.carry k K) n k) state
-    have hpreparedScratch : Clean registers.scratch prepared :=
+    have hpreparedScratch : Clean registers.scratch (run prepareCircuit state) := by
+      simpa only [prepareCircuit] using
       intervalPrepare_cleanScratch registers n k K target state hlayout hready
     have hpreparedTop : Clean
-        (registers.cellScratch k K :: registers.equalityScratch k K) prepared := by
+        (registers.cellScratch k K :: registers.equalityScratch k K)
+          (run prepareCircuit state) := by
       intro wire hwire
       exact hpreparedScratch wire
         (intervalTopScratch_mem_scratch registers k K target hlayout wire hwire)
-    have htopClean := intervalTopFirst_cleanTopScratch registers k K mode target
-      prepared hlayout hpreparedTop
     have hpaths := intervalPaths_clean_of_topScratch registers k K
-      (run (intervalTopFirst registers k K mode target) prepared) htopClean
-    simpa only [Valid, prefixCircuit, Classical.run_append, prepared] using hpaths
+      (run prepareCircuit state) hpreparedTop
+    refine ⟨hpaths.1, hpaths.2, ?_, fun _ ↦ hpreparedTop⟩
+    intro wire hwire
+    have hwireEq : wire = registers.cellScratch k K := by simpa using hwire
+    subst wire
+    exact hpreparedTop _ (by simp)
+  have htopFirstValid : ∀ state, Valid state →
+      Valid (run topFirstCircuit state) := by
+    intro state hvalid
+    by_cases hspecial : intervalHasTopSpecial k K = true
+    · have htopClean := intervalTopFirst_cleanTopScratch registers k K mode target
+        state hlayout (hvalid.2.2.2 hspecial)
+      have hpaths := intervalPaths_clean_of_topScratch registers k K
+        (run topFirstCircuit state) htopClean
+      refine ⟨hpaths.1, hpaths.2, ?_, fun _ ↦ htopClean⟩
+      intro wire hwire
+      have hwireEq : wire = registers.cellScratch k K := by simpa using hwire
+      subst wire
+      exact htopClean _ (by simp)
+    · simpa [topFirstCircuit, intervalTopFirst, hspecial] using hvalid
   have hfirstValid : ∀ state, Valid state → Valid (run firstCircuit state) := by
     intro state hstate
-    exact intervalFirstTraversal_clean mode (intervalHasTopSpecial k K)
+    have hclean := intervalFirstTraversal_cleanWithScratch mode
+      (intervalHasTopSpecial k K)
       (registers.rightTop k K) (registers.leftTop k K)
       (registers.accumulator k K) (registers.carry k K)
       (registers.cellScratch k K) (registers.targetAt target)
       (registers.addendAt target) (intervalTree registers k K)
       registers.control registers.control (registers.rightPaths k K)
-      (registers.leftPaths k K) state hlayout.traversal hstate.1 hstate.2
+      (registers.leftPaths k K) state hlayout.traversal hstate.1 hstate.2.1
+      hstate.2.2.1
+    refine ⟨hclean.1, hclean.2.1, hclean.2.2, ?_⟩
+    intro hspecial wire hwire
+    rw [show run firstCircuit state wire = state wire by
+      simpa only [firstCircuit] using
+        intervalTraversal_preservesTopScratch false registers k K mode target
+          hlayout hspecial state hstate.1 hstate.2.1 wire hwire]
+    exact hstate.2.2.2 hspecial wire hwire
   have hsignValid : ∀ state, Valid state → Valid (run signCircuit state) := by
     intro state hstate
-    constructor
+    have hpreserves : ∀ wire, wire ∈ registers.scratch →
+        run signCircuit state wire = state wire := by
+      intro wire hwire
+      simpa only [signCircuit] using
+        intervalSignUpdate_preservesScratch registers k K signUpdate target state
+          hlayout wire hwire
+    refine ⟨?_, ?_, ?_, ?_⟩
     · intro wire hwire
-      rw [show run signCircuit state wire = state wire by
-        exact intervalSignUpdate_preservesScratch registers k K signUpdate target state
-          hlayout wire (intervalTopScratch_mem_scratch registers k K target hlayout
-            wire (List.mem_cons_of_mem _
-              (intervalRightPaths_mem_equalityScratch registers k K wire hwire)))]
+      rw [hpreserves wire (intervalTopScratch_mem_scratch registers k K target
+        hlayout wire (List.mem_cons_of_mem _
+          (intervalRightPaths_mem_equalityScratch registers k K wire hwire)))]
       exact hstate.1 wire hwire
     · intro wire hwire
-      rw [show run signCircuit state wire = state wire by
-        exact intervalSignUpdate_preservesScratch registers k K signUpdate target state
-          hlayout wire (intervalTopScratch_mem_scratch registers k K target hlayout
-            wire (List.mem_cons_of_mem _
-              (intervalLeftPaths_mem_equalityScratch registers k K wire hwire)))]
-      exact hstate.2 wire hwire
-  have hsecondSuffix := interval_coherent_seq_circuits hsecond hsuffix
-    hsecondClassical (fun _ _ ↦ trivial)
-  have hsignTail := interval_coherent_seq_circuits hsign hsecondSuffix
+      rw [hpreserves wire (intervalTopScratch_mem_scratch registers k K target
+        hlayout wire (List.mem_cons_of_mem _
+          (intervalLeftPaths_mem_equalityScratch registers k K wire hwire)))]
+      exact hstate.2.1 wire hwire
+    · intro wire hwire
+      have hwireEq : wire = registers.cellScratch k K := by simpa using hwire
+      subst wire
+      rw [hpreserves _ (intervalTopScratch_mem_scratch registers k K target
+        hlayout _ (by simp))]
+      exact hstate.2.2.1 _ (by simp)
+    · intro hspecial wire hwire
+      rw [hpreserves wire
+        (intervalTopScratch_mem_scratch registers k K target hlayout wire hwire)]
+      exact hstate.2.2.2 hspecial wire hwire
+  have hsecondValid : ∀ state, Valid state → Valid (run secondCircuit state) := by
+    intro state hstate
+    have hclean := intervalSecondTraversal_cleanWithScratch mode
+      (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K)
+      (registers.accumulator k K) (registers.carry k K)
+      (registers.cellScratch k K) (registers.targetAt target)
+      (registers.addendAt target) (intervalTree registers k K)
+      registers.control registers.control (registers.rightPaths k K)
+      (registers.leftPaths k K) state hlayout.traversal hstate.1 hstate.2.1
+      hstate.2.2.1
+    refine ⟨hclean.1, hclean.2.1, hclean.2.2, ?_⟩
+    intro hspecial wire hwire
+    rw [show run secondCircuit state wire = state wire by
+      simpa only [secondCircuit] using
+        intervalTraversal_preservesTopScratch true registers k K mode target
+          hlayout hspecial state hstate.1 hstate.2.1 wire hwire]
+    exact hstate.2.2.2 hspecial wire hwire
+  have htopSecondTail := interval_coherent_seq_circuits htopSecond hrestore
+    htopSecondClassical (fun _ _ ↦ trivial)
+  have hsecondTail := interval_coherent_seq_circuits hsecond htopSecondTail
+    hsecondClassical hsecondValid
+  have hsignTail := interval_coherent_seq_circuits hsign hsecondTail
     hsignClassical hsignValid
   have hfirstTail := interval_coherent_seq_circuits hfirst hsignTail
     hfirstClassical hfirstValid
-  have hall := interval_coherent_seq_circuits hprefix hfirstTail
-    hprefixClassical hprefixValid
-  simpa only [intervalAddSub, intervalAddSubUnitary, prefixCircuit, firstCircuit,
-    signCircuit, secondCircuit, suffixCircuit, List.append_assoc] using hall
+  have htopFirstTail := interval_coherent_seq_circuits htopFirst hfirstTail
+    htopFirstClassical htopFirstValid
+  have hall := interval_coherent_seq_circuits hprepare htopFirstTail
+    hprepareClassical hprepareValid
+  simpa only [intervalAddSub, intervalAddSubUnitary, prepareCircuit, topFirstCircuit,
+    firstCircuit, signCircuit, secondCircuit, topSecondCircuit, restoreCircuit,
+    List.append_assoc] using hall
 
 /-! ## Constructor-derived resources -/
 
@@ -1759,26 +1958,35 @@ def intervalAdaptiveTFormula
   2 * intervalEndpointTFormula registers.lengthT.length
       registers.lengthQ.length registers.lengthS.length +
     tree.leafCostSum
-        (fun label _ _ ↦ 7 * (rippleFirstCellToffoliCost mode +
+        (fun label _ _ ↦ 7 * (rippleFirstCellToffoliCost mode - 1 +
           if maskedZeroLeaf (intervalHasTopSpecial k K) label then 2 else 0))
         registers.control registers.control (registers.rightPaths k K)
           (registers.leftPaths k K) +
     tree.leafCostSum
-        (fun label _ _ ↦ 7 * (rippleSecondCellToffoliCost mode +
+        (fun label _ _ ↦ 7 * (rippleSecondCellToffoliCost mode - 1 +
           if maskedZeroLeaf (intervalHasTopSpecial k K) label then 2 else 0))
         registers.control registers.control (registers.rightPaths k K)
           (registers.leftPaths k K) +
     28 * tree.internalNodes +
     if intervalHasTopSpecial k K then
-      7 * (4 * mcxVChainToffoliCost registers.lengthS.length +
-        4 * mcxVChainToffoliCost registers.lengthQ.length + 4 +
-        rippleFirstCellToffoliCost mode + rippleSecondCellToffoliCost mode)
+      28 * mcxVChainAdaptiveToffoliCost registers.lengthS.length +
+        28 * mcxVChainAdaptiveToffoliCost registers.lengthQ.length + 28 +
+        7 * (rippleFirstCellToffoliCost mode - 1) +
+        7 * (rippleSecondCellToffoliCost mode - 1)
     else 0
 
-/-- The two decoder stacks each erase one path AND per traversal node. -/
+/-- Every decoder path, main ripple cell, and top-special v-chain/ripple cleanup is measured. -/
 def intervalMeasurementFormula
     (registers : IntervalRegisters) (k K : Nat) : Nat :=
-  4 * (intervalTree registers k K).internalNodes
+  let tree := intervalTree registers k K
+  2 * tree.leafCostSum (fun _ _ _ ↦ 1)
+      registers.control registers.control (registers.rightPaths k K)
+        (registers.leftPaths k K) +
+    4 * tree.internalNodes +
+    if intervalHasTopSpecial k K then
+      4 * mcxVChainMeasurementCost registers.lengthS.length +
+        4 * mcxVChainMeasurementCost registers.lengthQ.length + 2
+    else 0
 
 private theorem intervalTopFirst_toffoliCount
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
@@ -2037,23 +2245,95 @@ private theorem intervalAdaptive_measurementCount_seq
       simp [Quantum.AdaptiveCircuit.seq, Quantum.AdaptiveCircuit.measurementCount,
         ihFalse, ihTrue, Nat.add_max_add_right, Nat.add_assoc]
 
-private theorem intervalTopFirst_tCount
+private theorem intervalTopFirstAdaptive_tCount
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
-    (target : IntervalTarget) :
-    ShorECDLP.tCount (intervalTopFirst registers k K mode target) =
-      7 * eeaToffoliCount (intervalTopFirst registers k K mode target) :=
-  tCount_eq_seven_mul_toffoli_of_HPFree _ (by
-    by_cases hspecial : intervalHasTopSpecial k K = true <;>
-      simp [intervalTopFirst, hspecial])
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    (intervalTopFirstAdaptive registers k K mode target).tCount =
+      if intervalHasTopSpecial k K then
+        (14 * mcxVChainAdaptiveToffoliCost registers.lengthS.length + 7) +
+          7 * (rippleFirstCellToffoliCost mode - 1) +
+          (14 * mcxVChainAdaptiveToffoliCost registers.lengthQ.length + 7)
+      else 0 := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopFirstAdaptive, if_pos hspecial, if_pos hspecial]
+    exact topSpecialFirstLeafAdaptive_tCount mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control
+      (intervalLengthS_sub_two_le_equalityScratch registers k K target hlayout)
+      (intervalLengthQ_sub_two_le_equalityScratch registers k K target hlayout)
+  · simp [intervalTopFirstAdaptive, hspecial,
+      Quantum.AdaptiveCircuit.tCount]
 
-private theorem intervalTopSecond_tCount
+private theorem intervalTopSecondAdaptive_tCount
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
-    (target : IntervalTarget) :
-    ShorECDLP.tCount (intervalTopSecond registers k K mode target) =
-      7 * eeaToffoliCount (intervalTopSecond registers k K mode target) :=
-  tCount_eq_seven_mul_toffoli_of_HPFree _ (by
-    by_cases hspecial : intervalHasTopSpecial k K = true <;>
-      simp [intervalTopSecond, hspecial])
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    (intervalTopSecondAdaptive registers k K mode target).tCount =
+      if intervalHasTopSpecial k K then
+        (14 * mcxVChainAdaptiveToffoliCost registers.lengthQ.length + 7) +
+          7 * (rippleSecondCellToffoliCost mode - 1) +
+          (14 * mcxVChainAdaptiveToffoliCost registers.lengthS.length + 7)
+      else 0 := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopSecondAdaptive, if_pos hspecial, if_pos hspecial]
+    exact topSpecialSecondLeafAdaptive_tCount mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control
+      (intervalLengthS_sub_two_le_equalityScratch registers k K target hlayout)
+      (intervalLengthQ_sub_two_le_equalityScratch registers k K target hlayout)
+  · simp [intervalTopSecondAdaptive, hspecial,
+      Quantum.AdaptiveCircuit.tCount]
+
+private theorem intervalTopFirstAdaptive_measurementCount
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    (intervalTopFirstAdaptive registers k K mode target).measurementCount =
+      if intervalHasTopSpecial k K then
+        2 * mcxVChainMeasurementCost registers.lengthS.length + 1 +
+          2 * mcxVChainMeasurementCost registers.lengthQ.length
+      else 0 := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopFirstAdaptive, if_pos hspecial, if_pos hspecial]
+    exact topSpecialFirstLeafAdaptive_measurementCount mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control
+      (intervalLengthS_sub_two_le_equalityScratch registers k K target hlayout)
+      (intervalLengthQ_sub_two_le_equalityScratch registers k K target hlayout)
+  · simp [intervalTopFirstAdaptive, hspecial,
+      Quantum.AdaptiveCircuit.measurementCount]
+
+private theorem intervalTopSecondAdaptive_measurementCount
+    (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
+    (target : IntervalTarget) (hlayout : IntervalLayout registers k K target) :
+    (intervalTopSecondAdaptive registers k K mode target).measurementCount =
+      if intervalHasTopSpecial k K then
+        2 * mcxVChainMeasurementCost registers.lengthQ.length + 1 +
+          2 * mcxVChainMeasurementCost registers.lengthS.length
+      else 0 := by
+  by_cases hspecial : intervalHasTopSpecial k K = true
+  · rw [intervalTopSecondAdaptive, if_pos hspecial, if_pos hspecial]
+    exact topSpecialSecondLeafAdaptive_measurementCount mode (intervalTopRelative k K)
+      registers.lengthS registers.lengthQ (registers.accumulator k K)
+      (registers.targetAt target (intervalTopRelative k K))
+      (registers.addendAt target (intervalTopRelative k K))
+      (registers.carry k K) (registers.cellScratch k K)
+      (registers.cellScratch k K) (registers.equalityScratch k K)
+      registers.control registers.control
+      (intervalLengthS_sub_two_le_equalityScratch registers k K target hlayout)
+      (intervalLengthQ_sub_two_le_equalityScratch registers k K target hlayout)
+  · simp [intervalTopSecondAdaptive, hspecial,
+      Quantum.AdaptiveCircuit.measurementCount]
 
 private theorem intervalSignUpdate_tCount
     (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool) :
@@ -2064,16 +2344,17 @@ theorem intervalAddSub_tCount
     (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
     (signUpdate : Bool) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
-    (intervalAddSub registers n k K mode signUpdate target).tCount =
+  (intervalAddSub registers n k K mode signUpdate target).tCount =
       intervalAdaptiveTFormula registers k K mode := by
   simp only [intervalAddSub, intervalAdaptive_tCount_seq,
-    Quantum.AdaptiveCircuit.tCount, ShorECDLP.tCount_append]
+    Quantum.AdaptiveCircuit.tCount]
   rw [prepareIntervalEndpoints_tCount registers.lengthT registers.lengthQ
       registers.lengthS registers.endpointScratch (registers.carry k K) n k
       hlayout.lengthT_eq_lengthQ
       (intervalLengthQ_le_endpointScratch registers k K target hlayout)
       (intervalLengthS_le_endpointScratch registers k K target hlayout)
       (intervalLengthS_positive registers k K target hlayout),
+    intervalTopFirstAdaptive_tCount registers k K mode target hlayout,
     intervalFirstTraversalAdaptive_tCount mode (intervalHasTopSpecial k K)
       (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
       (registers.carry k K) (registers.cellScratch k K)
@@ -2092,10 +2373,7 @@ theorem intervalAddSub_tCount
       (intervalLengthQ_le_endpointScratch registers k K target hlayout)
       (intervalLengthS_le_endpointScratch registers k K target hlayout)
       (intervalLengthS_positive registers k K target hlayout),
-    intervalTopFirst_tCount registers k K mode target,
-    intervalTopSecond_tCount registers k K mode target,
-    intervalTopFirst_toffoliCount registers k K mode target hlayout,
-    intervalTopSecond_toffoliCount registers k K mode target hlayout,
+    intervalTopSecondAdaptive_tCount registers k K mode target hlayout,
     intervalSignUpdate_tCount registers k K signUpdate]
   simp only [intervalAdaptiveTFormula]
   split <;> omega
@@ -2108,7 +2386,8 @@ theorem intervalAddSub_measurementCount
       intervalMeasurementFormula registers k K := by
   simp only [intervalAddSub, intervalAdaptive_measurementCount_seq,
     Quantum.AdaptiveCircuit.measurementCount]
-  rw [intervalFirstTraversalAdaptive_measurementCount mode
+  rw [intervalTopFirstAdaptive_measurementCount registers k K mode target hlayout,
+    intervalFirstTraversalAdaptive_measurementCount mode
       (intervalHasTopSpecial k K) (registers.rightTop k K)
       (registers.leftTop k K) (registers.accumulator k K)
       (registers.carry k K) (registers.cellScratch k K)
@@ -2121,9 +2400,205 @@ theorem intervalAddSub_measurementCount
       (registers.carry k K) (registers.cellScratch k K)
       (registers.targetAt target) (registers.addendAt target)
       (intervalTree registers k K) registers.control registers.control
-      (registers.rightPaths k K) (registers.leftPaths k K) hlayout.traversal.1]
-  simp [intervalMeasurementFormula]
-  omega
+      (registers.rightPaths k K) (registers.leftPaths k K) hlayout.traversal.1,
+    intervalTopSecondAdaptive_measurementCount registers k K mode target hlayout]
+  by_cases hspecial : intervalHasTopSpecial k K = true <;>
+    simp [intervalMeasurementFormula, hspecial] <;> omega
+
+/-! ## Closed physical witness and pinned-source resource regressions -/
+
+/-- A nontrivial source-shaped allocation for the five-lane interval `[3,7]`.  Its four-label
+main tree has depth two, and label four is handled by the separate top-special block. -/
+def intervalSourceComparisonRegisters : IntervalRegisters where
+  control := 0
+  sign := 1
+  work1 := List.range' 2 5
+  work2 := List.range' 7 5
+  lengthT := List.range' 12 3
+  lengthQ := List.range' 15 3
+  lengthS := List.range' 18 4
+  scratch := List.range' 22 7
+
+private theorem intervalSourceComparison_tree :
+    intervalTree intervalSourceComparisonRegisters 3 7 =
+      .node 19 16
+        (.node 18 15 (.leaf 0) (.leaf 1))
+        (.node 18 15 (.leaf 2) (.leaf 3)) := by
+  rfl
+
+private theorem intervalSourceComparison_decoderLayout :
+    (intervalTree intervalSourceComparisonRegisters 3 7).Layout
+      intervalSourceComparisonRegisters.control intervalSourceComparisonRegisters.control
+      (intervalSourceComparisonRegisters.rightPaths 3 7)
+      (intervalSourceComparisonRegisters.leftPaths 3 7) := by
+  change DualUnaryActionTree.Layout
+    (.node 19 16
+      (.node 18 15 (.leaf 0) (.leaf 1))
+      (.node 18 15 (.leaf 2) (.leaf 3))) 0 0
+        ([22, 23] : List Wire) ([24, 25] : List Wire)
+  apply DualUnaryActionTree.Layout.node
+  · norm_num [DualUnaryActionTree.decoderWires, DualUnaryActionTree.indexAWires,
+      DualUnaryActionTree.indexBWires]
+  · apply DualUnaryActionTree.Layout.node
+    · norm_num [DualUnaryActionTree.decoderWires, DualUnaryActionTree.indexAWires,
+        DualUnaryActionTree.indexBWires]
+    · apply DualUnaryActionTree.Layout.leaf
+      norm_num [DualUnaryActionTree.decoderWires, DualUnaryActionTree.indexAWires,
+        DualUnaryActionTree.indexBWires]
+    · apply DualUnaryActionTree.Layout.leaf
+      norm_num [DualUnaryActionTree.decoderWires, DualUnaryActionTree.indexAWires,
+        DualUnaryActionTree.indexBWires]
+  · apply DualUnaryActionTree.Layout.node
+    · norm_num [DualUnaryActionTree.decoderWires, DualUnaryActionTree.indexAWires,
+        DualUnaryActionTree.indexBWires]
+    · apply DualUnaryActionTree.Layout.leaf
+      norm_num [DualUnaryActionTree.decoderWires, DualUnaryActionTree.indexAWires,
+        DualUnaryActionTree.indexBWires]
+    · apply DualUnaryActionTree.Layout.leaf
+      norm_num [DualUnaryActionTree.decoderWires, DualUnaryActionTree.indexAWires,
+        DualUnaryActionTree.indexBWires]
+
+/-- The wrapper layout is genuinely inhabited; in particular, its public contracts are not
+vacuous after restricting finite-bank leaf obligations to the labels present in the tree. -/
+theorem intervalSourceComparisonLayout :
+    IntervalLayout intervalSourceComparisonRegisters 3 7 .work1 := by
+  refine {
+    k_le_K := by norm_num
+    work1_length := by norm_num [intervalSourceComparisonRegisters, intervalLaneCount]
+    work2_length := by norm_num [intervalSourceComparisonRegisters, intervalLaneCount]
+    lengthT_eq_lengthQ := by norm_num [intervalSourceComparisonRegisters]
+    lengthT_two_le := by norm_num [intervalSourceComparisonRegisters]
+    lengthS_two_le := by norm_num [intervalSourceComparisonRegisters]
+    right_index_capacity := by
+      change 2 ≤ 4
+      norm_num
+    left_index_capacity := by
+      change 2 ≤ 3
+      norm_num
+    right_top_capacity := by
+      change true = true → 2 < 4
+      norm_num
+    left_top_capacity := by
+      change true = true → 2 < 3
+      norm_num
+    scratch_length := by
+      change 7 = 4 + 3
+      norm_num
+    physical := by
+      change ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+        14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28] :
+          List Wire).Nodup
+      decide
+    endpoints := by
+      change IntervalEndpointLayout ([12, 13, 14] : List Wire)
+        ([15, 16, 17] : List Wire) ([18, 19, 20, 21] : List Wire)
+        ([22, 23, 24, 25] : List Wire) 26
+      norm_num [IntervalEndpointLayout]
+    traversal := ?_
+    topSpecial := ?_
+  }
+  · rw [IntervalTraversalLayout]
+    refine ⟨intervalSourceComparison_decoderLayout, ?_⟩
+    intro label hlabel
+    rw [intervalSourceComparison_tree] at hlabel
+    simp [DualUnaryActionTree.labels] at hlabel
+    rcases hlabel with rfl | rfl | rfl | rfl
+    · change ([20, 17, 27, 2, 7, 26, 28] : List Wire).Nodup ∧
+        DecoderOutsideIntervalRoles ([0, 19, 18, 16, 15, 22, 23, 24, 25] : List Wire)
+          20 17 27 2 7 26 28
+      norm_num [DecoderOutsideIntervalRoles]
+    · change ([20, 17, 27, 3, 8, 26, 28] : List Wire).Nodup ∧
+        DecoderOutsideIntervalRoles ([0, 19, 18, 16, 15, 22, 23, 24, 25] : List Wire)
+          20 17 27 3 8 26 28
+      norm_num [DecoderOutsideIntervalRoles]
+    · change ([20, 17, 27, 4, 9, 26, 28] : List Wire).Nodup ∧
+        DecoderOutsideIntervalRoles ([0, 19, 18, 16, 15, 22, 23, 24, 25] : List Wire)
+          20 17 27 4 9 26 28
+      norm_num [DecoderOutsideIntervalRoles]
+    · change ([20, 17, 27, 5, 10, 26, 28] : List Wire).Nodup ∧
+        DecoderOutsideIntervalRoles ([0, 19, 18, 16, 15, 22, 23, 24, 25] : List Wire)
+          20 17 27 5 10 26 28
+      norm_num [DecoderOutsideIntervalRoles]
+  · intro _
+    change TopSpecialLeafLayout 0 0 ([18, 19, 20, 21] : List Wire)
+      ([15, 16, 17] : List Wire) 27 6 11 26 28 28
+      ([22, 23, 24, 25] : List Wire)
+    norm_num [TopSpecialLeafLayout, EqControlLayout]
+
+/-- Closed comparison against the pinned source for `n=8`, `[k,K]=[3,7]`, addition with the
+sign update, and `Work1` as target.  These equalities are about the actual wrapper terms. -/
+theorem intervalSourceComparison_resources :
+    eeaToffoliCount
+        (intervalAddSubUnitary intervalSourceComparisonRegisters 8 3 7 .add true .work1) = 175 ∧
+      eeaCnotCount
+        (intervalAddSubUnitary intervalSourceComparisonRegisters 8 3 7 .add true .work1) = 203 ∧
+      (intervalAddSub intervalSourceComparisonRegisters 8 3 7 .add true .work1).tCount = 987 ∧
+      (intervalAddSub intervalSourceComparisonRegisters 8 3 7 .add true .work1).measurementCount =
+        34 := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [intervalAddSubUnitary_toffoliCount intervalSourceComparisonRegisters 8 3 7
+      .add true .work1 intervalSourceComparisonLayout]
+    rfl
+  · rw [intervalAddSubUnitary_cnotCount intervalSourceComparisonRegisters 8 3 7
+      .add true .work1 intervalSourceComparisonLayout]
+    rfl
+  · rw [intervalAddSub_tCount intervalSourceComparisonRegisters 8 3 7
+      .add true .work1 intervalSourceComparisonLayout]
+    rfl
+  · rw [intervalAddSub_measurementCount intervalSourceComparisonRegisters 8 3 7
+      .add true .work1 intervalSourceComparisonLayout]
+    rfl
+
+/-- Pinned-source edge regression: one ordinary lane measures its one ripple cleanup per pass. -/
+theorem intervalSingleton_sourceResourceRegression :
+    let registers : IntervalRegisters := {
+      control := 0
+      sign := 1
+      work1 := List.range' 2 1
+      work2 := List.range' 3 1
+      lengthT := List.range' 4 2
+      lengthQ := List.range' 6 2
+      lengthS := List.range' 8 2
+      scratch := List.range' 10 5 }
+    intervalToffoliFormula registers 4 4 .add = 47 ∧
+      intervalCnotFormula registers 4 4 false = 94 ∧
+      intervalAdaptiveTFormula registers 4 4 .add = 315 ∧
+      intervalMeasurementFormula registers 4 4 = 2 := by
+  exact ⟨rfl, rfl, rfl, rfl⟩
+
+/-- Pinned-source edge regression: the two-lane top-special case has four ripple erasures and
+zero equality-chain erasures at width two. -/
+theorem intervalTopSpecialTwoLane_sourceResourceRegression :
+    let registers : IntervalRegisters := {
+      control := 0
+      sign := 1
+      work1 := List.range' 2 2
+      work2 := List.range' 4 2
+      lengthT := List.range' 6 2
+      lengthQ := List.range' 8 2
+      lengthS := List.range' 10 2
+      scratch := List.range' 12 5 }
+    intervalToffoliFormula registers 4 5 .add = 70 ∧
+      intervalCnotFormula registers 4 5 false = 94 ∧
+      intervalAdaptiveTFormula registers 4 5 .add = 462 ∧
+      intervalMeasurementFormula registers 4 5 = 4 := by
+  exact ⟨rfl, rfl, rfl, rfl⟩
+
+/- Production-shaped pinned-source regression for the 257-lane interval and 9/11-bit endpoints. -/
+set_option maxRecDepth 10000 in
+theorem intervalProduction_sourceResourceRegression :
+    let registers : IntervalRegisters := {
+      control := 0
+      sign := 1
+      work1 := List.range' 2 257
+      work2 := List.range' 259 257
+      lengthT := List.range' 516 9
+      lengthQ := List.range' 525 9
+      lengthS := List.range' 534 11
+      scratch := List.range' 545 19 }
+    intervalAdaptiveTFormula registers 1 257 .add = 18319 ∧
+      intervalMeasurementFormula registers 1 257 = 1598 := by
+  exact ⟨rfl, rfl⟩
 
 end
 

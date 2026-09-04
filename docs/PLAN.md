@@ -428,8 +428,14 @@ the two physical decoder stacks, endpoint/equality/carry/accumulator/cell scratc
 and measurement-uncomputed adaptive realization share the source order
 `prepare; top-first; decreasing scan; sign; increasing scan; top-second; restore`, with direct
 basis-state semantics, clean-input coherent refinement, complete physical locality and
-well-formedness, and constructor-derived Toffoli/CNOT/T/measurement equations. Two small pinned
-supplement comparisons cover both the top-special and ordinary-tree cases gate-for-gate. Output
+well-formedness, and constructor-derived Toffoli/CNOT/T/measurement equations. The adaptive term
+follows the supplement's single global measurement-uncompute switch: reverse decoder paths, every
+main-leaf ripple cell, every top-special ripple cell, and both top-special equality v-chains use
+the measured erasure. Finite work-bank obligations are restricted to labels actually present in
+the certified tree, and a closed five-lane physical allocation proves that the complete layout is
+inhabited. Pinned regressions cover the singleton and two-lane edge cases, a nontrivial 8-bit
+top-special instance, and the production-shaped 257-lane instance; their adaptive measurement/T
+counts are respectively `2/315`, `4/462`, `34/987`, and `1598/18319`. Output
 scratch restoration is deliberately not claimed at this boundary: it depends on the indexed
 reachable endpoint/range invariant that the later four-phase step will supply. The inverse
 aggregate and that indexed four-phase step remain open within Phase 5.
@@ -650,8 +656,11 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #70, Phase-5 circuit unit 9 (current):** complete forward interval wrapper over the certified
   source tree and concrete physical register/lane allocation, with literal coherent and adaptive
   programs, direct basis-state semantics, clean-input coherent refinement, complete
-  locality/well-formedness, and exact constructor-derived resources. The inverse wrapper and the
-  indexed reachable-state theorem needed to prove output scratch cleanup remain open.
+  locality/well-formedness, and exact constructor-derived resources. The adaptive program applies
+  the source's global measurement-uncompute choice to decoder, ripple-cell, and equality cleanup;
+  a kernel-checked five-lane layout witness rules out vacuous physical contracts. The inverse
+  wrapper and the indexed reachable-state theorem needed to prove output scratch cleanup remain
+  open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
