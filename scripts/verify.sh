@@ -509,6 +509,26 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalSingleton_sourceResourceRegression
 #print axioms ShorECDLP.Paper2607_13816.intervalTopSpecialTwoLane_sourceResourceRegression
 #print axioms ShorECDLP.Paper2607_13816.intervalProduction_sourceResourceRegression
+#print axioms ShorECDLP.Paper2607_13816.run_phaseUpdateEpochUnitary
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochState_spec
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochState_preserves_scratch
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_ready
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_source_regression
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_small_resources
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_small_resources
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_secp256k1_resources
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_secp256k1_resources
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -540,8 +560,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 516 ]]; then
-  printf 'expected five hundred sixteen #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 536 ]]; then
+  printf 'expected five hundred thirty-six #print axioms results\n' >&2
   exit 1
 fi
 
