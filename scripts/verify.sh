@@ -586,7 +586,7 @@ LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
 if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 561 ]]; then
-  printf 'expected five hundred sixty-two #print axioms results\n' >&2
+  printf 'expected five hundred sixty-one #print axioms results\n' >&2
   exit 1
 fi
 
