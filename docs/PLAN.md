@@ -436,16 +436,18 @@ the certified tree, and a closed five-lane physical allocation proves that the c
 inhabited. Pinned regressions cover the singleton and two-lane edge cases, a nontrivial 8-bit
 top-special instance, and the production-shaped 257-lane instance; their adaptive measurement/T
 counts are respectively `2/315`, `4/462`, `34/987`, and `1598/18319`. Output
-scratch restoration is deliberately not claimed at this boundary: it depends on the indexed
-reachable endpoint/range invariant that the later four-phase step will supply. The tenth unit now
-adds the pinned source inverse as the same exact wrapper at the opposite ripple mode. Its two-sided
-whole-state round-trip theorems use `IntervalReady` at both wrapper boundaries, prove the literal
-endpoint streams reverse each other without pretending they are syntactic adjoints, and prove the
-opposite-mode dual traversals and top-special leaves implement the coherent body's adjoint. The
-inverse adaptive realization reuses the forward coherent-refinement proof and has exactly the same
-Toffoli, CNOT, T, and measurement formulas, including the closed five-lane regression. The indexed
-reachable endpoint/range theorem that supplies output `IntervalReady`, and the resulting
-four-phase step, remain open within Phase 5.
+scratch restoration was left open at that boundary. The tenth unit adds the pinned source inverse
+as the same exact wrapper at the opposite ripple mode, proves the literal endpoint streams reverse
+each other without pretending they are syntactic adjoints, and proves the opposite-mode dual
+traversals and top-special leaves implement the coherent body's adjoint. The inverse adaptive
+realization reuses the forward coherent-refinement proof and has exactly the same Toffoli, CNOT, T,
+and measurement formulas, including the closed five-lane regression. The eleventh unit closes the
+scratch invariant directly at the interval boundary: dirty-scratch Cuccaro half-cell pairs and
+opposite tree traversals restore every non-target lane, the sign update is transported through the
+sign-disjoint second traversal, and the separately handled top pair is composed using the physical
+lane separation. Consequently both forward and inverse wrappers derive output `IntervalReady` from
+the sole input premise, and the two whole-state round-trip theorems no longer assume cleanup at the
+output boundary. The indexed four-phase step remains open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -708,7 +710,7 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--9 are merged. Phase 5 circuit unit 10 (PR #71), the exact inverse
-interval aggregate, is current on that foundation. Its round trip deliberately exposes the
-forward-output `IntervalReady` premise; the indexed reachable endpoint/range theorem that proves
-that premise, followed by the indexed four-phase step, remains open.
+Phases 0--4 and Phase 5 circuit units 1--10 are merged. Phase 5 circuit unit 11, the complete
+interval scratch-restoration proof, is current on that foundation. It derives forward and inverse
+output `IntervalReady` internally and removes the former forward-output premise from both
+round-trip theorems. The indexed four-phase step remains open.
