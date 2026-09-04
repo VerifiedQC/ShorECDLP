@@ -5,12 +5,13 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-6 paper foundation below
-are on `main@73434f1f8b74d972c4e0a3b43e00570dcde0e46a`. PR #56 → PR #57 → PR #58 → PR #59
-→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 landed the source split, adaptive Kraus semantics,
-coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and the first six concrete circuit units; Phase 5 circuit unit 7 (affine endpoint
-preparation/restoration) is the current implementation unit. A `✓` means a
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-7 paper foundation below
+are on `main@7f4e9cb12a07944689e0ce5ab5bbd7f47af6da6b`. PR #56 → PR #57 → PR #58 → PR #59
+→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
+landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
+measurement-based uncomputation, pure EEA model, indexed EEA bounds/windows, and the first seven
+concrete circuit units. Phase 5 circuit unit 8 (zero maps and complete length blocks) is the current
+implementation unit in PR #69. A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
 
@@ -620,14 +621,19 @@ They are equal only if Phase 11 proves the required reuse.
   masked-zero main leaves and direct top-special leaves, caller-supplied per-label `qpair(j)` lanes
   in the `.dec`/`.inc` dual scans, shared equality/ripple scratch restoration, basis semantics,
   cleanup/locality, well-formedness, coherent refinement, and constructor-derived local/traversal
-  resource equations. Complete interval-block instantiation, endpoint transforms, zero maps, full
-  length blocks, the inverse aggregate, and indexed step remain open.
-- **Phase-5 circuit unit 7 (current):** source affine endpoint layer: uncontrolled increment,
+  resource equations. Complete interval-block instantiation remained open at that boundary.
+- **PR #68, Phase-5 circuit unit 7:** merged at `7f4e9cb1`; source affine endpoint layer:
+  uncontrolled increment,
   literal Cuccaro add/sub, clean constant add/subtract, `const - x`, and exact endpoint
   preparation/restoration, with direct word semantics, full shared-scratch cleanup, locality,
-  well-formedness, and coherent resource equations. These direct contracts are Boolean-word
-  recurrences; their Nat/mod-`2^w` interpretation and the formal prepare/restore round trip around
-  the traversal remain complete-interval obligations. Zero maps, complete length blocks, the
+  well-formedness, and coherent resource equations. Their Nat/mod-`2^w` interpretation and the
+  formal endpoint round trip remained open at that boundary.
+- **PR #69, Phase-5 circuit unit 8 (current):** Boolean-word-to-natural affine semantics, a full
+  endpoint prepare/restore basis-state round trip, literal upper/lower dirty zero maps, grouped
+  write/map/write/map length writers, and both complete affine/write/write/affine length blocks,
+  with direct semantics, borrowed-bank and scratch restoration, full outside-target locality,
+  physical well-formedness, and exact constructor-derived Toffoli/CNOT/T equations. The
+  source-built tree and physical register/lane instantiation in the complete interval wrapper, the
   inverse aggregate, and the indexed step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
@@ -663,5 +669,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--6 are merged. Phase 5 circuit unit 7 is the current
-implementation unit on that foundation.
+Phases 0--4 and Phase 5 circuit units 1--7 are merged. Phase 5 circuit unit 8 is the current
+implementation unit in PR #69 on that foundation.
