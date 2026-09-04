@@ -465,6 +465,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubUnitary_state
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_preservesOutside
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_HPFree
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSub_wellFormed
@@ -530,8 +531,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 506 ]]; then
-  printf 'expected five hundred six #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 507 ]]; then
+  printf 'expected five hundred seven #print axioms results\n' >&2
   exit 1
 fi
 
