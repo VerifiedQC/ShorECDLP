@@ -172,7 +172,7 @@ private theorem rippleCell_pair_preserves
 
 /-- The source's first and second Cuccaro half-cells restore every wire except their target,
 without assuming that the shared v-chain scratch starts clean. -/
-theorem rippleCell_pair_preservesOutsideTarget
+private theorem rippleCell_pair_preservesOutsideTarget
     (mode : RippleMode) (control target addend carry scratch : Wire)
     (state : BasisState)
     (hlayout : [control, target, addend, carry, scratch].Nodup) :

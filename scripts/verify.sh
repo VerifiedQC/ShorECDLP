@@ -463,7 +463,6 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.PaperCircuitAvoids.ofUsesOnly
 #print axioms ShorECDLP.Paper2607_13816.PaperCircuitAvoids.run_agreesOutside
 #print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.Layout.nodeParts
-#print axioms ShorECDLP.Paper2607_13816.rippleCell_pair_preservesOutsideTarget
 #print axioms ShorECDLP.Paper2607_13816.topSpecialLeaf_pair_preservesOutsideTarget
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_avoids
 #print axioms ShorECDLP.Paper2607_13816.intervalTraversals_pair_preservesOutsideTargets
@@ -541,8 +540,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 517 ]]; then
-  printf 'expected five hundred seventeen #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 516 ]]; then
+  printf 'expected five hundred sixteen #print axioms results\n' >&2
   exit 1
 fi
 
