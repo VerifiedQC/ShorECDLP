@@ -14,6 +14,7 @@ import ShorECDLP.Submission.«2607_13816».EEA.WordNat
 import ShorECDLP.Submission.«2607_13816».EEA.Endpoint
 import ShorECDLP.Submission.«2607_13816».EEA.ZeroMap
 import ShorECDLP.Submission.«2607_13816».EEA.LengthBlocks
+import ShorECDLP.Submission.«2607_13816».EEA.Interval
 import ShorECDLP.Submission.«2607_13816».EEA.Windows
 
 /-!

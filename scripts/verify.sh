@@ -407,6 +407,27 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.cleanC3X_preservesScratch
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCell_preservesScratch
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCell_preservesScratch
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_preservesOn
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversal_preservesScratch
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversal_preservesScratch
+#print axioms ShorECDLP.Paper2607_13816.intervalTree_built
+#print axioms ShorECDLP.Paper2607_13816.intervalTree_visitLabels_inc
+#print axioms ShorECDLP.Paper2607_13816.intervalTree_visitLabels_dec
+#print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubUnitary_state
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_coherent
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_tCount
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_measurementCount
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -438,8 +459,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 414 ]]; then
-  printf 'expected four hundred fourteen #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 435 ]]; then
+  printf 'expected four hundred thirty-five #print axioms results\n' >&2
   exit 1
 fi
 

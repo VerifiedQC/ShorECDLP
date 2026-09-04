@@ -380,6 +380,24 @@ theorem run_cleanC3X
           hscratchTarget, htargetScratch, hclean, hf, hs, ht, hout]
     · simp [cleanC3X, run, applyGate, upd, hwtarget, hws]
 
+/-- The v-chain work wire is restored even off the clean-input specification domain. -/
+theorem cleanC3X_preservesScratch
+    (first second third target scratch : Wire) (state : BasisState)
+    (hnd : [first, second, third, target, scratch].Nodup) :
+    run (cleanC3X first second third target scratch) state scratch =
+      state scratch := by
+  obtain ⟨_, hfirstTarget, hfirstScratch,
+    hsecondTarget, hsecondScratch, hthirdScratch,
+    _, hscratchTarget⟩ :=
+    nodupFive_parts first second third target scratch hnd
+  cases hfirst : state first <;> cases hsecond : state second <;>
+    cases hthird : state third <;> cases htarget : state target <;>
+      cases hscratch : state scratch <;>
+        simp [cleanC3X, run, applyGate, upd,
+          hfirstTarget, hfirstScratch, hsecondTarget, hsecondScratch,
+          hthirdScratch, hscratchTarget,
+          hfirst, hsecond, hthird, htarget, hscratch]
+
 /-- The clean-v-chain construction is physically well formed on five distinct wires. -/
 theorem cleanC3X_wellFormed
     (first second third target scratch : Wire)

@@ -2015,6 +2015,102 @@ theorem intervalSecondLeaf_preservesOutside
     target addend carry scratch label rightControl leftControl).preservesOutside
       state wire hwire
 
+private theorem intervalLeaf_scratch_outside_toggles
+    (rightControl leftControl rightTop leftTop accumulator target addend carry scratch : Wire)
+    (hlayout : IntervalLeafLayout rightControl leftControl rightTop leftTop
+      accumulator target addend carry scratch) :
+    scratch ∉ [rightControl, rightTop, accumulator] ∧
+      scratch ∉ [leftControl, leftTop, accumulator] := by
+  obtain ⟨_, hroles, hcross⟩ := List.nodup_append.mp hlayout
+  have hrightControlScratch : rightControl ≠ scratch := by
+    intro equality
+    exact hcross rightControl (by simp) scratch (by simp) equality
+  have hleftControlScratch : leftControl ≠ scratch := by
+    intro equality
+    exact hcross leftControl (by simp) scratch (by simp) equality
+  have hrightTopScratch : rightTop ≠ scratch := by
+    intro equality
+    exact (List.nodup_cons.mp hroles).1 (by simp [equality])
+  have hleftTopScratch : leftTop ≠ scratch := by
+    intro equality
+    exact (List.nodup_cons.mp (List.nodup_cons.mp hroles).2).1
+      (by simp [equality])
+  have haccumulatorScratch : accumulator ≠ scratch := by
+    intro equality
+    exact (List.nodup_cons.mp (List.nodup_cons.mp
+      (List.nodup_cons.mp hroles).2).2).1 (by simp [equality])
+  constructor <;> simp [Ne.symm hrightControlScratch, Ne.symm hleftControlScratch,
+    Ne.symm hrightTopScratch, Ne.symm hleftTopScratch,
+    Ne.symm haccumulatorScratch]
+
+/-- A complete first leaf always restores the shared clean-v-chain cell wire. -/
+theorem intervalFirstLeaf_preservesScratch
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator target addend carry scratch : Wire)
+    (label : Nat) (rightControl leftControl : Wire)
+    (state : BasisState)
+    (hlayout : IntervalLeafLayout rightControl leftControl rightTop leftTop
+      accumulator target addend carry scratch) :
+    run (intervalFirstLeaf mode topSpecial rightTop leftTop accumulator
+        target addend carry scratch label rightControl leftControl) state scratch =
+      state scratch := by
+  obtain ⟨_, _, hcell⟩ := intervalLeafLayout_parts rightControl leftControl
+    rightTop leftTop accumulator target addend carry scratch hlayout
+  obtain ⟨hrightOutside, hleftOutside⟩ :=
+    intervalLeaf_scratch_outside_toggles rightControl leftControl rightTop leftTop
+      accumulator target addend carry scratch hlayout
+  let afterRight := run
+    (endpointLeafToggle topSpecial label rightTop rightControl accumulator) state
+  let afterCell := run
+    (rippleFirstCell mode accumulator target addend carry scratch) afterRight
+  rw [intervalFirstLeaf, run_append, run_append]
+  change run (endpointLeafToggle topSpecial label leftTop leftControl accumulator)
+      afterCell scratch = state scratch
+  rw [(endpointLeafToggle_usesOnly topSpecial label leftTop leftControl accumulator).preservesOutside
+      afterCell hleftOutside]
+  change run (rippleFirstCell mode accumulator target addend carry scratch)
+      afterRight scratch = state scratch
+  rw [rippleFirstCell_preservesScratch mode accumulator target addend carry scratch
+      afterRight hcell]
+  change run (endpointLeafToggle topSpecial label rightTop rightControl accumulator)
+      state scratch = state scratch
+  exact (endpointLeafToggle_usesOnly topSpecial label rightTop rightControl accumulator).preservesOutside
+    state hrightOutside
+
+/-- A complete second leaf always restores the same cell wire. -/
+theorem intervalSecondLeaf_preservesScratch
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator target addend carry scratch : Wire)
+    (label : Nat) (rightControl leftControl : Wire)
+    (state : BasisState)
+    (hlayout : IntervalLeafLayout rightControl leftControl rightTop leftTop
+      accumulator target addend carry scratch) :
+    run (intervalSecondLeaf mode topSpecial rightTop leftTop accumulator
+        target addend carry scratch label rightControl leftControl) state scratch =
+      state scratch := by
+  obtain ⟨_, _, hcell⟩ := intervalLeafLayout_parts rightControl leftControl
+    rightTop leftTop accumulator target addend carry scratch hlayout
+  obtain ⟨hrightOutside, hleftOutside⟩ :=
+    intervalLeaf_scratch_outside_toggles rightControl leftControl rightTop leftTop
+      accumulator target addend carry scratch hlayout
+  let afterLeft := run
+    (endpointLeafToggle topSpecial label leftTop leftControl accumulator) state
+  let afterCell := run
+    (rippleSecondCell mode accumulator target addend carry scratch) afterLeft
+  rw [intervalSecondLeaf, run_append, run_append]
+  change run (endpointLeafToggle topSpecial label rightTop rightControl accumulator)
+      afterCell scratch = state scratch
+  rw [(endpointLeafToggle_usesOnly topSpecial label rightTop rightControl accumulator).preservesOutside
+      afterCell hrightOutside]
+  change run (rippleSecondCell mode accumulator target addend carry scratch)
+      afterLeft scratch = state scratch
+  rw [rippleSecondCell_preservesScratch mode accumulator target addend carry scratch
+      afterLeft hcell]
+  change run (endpointLeafToggle topSpecial label leftTop leftControl accumulator)
+      state scratch = state scratch
+  exact (endpointLeafToggle_usesOnly topSpecial label leftTop leftControl accumulator).preservesOutside
+    state hleftOutside
+
 /-- Caller-side condition saying the tree's decoder interface is disjoint from the arithmetic
 roles written by a leaf. -/
 def DecoderOutsideIntervalRoles
@@ -2311,6 +2407,136 @@ theorem run_topSpecialSecondLeaf
     run_toggleEqConstUnderControl rightRoot rightRegister topValue accumulator
       rippleScratch eqScratches afterCell hlayout.1 heqCleanAfterCell]
   rfl
+
+private theorem topSpecialFirstLeafState_clean
+    (mode : RippleMode) (topValue : Nat)
+    (rightRegister leftRegister : List Wire)
+    (accumulator target addend carry scratch : Wire)
+    (eqScratches : List Wire) (rightRoot leftRoot : Wire)
+    (state : BasisState)
+    (hcell : [accumulator, target, addend, carry, scratch].Nodup)
+    (hdisjoint : List.Disjoint eqScratches
+      (accumulator :: target :: addend :: carry :: scratch :: []))
+    (hclean : Clean (scratch :: eqScratches) state) :
+    Clean (scratch :: eqScratches)
+      (topSpecialFirstLeafState mode topValue rightRegister leftRegister
+        accumulator target addend carry rightRoot leftRoot state) := by
+  simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+    or_false, not_or] at hcell
+  obtain ⟨⟨haccTarget, haccAddend, haccCarry, haccScratch⟩,
+    ⟨⟨htargetAddend, htargetCarry, htargetScratch⟩,
+      ⟨⟨haddendCarry, haddendScratch⟩, ⟨hcarryScratch, _⟩⟩⟩⟩ := hcell
+  rw [List.disjoint_left] at hdisjoint
+  intro wire hwire
+  rcases List.mem_cons.mp hwire with hwire | hwire
+  · subst wire
+    simpa [topSpecialFirstLeafState, writeRippleCell, upd,
+      Ne.symm haccScratch, Ne.symm htargetScratch,
+      Ne.symm haddendScratch, Ne.symm hcarryScratch] using
+      hclean scratch (by simp)
+  · have houtside := hdisjoint hwire
+    have hacc : wire ≠ accumulator := by
+      intro equality
+      exact houtside (by simp [equality])
+    have htarget : wire ≠ target := by
+      intro equality
+      exact houtside (by simp [equality])
+    have haddend : wire ≠ addend := by
+      intro equality
+      exact houtside (by simp [equality])
+    have hcarry : wire ≠ carry := by
+      intro equality
+      exact houtside (by simp [equality])
+    simpa [topSpecialFirstLeafState, writeRippleCell, upd,
+      hacc, htarget, haddend, hcarry] using hclean wire (by simp [hwire])
+
+private theorem topSpecialSecondLeafState_clean
+    (mode : RippleMode) (topValue : Nat)
+    (rightRegister leftRegister : List Wire)
+    (accumulator target addend carry scratch : Wire)
+    (eqScratches : List Wire) (rightRoot leftRoot : Wire)
+    (state : BasisState)
+    (hcell : [accumulator, target, addend, carry, scratch].Nodup)
+    (hdisjoint : List.Disjoint eqScratches
+      (accumulator :: target :: addend :: carry :: scratch :: []))
+    (hclean : Clean (scratch :: eqScratches) state) :
+    Clean (scratch :: eqScratches)
+      (topSpecialSecondLeafState mode topValue rightRegister leftRegister
+        accumulator target addend carry rightRoot leftRoot state) := by
+  simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+    or_false, not_or] at hcell
+  obtain ⟨⟨haccTarget, haccAddend, haccCarry, haccScratch⟩,
+    ⟨⟨htargetAddend, htargetCarry, htargetScratch⟩,
+      ⟨⟨haddendCarry, haddendScratch⟩, ⟨hcarryScratch, _⟩⟩⟩⟩ := hcell
+  rw [List.disjoint_left] at hdisjoint
+  intro wire hwire
+  rcases List.mem_cons.mp hwire with hwire | hwire
+  · subst wire
+    simpa [topSpecialSecondLeafState, writeRippleCell, upd,
+      Ne.symm haccScratch, Ne.symm htargetScratch,
+      Ne.symm haddendScratch, Ne.symm hcarryScratch] using
+      hclean scratch (by simp)
+  · have houtside := hdisjoint hwire
+    have hacc : wire ≠ accumulator := by
+      intro equality
+      exact houtside (by simp [equality])
+    have htarget : wire ≠ target := by
+      intro equality
+      exact houtside (by simp [equality])
+    have haddend : wire ≠ addend := by
+      intro equality
+      exact houtside (by simp [equality])
+    have hcarry : wire ≠ carry := by
+      intro equality
+      exact houtside (by simp [equality])
+    simpa [topSpecialSecondLeafState, writeRippleCell, upd,
+      hacc, htarget, haddend, hcarry] using hclean wire (by simp [hwire])
+
+/-- The separately handled first top lane restores its equality/ripple scratch bank. -/
+theorem topSpecialFirstLeaf_clean
+    (mode : RippleMode) (topValue : Nat)
+    (rightRegister leftRegister : List Wire)
+    (accumulator target addend carry rippleScratch eqFlag : Wire)
+    (eqScratches : List Wire) (rightRoot leftRoot : Wire)
+    (state : BasisState)
+    (hlayout : TopSpecialLeafLayout rightRoot leftRoot rightRegister leftRegister
+      accumulator target addend carry rippleScratch eqFlag eqScratches)
+    (hclean : Clean (eqFlag :: eqScratches) state) :
+    Clean (eqFlag :: eqScratches)
+      (run (topSpecialFirstLeaf mode topValue rightRegister leftRegister
+        accumulator target addend carry rippleScratch eqFlag eqScratches
+        rightRoot leftRoot) state) := by
+  have heq : eqFlag = rippleScratch := hlayout.2.2.2.1
+  subst eqFlag
+  rw [run_topSpecialFirstLeaf mode topValue rightRegister leftRegister
+    accumulator target addend carry rippleScratch rippleScratch eqScratches
+    rightRoot leftRoot state hlayout hclean]
+  exact topSpecialFirstLeafState_clean mode topValue rightRegister leftRegister
+    accumulator target addend carry rippleScratch eqScratches rightRoot leftRoot state
+    hlayout.2.2.1 hlayout.2.2.2.2 hclean
+
+/-- The separately handled second top lane restores the same scratch bank. -/
+theorem topSpecialSecondLeaf_clean
+    (mode : RippleMode) (topValue : Nat)
+    (rightRegister leftRegister : List Wire)
+    (accumulator target addend carry rippleScratch eqFlag : Wire)
+    (eqScratches : List Wire) (rightRoot leftRoot : Wire)
+    (state : BasisState)
+    (hlayout : TopSpecialLeafLayout rightRoot leftRoot rightRegister leftRegister
+      accumulator target addend carry rippleScratch eqFlag eqScratches)
+    (hclean : Clean (eqFlag :: eqScratches) state) :
+    Clean (eqFlag :: eqScratches)
+      (run (topSpecialSecondLeaf mode topValue rightRegister leftRegister
+        accumulator target addend carry rippleScratch eqFlag eqScratches
+        rightRoot leftRoot) state) := by
+  have heq : eqFlag = rippleScratch := hlayout.2.2.2.1
+  subst eqFlag
+  rw [run_topSpecialSecondLeaf mode topValue rightRegister leftRegister
+    accumulator target addend carry rippleScratch rippleScratch eqScratches
+    rightRoot leftRoot state hlayout hclean]
+  exact topSpecialSecondLeafState_clean mode topValue rightRegister leftRegister
+    accumulator target addend carry rippleScratch eqScratches rightRoot leftRoot state
+    hlayout.2.2.1 hlayout.2.2.2.2 hclean
 
 theorem topSpecialFirstLeaf_usesOnly
     (mode : RippleMode) (topValue : Nat)
@@ -2664,6 +2890,46 @@ private theorem intervalLeafLayout_of_decoder
   apply (houtside hprotected)
   simpa [equality] using hrole
 
+/-- Decoder-facing form of first-leaf cell-scratch restoration. -/
+theorem intervalFirstLeaf_preservesScratch_of_decoder
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator target addend carry scratch : Wire)
+    (label : Nat) (rightControl leftControl : Wire)
+    (protectedWires : List Wire) (state : BasisState)
+    (hroles : [rightTop, leftTop, accumulator, target, addend, carry, scratch].Nodup)
+    (houtside : DecoderOutsideIntervalRoles protectedWires rightTop leftTop
+      accumulator target addend carry scratch)
+    (hright : rightControl ∈ protectedWires)
+    (hleft : leftControl ∈ protectedWires) :
+    run (intervalFirstLeaf mode topSpecial rightTop leftTop accumulator
+        target addend carry scratch label rightControl leftControl) state scratch =
+      state scratch := by
+  exact intervalFirstLeaf_preservesScratch mode topSpecial rightTop leftTop accumulator
+    target addend carry scratch label rightControl leftControl state
+    (intervalLeafLayout_of_decoder protectedWires rightControl leftControl
+      rightTop leftTop accumulator target addend carry scratch hroles houtside
+      hright hleft)
+
+/-- Decoder-facing form of second-leaf cell-scratch restoration. -/
+theorem intervalSecondLeaf_preservesScratch_of_decoder
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator target addend carry scratch : Wire)
+    (label : Nat) (rightControl leftControl : Wire)
+    (protectedWires : List Wire) (state : BasisState)
+    (hroles : [rightTop, leftTop, accumulator, target, addend, carry, scratch].Nodup)
+    (houtside : DecoderOutsideIntervalRoles protectedWires rightTop leftTop
+      accumulator target addend carry scratch)
+    (hright : rightControl ∈ protectedWires)
+    (hleft : leftControl ∈ protectedWires) :
+    run (intervalSecondLeaf mode topSpecial rightTop leftTop accumulator
+        target addend carry scratch label rightControl leftControl) state scratch =
+      state scratch := by
+  exact intervalSecondLeaf_preservesScratch mode topSpecial rightTop leftTop accumulator
+    target addend carry scratch label rightControl leftControl state
+    (intervalLeafLayout_of_decoder protectedWires rightControl leftControl
+      rightTop leftTop accumulator target addend carry scratch hroles houtside
+      hright hleft)
+
 private theorem intervalFirstLeaf_dualWellFormed
     (mode : RippleMode) (topSpecial : Bool)
     (rightTop leftTop accumulator carry scratch : Wire)
@@ -2865,6 +3131,224 @@ theorem intervalSecondTraversalAdaptive_wellFormed
     (intervalSecondLeaf_dualWellFormed mode topSpecial rightTop leftTop accumulator
       carry scratch targetAt addendAt tree
       (tree.decoderWires rightRoot leftRoot rightPaths leftPaths) hfamily)
+
+/-! ## Direct ordered traversal semantics -/
+
+/-- Total direct semantics of a first-pass leaf.  On the public clean-cell domain it is the
+gate-independent Boolean action; the fallback makes the state transformer total outside that
+domain without imposing a fictional behavior on dirty scratch. -/
+def intervalFirstLeafTotalState
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator target addend carry scratch : Wire)
+    (label : Nat) (rightControl leftControl : Wire)
+    (state : BasisState) : BasisState :=
+  if state scratch = false then
+    intervalFirstLeafState mode topSpecial rightTop leftTop accumulator
+      target addend carry label rightControl leftControl state
+  else
+    run (intervalFirstLeaf mode topSpecial rightTop leftTop accumulator
+      target addend carry scratch label rightControl leftControl) state
+
+/-- Total direct semantics of a second-pass leaf, with the same clean-cell boundary. -/
+def intervalSecondLeafTotalState
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator target addend carry scratch : Wire)
+    (label : Nat) (rightControl leftControl : Wire)
+    (state : BasisState) : BasisState :=
+  if state scratch = false then
+    intervalSecondLeafState mode topSpecial rightTop leftTop accumulator
+      target addend carry label rightControl leftControl state
+  else
+    run (intervalSecondLeaf mode topSpecial rightTop leftTop accumulator
+      target addend carry scratch label rightControl leftControl) state
+
+/-- Gate-independent source-order state action of the first (decreasing) synchronized scan. -/
+def intervalFirstTraversalState
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire) (state : BasisState) : BasisState :=
+  tree.runLeafState .dec
+    (fun label rightControl leftControl ↦
+      intervalFirstLeafTotalState mode topSpecial rightTop leftTop accumulator
+        (targetAt label) (addendAt label) carry scratch label
+        rightControl leftControl)
+    rightRoot leftRoot rightPaths leftPaths state
+
+/-- Gate-independent source-order state action of the second (increasing) synchronized scan. -/
+def intervalSecondTraversalState
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire) (state : BasisState) : BasisState :=
+  tree.runLeafState .inc
+    (fun label rightControl leftControl ↦
+      intervalSecondLeafTotalState mode topSpecial rightTop leftTop accumulator
+        (targetAt label) (addendAt label) carry scratch label
+        rightControl leftControl)
+    rightRoot leftRoot rightPaths leftPaths state
+
+/-- Direct whole-state semantics of the first source-ordered traversal. -/
+theorem run_intervalFirstTraversal_state
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire) (state : BasisState)
+    (hlayout : IntervalTraversalLayout tree rightRoot leftRoot rightPaths leftPaths
+      rightTop leftTop accumulator carry scratch targetAt addendAt)
+    (hcleanRight : Clean rightPaths state) (hcleanLeft : Clean leftPaths state) :
+    run (intervalFirstTraversal mode topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths) state =
+      intervalFirstTraversalState mode topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths state := by
+  let decoderSupport := tree.decoderWires rightRoot leftRoot rightPaths leftPaths
+  have hruns : DualUnaryLeafRunsAs
+      (fun label rightControl leftControl ↦
+        intervalFirstLeaf mode topSpecial rightTop leftTop accumulator
+          (targetAt label) (addendAt label) carry scratch label rightControl leftControl)
+      (fun label rightControl leftControl ↦
+        intervalFirstLeafTotalState mode topSpecial rightTop leftTop accumulator
+          (targetAt label) (addendAt label) carry scratch label rightControl leftControl)
+      decoderSupport := by
+    intro label rightControl leftControl hright hleft next
+    by_cases hclean : next scratch = false
+    · simp only [intervalFirstLeafTotalState, hclean, if_pos]
+      exact run_intervalFirstLeaf mode topSpecial rightTop leftTop accumulator
+        (targetAt label) (addendAt label) carry scratch label rightControl leftControl
+        next (intervalLeafLayout_of_decoder decoderSupport rightControl leftControl
+          rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
+          (hlayout.2 label).1 (hlayout.2 label).2 hright hleft) hclean
+    · simp_all [intervalFirstLeafTotalState]
+  rw [intervalFirstTraversal, intervalFirstTraversalState]
+  exact run_dualUnaryActionUnitary_as_runLeafState .dec _ _ tree rightRoot leftRoot
+    rightPaths leftPaths decoderSupport state hlayout.1 hruns
+    (intervalFirstLeafFamily_dualPreserves mode topSpecial rightTop leftTop accumulator
+      carry scratch targetAt addendAt decoderSupport (fun label ↦ (hlayout.2 label).2))
+    (fun _ hwire ↦ hwire) hcleanRight hcleanLeft
+
+/-- Direct whole-state semantics of the second source-ordered traversal. -/
+theorem run_intervalSecondTraversal_state
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire) (state : BasisState)
+    (hlayout : IntervalTraversalLayout tree rightRoot leftRoot rightPaths leftPaths
+      rightTop leftTop accumulator carry scratch targetAt addendAt)
+    (hcleanRight : Clean rightPaths state) (hcleanLeft : Clean leftPaths state) :
+    run (intervalSecondTraversal mode topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths) state =
+      intervalSecondTraversalState mode topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths state := by
+  let decoderSupport := tree.decoderWires rightRoot leftRoot rightPaths leftPaths
+  have hruns : DualUnaryLeafRunsAs
+      (fun label rightControl leftControl ↦
+        intervalSecondLeaf mode topSpecial rightTop leftTop accumulator
+          (targetAt label) (addendAt label) carry scratch label rightControl leftControl)
+      (fun label rightControl leftControl ↦
+        intervalSecondLeafTotalState mode topSpecial rightTop leftTop accumulator
+          (targetAt label) (addendAt label) carry scratch label rightControl leftControl)
+      decoderSupport := by
+    intro label rightControl leftControl hright hleft next
+    by_cases hclean : next scratch = false
+    · simp only [intervalSecondLeafTotalState, hclean, if_pos]
+      exact run_intervalSecondLeaf mode topSpecial rightTop leftTop accumulator
+        (targetAt label) (addendAt label) carry scratch label rightControl leftControl
+        next (intervalLeafLayout_of_decoder decoderSupport rightControl leftControl
+          rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
+          (hlayout.2 label).1 (hlayout.2 label).2 hright hleft) hclean
+    · simp_all [intervalSecondLeafTotalState]
+  rw [intervalSecondTraversal, intervalSecondTraversalState]
+  exact run_dualUnaryActionUnitary_as_runLeafState .inc _ _ tree rightRoot leftRoot
+    rightPaths leftPaths decoderSupport state hlayout.1 hruns
+    (intervalSecondLeafFamily_dualPreserves mode topSpecial rightTop leftTop accumulator
+      carry scratch targetAt addendAt decoderSupport (fun label ↦ (hlayout.2 label).2))
+    (fun _ hwire ↦ hwire) hcleanRight hcleanLeft
+
+/-- The first traversal restores the ripple cell scratch in addition to both decoder stacks. -/
+theorem intervalFirstTraversal_preservesScratch
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire) (state : BasisState)
+    (hlayout : IntervalTraversalLayout tree rightRoot leftRoot rightPaths leftPaths
+      rightTop leftTop accumulator carry scratch targetAt addendAt)
+    (hcleanRight : Clean rightPaths state) (hcleanLeft : Clean leftPaths state) :
+    run (intervalFirstTraversal mode topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths)
+      state scratch = state scratch := by
+  let decoderSupport := tree.decoderWires rightRoot leftRoot rightPaths leftPaths
+  let preserved := decoderSupport ++ [scratch]
+  have hleaf : DualUnaryLeafPreservesOn
+      (fun label rightControl leftControl ↦
+        intervalFirstLeaf mode topSpecial rightTop leftTop accumulator
+          (targetAt label) (addendAt label) carry scratch label rightControl leftControl)
+      tree.labels decoderSupport preserved := by
+    intro label _ rightControl leftControl hright hleft next wire hwire
+    rcases List.mem_append.mp hwire with hdecoder | hscratch
+    · have houtside := (hlayout.2 label).2
+      rw [DecoderOutsideIntervalRoles, List.disjoint_left] at houtside
+      exact intervalFirstLeaf_preservesOutside mode topSpecial rightTop leftTop
+        accumulator (targetAt label) (addendAt label) carry scratch label
+        rightControl leftControl next wire (houtside hdecoder)
+    · simp only [List.mem_singleton] at hscratch
+      subst wire
+      exact intervalFirstLeaf_preservesScratch mode topSpecial rightTop leftTop
+        accumulator (targetAt label) (addendAt label) carry scratch label
+        rightControl leftControl next
+        (intervalLeafLayout_of_decoder decoderSupport rightControl leftControl
+          rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
+          (hlayout.2 label).1 (hlayout.2 label).2 hright hleft)
+  exact dualUnaryActionUnitary_preservesOn .dec _ tree rightRoot leftRoot
+    rightPaths leftPaths decoderSupport preserved state hlayout.1 hleaf
+    (fun _ hwire ↦ hwire) (fun wire hwire ↦ by
+      exact List.mem_append_left [scratch] hwire) hcleanRight hcleanLeft
+    scratch (by simp [preserved])
+
+/-- The second traversal has the same off-domain scratch-restoration guarantee. -/
+theorem intervalSecondTraversal_preservesScratch
+    (mode : RippleMode) (topSpecial : Bool)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire) (state : BasisState)
+    (hlayout : IntervalTraversalLayout tree rightRoot leftRoot rightPaths leftPaths
+      rightTop leftTop accumulator carry scratch targetAt addendAt)
+    (hcleanRight : Clean rightPaths state) (hcleanLeft : Clean leftPaths state) :
+    run (intervalSecondTraversal mode topSpecial rightTop leftTop accumulator
+        carry scratch targetAt addendAt tree rightRoot leftRoot rightPaths leftPaths)
+      state scratch = state scratch := by
+  let decoderSupport := tree.decoderWires rightRoot leftRoot rightPaths leftPaths
+  let preserved := decoderSupport ++ [scratch]
+  have hleaf : DualUnaryLeafPreservesOn
+      (fun label rightControl leftControl ↦
+        intervalSecondLeaf mode topSpecial rightTop leftTop accumulator
+          (targetAt label) (addendAt label) carry scratch label rightControl leftControl)
+      tree.labels decoderSupport preserved := by
+    intro label _ rightControl leftControl hright hleft next wire hwire
+    rcases List.mem_append.mp hwire with hdecoder | hscratch
+    · have houtside := (hlayout.2 label).2
+      rw [DecoderOutsideIntervalRoles, List.disjoint_left] at houtside
+      exact intervalSecondLeaf_preservesOutside mode topSpecial rightTop leftTop
+        accumulator (targetAt label) (addendAt label) carry scratch label
+        rightControl leftControl next wire (houtside hdecoder)
+    · simp only [List.mem_singleton] at hscratch
+      subst wire
+      exact intervalSecondLeaf_preservesScratch mode topSpecial rightTop leftTop
+        accumulator (targetAt label) (addendAt label) carry scratch label
+        rightControl leftControl next
+        (intervalLeafLayout_of_decoder decoderSupport rightControl leftControl
+          rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
+          (hlayout.2 label).1 (hlayout.2 label).2 hright hleft)
+  exact dualUnaryActionUnitary_preservesOn .inc _ tree rightRoot leftRoot
+    rightPaths leftPaths decoderSupport preserved state hlayout.1 hleaf
+    (fun _ hwire ↦ hwire) (fun wire hwire ↦ by
+      exact List.mem_append_left [scratch] hwire) hcleanRight hcleanLeft
+    scratch (by simp [preserved])
 
 /-- The first arithmetic traversal restores every endpoint-decoder wire. -/
 theorem intervalFirstTraversal_preservesDecoder

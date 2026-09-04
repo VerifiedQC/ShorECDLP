@@ -52,6 +52,43 @@ def labels : DualUnaryActionTree → List Nat
   | .leaf label => [label]
   | .node _ _ zero one => zero.labels ++ one.labels
 
+/-- Gate-independent whole-state execution of a synchronized dual traversal.  It exposes the
+ordered leaf-state actions and the temporary path values explicitly, then clears both path wires
+in the source's reverse `B`-then-`A` order. -/
+def runLeafState
+    (order : UnaryOrder)
+    (leafState : Nat → Wire → Wire → BasisState → BasisState) :
+    DualUnaryActionTree → Wire → Wire → List Wire → List Wire →
+      BasisState → BasisState
+  | .leaf label, controlA, controlB, _, _, state =>
+      leafState label controlA controlB state
+  | .node indexBitA indexBitB zero one,
+      controlA, controlB, pathA :: restA, pathB :: restB, state =>
+      let afterA := state[pathA ↦ state controlA && !state indexBitA]
+      let first := afterA[pathB ↦ afterA controlB && !afterA indexBitB]
+      match order with
+      | .inc =>
+          let afterZero := zero.runLeafState order leafState
+            pathA pathB restA restB first
+          let switchedA := Classical.applyGate (.CX controlA pathA) afterZero
+          let switched := Classical.applyGate (.CX controlB pathB) switchedA
+          let afterOne := one.runLeafState order leafState
+            pathA pathB restA restB switched
+          let switchedB := Classical.applyGate (.CX controlB pathB) afterOne
+          let switchedBack := Classical.applyGate (.CX controlA pathA) switchedB
+          switchedBack[pathB ↦ false][pathA ↦ false]
+      | .dec =>
+          let switchedA := Classical.applyGate (.CX controlA pathA) first
+          let switched := Classical.applyGate (.CX controlB pathB) switchedA
+          let afterOne := one.runLeafState order leafState
+            pathA pathB restA restB switched
+          let switchedB := Classical.applyGate (.CX controlB pathB) afterOne
+          let switchedBack := Classical.applyGate (.CX controlA pathA) switchedB
+          let afterZero := zero.runLeafState order leafState
+            pathA pathB restA restB switchedBack
+          afterZero[pathB ↦ false][pathA ↦ false]
+  | .node _ _ _ _, _, _, _, _, state => state
+
 /-- Sum a leaf-local resource over the paired dynamic controls exposed by the tree. -/
 def leafCostSum
     (leafCost : Nat → Wire → Wire → Nat) :
@@ -157,7 +194,17 @@ def dualUnaryAction
                         controlB indexBitB pathB))))))
   | .node _ _ _ _, _, _, _, _ => .done
 
-/-- A dual leaf action preserves every declared decoder wire, including both dynamic controls. -/
+/-- A dual leaf action preserves a caller-selected interface whenever its two dynamic controls
+come from the declared decoder interface. -/
+def DualUnaryLeafPreservesOn
+    (leafAction : Nat → Wire → Wire → Circuit)
+    (labels : List Nat) (dynamicWires protectedWires : List Wire) : Prop :=
+  ∀ label, label ∈ labels → ∀ controlA controlB,
+    controlA ∈ dynamicWires → controlB ∈ dynamicWires →
+      ∀ state wire, wire ∈ protectedWires →
+        run (leafAction label controlA controlB) state wire = state wire
+
+/-- Common specialization where the decoder itself is the preserved interface. -/
 def DualUnaryLeafPreserves
     (leafAction : Nat → Wire → Wire → Circuit)
     (protectedWires : List Wire) : Prop :=
@@ -165,6 +212,24 @@ def DualUnaryLeafPreserves
     controlA ∈ protectedWires → controlB ∈ protectedWires →
       ∀ state wire, wire ∈ protectedWires →
         run (leafAction label controlA controlB) state wire = state wire
+
+/-- The supplied state action is the direct basis semantics of every paired leaf circuit. -/
+def DualUnaryLeafRunsAs
+    (leafAction : Nat → Wire → Wire → Circuit)
+    (leafState : Nat → Wire → Wire → BasisState → BasisState)
+    (protectedWires : List Wire) : Prop :=
+  ∀ label controlA controlB,
+    controlA ∈ protectedWires → controlB ∈ protectedWires →
+      ∀ state, Classical.run (leafAction label controlA controlB) state =
+        leafState label controlA controlB state
+
+/-- Every instantiated leaf circuit stays inside one caller-declared physical support. -/
+def DualUnaryLeafUsesOnly
+    (leafAction : Nat → Wire → Wire → Circuit)
+    (labels : List Nat) (support : List Wire) : Prop :=
+  ∀ label, label ∈ labels → ∀ controlA controlB,
+    controlA ∈ support → controlB ∈ support →
+      PaperCircuitUsesOnly support (leafAction label controlA controlB)
 
 def DualUnaryLeafHPFree
     (leafAction : Nat → Wire → Wire → Circuit) : Prop :=
@@ -986,10 +1051,14 @@ private theorem dualOnePathReady_preserved
 private theorem dualUnaryActionUnitary_preservesProtected
     (order : UnaryOrder) (leafAction : Nat → Wire → Wire → Circuit)
     (tree : DualUnaryActionTree) (controlA controlB : Wire)
-    (ancillasA ancillasB protectedWires : List Wire)
+    (ancillasA ancillasB dynamicWires protectedWires : List Wire)
     (state : BasisState)
     (hlayout : tree.Layout controlA controlB ancillasA ancillasB)
-    (hleaf : DualUnaryLeafPreserves leafAction protectedWires)
+    (hleaf : DualUnaryLeafPreservesOn leafAction tree.labels
+      dynamicWires protectedWires)
+    (hdynamic : ∀ wire,
+      wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
+        wire ∈ dynamicWires)
     (hroles : ∀ wire,
       wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
         wire ∈ protectedWires)
@@ -998,12 +1067,12 @@ private theorem dualUnaryActionUnitary_preservesProtected
     ∀ wire, wire ∈ protectedWires →
       run (dualUnaryActionUnitary order leafAction tree
         controlA controlB ancillasA ancillasB) state wire = state wire := by
-  induction hlayout generalizing state protectedWires with
+  induction hlayout generalizing state dynamicWires protectedWires with
   | leaf label controlA controlB ancillasA ancillasB hlocal =>
       intro wire hwire
-      exact hleaf label controlA controlB
-        (hroles controlA (by simp [DualUnaryActionTree.decoderWires]))
-        (hroles controlB (by simp [DualUnaryActionTree.decoderWires]))
+      exact hleaf label (by simp [DualUnaryActionTree.labels]) controlA controlB
+        (hdynamic controlA (by simp [DualUnaryActionTree.decoderWires]))
+        (hdynamic controlB (by simp [DualUnaryActionTree.decoderWires]))
         state wire hwire
   | node indexBitA indexBitB controlA controlB pathA pathB
       zero one restA restB hlocal hzero hone ihZero ihOne =>
@@ -1043,6 +1112,13 @@ private theorem dualUnaryActionUnitary_preservesProtected
         exact hroles wire
           (dualZero_decoder_subset indexBitA indexBitB controlA controlB
             pathA pathB zero one restA restB wire hwire)
+      have hzeroDynamic : ∀ wire,
+          wire ∈ zero.decoderWires pathA pathB restA restB →
+            wire ∈ dynamicWires := by
+        intro wire hwire
+        exact hdynamic wire
+          (dualZero_decoder_subset indexBitA indexBitB controlA controlB
+            pathA pathB zero one restA restB wire hwire)
       have honeRoles : ∀ wire,
           wire ∈ one.decoderWires pathA pathB restA restB →
             wire ∈ protectedWires := by
@@ -1050,6 +1126,23 @@ private theorem dualUnaryActionUnitary_preservesProtected
         exact hroles wire
           (dualOne_decoder_subset indexBitA indexBitB controlA controlB
             pathA pathB zero one restA restB wire hwire)
+      have honeDynamic : ∀ wire,
+          wire ∈ one.decoderWires pathA pathB restA restB →
+            wire ∈ dynamicWires := by
+        intro wire hwire
+        exact hdynamic wire
+          (dualOne_decoder_subset indexBitA indexBitB controlA controlB
+            pathA pathB zero one restA restB wire hwire)
+      have hzeroLeaf : DualUnaryLeafPreservesOn leafAction zero.labels
+          dynamicWires protectedWires := by
+        intro label hlabel
+        exact hleaf label (by
+          simp [DualUnaryActionTree.labels, hlabel])
+      have honeLeaf : DualUnaryLeafPreservesOn leafAction one.labels
+          dynamicWires protectedWires := by
+        intro label hlabel
+        exact hleaf label (by
+          simp [DualUnaryActionTree.labels, hlabel])
       cases order with
       | inc =>
           let afterZero := run
@@ -1058,7 +1151,7 @@ private theorem dualUnaryActionUnitary_preservesProtected
           have hzeroPreserves : ∀ wire, wire ∈ protectedWires →
               afterZero wire = first wire := by
             intro wire hwire
-            exact ihZero protectedWires first hleaf hzeroRoles
+            exact ihZero dynamicWires protectedWires first hzeroLeaf hzeroDynamic hzeroRoles
               hreadyFirst.1 hreadyFirst.2.1 wire hwire
           have hreadyAfterZero : DualZeroPathReady
               controlA indexBitA pathA controlB indexBitB pathB
@@ -1084,7 +1177,7 @@ private theorem dualUnaryActionUnitary_preservesProtected
           have honePreserves : ∀ wire, wire ∈ protectedWires →
               afterOne wire = switched wire := by
             intro wire hwire
-            exact ihOne protectedWires switched hleaf honeRoles
+            exact ihOne dynamicWires protectedWires switched honeLeaf honeDynamic honeRoles
               hreadySwitched.1 hreadySwitched.2.1 wire hwire
           have hreadyAfterOne : DualOnePathReady
               controlA indexBitA pathA controlB indexBitB pathB
@@ -1170,7 +1263,7 @@ private theorem dualUnaryActionUnitary_preservesProtected
           have honePreserves : ∀ wire, wire ∈ protectedWires →
               afterOne wire = switched wire := by
             intro wire hwire
-            exact ihOne protectedWires switched hleaf honeRoles
+            exact ihOne dynamicWires protectedWires switched honeLeaf honeDynamic honeRoles
               hreadySwitched.1 hreadySwitched.2.1 wire hwire
           have hreadyAfterOne : DualOnePathReady
               controlA indexBitA pathA controlB indexBitB pathB
@@ -1196,7 +1289,8 @@ private theorem dualUnaryActionUnitary_preservesProtected
           have hzeroPreserves : ∀ wire, wire ∈ protectedWires →
               afterZero wire = switchedBack wire := by
             intro wire hwire
-            exact ihZero protectedWires switchedBack hleaf hzeroRoles
+            exact ihZero dynamicWires protectedWires switchedBack hzeroLeaf
+              hzeroDynamic hzeroRoles
               hreadyBack.1 hreadyBack.2.1 wire hwire
           have hreadyAfterZero : DualZeroPathReady
               controlA indexBitA pathA controlB indexBitB pathB
@@ -1253,6 +1347,417 @@ private theorem dualUnaryActionUnitary_preservesProtected
                 hforwardOther wire hwireA hwireB,
                 hfirstOther wire hwireA hwireB]
 
+private theorem dualUnaryActionUnitary_usesOnly_impl
+    (order : UnaryOrder) (leafAction : Nat → Wire → Wire → Circuit)
+    (tree : DualUnaryActionTree) (controlA controlB : Wire)
+    (ancillasA ancillasB support : List Wire)
+    (hdecoder : ∀ wire,
+      wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
+        wire ∈ support)
+    (hleaf : DualUnaryLeafUsesOnly leafAction tree.labels support) :
+    PaperCircuitUsesOnly support
+      (dualUnaryActionUnitary order leafAction tree
+        controlA controlB ancillasA ancillasB) := by
+  induction tree generalizing controlA controlB ancillasA ancillasB with
+  | leaf label =>
+      apply hleaf label (by simp [DualUnaryActionTree.labels]) controlA controlB
+      · exact hdecoder controlA (by
+          simp [DualUnaryActionTree.decoderWires])
+      · exact hdecoder controlB (by
+          simp [DualUnaryActionTree.decoderWires])
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      cases ancillasA with
+      | nil => simp [dualUnaryActionUnitary, PaperCircuitUsesOnly]
+      | cons pathA restA =>
+          cases ancillasB with
+          | nil => simp [dualUnaryActionUnitary, PaperCircuitUsesOnly]
+          | cons pathB restB =>
+              have hcontrolA : controlA ∈ support := hdecoder controlA (by
+                simp [DualUnaryActionTree.decoderWires])
+              have hcontrolB : controlB ∈ support := hdecoder controlB (by
+                simp [DualUnaryActionTree.decoderWires])
+              have hindexA : indexBitA ∈ support := hdecoder indexBitA (by
+                simp [DualUnaryActionTree.decoderWires,
+                  DualUnaryActionTree.indexAWires])
+              have hindexB : indexBitB ∈ support := hdecoder indexBitB (by
+                simp [DualUnaryActionTree.decoderWires,
+                  DualUnaryActionTree.indexBWires])
+              have hpathA : pathA ∈ support := hdecoder pathA (by
+                simp [DualUnaryActionTree.decoderWires])
+              have hpathB : pathB ∈ support := hdecoder pathB (by
+                simp [DualUnaryActionTree.decoderWires])
+              have hzeroDecoder : ∀ wire,
+                  wire ∈ zero.decoderWires pathA pathB restA restB →
+                    wire ∈ support := by
+                intro wire hwire
+                apply hdecoder wire
+                simp only [DualUnaryActionTree.decoderWires,
+                  DualUnaryActionTree.indexAWires,
+                  DualUnaryActionTree.indexBWires, List.mem_append,
+                  List.mem_dedup, List.mem_cons, List.not_mem_nil, or_false] at hwire ⊢
+                aesop
+              have honeDecoder : ∀ wire,
+                  wire ∈ one.decoderWires pathA pathB restA restB →
+                    wire ∈ support := by
+                intro wire hwire
+                apply hdecoder wire
+                simp only [DualUnaryActionTree.decoderWires,
+                  DualUnaryActionTree.indexAWires,
+                  DualUnaryActionTree.indexBWires, List.mem_append,
+                  List.mem_dedup, List.mem_cons, List.not_mem_nil, or_false] at hwire ⊢
+                aesop
+              have hzeroLeaf : DualUnaryLeafUsesOnly leafAction zero.labels support := by
+                intro label hlabel
+                exact hleaf label (by
+                  simp [DualUnaryActionTree.labels, hlabel])
+              have honeLeaf : DualUnaryLeafUsesOnly leafAction one.labels support := by
+                intro label hlabel
+                exact hleaf label (by
+                  simp [DualUnaryActionTree.labels, hlabel])
+              have hcomputeA : PaperCircuitUsesOnly support
+                  (computeZeroAnd controlA indexBitA pathA) := by
+                simp [computeZeroAnd, PaperCircuitUsesOnly, PaperGateUsesOnly,
+                  gateWires, hcontrolA, hindexA, hpathA]
+              have hcomputeB : PaperCircuitUsesOnly support
+                  (computeZeroAnd controlB indexBitB pathB) := by
+                simp [computeZeroAnd, PaperCircuitUsesOnly, PaperGateUsesOnly,
+                  gateWires, hcontrolB, hindexB, hpathB]
+              have hforward : PaperCircuitUsesOnly support
+                  ([.CX controlA pathA, .CX controlB pathB] : Circuit) := by
+                simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires,
+                  hcontrolA, hcontrolB, hpathA, hpathB]
+              have hreverse : PaperCircuitUsesOnly support
+                  ([.CX controlB pathB, .CX controlA pathA] : Circuit) := by
+                simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires,
+                  hcontrolA, hcontrolB, hpathA, hpathB]
+              have hzero := ihZero pathA pathB restA restB hzeroDecoder hzeroLeaf
+              have hone := ihOne pathA pathB restA restB honeDecoder honeLeaf
+              cases order with
+              | inc =>
+                  simp only [dualUnaryActionUnitary]
+                  exact PaperCircuitUsesOnly.append
+                    (PaperCircuitUsesOnly.append
+                      (PaperCircuitUsesOnly.append
+                        (PaperCircuitUsesOnly.append
+                          (PaperCircuitUsesOnly.append
+                            (PaperCircuitUsesOnly.append
+                              (PaperCircuitUsesOnly.append hcomputeA hcomputeB)
+                              hzero) hforward) hone) hreverse) hcomputeB) hcomputeA
+              | dec =>
+                  simp only [dualUnaryActionUnitary]
+                  exact PaperCircuitUsesOnly.append
+                    (PaperCircuitUsesOnly.append
+                      (PaperCircuitUsesOnly.append
+                        (PaperCircuitUsesOnly.append
+                          (PaperCircuitUsesOnly.append
+                            (PaperCircuitUsesOnly.append
+                              (PaperCircuitUsesOnly.append hcomputeA hcomputeB)
+                              hforward) hone) hreverse) hzero) hcomputeB) hcomputeA
+
+/-- The coherent synchronized traversal stays inside the union supplied by its caller. -/
+theorem dualUnaryActionUnitary_usesOnly
+    (order : UnaryOrder) (leafAction : Nat → Wire → Wire → Circuit)
+    (tree : DualUnaryActionTree) (controlA controlB : Wire)
+    (ancillasA ancillasB support : List Wire)
+    (hdecoder : ∀ wire,
+      wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
+        wire ∈ support)
+    (hleaf : DualUnaryLeafUsesOnly leafAction tree.labels support) :
+    PaperCircuitUsesOnly support
+      (dualUnaryActionUnitary order leafAction tree
+        controlA controlB ancillasA ancillasB) :=
+  dualUnaryActionUnitary_usesOnly_impl order leafAction tree controlA controlB
+    ancillasA ancillasB support hdecoder hleaf
+
+/-- A synchronized traversal preserves a caller-declared interface when its actual decoder wires
+are separately tracked as the admissible dynamic controls. -/
+theorem dualUnaryActionUnitary_preservesOn
+    (order : UnaryOrder) (leafAction : Nat → Wire → Wire → Circuit)
+    (tree : DualUnaryActionTree) (controlA controlB : Wire)
+    (ancillasA ancillasB dynamicWires protectedWires : List Wire)
+    (state : BasisState)
+    (hlayout : tree.Layout controlA controlB ancillasA ancillasB)
+    (hleaf : DualUnaryLeafPreservesOn leafAction tree.labels
+      dynamicWires protectedWires)
+    (hdynamic : ∀ wire,
+      wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
+        wire ∈ dynamicWires)
+    (hroles : ∀ wire,
+      wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
+        wire ∈ protectedWires)
+    (hcleanA : Clean ancillasA state)
+    (hcleanB : Clean ancillasB state) :
+    ∀ wire, wire ∈ protectedWires →
+      run (dualUnaryActionUnitary order leafAction tree
+        controlA controlB ancillasA ancillasB) state wire = state wire :=
+  dualUnaryActionUnitary_preservesProtected order leafAction tree
+    controlA controlB ancillasA ancillasB dynamicWires protectedWires state hlayout
+    hleaf hdynamic hroles hcleanA hcleanB
+
+/-- Common specialization where the decoder roles themselves are the protected interface. -/
+theorem dualUnaryActionUnitary_preserves
+    (order : UnaryOrder) (leafAction : Nat → Wire → Wire → Circuit)
+    (tree : DualUnaryActionTree) (controlA controlB : Wire)
+    (ancillasA ancillasB protectedWires : List Wire)
+    (state : BasisState)
+    (hlayout : tree.Layout controlA controlB ancillasA ancillasB)
+    (hleaf : DualUnaryLeafPreserves leafAction protectedWires)
+    (hroles : ∀ wire,
+      wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
+        wire ∈ protectedWires)
+    (hcleanA : Clean ancillasA state)
+    (hcleanB : Clean ancillasB state) :
+    ∀ wire, wire ∈ protectedWires →
+      run (dualUnaryActionUnitary order leafAction tree
+        controlA controlB ancillasA ancillasB) state wire = state wire :=
+  dualUnaryActionUnitary_preservesOn order leafAction tree controlA controlB
+    ancillasA ancillasB protectedWires protectedWires state hlayout
+    (fun label _ ↦ hleaf label)
+    hroles hroles hcleanA hcleanB
+
+/-- Direct whole-state semantics of the coherent synchronized traversal.  The theorem exposes the
+exact ordered paired-leaf execution while proving that both temporary decoder stacks are restored. -/
+theorem run_dualUnaryActionUnitary_as_runLeafState
+    (order : UnaryOrder)
+    (leafAction : Nat → Wire → Wire → Circuit)
+    (leafState : Nat → Wire → Wire → BasisState → BasisState)
+    (tree : DualUnaryActionTree) (controlA controlB : Wire)
+    (ancillasA ancillasB protectedWires : List Wire)
+    (state : BasisState)
+    (hlayout : tree.Layout controlA controlB ancillasA ancillasB)
+    (hruns : DualUnaryLeafRunsAs leafAction leafState protectedWires)
+    (hleaf : DualUnaryLeafPreserves leafAction protectedWires)
+    (hroles : ∀ wire,
+      wire ∈ tree.decoderWires controlA controlB ancillasA ancillasB →
+        wire ∈ protectedWires)
+    (hcleanA : Clean ancillasA state)
+    (hcleanB : Clean ancillasB state) :
+    run (dualUnaryActionUnitary order leafAction tree
+        controlA controlB ancillasA ancillasB) state =
+      tree.runLeafState order leafState controlA controlB
+        ancillasA ancillasB state := by
+  induction hlayout generalizing state with
+  | leaf label controlA controlB ancillasA ancillasB hlocal =>
+      exact hruns label controlA controlB
+        (hroles controlA (by simp [DualUnaryActionTree.decoderWires]))
+        (hroles controlB (by simp [DualUnaryActionTree.decoderWires])) state
+  | node indexBitA indexBitB controlA controlB pathA pathB
+      zero one restA restB hlocal hzero hone ihZero ihOne =>
+      obtain ⟨hca, hcpa, hia, hcb, hcpb, hib,
+        hpathAPathB, hpathARestA, hpathARestB,
+        hpathBRestA, hpathBRestB,
+        hcontrolAPathB, hindexAPathB,
+        hcontrolBPathA, hindexBPathA⟩ :=
+        dualUnaryNode_parts indexBitA indexBitB controlA controlB pathA pathB
+          zero one restA restB hlocal
+      have hpathAFalse : state pathA = false := hcleanA pathA (by simp)
+      have hpathBFalse : state pathB = false := hcleanB pathB (by simp)
+      let afterA := run (computeZeroAnd controlA indexBitA pathA) state
+      have hafterA : afterA =
+          state[pathA ↦ state controlA && !state indexBitA] := by
+        simpa only [afterA] using run_computeZeroAnd
+          controlA indexBitA pathA state hca hcpa hia hpathAFalse
+      have hpathBAfterA : afterA pathB = false := by
+        rw [hafterA, upd_other state pathA _ (Ne.symm hpathAPathB)]
+        exact hpathBFalse
+      let first := run (computeZeroAnd controlB indexBitB pathB) afterA
+      have hfirst : first =
+          afterA[pathB ↦ afterA controlB && !afterA indexBitB] := by
+        simpa only [first] using run_computeZeroAnd
+          controlB indexBitB pathB afterA hcb hcpb hib hpathBAfterA
+      have hreadyFirst : DualZeroPathReady controlA indexBitA pathA
+          controlB indexBitB pathB restA restB first := by
+        simpa only [first, afterA] using dualZeroPathReady_after_compute
+          controlA indexBitA pathA controlB indexBitB pathB restA restB state
+          hca hcpa hia hcb hcpb hib hpathAPathB
+          hpathARestA hpathARestB hpathBRestA hpathBRestB
+          hcontrolAPathB hindexAPathB hcleanA hcleanB
+      have hzeroRoles : ∀ wire,
+          wire ∈ zero.decoderWires pathA pathB restA restB →
+            wire ∈ protectedWires := by
+        intro wire hwire
+        exact hroles wire
+          (dualZero_decoder_subset indexBitA indexBitB controlA controlB
+            pathA pathB zero one restA restB wire hwire)
+      have honeRoles : ∀ wire,
+          wire ∈ one.decoderWires pathA pathB restA restB →
+            wire ∈ protectedWires := by
+        intro wire hwire
+        exact hroles wire
+          (dualOne_decoder_subset indexBitA indexBitB controlA controlB
+            pathA pathB zero one restA restB wire hwire)
+      cases order with
+      | inc =>
+          let afterZero := run
+            (dualUnaryActionUnitary .inc leafAction zero
+              pathA pathB restA restB) first
+          have hzeroState : afterZero =
+              zero.runLeafState .inc leafState pathA pathB restA restB first := by
+            exact ihZero first hzeroRoles hreadyFirst.1 hreadyFirst.2.1
+          have hzeroPreserves : ∀ wire, wire ∈ protectedWires →
+              afterZero wire = first wire := by
+            intro wire hwire
+            exact dualUnaryActionUnitary_preservesProtected .inc leafAction zero
+              pathA pathB restA restB protectedWires protectedWires first hzero
+              (fun label _ ↦ hleaf label)
+              hzeroRoles hzeroRoles hreadyFirst.1 hreadyFirst.2.1 wire hwire
+          have hreadyAfterZero : DualZeroPathReady
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB afterZero :=
+            dualZeroPathReady_preserved
+              indexBitA indexBitB controlA controlB pathA pathB
+              zero one restA restB protectedWires first afterZero
+              hroles hreadyFirst hzeroPreserves
+          let switched := run
+            [.CX controlA pathA, .CX controlB pathB] afterZero
+          have hswitchedModel : switched =
+              Classical.applyGate (.CX controlB pathB)
+                (Classical.applyGate (.CX controlA pathA) afterZero) := rfl
+          have hreadySwitched : DualOnePathReady
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB switched := by
+            simpa only [switched] using dualOnePathReady_after_forwardToggle
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB afterZero hcpa hia hcpb hib hpathAPathB
+              hpathARestA hpathARestB hpathBRestA hpathBRestB
+              hcontrolAPathB hindexAPathB hcontrolBPathA hindexBPathA
+              hreadyAfterZero
+          let afterOne := run
+            (dualUnaryActionUnitary .inc leafAction one
+              pathA pathB restA restB) switched
+          have honeState : afterOne =
+              one.runLeafState .inc leafState pathA pathB restA restB switched := by
+            exact ihOne switched honeRoles hreadySwitched.1 hreadySwitched.2.1
+          have honePreserves : ∀ wire, wire ∈ protectedWires →
+              afterOne wire = switched wire := by
+            intro wire hwire
+            exact dualUnaryActionUnitary_preservesProtected .inc leafAction one
+              pathA pathB restA restB protectedWires protectedWires switched hone
+              (fun label _ ↦ hleaf label)
+              honeRoles honeRoles hreadySwitched.1 hreadySwitched.2.1 wire hwire
+          have hreadyAfterOne : DualOnePathReady
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB afterOne :=
+            dualOnePathReady_preserved
+              indexBitA indexBitB controlA controlB pathA pathB
+              zero one restA restB protectedWires switched afterOne
+              hroles hreadySwitched honePreserves
+          let switchedBack := run
+            [.CX controlB pathB, .CX controlA pathA] afterOne
+          have hswitchedBackModel : switchedBack =
+              Classical.applyGate (.CX controlA pathA)
+                (Classical.applyGate (.CX controlB pathB) afterOne) := rfl
+          have hreadyBack : DualZeroPathReady
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB switchedBack := by
+            simpa only [switchedBack] using dualZeroPathReady_after_reverseToggle
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB afterOne hcpa hia hcpb hib hpathAPathB
+              hpathARestA hpathARestB hpathBRestA hpathBRestB
+              hcontrolAPathB hindexAPathB hcontrolBPathA hindexBPathA
+              hreadyAfterOne
+          have hcleanup := run_dualZeroAnd_cleanup
+            controlA indexBitA pathA controlB indexBitB pathB
+            restA restB switchedBack hca hcpa hia hcb hcpb hib
+            hpathAPathB hcontrolAPathB hindexAPathB hreadyBack
+          rw [dualUnaryActionUnitary,
+            Classical.run_append, Classical.run_append,
+            Classical.run_append, Classical.run_append,
+            Classical.run_append, Classical.run_append]
+          change run
+            (computeZeroAnd controlB indexBitB pathB ++
+              computeZeroAnd controlA indexBitA pathA)
+            switchedBack = _
+          rw [hcleanup]
+          simp only [DualUnaryActionTree.runLeafState]
+          rw [← hafterA, ← hfirst, ← hzeroState, ← hswitchedModel,
+            ← honeState, ← hswitchedBackModel]
+      | dec =>
+          let switched := run
+            [.CX controlA pathA, .CX controlB pathB] first
+          have hswitched : switched =
+              Classical.applyGate (.CX controlB pathB)
+                (Classical.applyGate (.CX controlA pathA) first) := rfl
+          have hreadySwitched : DualOnePathReady
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB switched := by
+            simpa only [switched] using dualOnePathReady_after_forwardToggle
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB first hcpa hia hcpb hib hpathAPathB
+              hpathARestA hpathARestB hpathBRestA hpathBRestB
+              hcontrolAPathB hindexAPathB hcontrolBPathA hindexBPathA
+              hreadyFirst
+          let afterOne := run
+            (dualUnaryActionUnitary .dec leafAction one
+              pathA pathB restA restB) switched
+          have honeState : afterOne =
+              one.runLeafState .dec leafState pathA pathB restA restB switched := by
+            exact ihOne switched honeRoles hreadySwitched.1 hreadySwitched.2.1
+          have honePreserves : ∀ wire, wire ∈ protectedWires →
+              afterOne wire = switched wire := by
+            intro wire hwire
+            exact dualUnaryActionUnitary_preservesProtected .dec leafAction one
+              pathA pathB restA restB protectedWires protectedWires switched hone
+              (fun label _ ↦ hleaf label)
+              honeRoles honeRoles hreadySwitched.1 hreadySwitched.2.1 wire hwire
+          have hreadyAfterOne : DualOnePathReady
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB afterOne :=
+            dualOnePathReady_preserved
+              indexBitA indexBitB controlA controlB pathA pathB
+              zero one restA restB protectedWires switched afterOne
+              hroles hreadySwitched honePreserves
+          let switchedBack := run
+            [.CX controlB pathB, .CX controlA pathA] afterOne
+          have hswitchedBack : switchedBack =
+              Classical.applyGate (.CX controlA pathA)
+                (Classical.applyGate (.CX controlB pathB) afterOne) := rfl
+          have hreadyBack : DualZeroPathReady
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB switchedBack := by
+            simpa only [switchedBack] using dualZeroPathReady_after_reverseToggle
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB afterOne hcpa hia hcpb hib hpathAPathB
+              hpathARestA hpathARestB hpathBRestA hpathBRestB
+              hcontrolAPathB hindexAPathB hcontrolBPathA hindexBPathA
+              hreadyAfterOne
+          let afterZero := run
+            (dualUnaryActionUnitary .dec leafAction zero
+              pathA pathB restA restB) switchedBack
+          have hzeroState : afterZero =
+              zero.runLeafState .dec leafState pathA pathB restA restB switchedBack := by
+            exact ihZero switchedBack hzeroRoles hreadyBack.1 hreadyBack.2.1
+          have hzeroPreserves : ∀ wire, wire ∈ protectedWires →
+              afterZero wire = switchedBack wire := by
+            intro wire hwire
+            exact dualUnaryActionUnitary_preservesProtected .dec leafAction zero
+              pathA pathB restA restB protectedWires protectedWires switchedBack hzero
+              (fun label _ ↦ hleaf label)
+              hzeroRoles hzeroRoles hreadyBack.1 hreadyBack.2.1 wire hwire
+          have hreadyAfterZero : DualZeroPathReady
+              controlA indexBitA pathA controlB indexBitB pathB
+              restA restB afterZero :=
+            dualZeroPathReady_preserved
+              indexBitA indexBitB controlA controlB pathA pathB
+              zero one restA restB protectedWires switchedBack afterZero
+              hroles hreadyBack hzeroPreserves
+          have hcleanup := run_dualZeroAnd_cleanup
+            controlA indexBitA pathA controlB indexBitB pathB
+            restA restB afterZero hca hcpa hia hcb hcpb hib
+            hpathAPathB hcontrolAPathB hindexAPathB hreadyAfterZero
+          rw [dualUnaryActionUnitary,
+            Classical.run_append, Classical.run_append,
+            Classical.run_append, Classical.run_append,
+            Classical.run_append, Classical.run_append]
+          change run
+            (computeZeroAnd controlB indexBitB pathB ++
+              computeZeroAnd controlA indexBitA pathA)
+            afterZero = _
+          rw [hcleanup]
+          simp only [DualUnaryActionTree.runLeafState]
+          rw [← hafterA, ← hfirst, ← hswitched, ← honeState,
+            ← hswitchedBack, ← hzeroState]
+
 /-- The coherent synchronized traversal restores its complete paired decoder interface whenever
 every leaf action preserves that interface. -/
 theorem dualUnaryActionUnitary_preservesDecoder
@@ -1271,7 +1776,10 @@ theorem dualUnaryActionUnitary_preservesDecoder
   exact dualUnaryActionUnitary_preservesProtected
     order leafAction tree controlA controlB ancillasA ancillasB
       (tree.decoderWires controlA controlB ancillasA ancillasB)
-      state hlayout hleaf (fun _ hwire ↦ hwire) hcleanA hcleanB
+      (tree.decoderWires controlA controlB ancillasA ancillasB)
+      state hlayout (fun label _ ↦ hleaf label)
+      (fun _ hwire ↦ hwire) (fun _ hwire ↦ hwire)
+      hcleanA hcleanB
 
 /-- Both coherent path banks are restored clean. -/
 theorem dualUnaryActionUnitary_clean
@@ -1444,7 +1952,9 @@ theorem dualUnaryAction_coherent
         intro state hready
         have hpreserves := dualUnaryActionUnitary_preservesProtected
           order leafAction zero pathA pathB restA restB protectedWires
-          state hzero hleaf hzeroRoles hready.1 hready.2.1
+          protectedWires state hzero (fun label _ ↦ hleaf label)
+          hzeroRoles hzeroRoles
+          hready.1 hready.2.1
         exact dualZeroPathReady_preserved
           indexBitA indexBitB controlA controlB pathA pathB
           zero one restA restB protectedWires state
@@ -1461,7 +1971,9 @@ theorem dualUnaryAction_coherent
         intro state hready
         have hpreserves := dualUnaryActionUnitary_preservesProtected
           order leafAction one pathA pathB restA restB protectedWires
-          state hone hleaf honeRoles hready.1 hready.2.1
+          protectedWires state hone (fun label _ ↦ hleaf label)
+          honeRoles honeRoles
+          hready.1 hready.2.1
         exact dualOnePathReady_preserved
           indexBitA indexBitB controlA controlB pathA pathB
           zero one restA restB protectedWires state

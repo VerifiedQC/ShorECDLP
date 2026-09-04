@@ -375,7 +375,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first seven dependency-closed construction units are merged. PR #62 contains
+**Status:** the first eight dependency-closed construction units are merged. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -420,8 +420,17 @@ blocks. It proves their direct Boolean-word semantics, borrowed-bank and clean-s
 full outside-target locality, physical well-formedness, and constructor-derived Toffoli/CNOT/T
 equations. A separate Boolean-word-to-natural bridge gives the arithmetic meaning and involution
 of the affine word transforms, while the exact endpoint prepare/restore streams now have a full
-basis-state roundtrip theorem. The source-built tree and physical-lane instantiation in a complete
-interval block, the inverse aggregate, and the indexed four-phase step remain open within Phase 5.
+basis-state roundtrip theorem. The ninth unit now instantiates the certified source-built tree,
+the two physical decoder stacks, endpoint/equality/carry/accumulator/cell scratch lanes, and every
+`qpair(j)` work-bank lane in the complete forward interval wrapper. Its literal coherent circuit
+and measurement-uncomputed adaptive realization share the source order
+`prepare; top-first; decreasing scan; sign; increasing scan; top-second; restore`, with direct
+basis-state semantics, clean-input coherent refinement, complete physical locality and
+well-formedness, and constructor-derived Toffoli/CNOT/T/measurement equations. Two small pinned
+supplement comparisons cover both the top-special and ordinary-tree cases gate-for-gate. Output
+scratch restoration is deliberately not claimed at this boundary: it depends on the indexed
+reachable endpoint/range invariant that the later four-phase step will supply. The inverse
+aggregate and that indexed four-phase step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -628,13 +637,19 @@ They are equal only if Phase 11 proves the required reuse.
   preparation/restoration, with direct word semantics, full shared-scratch cleanup, locality,
   well-formedness, and coherent resource equations. Their Nat/mod-`2^w` interpretation and the
   formal endpoint round trip remained open at that boundary.
-- **PR #69, Phase-5 circuit unit 8 (current):** Boolean-word-to-natural affine semantics, a full
+- **PR #69, Phase-5 circuit unit 8:** merged at `deeeb945`; Boolean-word-to-natural affine
+  semantics, a full
   endpoint prepare/restore basis-state round trip, literal upper/lower dirty zero maps, grouped
   write/map/write/map length writers, and both complete affine/write/write/affine length blocks,
   with direct semantics, borrowed-bank and scratch restoration, full outside-target locality,
   physical well-formedness, and exact constructor-derived Toffoli/CNOT/T equations. The
   source-built tree and physical register/lane instantiation in the complete interval wrapper, the
   inverse aggregate, and the indexed step remain open.
+- **Phase-5 circuit unit 9 (current branch):** complete forward interval wrapper over the certified
+  source tree and concrete physical register/lane allocation, with literal coherent and adaptive
+  programs, direct basis-state semantics, clean-input coherent refinement, complete
+  locality/well-formedness, and exact constructor-derived resources. The inverse wrapper and the
+  indexed reachable-state theorem needed to prove output scratch cleanup remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
