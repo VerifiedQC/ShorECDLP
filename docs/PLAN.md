@@ -5,15 +5,15 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-13 paper foundation below
-are on `main@7fb0cffe47bb429dd6570dbf9a06788794ccece3`. PR #56 → PR #57 → PR #58 → PR #59
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-14 paper foundation below
+are on `main@0a5bc1807262a16a4a4cc6514b9f57ba638e1e2e`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
-→ PR #69 → PR #70 → PR #71 → PR #72 → PR #73 → PR #74 landed the source split, adaptive Kraus semantics,
-coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and thirteen concrete circuit units ending with the source-exact forward and
-measurement-safe inverse borrowed-epoch phase-update controllers. Phase 5 circuit unit 14 is
-current in PR #75: it implements the pinned pre/post shift layer. The full indexed four-phase step
-remains open.
+→ PR #69 → PR #70 → PR #71 → PR #72 → PR #73 → PR #74 → PR #75 landed the source split,
+adaptive Kraus semantics, coherent-refinement bridge, measurement-based uncomputation, pure EEA
+model, indexed EEA bounds/windows, and fourteen concrete circuit units ending with the pinned
+pre/post shift layer. Phase 5 circuit unit 15 is current in PR #76: it implements Figure 9's exact
+location-controlled quotient/sign selector. The coefficient-prefix update and full indexed
+four-phase step remain open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
