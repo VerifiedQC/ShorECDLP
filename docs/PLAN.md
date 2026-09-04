@@ -645,7 +645,7 @@ They are equal only if Phase 11 proves the required reuse.
   physical well-formedness, and exact constructor-derived Toffoli/CNOT/T equations. The
   source-built tree and physical register/lane instantiation in the complete interval wrapper, the
   inverse aggregate, and the indexed step remain open.
-- **Phase-5 circuit unit 9 (current branch):** complete forward interval wrapper over the certified
+- **PR #70, Phase-5 circuit unit 9 (current):** complete forward interval wrapper over the certified
   source tree and concrete physical register/lane allocation, with literal coherent and adaptive
   programs, direct basis-state semantics, clean-input coherent refinement, complete
   locality/well-formedness, and exact constructor-derived resources. The inverse wrapper and the
