@@ -1,4 +1,4 @@
-import ShorECDLP.Submission.«2607_13816».EEA.TreeBuilder
+import ShorECDLP.Submission.«2607_13816».EEA.UnaryAction
 import ShorECDLP.Submission.«2607_13816».EEA.LengthUpdate
 
 /-!
@@ -565,6 +565,17 @@ def zeroRecurrenceCell
     .X temporary,
     .CCX rangeControl bit temporary]
 
+/-- Source-ordered base cell.  The supplement writes the external root control before the
+temporary negative control in the middle Toffoli; non-base cells use `zeroRecurrenceCell` with
+the temporary first and the neighbouring dirty lane second. -/
+private def zeroRecurrenceBaseCell
+    (rangeControl bit control target temporary : Wire) : Circuit :=
+  [.CCX rangeControl bit temporary,
+    .X temporary,
+    .CCX control temporary target,
+    .X temporary,
+    .CCX rangeControl bit temporary]
+
 /-- Direct Boolean state action of one recurrence cell. -/
 def zeroRecurrenceCellState
     (rangeControl bit guard target : Wire) (state : BasisState) : BasisState :=
@@ -614,11 +625,53 @@ theorem run_zeroRecurrenceCell
           · simp [zeroRecurrenceCell, zeroRecurrenceCellState,
               Classical.run, Classical.applyGate, upd, hwireTarget, hwireTemporary]
 
+private theorem run_zeroRecurrenceBaseCell
+    (rangeControl bit control target temporary : Wire) (state : BasisState)
+    (hlayout : [rangeControl, bit, control, target, temporary].Nodup)
+    (hclean : state temporary = false) :
+    Classical.run (zeroRecurrenceBaseCell rangeControl bit control target temporary) state =
+      zeroRecurrenceCellState rangeControl bit control target state := by
+  simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+    or_false, not_or] at hlayout
+  funext wire
+  by_cases hwireTarget : wire = target
+  · subst wire
+    cases hc : state rangeControl <;> cases hb : state bit <;>
+      cases hg : state control <;> cases ht : state target <;>
+      simp_all [zeroRecurrenceBaseCell, zeroRecurrenceCellState,
+        Classical.run, Classical.applyGate, upd]
+  · by_cases hwireTemporary : wire = temporary
+    · subst wire
+      cases hc : state rangeControl <;> cases hb : state bit <;>
+        cases hg : state control <;> cases ht : state target <;>
+        simp_all [zeroRecurrenceBaseCell, zeroRecurrenceCellState,
+          Classical.run, Classical.applyGate, upd]
+    · by_cases hwireControl : wire = rangeControl
+      · subst wire
+        simp_all [zeroRecurrenceBaseCell, zeroRecurrenceCellState,
+          Classical.run, Classical.applyGate, upd]
+      · by_cases hwireBit : wire = bit
+        · subst wire
+          simp_all [zeroRecurrenceBaseCell, zeroRecurrenceCellState,
+            Classical.run, Classical.applyGate, upd]
+        · by_cases hwireGuard : wire = control
+          · subst wire
+            simp_all [zeroRecurrenceBaseCell, zeroRecurrenceCellState,
+              Classical.run, Classical.applyGate, upd]
+          · simp [zeroRecurrenceBaseCell, zeroRecurrenceCellState,
+              Classical.run, Classical.applyGate, upd, hwireTarget, hwireTemporary]
+
 theorem zeroRecurrenceCell_usesOnly
     (rangeControl bit guard target temporary : Wire) :
     PaperCircuitUsesOnly [rangeControl, bit, guard, target, temporary]
       (zeroRecurrenceCell rangeControl bit guard target temporary) := by
   simp [zeroRecurrenceCell, PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
+
+private theorem zeroRecurrenceBaseCell_usesOnly
+    (rangeControl bit control target temporary : Wire) :
+    PaperCircuitUsesOnly [rangeControl, bit, control, target, temporary]
+      (zeroRecurrenceBaseCell rangeControl bit control target temporary) := by
+  simp [zeroRecurrenceBaseCell, PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
 
 /-- A recurrence cell can only update its declared target and temporary wires. -/
 theorem zeroRecurrenceCell_preserves
@@ -628,6 +681,16 @@ theorem zeroRecurrenceCell_preserves
     Classical.run (zeroRecurrenceCell rangeControl bit guard target temporary) state wire =
       state wire := by
   simp [zeroRecurrenceCell, Classical.run, Classical.applyGate, upd,
+    hwireTarget, hwireTemporary]
+
+private theorem zeroRecurrenceBaseCell_preserves
+    (rangeControl bit control target temporary wire : Wire)
+    (hwireTarget : wire ≠ target) (hwireTemporary : wire ≠ temporary)
+    (state : BasisState) :
+    Classical.run
+      (zeroRecurrenceBaseCell rangeControl bit control target temporary) state wire =
+      state wire := by
+  simp [zeroRecurrenceBaseCell, Classical.run, Classical.applyGate, upd,
     hwireTarget, hwireTemporary]
 
 @[simp]
@@ -644,6 +707,16 @@ theorem zeroRecurrenceCell_wellFormed
   simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
     or_false, not_or] at hlayout
   simp_all [zeroRecurrenceCell, CircuitWellFormed, Gate.WellFormed,
+    Ne.symm]
+
+private theorem zeroRecurrenceBaseCell_wellFormed
+    (rangeControl bit control target temporary : Wire)
+    (hlayout : [rangeControl, bit, control, target, temporary].Nodup) :
+    CircuitWellFormed
+      (zeroRecurrenceBaseCell rangeControl bit control target temporary) := by
+  simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+    or_false, not_or] at hlayout
+  simp_all [zeroRecurrenceBaseCell, CircuitWellFormed, Gate.WellFormed,
     Ne.symm]
 
 @[simp]
@@ -1830,7 +1903,7 @@ def upperZeroForwardLeaf
     (rangeAccumulator : Wire) : Circuit :=
   if k ≤ label ∧ label ≤ K then
     if label = K then
-      zeroRecurrenceCell rangeAccumulator (bitAt label) control
+      zeroRecurrenceBaseCell rangeAccumulator (bitAt label) control
         (dirtyAt label) temporary
     else
       zeroRecurrenceCell rangeAccumulator (bitAt label) (dirtyAt (label + 1))
@@ -1854,7 +1927,7 @@ def lowerZeroForwardLeaf
     (rangeAccumulator : Wire) : Circuit :=
   if k ≤ label ∧ label ≤ K then
     if label = k then
-      zeroRecurrenceCell rangeAccumulator (bitAt label) control
+      zeroRecurrenceBaseCell rangeAccumulator (bitAt label) control
         (dirtyAt label) temporary
     else
       zeroRecurrenceCell rangeAccumulator (bitAt label) (dirtyAt (label - 1))
@@ -2066,6 +2139,35 @@ private theorem zeroRecurrenceCell_usesOnly_zeroMapData
   · subst wire
     simp [zeroMapDataWires]
 
+private theorem zeroRecurrenceBaseCell_usesOnly_zeroMapData
+    (k K label : Nat)
+    (control rangeAccumulator temporary : Wire)
+    (bitAt dirtyAt : Nat → Wire)
+    (hlabel : label ∈ zeroMapLabels k K) :
+    PaperCircuitUsesOnly
+      (zeroMapDataWires k K control rangeAccumulator temporary bitAt dirtyAt)
+      (zeroRecurrenceBaseCell rangeAccumulator (bitAt label) control
+        (dirtyAt label) temporary) := by
+  apply (zeroRecurrenceBaseCell_usesOnly rangeAccumulator (bitAt label) control
+    (dirtyAt label) temporary).mono
+  intro wire hwire
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hwire
+  rcases hwire with hwire | hwire | hwire | hwire | hwire
+  · subst wire
+    simp [zeroMapDataWires]
+  · subst wire
+    simp only [zeroMapDataWires, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false, List.mem_map]
+    exact Or.inl (Or.inr ⟨label, hlabel, rfl⟩)
+  · subst wire
+    simp [zeroMapDataWires]
+  · subst wire
+    simp only [zeroMapDataWires, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false, List.mem_map]
+    exact Or.inr ⟨label, hlabel, rfl⟩
+  · subst wire
+    simp [zeroMapDataWires]
+
 theorem upperZeroForwardLeaf_usesOnly
     (k K : Nat) (hkK : k ≤ K)
     (control rangeAccumulator temporary : Wire)
@@ -2079,8 +2181,8 @@ theorem upperZeroForwardLeaf_usesOnly
     have hlabel := (mem_zeroMapLabels hkK).2 hwindow
     by_cases hbase : label = K
     · rw [if_pos hbase]
-      exact zeroRecurrenceCell_usesOnly_zeroMapData k K label control
-        rangeAccumulator temporary bitAt dirtyAt control (Or.inl rfl) hlabel
+      exact zeroRecurrenceBaseCell_usesOnly_zeroMapData k K label control
+        rangeAccumulator temporary bitAt dirtyAt hlabel
     · rw [if_neg hbase]
       apply zeroRecurrenceCell_usesOnly_zeroMapData k K label control
         rangeAccumulator temporary bitAt dirtyAt (dirtyAt (label + 1))
@@ -2118,8 +2220,8 @@ theorem lowerZeroForwardLeaf_usesOnly
     have hlabel := (mem_zeroMapLabels hkK).2 hwindow
     by_cases hbase : label = k
     · rw [if_pos hbase]
-      exact zeroRecurrenceCell_usesOnly_zeroMapData k K label control
-        rangeAccumulator temporary bitAt dirtyAt control (Or.inl rfl) hlabel
+      exact zeroRecurrenceBaseCell_usesOnly_zeroMapData k K label control
+        rangeAccumulator temporary bitAt dirtyAt hlabel
     · rw [if_neg hbase]
       apply zeroRecurrenceCell_usesOnly_zeroMapData k K label control
         rangeAccumulator temporary bitAt dirtyAt (dirtyAt (label - 1))
@@ -2236,7 +2338,7 @@ theorem upperZeroForwardLeaf_HPFree
   by_cases hwindow : k ≤ label ∧ label ≤ K
   · rw [upperZeroForwardLeaf, if_pos hwindow]
     by_cases hbase : label = K <;>
-      simp [hbase, zeroRecurrenceCell, HPFree]
+      simp [hbase, zeroRecurrenceBaseCell, zeroRecurrenceCell, HPFree]
   · simp [upperZeroForwardLeaf, hwindow, HPFree]
 
 @[simp]
@@ -2260,7 +2362,7 @@ theorem lowerZeroForwardLeaf_HPFree
   by_cases hwindow : k ≤ label ∧ label ≤ K
   · rw [lowerZeroForwardLeaf, if_pos hwindow]
     by_cases hbase : label = k <;>
-      simp [hbase, zeroRecurrenceCell, HPFree]
+      simp [hbase, zeroRecurrenceBaseCell, zeroRecurrenceCell, HPFree]
   · simp [lowerZeroForwardLeaf, hwindow, HPFree]
 
 @[simp]
@@ -2318,7 +2420,7 @@ theorem upperZeroForwardLeaf_wellFormed
     have hlabel := (mem_zeroMapLabels hkK).2 hwindow
     by_cases hbase : label = K
     · rw [if_pos hbase]
-      exact zeroRecurrenceCell_wellFormed rangeAccumulator (bitAt label)
+      exact zeroRecurrenceBaseCell_wellFormed rangeAccumulator (bitAt label)
         control (dirtyAt label) temporary
         (hlayout.cell label hlabel control (Or.inl rfl))
     · rw [if_neg hbase]
@@ -2365,7 +2467,7 @@ theorem lowerZeroForwardLeaf_wellFormed
     have hlabel := (mem_zeroMapLabels hkK).2 hwindow
     by_cases hbase : label = k
     · rw [if_pos hbase]
-      exact zeroRecurrenceCell_wellFormed rangeAccumulator (bitAt label)
+      exact zeroRecurrenceBaseCell_wellFormed rangeAccumulator (bitAt label)
         control (dirtyAt label) temporary
         (hlayout.cell label hlabel control (Or.inl rfl))
     · rw [if_neg hbase]
@@ -2603,7 +2705,7 @@ theorem run_upperZeroForwardLeaf
     have hlabel := (mem_zeroMapLabels hkK).2 hwindow
     by_cases hbase : label = K
     · rw [if_pos hbase, if_pos hbase]
-      exact run_zeroRecurrenceCell rangeAccumulator (bitAt label) control
+      exact run_zeroRecurrenceBaseCell rangeAccumulator (bitAt label) control
         (dirtyAt label) temporary state
         (hlayout.cell label hlabel control (Or.inl rfl)) hclean
     · rw [if_neg hbase, if_neg hbase]
@@ -2649,7 +2751,7 @@ theorem run_lowerZeroForwardLeaf
     have hlabel := (mem_zeroMapLabels hkK).2 hwindow
     by_cases hbase : label = k
     · rw [if_pos hbase, if_pos hbase]
-      exact run_zeroRecurrenceCell rangeAccumulator (bitAt label) control
+      exact run_zeroRecurrenceBaseCell rangeAccumulator (bitAt label) control
         (dirtyAt label) temporary state
         (hlayout.cell label hlabel control (Or.inl rfl)) hclean
     · rw [if_neg hbase, if_neg hbase]
@@ -2754,10 +2856,15 @@ theorem upperZeroForwardLeaf_preserves_control
   by_cases hwindow : k ≤ label ∧ label ≤ K
   · rw [upperZeroForwardLeaf, if_pos hwindow]
     have hlabel := (mem_zeroMapLabels hkK).2 hwindow
-    split
-    <;> apply zeroRecurrenceCell_preserves
-    <;> first | exact hlayout.control_ne_dirty hlabel
-              | exact hlayout.control_ne_temporary
+    by_cases hbase : label = K
+    · rw [if_pos hbase]
+      apply zeroRecurrenceBaseCell_preserves
+      · exact hlayout.control_ne_dirty hlabel
+      · exact hlayout.control_ne_temporary
+    · rw [if_neg hbase]
+      apply zeroRecurrenceCell_preserves
+      · exact hlayout.control_ne_dirty hlabel
+      · exact hlayout.control_ne_temporary
   · simp [upperZeroForwardLeaf, hwindow]
 
 theorem upperZeroReverseLeaf_preserves_control
@@ -2788,10 +2895,15 @@ theorem lowerZeroForwardLeaf_preserves_control
   by_cases hwindow : k ≤ label ∧ label ≤ K
   · rw [lowerZeroForwardLeaf, if_pos hwindow]
     have hlabel := (mem_zeroMapLabels hkK).2 hwindow
-    split
-    <;> apply zeroRecurrenceCell_preserves
-    <;> first | exact hlayout.control_ne_dirty hlabel
-              | exact hlayout.control_ne_temporary
+    by_cases hbase : label = k
+    · rw [if_pos hbase]
+      apply zeroRecurrenceBaseCell_preserves
+      · exact hlayout.control_ne_dirty hlabel
+      · exact hlayout.control_ne_temporary
+    · rw [if_neg hbase]
+      apply zeroRecurrenceCell_preserves
+      · exact hlayout.control_ne_dirty hlabel
+      · exact hlayout.control_ne_temporary
   · simp [lowerZeroForwardLeaf, hwindow]
 
 theorem lowerZeroReverseLeaf_preserves_control

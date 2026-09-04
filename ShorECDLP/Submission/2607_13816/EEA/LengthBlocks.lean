@@ -427,21 +427,32 @@ theorem dirtyConstantWrites_tCount
 
 /-! ## Source value streams and grouped writers -/
 
-/-- Low-word truncation used by the supplement's `value & ((1 << width) - 1)`. -/
-def truncateConstant (width value : Nat) : Nat :=
-  value % 2 ^ width
+/-- Signed subtraction followed by the source's `width`-bit mask, expressed without saturating
+natural subtraction. -/
+def subtractModPowTwo (width value subtract : Nat) : Nat :=
+  (value + 2 ^ width - subtract % 2 ^ width) % 2 ^ width
+
+/-- Source truth-minus-one encoding, including `0 ↦ -1 mod 2^width`. -/
+def truthMinusOneValue (width truth : Nat) : Nat :=
+  subtractModPowTwo width truth 1
+
+/-- Source right-length encoding `n + 3 - position mod 2^width`. -/
+def rightLengthValue (n width position : Nat) : Nat :=
+  subtractModPowTwo width (n + 3) position
 
 /-- Source delta at one upper-writer dirty lane. -/
 def highestPositionWriteValue (width k : Nat) (label : Nat) : Nat :=
-  truncateConstant width
-    (if label = k then highestPositionBaseDelta width k
-      else highestPositionAdjacentDelta label)
+  if label = k then
+    truthMinusOneValue width k ^^^ (2 ^ width - 1)
+  else
+    truthMinusOneValue width label ^^^ subtractModPowTwo width label 2
 
 /-- Source delta at one right-writer dirty lane. -/
 def rightLengthWriteValue (n width K : Nat) (label : Nat) : Nat :=
-  truncateConstant width
-    (if label = K then rightLengthBaseDelta n width K
-      else rightLengthDelta n label)
+  if label = K then
+    rightLengthValue n width K ^^^ (2 ^ width - 1)
+  else
+    rightLengthValue n width label ^^^ rightLengthValue n width (label + 1)
 
 /-- Descending dirty-write stream emitted by `highest_position_xor_write`. -/
 def highestPositionDirtyWrites
@@ -462,7 +473,7 @@ def highestPositionXorWrite
     (control rangeAccumulator temporary : Wire) (path : List Wire)
     (bitAt dirtyAt : Nat → Wire) (targets : List Wire) : Circuit :=
   controlledXorConstant control targets
-      (truncateConstant targets.length (K - 1)) ++
+      (truthMinusOneValue targets.length K) ++
     highestPositionDirtyWrites k K targets dirtyAt ++
     upperZeroMapUnitary k K tree control rangeAccumulator temporary path bitAt dirtyAt ++
     highestPositionDirtyWrites k K targets dirtyAt ++
@@ -474,7 +485,7 @@ def rightLengthXorWrite
     (control rangeAccumulator temporary : Wire) (path : List Wire)
     (bitAt dirtyAt : Nat → Wire) (targets : List Wire) : Circuit :=
   controlledXorConstant control targets
-      (truncateConstant targets.length (n + 3 - k)) ++
+      (rightLengthValue n targets.length k) ++
     rightLengthDirtyWrites n k K targets dirtyAt ++
     lowerZeroMapUnitary k K tree control rangeAccumulator temporary path bitAt dirtyAt ++
     rightLengthDirtyWrites n k K targets dirtyAt ++
@@ -693,7 +704,7 @@ def highestPositionWordAction
     (zeroMapLabels k K).reverse
     (gateWord enabled (suffixZeroFlags rangeBits)).reverse
     (gatedXorConstantBits enabled targetBits
-      (truncateConstant width (K - 1)))
+      (truthMinusOneValue width K))
 
 /-- Gate-independent action of one complete right-length writer. -/
 def rightLengthWordAction
@@ -702,7 +713,7 @@ def rightLengthWordAction
     (zeroMapLabels k K)
     (gateWord enabled (prefixZeroFlags rangeBits))
     (gatedXorConstantBits enabled targetBits
-      (truncateConstant width (n + 3 - k)))
+      (rightLengthValue n width k))
 
 /-- The literal upper writer has exactly the source seed followed by the suffix-zero-selected
 telescoping constants.  This theorem is intentionally stated at the Boolean-word boundary; the
@@ -729,9 +740,9 @@ theorem highestPositionXorWrite_word
           (suffixZeroFlags
             (upperRangeBits (state control) boundary (zeroMapLabels k K) bitAt state))).reverse
         (gatedXorConstantBits (state control) (wireValues targets state)
-          (truncateConstant targets.length (K - 1))) := by
+          (truthMinusOneValue targets.length K)) := by
   let labels := zeroMapLabels k K
-  let seedValue := truncateConstant targets.length (K - 1)
+  let seedValue := truthMinusOneValue targets.length K
   let valueAt := highestPositionWriteValue targets.length k
   let map := upperZeroMapUnitary k K tree control rangeAccumulator temporary path bitAt dirtyAt
   let seed := controlledXorConstant control targets seedValue
@@ -952,7 +963,7 @@ theorem highestPositionXorWrite_restores
         readWireWord (zeroMapLabels k K) dirtyAt state ∧
       Clean (path ++ [rangeAccumulator, temporary]) after := by
   let labels := zeroMapLabels k K
-  let seedValue := truncateConstant targets.length (K - 1)
+  let seedValue := truthMinusOneValue targets.length K
   let valueAt := highestPositionWriteValue targets.length k
   let map := upperZeroMapUnitary k K tree control rangeAccumulator temporary path bitAt dirtyAt
   let seed := controlledXorConstant control targets seedValue
@@ -1161,9 +1172,9 @@ theorem rightLengthXorWrite_word
           (prefixZeroFlags
             (lowerRangeBits (state control) boundary (zeroMapLabels k K) bitAt state)))
         (gatedXorConstantBits (state control) (wireValues targets state)
-          (truncateConstant targets.length (n + 3 - k))) := by
+          (rightLengthValue n targets.length k)) := by
   let labels := zeroMapLabels k K
-  let seedValue := truncateConstant targets.length (n + 3 - k)
+  let seedValue := rightLengthValue n targets.length k
   let valueAt := rightLengthWriteValue n targets.length K
   let map := lowerZeroMapUnitary k K tree control rangeAccumulator temporary path bitAt dirtyAt
   let seed := controlledXorConstant control targets seedValue
@@ -1365,7 +1376,7 @@ theorem rightLengthXorWrite_restores
         readWireWord (zeroMapLabels k K) dirtyAt state ∧
       Clean (path ++ [rangeAccumulator, temporary]) after := by
   let labels := zeroMapLabels k K
-  let seedValue := truncateConstant targets.length (n + 3 - k)
+  let seedValue := rightLengthValue n targets.length k
   let valueAt := rightLengthWriteValue n targets.length K
   let map := lowerZeroMapUnitary k K tree control rangeAccumulator temporary path bitAt dirtyAt
   let seed := controlledXorConstant control targets seedValue
@@ -1568,7 +1579,7 @@ theorem highestPositionXorWrite_preserves
       bitAt dirtyAt targets) state wire = state wire := by
   let map := upperZeroMapUnitary k K tree control rangeAccumulator temporary path bitAt dirtyAt
   let seed := controlledXorConstant control targets
-    (truncateConstant targets.length (K - 1))
+    (truthMinusOneValue targets.length K)
   let writes := highestPositionDirtyWrites k K targets dirtyAt
   let seeded := run seed state
   let firstWritten := run writes seeded
@@ -1679,7 +1690,7 @@ theorem rightLengthXorWrite_preserves
       bitAt dirtyAt targets) state wire = state wire := by
   let map := lowerZeroMapUnitary k K tree control rangeAccumulator temporary path bitAt dirtyAt
   let seed := controlledXorConstant control targets
-    (truncateConstant targets.length (n + 3 - k))
+    (rightLengthValue n targets.length k)
   let writes := rightLengthDirtyWrites n k K targets dirtyAt
   let seeded := run seed state
   let firstWritten := run writes seeded
@@ -1858,7 +1869,7 @@ theorem highestPositionXorWrite_usesOnly
   have hseed : PaperCircuitUsesOnly
       (lengthWriterSupport k K tree control rangeAccumulator temporary path bitAt dirtyAt targets)
       (controlledXorConstant control targets
-        (truncateConstant targets.length (K - 1))) := by
+        (truthMinusOneValue targets.length K)) := by
     apply (controlledXorConstant_usesOnly control targets _).mono
     intro wire hwire
     simp only [lengthWriterSupport, List.mem_cons, List.mem_append] at hwire ⊢
@@ -1903,7 +1914,7 @@ theorem rightLengthXorWrite_usesOnly
   have hseed : PaperCircuitUsesOnly
       (lengthWriterSupport k K tree control rangeAccumulator temporary path bitAt dirtyAt targets)
       (controlledXorConstant control targets
-        (truncateConstant targets.length (n + 3 - k))) := by
+        (rightLengthValue n targets.length k)) := by
     apply (controlledXorConstant_usesOnly control targets _).mono
     intro wire hwire
     simp only [lengthWriterSupport, List.mem_cons, List.mem_append] at hwire ⊢
@@ -1964,7 +1975,7 @@ theorem highestPositionXorWrite_wellFormed
       (highestPositionXorWrite k K tree control rangeAccumulator temporary path
         bitAt dirtyAt targets) := by
   have hseed := controlledXorConstant_wellFormed control targets
-    (truncateConstant targets.length (K - 1)) (by
+    (truthMinusOneValue targets.length K) (by
       intro target htarget equality
       subst target
       exact hlayout.control_not_target htarget)
@@ -1989,7 +2000,7 @@ theorem rightLengthXorWrite_wellFormed
       (rightLengthXorWrite n k K tree control rangeAccumulator temporary path
         bitAt dirtyAt targets) := by
   have hseed := controlledXorConstant_wellFormed control targets
-    (truncateConstant targets.length (n + 3 - k)) (by
+    (rightLengthValue n targets.length k) (by
       intro target htarget equality
       subst target
       exact hlayout.control_not_target htarget)
@@ -2024,7 +2035,7 @@ theorem highestPositionXorWrite_cnotCount
     eeaCnotCount
         (highestPositionXorWrite k K tree control rangeAccumulator temporary path
           bitAt dirtyAt targets) =
-      lowBitCount targets.length (truncateConstant targets.length (K - 1)) +
+      lowBitCount targets.length (truthMinusOneValue targets.length K) +
         2 * ((zeroMapLabels k K).reverse.map fun label ↦
           lowBitCount targets.length (highestPositionWriteValue targets.length k label)).sum +
         2 * eeaCnotCount
@@ -2065,7 +2076,7 @@ theorem rightLengthXorWrite_cnotCount
     eeaCnotCount
         (rightLengthXorWrite n k K tree control rangeAccumulator temporary path
           bitAt dirtyAt targets) =
-      lowBitCount targets.length (truncateConstant targets.length (n + 3 - k)) +
+      lowBitCount targets.length (rightLengthValue n targets.length k) +
         2 * ((zeroMapLabels k K).map fun label ↦
           lowBitCount targets.length (rightLengthWriteValue n targets.length K label)).sum +
         2 * eeaCnotCount
@@ -2804,7 +2815,7 @@ theorem lenUpdateLtUnary_cnotCount
           work1At work2At lengthT lengthRP constants) =
       2 * (lengthRP.length + 1 + 4 * lengthRP.length) +
         2 * lowBitCount lengthT.length
-          (truncateConstant lengthT.length (K - 1)) +
+          (truthMinusOneValue lengthT.length K) +
         4 * ((zeroMapLabels k K).reverse.map fun label ↦
           lowBitCount lengthT.length
             (highestPositionWriteValue lengthT.length k label)).sum +
@@ -2897,7 +2908,7 @@ theorem lenUpdateLrpUnary_cnotCount
           work1At work2At lengthT lengthRP constants) =
       8 * lengthT.length +
         2 * lowBitCount lengthRP.length
-          (truncateConstant lengthRP.length (n + 3 - k)) +
+          (rightLengthValue n lengthRP.length k) +
         4 * ((zeroMapLabels k K).map fun label ↦
           lowBitCount lengthRP.length
             (rightLengthWriteValue n lengthRP.length K label)).sum +

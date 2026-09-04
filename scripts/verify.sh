@@ -216,8 +216,6 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.PaperCircuitUsesOnly.run_congrOn
 #print axioms ShorECDLP.Paper2607_13816.controlledXorConstant_preservesOutside
 #print axioms ShorECDLP.Paper2607_13816.controlledXorConstant_cnotCount
-#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.projectA_visitLabels
-#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.projectB_visitLabels
 #print axioms ShorECDLP.Paper2607_13816.UnaryActionTree.runLogicalTree_eq_foldl
 #print axioms ShorECDLP.Paper2607_13816.run_unaryActionUnitary_as_runLogicalTree
 #print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_preserves
@@ -440,8 +438,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 416 ]]; then
-  printf 'expected four hundred sixteen #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 414 ]]; then
+  printf 'expected four hundred fourteen #print axioms results\n' >&2
   exit 1
 fi
 
