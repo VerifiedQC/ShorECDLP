@@ -10,7 +10,7 @@ are on `main@fc9436c982c665a8769b986042416a1eadb0cbc0`. PR #56 → PR #57 → PR
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
 → PR #69 → PR #70 landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
 measurement-based uncomputation, pure EEA model, indexed EEA bounds/windows, and the first nine
-concrete circuit units. Phase 5 circuit unit 10, the source inverse interval aggregate and its
+concrete circuit units. Phase 5 circuit unit 10 (PR #71), the source inverse interval aggregate and its
 clean-boundary whole-state round trip, is current. Proving that the forward output satisfies that
 boundary from indexed endpoint/range reachability, then composing the four-phase step, remain open.
 A `✓` means a
@@ -668,7 +668,7 @@ They are equal only if Phase 11 proves the required reuse.
   a kernel-checked five-lane layout witness rules out vacuous physical contracts. The inverse
   wrapper and the indexed reachable-state theorem needed to prove output scratch cleanup remain
   open.
-- **Phase-5 circuit unit 10 (current):** exact source inverse interval aggregate, defined by the
+- **Phase-5 circuit unit 10 (PR #71, current):** exact source inverse interval aggregate, defined by the
   source's opposite ripple-mode specialization of the same wrapper. It adds two-sided complete-state
   round trips under clean input/output wrapper boundaries, the reverse endpoint identity needed for
   that proof, coherent and adaptive contracts, and matching constructor-derived resource equations.
@@ -708,7 +708,7 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--9 are merged. Phase 5 circuit unit 10, the exact inverse
+Phases 0--4 and Phase 5 circuit units 1--9 are merged. Phase 5 circuit unit 10 (PR #71), the exact inverse
 interval aggregate, is current on that foundation. Its round trip deliberately exposes the
 forward-output `IntervalReady` premise; the indexed reachable endpoint/range theorem that proves
 that premise, followed by the indexed four-phase step, remains open.
