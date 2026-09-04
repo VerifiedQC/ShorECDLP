@@ -12,7 +12,7 @@ are on `main@7f52576dba45c8a86c9fbc34f4b007097b8cc3cc`. PR #56 → PR #57 → PR
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
 bounds/windows, and twelve concrete circuit units ending with the source-exact forward
 borrowed-epoch phase-update controller and its adaptive refinement. Phase 5 circuit unit 13 is
-current: it implements the pinned explicit measurement-safe inverse of that controller. The full
+current in PR #74: it implements the pinned explicit measurement-safe inverse of that controller. The full
 indexed four-phase step remains open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
@@ -379,7 +379,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 active/padding state; counts are symbolic over the active window.
 
 **Status:** the first twelve dependency-closed construction units are merged; the thirteenth is
-current. PR #62 contains
+current in PR #74. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -738,4 +738,4 @@ Runzhou approved the five roadmap choices on 2026-09-02:
 
 Phases 0--4 and Phase 5 circuit units 1--12 are merged through PR #73. Phase 5 circuit unit 13,
 the pinned explicit measurement-safe inverse phase-update controller and adaptive refinement, is
-current on that foundation. The full indexed four-phase step remains open.
+current in PR #74 on that foundation. The full indexed four-phase step remains open.
