@@ -4,16 +4,18 @@ import Lean.Elab.Tactic.Omega
 /-!
 # Algorithm-3 phase update
 
-This module implements the literal `phase_update_gate` from the pinned supplement.  The three
-truth-minus-one length words are tested for encoded zero with clean v-chains, the two phase bits
-and sign bit are updated in the source order, and every flag and v-chain scratch wire is restored.
+This module implements the literal `phase_update_gate` and `phase_update_inverse_gate` from the
+pinned supplement.  The three truth-minus-one length words are tested for encoded zero with clean
+v-chains, the two phase bits and sign bit are updated in source order (or exact reverse order), and
+every flag and v-chain scratch wire is restored.
 The generic block takes the exact list of wires used by each zero test.  The production wrapper
 appends the borrowed shift-epoch discriminator to the low shift word and conjugates that test by
 the two source `X` gates, so terminal-padding wrap cannot look like encoded zero.
 
-The coherent circuit and its measurement-uncomputed realization use the same source block order.  In
-the adaptive term only the internal cleanup of each multi-controlled equality test is replaced by
-the global measurement-uncomputation choice; the phase/sign core stays unitary.
+Each coherent circuit and its measurement-uncomputed realization use the same source block order.
+In the adaptive terms only the internal cleanup of each multi-controlled equality test is replaced
+by the global measurement-uncomputation choice; the forward and inverse phase/sign cores stay
+unitary.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -245,6 +247,27 @@ private def phaseUpdateCore (registers : PhaseUpdateRegisters) : Circuit :=
     .CX registers.zeroS registers.phase1,
     .CX registers.zeroS registers.phase2]
 
+private def phaseUpdateInverseCore (registers : PhaseUpdateRegisters) : Circuit :=
+  [.CX registers.zeroS registers.phase2,
+    .CX registers.zeroS registers.phase1,
+    .X registers.zeroRPrime,
+    .CCX registers.zeroQ registers.zeroRPrime registers.condition,
+    .X registers.zeroRPrime,
+    .CCX registers.condition registers.phase2 registers.sign,
+    .CX registers.sign registers.temporary,
+    .CX registers.phase1 registers.temporary,
+    .CCX registers.condition registers.temporary registers.phase2,
+    .CX registers.phase1 registers.temporary,
+    .CX registers.sign registers.temporary,
+    .X registers.zeroRPrime,
+    .CCX registers.zeroQ registers.zeroRPrime registers.condition,
+    .X registers.zeroRPrime]
+
+private theorem phaseUpdateInverseCore_eq_adjoint
+    (registers : PhaseUpdateRegisters) :
+    phaseUpdateInverseCore registers = (phaseUpdateCore registers).adjoint := by
+  rfl
+
 private def phaseUpdateCoreState (registers : PhaseUpdateRegisters)
     (state : BasisState) : BasisState :=
   let condition := state registers.zeroQ && !state registers.zeroRPrime
@@ -467,6 +490,25 @@ private def phaseUpdateState (registers : PhaseUpdateRegisters)
   state
     [registers.phase1 ↦ Bool.xor (state registers.phase1) zeroS]
     [registers.phase2 ↦ Bool.xor phase2 zeroS]
+    [registers.sign ↦ sign]
+
+/-- Gate-independent reverse transition on the three public phase/sign bits.  The zero
+predicates depend only on unchanged length metadata, so the source reconstructs them before
+running this Boolean update. -/
+def phaseUpdateInverseState (registers : PhaseUpdateRegisters)
+    (state : BasisState) : BasisState :=
+  let zeroQ := wireAnd registers.lengthQ state
+  let zeroRPrime := wireAnd registers.lengthRPrime state
+  let zeroS := wireAnd registers.lengthS state
+  let condition := zeroQ && !zeroRPrime
+  let phase1 := Bool.xor (state registers.phase1) zeroS
+  let phase2AfterZero := Bool.xor (state registers.phase2) zeroS
+  let sign := Bool.xor (state registers.sign) (condition && phase2AfterZero)
+  let phase2 := Bool.xor phase2AfterZero
+    (condition && Bool.xor sign phase1)
+  state
+    [registers.phase1 ↦ phase1]
+    [registers.phase2 ↦ phase2]
     [registers.sign ↦ sign]
 
 private theorem clean_upd_not_mem
@@ -990,6 +1032,211 @@ private theorem phaseUpdateState_preserves_scratch
   rw [upd_other _ registers.sign _ (Ne.symm hsignWire),
     upd_other _ registers.phase2 _ (Ne.symm hp2Wire),
     upd_other _ registers.phase1 _ (Ne.symm hp1Wire)]
+
+theorem phaseUpdateInverseState_preserves_scratch
+    (registers : PhaseUpdateRegisters) (state : BasisState)
+    (hlayout : PhaseUpdateLayout registers) {wire : Wire}
+    (hwire : wire ∈ registers.scratch) :
+    phaseUpdateInverseState registers state wire = state wire := by
+  have hp1Wire := hlayout.scalarTailNe
+    (scalar := registers.phase1) (wire := wire)
+    (by simp [PhaseUpdateRegisters.scalarWires])
+    (List.mem_append_right registers.lengthWires hwire)
+  have hp2Wire := hlayout.scalarTailNe
+    (scalar := registers.phase2) (wire := wire)
+    (by simp [PhaseUpdateRegisters.scalarWires])
+    (List.mem_append_right registers.lengthWires hwire)
+  have hsignWire := hlayout.scalarTailNe
+    (scalar := registers.sign) (wire := wire)
+    (by simp [PhaseUpdateRegisters.scalarWires])
+    (List.mem_append_right registers.lengthWires hwire)
+  unfold phaseUpdateInverseState
+  rw [upd_other _ registers.sign _ (Ne.symm hsignWire),
+    upd_other _ registers.phase2 _ (Ne.symm hp2Wire),
+    upd_other _ registers.phase1 _ (Ne.symm hp1Wire)]
+
+private theorem phaseUpdateInverseState_wireAnd
+    (registers : PhaseUpdateRegisters) (state : BasisState)
+    (wires : List Wire) (hlayout : PhaseUpdateLayout registers)
+    (hsub : ∀ wire ∈ wires, wire ∈ registers.lengthWires) :
+    wireAnd wires (phaseUpdateInverseState registers state) =
+      wireAnd wires state := by
+  have hp1 : registers.phase1 ∉ wires := by
+    intro hmem
+    exact hlayout.scalarWire_not_lengthWires
+      (wire := registers.phase1) (by simp [PhaseUpdateRegisters.scalarWires])
+        (hsub registers.phase1 hmem)
+  have hp2 : registers.phase2 ∉ wires := by
+    intro hmem
+    exact hlayout.scalarWire_not_lengthWires
+      (wire := registers.phase2) (by simp [PhaseUpdateRegisters.scalarWires])
+        (hsub registers.phase2 hmem)
+  have hsign : registers.sign ∉ wires := by
+    intro hmem
+    exact hlayout.scalarWire_not_lengthWires
+      (wire := registers.sign) (by simp [PhaseUpdateRegisters.scalarWires])
+        (hsub registers.sign hmem)
+  unfold phaseUpdateInverseState
+  rw [wireAnd_upd_not_mem _ _ _ _ hsign,
+    wireAnd_upd_not_mem _ _ _ _ hp2,
+    wireAnd_upd_not_mem _ _ _ _ hp1]
+
+private theorem phaseUpdateState_wireAnd
+    (registers : PhaseUpdateRegisters) (state : BasisState)
+    (wires : List Wire) (hlayout : PhaseUpdateLayout registers)
+    (hsub : ∀ wire ∈ wires, wire ∈ registers.lengthWires) :
+    wireAnd wires (phaseUpdateState registers state) = wireAnd wires state := by
+  have hp1 : registers.phase1 ∉ wires := by
+    intro hmem
+    exact hlayout.scalarWire_not_lengthWires
+      (wire := registers.phase1) (by simp [PhaseUpdateRegisters.scalarWires])
+        (hsub registers.phase1 hmem)
+  have hp2 : registers.phase2 ∉ wires := by
+    intro hmem
+    exact hlayout.scalarWire_not_lengthWires
+      (wire := registers.phase2) (by simp [PhaseUpdateRegisters.scalarWires])
+        (hsub registers.phase2 hmem)
+  have hsign : registers.sign ∉ wires := by
+    intro hmem
+    exact hlayout.scalarWire_not_lengthWires
+      (wire := registers.sign) (by simp [PhaseUpdateRegisters.scalarWires])
+        (hsub registers.sign hmem)
+  unfold phaseUpdateState
+  rw [wireAnd_upd_not_mem _ _ _ _ hsign,
+    wireAnd_upd_not_mem _ _ _ _ hp2,
+    wireAnd_upd_not_mem _ _ _ _ hp1]
+
+set_option linter.unusedSimpArgs false in
+set_option maxHeartbeats 1000000 in
+private theorem phaseUpdateState_after_inverse
+    (registers : PhaseUpdateRegisters) (state : BasisState)
+    (hlayout : PhaseUpdateLayout registers) :
+    phaseUpdateState registers (phaseUpdateInverseState registers state) = state := by
+  have hq := phaseUpdateInverseState_wireAnd registers state registers.lengthQ
+    hlayout (by
+      intro wire hwire
+      simp only [PhaseUpdateRegisters.lengthWires, List.mem_append]
+      exact Or.inl (Or.inl hwire))
+  have hr := phaseUpdateInverseState_wireAnd registers state registers.lengthRPrime
+    hlayout (by
+      intro wire hwire
+      simp only [PhaseUpdateRegisters.lengthWires, List.mem_append]
+      exact Or.inl (Or.inr hwire))
+  have hs := phaseUpdateInverseState_wireAnd registers state registers.lengthS
+    hlayout (by
+      intro wire hwire
+      simp only [PhaseUpdateRegisters.lengthWires, List.mem_append]
+      exact Or.inr hwire)
+  have hnd := hlayout.coreNodup
+  obtain ⟨hp1Not, hnd⟩ := List.nodup_cons.mp hnd
+  obtain ⟨hp2Not, _⟩ := List.nodup_cons.mp hnd
+  simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hp1Not hp2Not
+  have hp1p2 := hp1Not.1
+  have hp1sign := hp1Not.2.1
+  have hp2sign := hp2Not.1
+  unfold phaseUpdateState
+  rw [hq, hr, hs]
+  funext wire
+  by_cases hp1 : wire = registers.phase1
+  · subst wire
+    cases hqv : wireAnd registers.lengthQ state <;>
+      cases hrv : wireAnd registers.lengthRPrime state <;>
+      cases hsv : wireAnd registers.lengthS state <;>
+      cases hp1v : state registers.phase1 <;>
+      cases hp2v : state registers.phase2 <;>
+      cases hsignv : state registers.sign <;>
+      simp [phaseUpdateInverseState, upd,
+        hqv, hrv, hsv, hp1v, hp2v, hsignv, hp1p2, hp1sign,
+        hp2sign, Ne.symm hp1p2, Ne.symm hp1sign, Ne.symm hp2sign]
+  · by_cases hp2 : wire = registers.phase2
+    · subst wire
+      cases hqv : wireAnd registers.lengthQ state <;>
+        cases hrv : wireAnd registers.lengthRPrime state <;>
+        cases hsv : wireAnd registers.lengthS state <;>
+        cases hp1v : state registers.phase1 <;>
+        cases hp2v : state registers.phase2 <;>
+        cases hsignv : state registers.sign <;>
+        simp [phaseUpdateInverseState, upd,
+          hqv, hrv, hsv, hp1v, hp2v, hsignv, hp1p2, hp1sign,
+          hp2sign, Ne.symm hp1p2, Ne.symm hp1sign, Ne.symm hp2sign]
+    · by_cases hsign : wire = registers.sign
+      · subst wire
+        cases hqv : wireAnd registers.lengthQ state <;>
+          cases hrv : wireAnd registers.lengthRPrime state <;>
+          cases hsv : wireAnd registers.lengthS state <;>
+          cases hp1v : state registers.phase1 <;>
+          cases hp2v : state registers.phase2 <;>
+          cases hsignv : state registers.sign <;>
+          simp [phaseUpdateInverseState, upd,
+            hqv, hrv, hsv, hp1v, hp2v, hsignv, hp1p2, hp1sign,
+            hp2sign, Ne.symm hp1p2, Ne.symm hp1sign, Ne.symm hp2sign]
+      · simp [phaseUpdateInverseState, upd, hp1, hp2, hsign]
+
+set_option linter.unusedSimpArgs false in
+set_option maxHeartbeats 1000000 in
+private theorem phaseUpdateInverseState_after_forward
+    (registers : PhaseUpdateRegisters) (state : BasisState)
+    (hlayout : PhaseUpdateLayout registers) :
+    phaseUpdateInverseState registers (phaseUpdateState registers state) = state := by
+  have hq := phaseUpdateState_wireAnd registers state registers.lengthQ
+    hlayout (by
+      intro wire hwire
+      simp only [PhaseUpdateRegisters.lengthWires, List.mem_append]
+      exact Or.inl (Or.inl hwire))
+  have hr := phaseUpdateState_wireAnd registers state registers.lengthRPrime
+    hlayout (by
+      intro wire hwire
+      simp only [PhaseUpdateRegisters.lengthWires, List.mem_append]
+      exact Or.inl (Or.inr hwire))
+  have hs := phaseUpdateState_wireAnd registers state registers.lengthS
+    hlayout (by
+      intro wire hwire
+      simp only [PhaseUpdateRegisters.lengthWires, List.mem_append]
+      exact Or.inr hwire)
+  have hnd := hlayout.coreNodup
+  obtain ⟨hp1Not, hnd⟩ := List.nodup_cons.mp hnd
+  obtain ⟨hp2Not, _⟩ := List.nodup_cons.mp hnd
+  simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hp1Not hp2Not
+  have hp1p2 := hp1Not.1
+  have hp1sign := hp1Not.2.1
+  have hp2sign := hp2Not.1
+  unfold phaseUpdateInverseState
+  rw [hq, hr, hs]
+  funext wire
+  by_cases hp1 : wire = registers.phase1
+  · subst wire
+    cases hqv : wireAnd registers.lengthQ state <;>
+      cases hrv : wireAnd registers.lengthRPrime state <;>
+      cases hsv : wireAnd registers.lengthS state <;>
+      cases hp1v : state registers.phase1 <;>
+      cases hp2v : state registers.phase2 <;>
+      cases hsignv : state registers.sign <;>
+      simp [phaseUpdateState, upd,
+        hqv, hrv, hsv, hp1v, hp2v, hsignv, hp1p2, hp1sign,
+        hp2sign, Ne.symm hp1p2, Ne.symm hp1sign, Ne.symm hp2sign]
+  · by_cases hp2 : wire = registers.phase2
+    · subst wire
+      cases hqv : wireAnd registers.lengthQ state <;>
+        cases hrv : wireAnd registers.lengthRPrime state <;>
+        cases hsv : wireAnd registers.lengthS state <;>
+        cases hp1v : state registers.phase1 <;>
+        cases hp2v : state registers.phase2 <;>
+        cases hsignv : state registers.sign <;>
+        simp [phaseUpdateState, upd,
+          hqv, hrv, hsv, hp1v, hp2v, hsignv, hp1p2, hp1sign,
+          hp2sign, Ne.symm hp1p2, Ne.symm hp1sign, Ne.symm hp2sign]
+    · by_cases hsign : wire = registers.sign
+      · subst wire
+        cases hqv : wireAnd registers.lengthQ state <;>
+          cases hrv : wireAnd registers.lengthRPrime state <;>
+          cases hsv : wireAnd registers.lengthS state <;>
+          cases hp1v : state registers.phase1 <;>
+          cases hp2v : state registers.phase2 <;>
+          cases hsignv : state registers.sign <;>
+          simp [phaseUpdateState, upd,
+            hqv, hrv, hsv, hp1v, hp2v, hsignv, hp1p2, hp1sign,
+            hp2sign, Ne.symm hp1p2, Ne.symm hp1sign, Ne.symm hp2sign]
+      · simp [phaseUpdateState, upd, hp1, hp2, hsign]
 
 private theorem phaseUpdateCore_usesOnly (registers : PhaseUpdateRegisters) :
     PaperCircuitUsesOnly
@@ -1837,6 +2084,322 @@ theorem phaseUpdateEpochUnitary_tCount
     hforward, hcore, hcleanup]
   omega
 
+/-! ## Explicit measurement-safe inverse -/
+
+private theorem mcxVChainTail_adjoint
+    (accumulator : Wire) (controls : List Wire) (target : Wire)
+    (scratches : List Wire) :
+    (mcxVChainTail accumulator controls target scratches).adjoint =
+      mcxVChainTail accumulator controls target scratches := by
+  induction controls generalizing accumulator scratches with
+  | nil => simp [mcxVChainTail]
+  | cons control controls ih =>
+      cases controls with
+      | nil => simp [mcxVChainTail, Circuit.adjoint]
+      | cons nextControl controls =>
+          cases scratches with
+          | nil => simp [mcxVChainTail]
+          | cons scratch scratches =>
+              simp [mcxVChainTail, circuit_adjoint_append, ih]
+
+private theorem mcxVChain_adjoint
+    (controls : List Wire) (target : Wire) (scratches : List Wire) :
+    (mcxVChain controls target scratches).adjoint =
+      mcxVChain controls target scratches := by
+  cases controls with
+  | nil => simp [mcxVChain, Circuit.adjoint]
+  | cons first controls =>
+      cases controls with
+      | nil => simp [mcxVChain, Circuit.adjoint]
+      | cons second controls =>
+          simp [mcxVChain, mcxVChainTail_adjoint]
+
+private theorem phaseUpdateEpochCleanupTests_eq_forward_adjoint
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) :
+    phaseUpdateEpochCleanupTests registers shiftEpoch =
+      (phaseUpdateEpochForwardTests registers shiftEpoch).adjoint := by
+  unfold phaseUpdateEpochForwardTests phaseUpdateEpochCleanupTests
+  rw [circuit_adjoint_append, circuit_adjoint_append,
+    circuit_adjoint_append, circuit_adjoint_append]
+  rw [mcxVChain_adjoint, mcxVChain_adjoint, mcxVChain_adjoint]
+  simp [Circuit.adjoint]
+
+private theorem phaseUpdateEpochForwardTests_eq_cleanup_adjoint
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) :
+    phaseUpdateEpochForwardTests registers shiftEpoch =
+      (phaseUpdateEpochCleanupTests registers shiftEpoch).adjoint := by
+  rw [phaseUpdateEpochCleanupTests_eq_forward_adjoint,
+    circuit_adjoint_adjoint]
+
+/-- The pinned source's explicit inverse: reconstruct the three zero predicates, undo the
+phase/sign core in exact reverse order, then erase the predicates with the same self-inverse
+networks.  This term is deliberately explicit rather than an adaptive adjoint. -/
+def phaseUpdateEpochInverseUnitary
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) : Circuit :=
+  phaseUpdateEpochForwardTests registers shiftEpoch ++
+    phaseUpdateInverseCore (registers.withShiftEpoch shiftEpoch) ++
+    phaseUpdateEpochCleanupTests registers shiftEpoch
+
+/-- The explicit coherent inverse is exactly the adjoint of the coherent forward source block. -/
+theorem phaseUpdateEpochInverseUnitary_eq_adjoint
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) :
+    phaseUpdateEpochInverseUnitary registers shiftEpoch =
+      (phaseUpdateEpochUnitary registers shiftEpoch).adjoint := by
+  unfold phaseUpdateEpochInverseUnitary phaseUpdateEpochUnitary
+  rw [circuit_adjoint_append, circuit_adjoint_append,
+    ← phaseUpdateEpochForwardTests_eq_cleanup_adjoint,
+    ← phaseUpdateInverseCore_eq_adjoint,
+    ← phaseUpdateEpochCleanupTests_eq_forward_adjoint]
+  simp [List.append_assoc]
+
+/-- Gate-independent inverse transition with the two literal borrowed-epoch conjugations. -/
+def phaseUpdateEpochInverseState
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState) : BasisState :=
+  toggleShiftEpoch shiftEpoch
+    (phaseUpdateInverseState (registers.withShiftEpoch shiftEpoch)
+      (toggleShiftEpoch shiftEpoch state))
+
+theorem phaseUpdateEpochState_after_inverse
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    phaseUpdateEpochState registers shiftEpoch
+        (phaseUpdateEpochInverseState registers shiftEpoch state) = state := by
+  unfold phaseUpdateEpochState phaseUpdateEpochInverseState
+  rw [toggleShiftEpoch_twice,
+    phaseUpdateState_after_inverse
+      (registers.withShiftEpoch shiftEpoch)
+      (toggleShiftEpoch shiftEpoch state) hlayout,
+    toggleShiftEpoch_twice]
+
+theorem phaseUpdateEpochInverseState_after_forward
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    phaseUpdateEpochInverseState registers shiftEpoch
+        (phaseUpdateEpochState registers shiftEpoch state) = state := by
+  unfold phaseUpdateEpochState phaseUpdateEpochInverseState
+  rw [toggleShiftEpoch_twice,
+    phaseUpdateInverseState_after_forward
+      (registers.withShiftEpoch shiftEpoch)
+      (toggleShiftEpoch shiftEpoch state) hlayout,
+    toggleShiftEpoch_twice]
+
+/-- Direct source-facing form of the inverse Boolean transition. -/
+theorem phaseUpdateEpochInverseState_spec
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    phaseUpdateEpochInverseState registers shiftEpoch state =
+      let zeroQ := wireAnd registers.lengthQ state
+      let zeroRPrime := wireAnd registers.lengthRPrime state
+      let zeroS := wireAnd registers.lengthS state && !state shiftEpoch
+      let condition := zeroQ && !zeroRPrime
+      let phase1 := Bool.xor (state registers.phase1) zeroS
+      let phase2AfterZero := Bool.xor (state registers.phase2) zeroS
+      let sign := Bool.xor (state registers.sign)
+        (condition && phase2AfterZero)
+      let phase2 := Bool.xor phase2AfterZero
+        (condition && Bool.xor sign phase1)
+      state
+        [registers.phase1 ↦ phase1]
+        [registers.phase2 ↦ phase2]
+        [registers.sign ↦ sign] := by
+  have hepochLengths := hlayout.shiftEpoch_not_lengths
+  simp only [PhaseUpdateRegisters.lengthWires, List.mem_append,
+    not_or] at hepochLengths
+  have hepochQ := hepochLengths.1.1
+  have hepochRPrime := hepochLengths.1.2
+  have hepochS := hepochLengths.2
+  have hp1Epoch := hlayout.scalarTailNe
+    (scalar := registers.phase1) (wire := shiftEpoch)
+    (by simp [PhaseUpdateRegisters.withShiftEpoch,
+      PhaseUpdateRegisters.scalarWires])
+    (List.mem_append_left _
+      (phaseUpdate_shiftEpoch_mem_lengthWires registers shiftEpoch))
+  have hp2Epoch := hlayout.scalarTailNe
+    (scalar := registers.phase2) (wire := shiftEpoch)
+    (by simp [PhaseUpdateRegisters.withShiftEpoch,
+      PhaseUpdateRegisters.scalarWires])
+    (List.mem_append_left _
+      (phaseUpdate_shiftEpoch_mem_lengthWires registers shiftEpoch))
+  have hsignEpoch := hlayout.scalarTailNe
+    (scalar := registers.sign) (wire := shiftEpoch)
+    (by simp [PhaseUpdateRegisters.withShiftEpoch,
+      PhaseUpdateRegisters.scalarWires])
+    (List.mem_append_left _
+      (phaseUpdate_shiftEpoch_mem_lengthWires registers shiftEpoch))
+  unfold phaseUpdateEpochInverseState phaseUpdateInverseState toggleShiftEpoch
+  simp only [PhaseUpdateRegisters.withShiftEpoch]
+  rw [wireAnd_upd_not_mem _ _ _ _ hepochQ,
+    wireAnd_upd_not_mem _ _ _ _ hepochRPrime,
+    wireAnd_append_singleton,
+    wireAnd_upd_not_mem _ _ _ _ hepochS]
+  funext wire
+  by_cases hwire : wire = shiftEpoch
+  · subst wire
+    simp [upd, Ne.symm hp1Epoch, Ne.symm hp2Epoch, Ne.symm hsignEpoch]
+  · simp [upd, hwire, hp1Epoch, hp2Epoch, hsignEpoch]
+
+theorem phaseUpdateEpochInverseState_preserves_scratch
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch)
+    {wire : Wire} (hwire : wire ∈ registers.scratch) :
+    phaseUpdateEpochInverseState registers shiftEpoch state wire = state wire := by
+  have hwireEpoch : wire ≠ shiftEpoch := by
+    intro equality
+    subst wire
+    exact hlayout.shiftEpoch_not_scratch hwire
+  unfold phaseUpdateEpochInverseState toggleShiftEpoch
+  rw [upd_other _ shiftEpoch _ hwireEpoch]
+  change phaseUpdateInverseState (registers.withShiftEpoch shiftEpoch)
+      (toggleShiftEpoch shiftEpoch state) wire = state wire
+  rw [phaseUpdateInverseState_preserves_scratch
+    (registers.withShiftEpoch shiftEpoch)
+    (toggleShiftEpoch shiftEpoch state) hlayout
+    (by simpa [PhaseUpdateRegisters.withShiftEpoch,
+      PhaseUpdateRegisters.scratch] using hwire)]
+  simp [toggleShiftEpoch, upd, hwireEpoch]
+
+/-- Direct whole-state correctness of the pinned explicit inverse from the same clean boundary. -/
+theorem run_phaseUpdateEpochInverseUnitary
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch)
+    (hready : PhaseUpdateReady registers state) :
+    Classical.run (phaseUpdateEpochInverseUnitary registers shiftEpoch) state =
+      phaseUpdateEpochInverseState registers shiftEpoch state := by
+  have hinverseReady : PhaseUpdateReady registers
+      (phaseUpdateEpochInverseState registers shiftEpoch state) := by
+    intro wire hwire
+    rw [phaseUpdateEpochInverseState_preserves_scratch registers shiftEpoch
+      state hlayout hwire]
+    exact hready wire hwire
+  have hforward := run_phaseUpdateEpochUnitary registers shiftEpoch
+    (phaseUpdateEpochInverseState registers shiftEpoch state) hlayout hinverseReady
+  rw [phaseUpdateEpochState_after_inverse registers shiftEpoch state hlayout] at hforward
+  rw [phaseUpdateEpochInverseUnitary_eq_adjoint]
+  calc
+    Classical.run (phaseUpdateEpochUnitary registers shiftEpoch).adjoint state =
+        Classical.run (phaseUpdateEpochUnitary registers shiftEpoch).adjoint
+          (Classical.run (phaseUpdateEpochUnitary registers shiftEpoch)
+            (phaseUpdateEpochInverseState registers shiftEpoch state)) := by
+              rw [hforward]
+    _ = phaseUpdateEpochInverseState registers shiftEpoch state :=
+      run_adjoint_run_classical
+        (phaseUpdateEpochUnitary registers shiftEpoch)
+        (phaseUpdateEpochUnitary_wellFormed registers shiftEpoch hlayout)
+        (phaseUpdateEpochInverseState registers shiftEpoch state)
+
+/-- The inverse restores the same shared scratch boundary on every ready input. -/
+theorem phaseUpdateEpochInverseUnitary_ready
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch)
+    (hready : PhaseUpdateReady registers state) :
+    PhaseUpdateReady registers
+      (Classical.run (phaseUpdateEpochInverseUnitary registers shiftEpoch) state) := by
+  rw [run_phaseUpdateEpochInverseUnitary registers shiftEpoch state hlayout hready]
+  intro wire hwire
+  rw [phaseUpdateEpochInverseState_preserves_scratch registers shiftEpoch state
+    hlayout hwire]
+  exact hready wire hwire
+
+/-- The explicit inverse cancels the coherent forward term on every basis state. -/
+theorem run_phaseUpdateEpochInverseUnitary_after_forward
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    Classical.run (phaseUpdateEpochInverseUnitary registers shiftEpoch)
+        (Classical.run (phaseUpdateEpochUnitary registers shiftEpoch) state) = state := by
+  rw [phaseUpdateEpochInverseUnitary_eq_adjoint]
+  exact run_adjoint_run_classical
+    (phaseUpdateEpochUnitary registers shiftEpoch)
+    (phaseUpdateEpochUnitary_wellFormed registers shiftEpoch hlayout) state
+
+/-- Symmetrically, the coherent forward term cancels the explicit inverse on every basis state. -/
+theorem run_phaseUpdateEpochUnitary_after_inverse
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    Classical.run (phaseUpdateEpochUnitary registers shiftEpoch)
+        (Classical.run (phaseUpdateEpochInverseUnitary registers shiftEpoch) state) = state := by
+  rw [phaseUpdateEpochInverseUnitary_eq_adjoint]
+  have hadjoint := run_adjoint_run_classical
+    (phaseUpdateEpochUnitary registers shiftEpoch).adjoint
+    ((circuitWellFormed_adjoint
+      (phaseUpdateEpochUnitary registers shiftEpoch)).mpr
+        (phaseUpdateEpochUnitary_wellFormed registers shiftEpoch hlayout)) state
+  simpa [circuit_adjoint_adjoint] using hadjoint
+
+theorem phaseUpdateEpochInverseUnitary_usesOnly
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) :
+    PaperCircuitUsesOnly (registers.epochWires shiftEpoch)
+      (phaseUpdateEpochInverseUnitary registers shiftEpoch) := by
+  rw [phaseUpdateEpochInverseUnitary_eq_adjoint]
+  exact (phaseUpdateEpochUnitary_usesOnly registers shiftEpoch).adjoint
+
+theorem phaseUpdateEpochInverseUnitary_preservesOutside
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (state : BasisState) {wire : Wire}
+    (hwire : wire ∉ registers.epochWires shiftEpoch) :
+    Classical.run (phaseUpdateEpochInverseUnitary registers shiftEpoch) state wire =
+      state wire :=
+  (phaseUpdateEpochInverseUnitary_usesOnly registers shiftEpoch).preservesOutside
+    state hwire
+
+@[simp]
+theorem phaseUpdateEpochInverseUnitary_HPFree
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) :
+    HPFree (phaseUpdateEpochInverseUnitary registers shiftEpoch) := by
+  simp [phaseUpdateEpochInverseUnitary, phaseUpdateEpochForwardTests,
+    phaseUpdateEpochCleanupTests, phaseUpdateInverseCore]
+
+theorem phaseUpdateEpochInverseUnitary_wellFormed
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    CircuitWellFormed
+      (phaseUpdateEpochInverseUnitary registers shiftEpoch) := by
+  rw [phaseUpdateEpochInverseUnitary_eq_adjoint]
+  exact (circuitWellFormed_adjoint
+    (phaseUpdateEpochUnitary registers shiftEpoch)).mpr
+      (phaseUpdateEpochUnitary_wellFormed registers shiftEpoch hlayout)
+
+@[simp]
+theorem phaseUpdateEpochInverseUnitary_toffoliCount
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    eeaToffoliCount (phaseUpdateEpochInverseUnitary registers shiftEpoch) =
+      2 * (mcxVChainToffoliCost registers.lengthQ.length +
+        mcxVChainToffoliCost registers.lengthRPrime.length +
+        mcxVChainToffoliCost (registers.lengthS.length + 1)) + 4 := by
+  rw [phaseUpdateEpochInverseUnitary_eq_adjoint,
+    eeaToffoliCount_adjoint,
+    phaseUpdateEpochUnitary_toffoliCount registers shiftEpoch hlayout]
+
+@[simp]
+theorem phaseUpdateEpochInverseUnitary_cnotCount
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) :
+    eeaCnotCount (phaseUpdateEpochInverseUnitary registers shiftEpoch) =
+      2 * (mcxVChainCnotCost registers.lengthQ.length +
+        mcxVChainCnotCost registers.lengthRPrime.length +
+        mcxVChainCnotCost (registers.lengthS.length + 1)) + 6 := by
+  rw [phaseUpdateEpochInverseUnitary_eq_adjoint,
+    eeaCnotCount_adjoint, phaseUpdateEpochUnitary_cnotCount]
+
+@[simp]
+theorem phaseUpdateEpochInverseUnitary_tCount
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    ShorECDLP.tCount (phaseUpdateEpochInverseUnitary registers shiftEpoch) =
+      7 * (2 * (mcxVChainToffoliCost registers.lengthQ.length +
+        mcxVChainToffoliCost registers.lengthRPrime.length +
+        mcxVChainToffoliCost (registers.lengthS.length + 1)) + 4) := by
+  rw [phaseUpdateEpochInverseUnitary_eq_adjoint, tCount_adjoint,
+    phaseUpdateEpochUnitary_tCount registers shiftEpoch hlayout]
+
 private def phaseUpdateEpochForwardTestsAdaptive
     (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) :
     Quantum.AdaptiveCircuit :=
@@ -1867,6 +2430,16 @@ def phaseUpdateEpochAdaptive
     Quantum.AdaptiveCircuit :=
   ((phaseUpdateEpochForwardTestsAdaptive registers shiftEpoch).seq
     (.unitary (phaseUpdateCore (registers.withShiftEpoch shiftEpoch)) .done)).seq
+  (phaseUpdateEpochCleanupTestsAdaptive registers shiftEpoch)
+
+/-- Measurement-uncomputed realization of the pinned explicit inverse.  Measurements occur only
+inside the dynamically erased equality chains; the reverse phase/sign core remains unitary. -/
+def phaseUpdateEpochInverseAdaptive
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire) :
+    Quantum.AdaptiveCircuit :=
+  ((phaseUpdateEpochForwardTestsAdaptive registers shiftEpoch).seq
+    (.unitary
+      (phaseUpdateInverseCore (registers.withShiftEpoch shiftEpoch)) .done)).seq
   (phaseUpdateEpochCleanupTestsAdaptive registers shiftEpoch)
 
 private theorem phaseUpdateEpochX_preservesEqualityClean
@@ -2060,6 +2633,60 @@ private theorem phaseUpdateEpochForwardTests_preservesEqualityClean
       (phaseUpdateEpochX_preservesEqualityClean registers shiftEpoch state
         hlayout hclean))
 
+private theorem phaseUpdateInverseCore_usesOnly
+    (registers : PhaseUpdateRegisters) :
+    PaperCircuitUsesOnly
+      [registers.phase1, registers.phase2, registers.sign,
+        registers.zeroQ, registers.zeroRPrime, registers.zeroS,
+        registers.condition, registers.temporary]
+      (phaseUpdateInverseCore registers) := by
+  rw [phaseUpdateInverseCore_eq_adjoint]
+  exact (phaseUpdateCore_usesOnly registers).adjoint
+
+private theorem phaseUpdateInverseCore_preservesEqualityClean
+    (registers : PhaseUpdateRegisters) (state : BasisState)
+    (hlayout : PhaseUpdateLayout registers)
+    (hclean : Clean registers.equalityScratch state) :
+    Clean registers.equalityScratch
+      (Classical.run (phaseUpdateInverseCore registers) state) := by
+  intro wire hwire
+  have houtside : wire ∉
+      [registers.phase1, registers.phase2, registers.sign,
+        registers.zeroQ, registers.zeroRPrime, registers.zeroS,
+        registers.condition, registers.temporary] := by
+    intro hmem
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+    rcases hmem with hmem | hmem | hmem | hmem | hmem | hmem | hmem | hmem
+    · subst wire
+      exact hlayout.scalarWire_not_equality
+        (wire := registers.phase1) (by simp [PhaseUpdateRegisters.scalarWires])
+          hwire
+    · subst wire
+      exact hlayout.scalarWire_not_equality
+        (wire := registers.phase2) (by simp [PhaseUpdateRegisters.scalarWires])
+          hwire
+    · subst wire
+      exact hlayout.scalarWire_not_equality
+        (wire := registers.sign) (by simp [PhaseUpdateRegisters.scalarWires])
+          hwire
+    · subst wire
+      exact hlayout.namedScratch_not_equality (wire := registers.zeroQ)
+        (by simp) hwire
+    · subst wire
+      exact hlayout.namedScratch_not_equality (wire := registers.zeroRPrime)
+        (by simp) hwire
+    · subst wire
+      exact hlayout.namedScratch_not_equality (wire := registers.zeroS)
+        (by simp) hwire
+    · subst wire
+      exact hlayout.namedScratch_not_equality (wire := registers.condition)
+        (by simp) hwire
+    · subst wire
+      exact hlayout.namedScratch_not_equality (wire := registers.temporary)
+        (by simp) hwire
+  rw [(phaseUpdateInverseCore_usesOnly registers).preservesOutside state houtside]
+  exact hclean wire hwire
+
 private theorem phaseUpdateEpochAdaptive_coherent_equalityClean
     (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
     (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
@@ -2104,6 +2731,60 @@ theorem phaseUpdateEpochAdaptive_coherent
       (Quantum.run (phaseUpdateEpochUnitary registers shiftEpoch))
       (PhaseUpdateReady registers) := by
   rcases phaseUpdateEpochAdaptive_coherent_equalityClean registers shiftEpoch
+    hlayout with ⟨coefficients, haligned, hmass⟩
+  refine ⟨coefficients, ?_, hmass⟩
+  exact haligned.imp fun branch coefficient hbranch state hready ↦
+    hbranch state (by
+      intro wire hwire
+      exact hready wire (by
+        simp [PhaseUpdateRegisters.scratch, hwire]))
+
+private theorem phaseUpdateEpochInverseAdaptive_coherent_equalityClean
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    Quantum.CoherentlyImplementsOn
+      (phaseUpdateEpochInverseAdaptive registers shiftEpoch)
+      (Quantum.run (phaseUpdateEpochInverseUnitary registers shiftEpoch))
+      (fun state ↦ Clean registers.equalityScratch state) := by
+  have hforward := phaseUpdateEpochForwardTestsAdaptive_coherent
+    registers shiftEpoch hlayout
+  have hcore := Quantum.CoherentlyImplementsOn.unitary
+    (phaseUpdateInverseCore (registers.withShiftEpoch shiftEpoch))
+    (fun state ↦ Clean registers.equalityScratch state)
+  have hforwardCore := phaseUpdate_coherent_seq_circuits hforward hcore
+    (by simp [phaseUpdateEpochForwardTests])
+    (fun state hclean ↦
+      phaseUpdateEpochForwardTests_preservesEqualityClean registers
+        shiftEpoch state hlayout hclean)
+  have hcleanup := phaseUpdateEpochCleanupTestsAdaptive_coherent
+    registers shiftEpoch hlayout
+  have hprefixPreserves : ∀ state, Clean registers.equalityScratch state →
+      Clean registers.equalityScratch
+        (Classical.run
+          (phaseUpdateEpochForwardTests registers shiftEpoch ++
+            phaseUpdateInverseCore (registers.withShiftEpoch shiftEpoch)) state) := by
+    intro state hclean
+    rw [Classical.run_append]
+    exact phaseUpdateInverseCore_preservesEqualityClean
+      (registers.withShiftEpoch shiftEpoch) _ hlayout
+      (phaseUpdateEpochForwardTests_preservesEqualityClean registers
+        shiftEpoch state hlayout hclean)
+  have hall := phaseUpdate_coherent_seq_circuits hforwardCore hcleanup
+    (by simp [phaseUpdateEpochForwardTests, phaseUpdateInverseCore])
+    hprefixPreserves
+  simpa [phaseUpdateEpochInverseAdaptive,
+    phaseUpdateEpochInverseUnitary] using hall
+
+/-- Every branch of the measurement-uncomputed explicit inverse is coefficient-aligned with the
+same source-order coherent inverse on the complete clean-scratch boundary. -/
+theorem phaseUpdateEpochInverseAdaptive_coherent
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    Quantum.CoherentlyImplementsOn
+      (phaseUpdateEpochInverseAdaptive registers shiftEpoch)
+      (Quantum.run (phaseUpdateEpochInverseUnitary registers shiftEpoch))
+      (PhaseUpdateReady registers) := by
+  rcases phaseUpdateEpochInverseAdaptive_coherent_equalityClean registers shiftEpoch
     hlayout with ⟨coefficients, haligned, hmass⟩
   refine ⟨coefficients, ?_, hmass⟩
   exact haligned.imp fun branch coefficient hbranch state hready ↦
@@ -2165,6 +2846,26 @@ theorem phaseUpdateEpochAdaptive_wellFormed
     (phaseUpdateEpochCleanupTestsAdaptive_wellFormed
       registers shiftEpoch hlayout)
 
+theorem phaseUpdateEpochInverseAdaptive_wellFormed
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    (phaseUpdateEpochInverseAdaptive registers shiftEpoch).WellFormed := by
+  have hcore : CircuitWellFormed
+      (phaseUpdateInverseCore (registers.withShiftEpoch shiftEpoch)) := by
+    rw [phaseUpdateInverseCore_eq_adjoint]
+    exact (circuitWellFormed_adjoint
+      (phaseUpdateCore (registers.withShiftEpoch shiftEpoch))).mpr
+        (phaseUpdateCore_wellFormed
+          (registers.withShiftEpoch shiftEpoch) hlayout)
+  rw [phaseUpdateEpochInverseAdaptive]
+  exact Quantum.AdaptiveCircuit.WellFormed.seq
+    (Quantum.AdaptiveCircuit.WellFormed.seq
+      (phaseUpdateEpochForwardTestsAdaptive_wellFormed
+        registers shiftEpoch hlayout)
+      ⟨hcore, trivial⟩)
+    (phaseUpdateEpochCleanupTestsAdaptive_wellFormed
+      registers shiftEpoch hlayout)
+
 @[simp]
 theorem phaseUpdateEpochAdaptive_measurementCount
     (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
@@ -2219,6 +2920,60 @@ theorem phaseUpdateEpochAdaptive_tCount
     ShorECDLP.tCount, ShorECDLP.tCost]
   omega
 
+@[simp]
+theorem phaseUpdateEpochInverseAdaptive_measurementCount
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    (phaseUpdateEpochInverseAdaptive registers shiftEpoch).measurementCount =
+      2 * (mcxVChainMeasurementCost registers.lengthQ.length +
+        mcxVChainMeasurementCost registers.lengthRPrime.length +
+        mcxVChainMeasurementCost (registers.lengthS.length + 1)) := by
+  have hq := mcxVChainAdaptive_measurementCount registers.lengthQ
+    registers.zeroQ registers.equalityScratch (by
+      simpa [PhaseUpdateRegisters.withShiftEpoch] using hlayout.q_capacity)
+  have hr := mcxVChainAdaptive_measurementCount registers.lengthRPrime
+    registers.zeroRPrime registers.equalityScratch (by
+      simpa [PhaseUpdateRegisters.withShiftEpoch] using hlayout.rPrime_capacity)
+  have hs := mcxVChainAdaptive_measurementCount
+    (registers.lengthS ++ [shiftEpoch]) registers.zeroS
+    registers.equalityScratch (by
+      simpa [PhaseUpdateRegisters.withShiftEpoch] using hlayout.s_capacity)
+  simp only [phaseUpdateEpochInverseAdaptive,
+    phaseUpdateEpochForwardTestsAdaptive,
+    phaseUpdateEpochCleanupTestsAdaptive,
+    phaseUpdateAdaptive_measurementCount_seq,
+    PhaseUpdateRegisters.withShiftEpoch, hq, hr, hs,
+    List.length_append, List.length_singleton]
+  simp [Quantum.AdaptiveCircuit.measurementCount]
+  omega
+
+@[simp]
+theorem phaseUpdateEpochInverseAdaptive_tCount
+    (registers : PhaseUpdateRegisters) (shiftEpoch : Wire)
+    (hlayout : PhaseUpdateEpochLayout registers shiftEpoch) :
+    (phaseUpdateEpochInverseAdaptive registers shiftEpoch).tCount =
+      7 * (2 * (mcxVChainAdaptiveToffoliCost registers.lengthQ.length +
+        mcxVChainAdaptiveToffoliCost registers.lengthRPrime.length +
+        mcxVChainAdaptiveToffoliCost (registers.lengthS.length + 1)) + 4) := by
+  have hq := mcxVChainAdaptive_tCount registers.lengthQ registers.zeroQ
+    registers.equalityScratch (by
+      simpa [PhaseUpdateRegisters.withShiftEpoch] using hlayout.q_capacity)
+  have hr := mcxVChainAdaptive_tCount registers.lengthRPrime
+    registers.zeroRPrime registers.equalityScratch (by
+      simpa [PhaseUpdateRegisters.withShiftEpoch] using hlayout.rPrime_capacity)
+  have hs := mcxVChainAdaptive_tCount (registers.lengthS ++ [shiftEpoch])
+    registers.zeroS registers.equalityScratch (by
+      simpa [PhaseUpdateRegisters.withShiftEpoch] using hlayout.s_capacity)
+  simp only [phaseUpdateEpochInverseAdaptive,
+    phaseUpdateEpochForwardTestsAdaptive,
+    phaseUpdateEpochCleanupTestsAdaptive,
+    phaseUpdateAdaptive_tCount_seq,
+    PhaseUpdateRegisters.withShiftEpoch, hq, hr, hs,
+    List.length_append, List.length_singleton]
+  simp [Quantum.AdaptiveCircuit.tCount, phaseUpdateInverseCore,
+    ShorECDLP.tCount, ShorECDLP.tCost]
+  omega
+
 /-! ## Pinned-source regressions -/
 
 private def phaseUpdateSmallRegisters : PhaseUpdateRegisters where
@@ -2269,6 +3024,31 @@ theorem phaseUpdateEpochUnitary_source_regression :
        .CCX 3 4 19, .CCX 5 19 14, .CCX 3 4 19] := by
   rfl
 
+/-- Exact flattened inverse stream from the pinned supplement.  In particular, this witnesses
+predicate reconstruction and the reverse core order directly rather than through an `adjoint`
+abbreviation. -/
+theorem phaseUpdateEpochInverseUnitary_source_regression :
+    phaseUpdateEpochInverseUnitary phaseUpdateSmallRegisters 13 =
+      [.CCX 3 4 19, .CCX 5 19 14, .CCX 3 4 19,
+       .CCX 6 7 19, .CCX 8 19 15, .CCX 6 7 19,
+       .X 13,
+       .CCX 9 10 19, .CCX 11 19 20, .CCX 12 20 21,
+       .CCX 13 21 16, .CCX 12 20 21, .CCX 11 19 20,
+       .CCX 9 10 19, .X 13,
+       .CX 16 1, .CX 16 0,
+       .X 15, .CCX 14 15 17, .X 15,
+       .CCX 17 1 2,
+       .CX 2 18, .CX 0 18, .CCX 17 18 1,
+       .CX 0 18, .CX 2 18,
+       .X 15, .CCX 14 15 17, .X 15,
+       .X 13,
+       .CCX 9 10 19, .CCX 11 19 20, .CCX 12 20 21,
+       .CCX 13 21 16, .CCX 12 20 21, .CCX 11 19 20,
+       .CCX 9 10 19, .X 13,
+       .CCX 6 7 19, .CCX 8 19 15, .CCX 6 7 19,
+       .CCX 3 4 19, .CCX 5 19 14, .CCX 3 4 19] := by
+  rfl
+
 theorem phaseUpdateEpochUnitary_small_resources :
     eeaToffoliCount
           (phaseUpdateEpochUnitary phaseUpdateSmallRegisters 13) = 30 ∧
@@ -2287,6 +3067,27 @@ theorem phaseUpdateEpochAdaptive_small_resources :
       (phaseUpdateEpochAdaptive phaseUpdateSmallRegisters 13).tCount = 140 := by
   rw [phaseUpdateEpochAdaptive_measurementCount _ _ phaseUpdateSmallLayout,
     phaseUpdateEpochAdaptive_tCount _ _ phaseUpdateSmallLayout]
+  norm_num [phaseUpdateSmallRegisters, mcxVChainMeasurementCost,
+    mcxVChainAdaptiveToffoliCost]
+
+theorem phaseUpdateEpochInverseUnitary_small_resources :
+    eeaToffoliCount
+          (phaseUpdateEpochInverseUnitary phaseUpdateSmallRegisters 13) = 30 ∧
+      eeaCnotCount
+          (phaseUpdateEpochInverseUnitary phaseUpdateSmallRegisters 13) = 6 ∧
+      ShorECDLP.tCount
+          (phaseUpdateEpochInverseUnitary phaseUpdateSmallRegisters 13) = 210 := by
+  rw [phaseUpdateEpochInverseUnitary_toffoliCount _ _ phaseUpdateSmallLayout,
+    phaseUpdateEpochInverseUnitary_cnotCount,
+    phaseUpdateEpochInverseUnitary_tCount _ _ phaseUpdateSmallLayout]
+  norm_num [phaseUpdateSmallRegisters, mcxVChainToffoliCost,
+    mcxVChainCnotCost]
+
+theorem phaseUpdateEpochInverseAdaptive_small_resources :
+    (phaseUpdateEpochInverseAdaptive phaseUpdateSmallRegisters 13).measurementCount = 10 ∧
+      (phaseUpdateEpochInverseAdaptive phaseUpdateSmallRegisters 13).tCount = 140 := by
+  rw [phaseUpdateEpochInverseAdaptive_measurementCount _ _ phaseUpdateSmallLayout,
+    phaseUpdateEpochInverseAdaptive_tCount _ _ phaseUpdateSmallLayout]
   norm_num [phaseUpdateSmallRegisters, mcxVChainMeasurementCost,
     mcxVChainAdaptiveToffoliCost]
 
@@ -2336,6 +3137,24 @@ theorem phaseUpdateEpochUnitary_secp256k1_resources :
     PhaseUpdateRegisters.scratch, phaseUpdateSecp256k1Registers,
     List.range', mcxVChainToffoliCost, mcxVChainCnotCost]
 
+/-- The source inverse has exactly the same production-width coherent resource cost. -/
+theorem phaseUpdateEpochInverseUnitary_secp256k1_resources :
+    (phaseUpdateSecp256k1Registers.epochWires 30).length = 44 ∧
+      eeaToffoliCount
+          (phaseUpdateEpochInverseUnitary phaseUpdateSecp256k1Registers 30) = 98 ∧
+      eeaCnotCount
+          (phaseUpdateEpochInverseUnitary phaseUpdateSecp256k1Registers 30) = 6 ∧
+      ShorECDLP.tCount
+          (phaseUpdateEpochInverseUnitary phaseUpdateSecp256k1Registers 30) = 686 := by
+  rw [phaseUpdateEpochInverseUnitary_toffoliCount _ _
+      phaseUpdateSecp256k1Layout,
+    phaseUpdateEpochInverseUnitary_cnotCount,
+    phaseUpdateEpochInverseUnitary_tCount _ _ phaseUpdateSecp256k1Layout]
+  norm_num [PhaseUpdateRegisters.epochWires,
+    PhaseUpdateRegisters.withShiftEpoch, PhaseUpdateRegisters.allWires,
+    PhaseUpdateRegisters.scratch, phaseUpdateSecp256k1Registers,
+    List.range', mcxVChainToffoliCost, mcxVChainCnotCost]
+
 /-- Production measurement-uncomputation regression from the same 9/9/9-bit source instance. -/
 theorem phaseUpdateEpochAdaptive_secp256k1_resources :
     (phaseUpdateEpochAdaptive phaseUpdateSecp256k1Registers 30).measurementCount = 44 ∧
@@ -2343,5 +3162,17 @@ theorem phaseUpdateEpochAdaptive_secp256k1_resources :
   rw [phaseUpdateEpochAdaptive_measurementCount _ _
       phaseUpdateSecp256k1Layout,
     phaseUpdateEpochAdaptive_tCount _ _ phaseUpdateSecp256k1Layout]
+  norm_num [phaseUpdateSecp256k1Registers,
+    mcxVChainMeasurementCost, mcxVChainAdaptiveToffoliCost]
+
+/-- Production measurement-uncomputation regression for the explicit inverse. -/
+theorem phaseUpdateEpochInverseAdaptive_secp256k1_resources :
+    (phaseUpdateEpochInverseAdaptive
+        phaseUpdateSecp256k1Registers 30).measurementCount = 44 ∧
+      (phaseUpdateEpochInverseAdaptive
+        phaseUpdateSecp256k1Registers 30).tCount = 378 := by
+  rw [phaseUpdateEpochInverseAdaptive_measurementCount _ _
+      phaseUpdateSecp256k1Layout,
+    phaseUpdateEpochInverseAdaptive_tCount _ _ phaseUpdateSecp256k1Layout]
   norm_num [phaseUpdateSecp256k1Registers,
     mcxVChainMeasurementCost, mcxVChainAdaptiveToffoliCost]

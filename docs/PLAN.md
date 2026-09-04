@@ -5,15 +5,15 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-11 paper foundation below
-are on `main@c468d137674d4c7e37060fbaee58af20d4182df9`. PR #56 → PR #57 → PR #58 → PR #59
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-12 paper foundation below
+are on `main@7f52576dba45c8a86c9fbc34f4b007097b8cc3cc`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
-→ PR #69 → PR #70 → PR #71 → PR #72 landed the source split, adaptive Kraus semantics,
+→ PR #69 → PR #70 → PR #71 → PR #72 → PR #73 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and eleven concrete circuit units ending with complete forward/inverse interval
-scratch restoration. Phase 5 circuit unit 12 (PR #73) is current: it implements the source-exact forward
-borrowed-epoch phase-update controller and its adaptive refinement. The explicit inverse and full
-indexed four-phase step remain open.
+bounds/windows, and twelve concrete circuit units ending with the source-exact forward
+borrowed-epoch phase-update controller and its adaptive refinement. Phase 5 circuit unit 13 is
+current: it implements the pinned explicit measurement-safe inverse of that controller. The full
+indexed four-phase step remains open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -378,8 +378,8 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first eleven dependency-closed construction units are merged; the twelfth is
-current in PR #73. PR #62 contains
+**Status:** the first twelve dependency-closed construction units are merged; the thirteenth is
+current. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -455,9 +455,14 @@ shift-epoch conjugations at their exact source positions. It proves direct whole
 scratch restoration, locality and well-formedness, adaptive coherent refinement, exact symbolic
 counts, and small/production source regressions. At the 9/9/9-bit production widths the isolated
 block uses 44 wires, 98 coherent Toffolis / 686 T, or 44 measurements / 378 T after the source's
-measurement-uncomputation choice. The explicit inverse phase update, surrounding shifts,
-selectors, coefficient-prefix update, and their indexed four-phase composition remain open within
-Phase 5.
+measurement-uncomputation choice. The thirteenth unit implements the source's explicit inverse:
+it reconstructs the unchanged zero predicates, reverses the phase/sign core, and erases the
+predicates in the same source block order. Its coherent term is proved exactly equal to the
+forward term's adjoint, while its adaptive term is defined separately so equality-chain cleanup
+retains measurement uncomputation. Direct inverse semantics, clean-scratch restoration, both
+whole-state round trips, locality/well-formedness, and equal forward/inverse symbolic and
+small/production resource regressions are all certified. The surrounding shifts, selectors,
+coefficient-prefix update, and their indexed four-phase composition remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -731,6 +736,6 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--11 are merged. Phase 5 circuit unit 12 (PR #73), the exact
-forward borrowed-epoch phase-update controller and adaptive refinement, is current on that
-foundation. Its explicit inverse and the full indexed four-phase step remain open.
+Phases 0--4 and Phase 5 circuit units 1--12 are merged through PR #73. Phase 5 circuit unit 13,
+the pinned explicit measurement-safe inverse phase-update controller and adaptive refinement, is
+current on that foundation. The full indexed four-phase step remains open.

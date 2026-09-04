@@ -529,6 +529,32 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_small_resources
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochUnitary_secp256k1_resources
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_secp256k1_resources
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateInverseState_preserves_scratch
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_eq_adjoint
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochState_after_inverse
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseState_after_forward
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseState_spec
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseState_preserves_scratch
+#print axioms ShorECDLP.Paper2607_13816.run_phaseUpdateEpochInverseUnitary
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_ready
+#print axioms ShorECDLP.Paper2607_13816.run_phaseUpdateEpochInverseUnitary_after_forward
+#print axioms ShorECDLP.Paper2607_13816.run_phaseUpdateEpochUnitary_after_inverse
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_source_regression
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_small_resources
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_small_resources
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseUnitary_secp256k1_resources
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_secp256k1_resources
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -560,8 +586,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 536 ]]; then
-  printf 'expected five hundred thirty-six #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 562 ]]; then
+  printf 'expected five hundred sixty-two #print axioms results\n' >&2
   exit 1
 fi
 
