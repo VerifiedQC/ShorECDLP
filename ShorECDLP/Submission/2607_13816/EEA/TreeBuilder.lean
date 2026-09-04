@@ -27,6 +27,69 @@ noncomputable section
 
 namespace DualUnaryActionTree
 
+/-- Forget the second endpoint wire at every node.  The zero-map range scans use exactly one
+boundary register but share the supplement's highest-varying-bit tree shape. -/
+def projectA : DualUnaryActionTree → UnaryActionTree
+  | .leaf label => .leaf label
+  | .node indexBitA _ zero one =>
+      .node indexBitA zero.projectA one.projectA
+
+/-- Forget the first endpoint wire at every node. -/
+def projectB : DualUnaryActionTree → UnaryActionTree
+  | .leaf label => .leaf label
+  | .node _ indexBitB zero one =>
+      .node indexBitB zero.projectB one.projectB
+
+@[simp]
+theorem projectA_labels (tree : DualUnaryActionTree) :
+    tree.projectA.labels = tree.labels := by
+  induction tree with
+  | leaf => rfl
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      simp [projectA, UnaryActionTree.labels, labels, ihZero, ihOne]
+
+@[simp]
+theorem projectB_labels (tree : DualUnaryActionTree) :
+    tree.projectB.labels = tree.labels := by
+  induction tree with
+  | leaf => rfl
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      simp [projectB, UnaryActionTree.labels, labels, ihZero, ihOne]
+
+@[simp]
+theorem projectA_indexWires (tree : DualUnaryActionTree) :
+    tree.projectA.indexWires = tree.indexAWires := by
+  induction tree with
+  | leaf => rfl
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      simp [projectA, UnaryActionTree.indexWires, indexAWires, ihZero, ihOne]
+
+@[simp]
+theorem projectB_indexWires (tree : DualUnaryActionTree) :
+    tree.projectB.indexWires = tree.indexBWires := by
+  induction tree with
+  | leaf => rfl
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      simp [projectB, UnaryActionTree.indexWires, indexBWires, ihZero, ihOne]
+
+@[simp]
+theorem projectA_internalNodes (tree : DualUnaryActionTree) :
+    tree.projectA.internalNodes = tree.internalNodes := by
+  induction tree with
+  | leaf => rfl
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      simp [projectA, UnaryActionTree.internalNodes, internalNodes,
+        ihZero, ihOne]
+
+@[simp]
+theorem projectB_internalNodes (tree : DualUnaryActionTree) :
+    tree.projectB.internalNodes = tree.internalNodes := by
+  induction tree with
+  | leaf => rfl
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      simp [projectB, UnaryActionTree.internalNodes, internalNodes,
+        ihZero, ihOne]
+
 def optionLabels : Option DualUnaryActionTree → List Nat
   | none => []
   | some tree => tree.labels
@@ -291,6 +354,44 @@ def visitLabels : UnaryOrder → DualUnaryActionTree → List Nat
   | _, .leaf label => [label]
   | .inc, .node _ _ zero one => visitLabels .inc zero ++ visitLabels .inc one
   | .dec, .node _ _ zero one => visitLabels .dec one ++ visitLabels .dec zero
+
+@[simp]
+theorem projectA_visitLabels (order : UnaryOrder)
+    (tree : DualUnaryActionTree) :
+    tree.projectA.visitLabels order = tree.visitLabels order := by
+  induction tree generalizing order with
+  | leaf => cases order <;> rfl
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      cases order with
+      | inc =>
+          change zero.projectA.visitLabels .inc ++
+              one.projectA.visitLabels .inc =
+            zero.visitLabels .inc ++ one.visitLabels .inc
+          rw [ihZero, ihOne]
+      | dec =>
+          change one.projectA.visitLabels .dec ++
+              zero.projectA.visitLabels .dec =
+            one.visitLabels .dec ++ zero.visitLabels .dec
+          rw [ihOne, ihZero]
+
+@[simp]
+theorem projectB_visitLabels (order : UnaryOrder)
+    (tree : DualUnaryActionTree) :
+    tree.projectB.visitLabels order = tree.visitLabels order := by
+  induction tree generalizing order with
+  | leaf => cases order <;> rfl
+  | node indexBitA indexBitB zero one ihZero ihOne =>
+      cases order with
+      | inc =>
+          change zero.projectB.visitLabels .inc ++
+              one.projectB.visitLabels .inc =
+            zero.visitLabels .inc ++ one.visitLabels .inc
+          rw [ihZero, ihOne]
+      | dec =>
+          change one.projectB.visitLabels .dec ++
+              zero.projectB.visitLabels .dec =
+            one.visitLabels .dec ++ zero.visitLabels .dec
+          rw [ihOne, ihZero]
 
 @[simp]
 theorem visitLabels_inc (tree : DualUnaryActionTree) :

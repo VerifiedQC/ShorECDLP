@@ -374,7 +374,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first six dependency-closed construction units are merged. PR #62 contains
+**Status:** the first seven dependency-closed construction units are merged. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -402,20 +402,25 @@ the highest candidate bit downward, pruning empty halves, and emitting a node on
 survive. Its certificates identify `.inc` with the sorted labels and `.dec` with their reverse,
 bound path depth and index-wire positions, and keep the separately handled top bit outside the main
 tree's corresponding index bank, including the singleton-main-tree case. Cross-bank exclusion
-remains a full-register layout obligation. PR #67, the current sixth unit, binds the source-shaped
+remains a full-register layout obligation. PR #67, the sixth unit, binds the source-shaped
 interval arithmetic leaves to the already-certified dual-traversal interface: each label receives
 a caller-supplied `qpair(j)` target/addend lane; the first ripple pass follows `.dec`, the second
 follows `.inc`; label zero is masked
 by the endpoint top bit; and the separately handled top label uses the supplement's direct
 equality-control stream while reusing the ripple cell's clean scratch. The same concrete terms have
 direct basis semantics, cleanup/locality and well-formedness contracts, adaptive coherent
-refinement, and constructor-derived local/traversal resource equations. The current seventh unit
+refinement, and constructor-derived local/traversal resource equations. PR #68, the seventh unit,
 implements the source's reusable uncontrolled increment, literal Cuccaro add/sub streams, clean
 constant add/subtract, `const - x`, and exact interval-endpoint preparation/restoration, with direct
 word semantics, full shared-scratch cleanup, locality, well-formedness, and constructor-derived
-coherent counts. The source-built tree and physical-lane instantiation in a complete interval
-block, upper/lower zero maps, complete length blocks, the inverse aggregate, and the indexed
-four-phase step remain open within Phase 5.
+coherent counts. The eighth unit in this tree implements the literal upper/lower dirty zero maps,
+the grouped write/map/write/map length writers, and both complete affine/write/write/affine length
+blocks. It proves their direct Boolean-word semantics, borrowed-bank and clean-scratch restoration,
+full outside-target locality, physical well-formedness, and constructor-derived Toffoli/CNOT/T
+equations. A separate Boolean-word-to-natural bridge gives the arithmetic meaning and involution
+of the affine word transforms, while the exact endpoint prepare/restore streams now have a full
+basis-state roundtrip theorem. The source-built tree and physical-lane instantiation in a complete
+interval block, the inverse aggregate, and the indexed four-phase step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 

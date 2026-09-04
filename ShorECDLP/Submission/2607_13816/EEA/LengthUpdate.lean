@@ -180,7 +180,7 @@ theorem borrowedXorConstant_HPFree
       by_cases hbit : value.testBit 0 <;>
         simp [borrowedXorConstant, hbit, ih]
 
-private theorem controlledXorConstant_preservesOutside
+theorem controlledXorConstant_preservesOutside
     (control : Wire) (targets : List Wire) (value : Nat)
     (state : BasisState) (wire : Wire) (hwire : wire ∉ targets) :
     run (controlledXorConstant control targets value) state wire = state wire := by
@@ -196,7 +196,7 @@ private theorem controlledXorConstant_preservesOutside
       · rw [controlledXorConstant, if_neg hbit, List.nil_append]
         exact ih (value / 2) state hwire.2
 
-private theorem controlledXorConstant_wellFormed
+theorem controlledXorConstant_wellFormed
     (control : Wire) (targets : List Wire) (value : Nat)
     (hlayout : ∀ target ∈ targets, control ≠ target) :
     CircuitWellFormed (controlledXorConstant control targets value) := by
@@ -277,6 +277,47 @@ def lowBitCount : Nat → Nat → Nat
   | 0, _ => 0
   | width + 1, value =>
       (if value.testBit 0 then 1 else 0) + lowBitCount width (value / 2)
+
+theorem controlledXorConstant_cnotCount
+    (control : Wire) (targets : List Wire) (value : Nat) :
+    eeaCnotCount (controlledXorConstant control targets value) =
+      lowBitCount targets.length value := by
+  induction targets generalizing value with
+  | nil => rfl
+  | cons target targets ih =>
+      by_cases hbit : value.testBit 0
+      · rw [controlledXorConstant, if_pos hbit, eeaCnotCount_append, ih]
+        simp [lowBitCount, hbit, eeaCnotCount]
+      · rw [controlledXorConstant, if_neg hbit]
+        simpa [lowBitCount, hbit] using ih (value / 2)
+
+@[simp]
+theorem controlledXorConstant_toffoliCount
+    (control : Wire) (targets : List Wire) (value : Nat) :
+    eeaToffoliCount (controlledXorConstant control targets value) = 0 := by
+  induction targets generalizing value with
+  | nil => rfl
+  | cons target targets ih =>
+      by_cases hbit : value.testBit 0
+      · rw [controlledXorConstant, if_pos hbit, eeaToffoliCount_append,
+          ih (value / 2)]
+        rfl
+      · rw [controlledXorConstant, if_neg hbit]
+        exact ih (value / 2)
+
+@[simp]
+theorem controlledXorConstant_tCount
+    (control : Wire) (targets : List Wire) (value : Nat) :
+    ShorECDLP.tCount (controlledXorConstant control targets value) = 0 := by
+  induction targets generalizing value with
+  | nil => rfl
+  | cons target targets ih =>
+      by_cases hbit : value.testBit 0
+      · rw [controlledXorConstant, if_pos hbit, tCount_append,
+          ih (value / 2)]
+        rfl
+      · rw [controlledXorConstant, if_neg hbit]
+        exact ih (value / 2)
 
 theorem borrowedXorConstant_cnotCount
     (dirty selector : Wire) (targets : List Wire) (value : Nat) :
