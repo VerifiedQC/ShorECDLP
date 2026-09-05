@@ -12,7 +12,7 @@ are on `main@1812e5766c341034848b00e3f28b7a7810690406`. PR #56 → PR #57 → PR
 → PR #78 → PR #79 → PR #80 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
 bounds/windows, and nineteen concrete circuit units ending with the source-exact control and
-terminal helpers. Phase 5 circuit unit 20 is current in this change: it composes the exact
+terminal helpers. Phase 5 circuit unit 20 is current in PR #81: it composes the exact
 end-of-iteration work swap and upper/lower length updates, with an explicit reverse aggregate.
 The full indexed four-phase step remains open.
 A `✓` means a
@@ -380,7 +380,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 active/padding state; counts are symbolic over the active window.
 
 **Status:** the first nineteen dependency-closed construction units are merged through PR #80;
-the twentieth is the current end-of-iteration aggregate in this change. PR #62 contains
+the twentieth is the current end-of-iteration aggregate in PR #81. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -805,7 +805,7 @@ They are equal only if Phase 11 proves the required reuse.
   spill/restore, and the terminal padding rotation with its inverse. Direct whole-state semantics,
   complete scratch restoration, two-sided cancellation, locality/well-formedness, flattened source
   regressions, and exact production resource equations are included.
-- **Phase-5 circuit unit 20 (current change):** the exact end-of-iteration work/length aggregate
+- **PR #81, Phase-5 circuit unit 20 (current):** the exact end-of-iteration work/length aggregate
   and its explicit reverse. The literal circuit performs the full controlled Work-register swap,
   then the upper and lower length updates serially over shared restored scratch. Direct semantics,
   cleanup and outside preservation, locality/HP-free/well-formedness, a forward-then-inverse
@@ -848,5 +848,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
 Phases 0--4 and Phase 5 circuit units 1--19 are merged through PR #80 at `main@1812e576`. Phase 5
-circuit unit 20, the exact end-of-iteration work/length aggregate, is current in this change. The
+circuit unit 20, the exact end-of-iteration work/length aggregate, is current in PR #81. The
 full indexed four-phase step remains open.
