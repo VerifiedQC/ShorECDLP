@@ -2690,6 +2690,697 @@ theorem lowerZeroMapUnitary_tCount
       (lowerZeroReverseLeaf k K temporary bitAt dirtyAt) hlayout]
   omega
 
+/-! ## Closed resource certificates for source-range trees -/
+
+private theorem zeroMap_leafCostSum_eq_labelsSum
+    (tree : UnaryActionTree) (control : Wire) (path : List Wire)
+    (cost : Nat → Nat)
+    (hlayout : tree.Layout control path) :
+    tree.leafCostSum (fun label _ ↦ cost label) control path =
+      (tree.labels.map cost).sum := by
+  induction hlayout with
+  | leaf label control path hlocal => rfl
+  | node indexBit control next zero one rest hlocal hzero hone ihZero ihOne =>
+      simp only [UnaryActionTree.leafCostSum, UnaryActionTree.labels,
+        List.map_append, List.sum_append, ihZero, ihOne]
+
+private theorem zeroMap_leaves_eq_labels_length
+    (tree : UnaryActionTree) :
+    tree.leaves = tree.labels.length := by
+  induction tree with
+  | leaf label => rfl
+  | node indexBit zero one ihZero ihOne =>
+      simp [UnaryActionTree.leaves, UnaryActionTree.labels, ihZero, ihOne]
+
+private theorem zeroMap_internalNodes_succ_eq_leaves
+    (tree : UnaryActionTree) :
+    tree.internalNodes + 1 = tree.leaves := by
+  induction tree with
+  | leaf label => rfl
+  | node indexBit zero one ihZero ihOne =>
+      simp only [UnaryActionTree.internalNodes, UnaryActionTree.leaves]
+      omega
+
+private theorem zeroMap_sum_map_const
+    (labels : List Nat) (cost : Nat) :
+    (labels.map fun _ ↦ cost).sum = labels.length * cost := by
+  induction labels with
+  | nil => simp
+  | cons label labels ih =>
+      simp only [List.map_cons, List.sum_cons, List.length_cons]
+      rw [ih]
+      simp [Nat.succ_mul, Nat.add_comm]
+
+private theorem zeroMap_sum_last_zero
+    (k K cost : Nat) (hkK : k ≤ K) :
+    ((zeroMapLabels k K).map fun label ↦
+      if label = K then 0 else cost).sum = cost * (K - k) := by
+  induction K, hkK using Nat.le_induction with
+  | base => simp
+  | succ K hkK ih =>
+      rw [zeroMapLabels_snoc hkK]
+      simp only [List.map_append, List.sum_append, List.map_singleton,
+        List.sum_singleton]
+      have hmap :
+          (zeroMapLabels k K).map
+              (fun label ↦ if label = K + 1 then 0 else cost) =
+            (zeroMapLabels k K).map (fun _ ↦ cost) := by
+        apply List.map_congr_left
+        intro label hlabel
+        have hle : label ≤ K := (mem_zeroMapLabels hkK).mp hlabel |>.2
+        simp [show label ≠ K + 1 by omega]
+      rw [hmap, zeroMap_sum_map_const]
+      simp [zeroMapLabels, Nat.mul_comm]
+
+private theorem zeroMap_sum_first_zero
+    (k K cost : Nat) (hkK : k ≤ K) :
+    ((zeroMapLabels k K).map fun label ↦
+      if label = k then 0 else cost).sum = cost * (K - k) := by
+  by_cases heq : k = K
+  · subst K
+    simp
+  · have hlt : k < K := by omega
+    rw [zeroMapLabels_cons hlt]
+    simp only [List.map_cons, List.sum_cons]
+    simp only [if_true, zero_add]
+    have hmap :
+        (zeroMapLabels (k + 1) K).map
+            (fun label ↦ if label = k then 0 else cost) =
+          (zeroMapLabels (k + 1) K).map (fun _ ↦ cost) := by
+      apply List.map_congr_left
+      intro label hlabel
+      have hge : k + 1 ≤ label :=
+        (mem_zeroMapLabels (show k + 1 ≤ K by omega)).mp hlabel |>.1
+      simp [show label ≠ k by omega]
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels, Nat.mul_comm]
+
+private theorem upperZeroForwardLeaf_resourceCounts
+    (k K label : Nat) (control temporary rangeAccumulator : Wire)
+    (bitAt dirtyAt : Nat → Wire) (hkK : k ≤ K)
+    (hlabel : label ∈ zeroMapLabels k K) :
+    eeaToffoliCount
+        (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+          rangeAccumulator) = 3 ∧
+      eeaCnotCount
+        (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+          rangeAccumulator) = 0 ∧
+      eeaXCount
+        (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+          rangeAccumulator) = 2 ∧
+      ShorECDLP.tCount
+        (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+          rangeAccumulator) = 21 := by
+  obtain ⟨hkl, hlK⟩ := (mem_zeroMapLabels hkK).mp hlabel
+  rw [upperZeroForwardLeaf, if_pos ⟨hkl, hlK⟩]
+  split <;>
+    simp [zeroRecurrenceBaseCell, zeroRecurrenceCell, eeaToffoliCount,
+      eeaCnotCount, eeaXCount, ShorECDLP.tCount, ShorECDLP.tCost]
+
+private theorem upperZeroReverseLeaf_resourceCounts
+    (k K label : Nat) (temporary rangeAccumulator : Wire)
+    (bitAt dirtyAt : Nat → Wire) (hkK : k ≤ K)
+    (hlabel : label ∈ zeroMapLabels k K) :
+    eeaToffoliCount
+        (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+          rangeAccumulator) = (if label = K then 0 else 3) ∧
+      eeaCnotCount
+        (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+          rangeAccumulator) = 0 ∧
+      eeaXCount
+        (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+          rangeAccumulator) = (if label = K then 0 else 2) ∧
+      ShorECDLP.tCount
+        (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+          rangeAccumulator) = (if label = K then 0 else 21) := by
+  obtain ⟨hkl, hlK⟩ := (mem_zeroMapLabels hkK).mp hlabel
+  by_cases h : label = K
+  · subst label
+    rw [upperZeroReverseLeaf, if_neg (by omega)]
+    simp [eeaToffoliCount, eeaCnotCount, eeaXCount, ShorECDLP.tCount]
+  · have hlt : label < K := by omega
+    rw [upperZeroReverseLeaf, if_pos ⟨hkl, hlt⟩]
+    simp [h, zeroRecurrenceCell, eeaToffoliCount, eeaCnotCount,
+      eeaXCount, ShorECDLP.tCount, ShorECDLP.tCost]
+
+private theorem lowerZeroForwardLeaf_resourceCounts
+    (k K label : Nat) (control temporary rangeAccumulator : Wire)
+    (bitAt dirtyAt : Nat → Wire) (hkK : k ≤ K)
+    (hlabel : label ∈ zeroMapLabels k K) :
+    eeaToffoliCount
+        (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+          rangeAccumulator) = 3 ∧
+      eeaCnotCount
+        (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+          rangeAccumulator) = 0 ∧
+      eeaXCount
+        (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+          rangeAccumulator) = 2 ∧
+      ShorECDLP.tCount
+        (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+          rangeAccumulator) = 21 := by
+  obtain ⟨hkl, hlK⟩ := (mem_zeroMapLabels hkK).mp hlabel
+  rw [lowerZeroForwardLeaf, if_pos ⟨hkl, hlK⟩]
+  split <;>
+    simp [zeroRecurrenceBaseCell, zeroRecurrenceCell, eeaToffoliCount,
+      eeaCnotCount, eeaXCount, ShorECDLP.tCount, ShorECDLP.tCost]
+
+private theorem lowerZeroReverseLeaf_resourceCounts
+    (k K label : Nat) (temporary rangeAccumulator : Wire)
+    (bitAt dirtyAt : Nat → Wire) (hkK : k ≤ K)
+    (hlabel : label ∈ zeroMapLabels k K) :
+    eeaToffoliCount
+        (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+          rangeAccumulator) = (if label = k then 0 else 3) ∧
+      eeaCnotCount
+        (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+          rangeAccumulator) = 0 ∧
+      eeaXCount
+        (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+          rangeAccumulator) = (if label = k then 0 else 2) ∧
+      ShorECDLP.tCount
+        (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+          rangeAccumulator) = (if label = k then 0 else 21) := by
+  obtain ⟨hkl, hlK⟩ := (mem_zeroMapLabels hkK).mp hlabel
+  by_cases h : label = k
+  · subst label
+    rw [lowerZeroReverseLeaf, if_neg (by omega)]
+    simp [eeaToffoliCount, eeaCnotCount, eeaXCount, ShorECDLP.tCount]
+  · have hlt : k < label := by omega
+    rw [lowerZeroReverseLeaf, if_pos ⟨hlt, hlK⟩]
+    simp [h, zeroRecurrenceCell, eeaToffoliCount, eeaCnotCount,
+      eeaXCount, ShorECDLP.tCount, ShorECDLP.tCost]
+
+private theorem zeroMap_unaryActionUnitary_xCount
+    (order : UnaryOrder) (leafAction : Nat → Wire → Circuit)
+    (tree : UnaryActionTree) (control : Wire) (path : List Wire)
+    (hlayout : tree.Layout control path) :
+    eeaXCount (unaryActionUnitary order leafAction tree control path) =
+      tree.leafCostSum
+          (fun label wire ↦ eeaXCount (leafAction label wire)) control path +
+        4 * tree.internalNodes := by
+  induction hlayout with
+  | leaf label control path hlocal => rfl
+  | node indexBit control next zero one rest hlocal hzero hone ihZero ihOne =>
+      cases order <;>
+        rw [unaryActionUnitary] <;>
+        simp only [eeaXCount_append, ihZero, ihOne] <;>
+        simp [computeZeroAnd, eeaXCount, UnaryActionTree.leafCostSum,
+          UnaryActionTree.internalNodes] <;>
+        omega
+
+private theorem zeroMap_rangeScanUnitary_xCount
+    (toggleAfter : Bool) (order : UnaryOrder)
+    (tree : UnaryActionTree) (control rangeAccumulator : Wire)
+    (path : List Wire) (leafAction : Nat → Wire → Circuit)
+    (hlayout : tree.Layout control path) :
+    eeaXCount
+        (rangeScanUnitary toggleAfter order tree control rangeAccumulator path
+          leafAction) =
+      tree.leafCostSum
+          (fun label _ ↦ eeaXCount (leafAction label rangeAccumulator))
+          control path +
+        4 * tree.internalNodes := by
+  have hleaf : tree.leafCostSum
+        (fun label wire ↦ eeaXCount
+          (rangeScanLeafAction toggleAfter rangeAccumulator leafAction label wire))
+        control path =
+      tree.leafCostSum
+        (fun label _ ↦ eeaXCount (leafAction label rangeAccumulator))
+        control path := by
+    induction hlayout with
+    | leaf label control path hlocal =>
+        cases toggleAfter <;> simp [UnaryActionTree.leafCostSum,
+          rangeScanLeafAction, eeaXCount]
+    | node indexBit control next zero one rest hlocal hzero hone ihZero ihOne =>
+        simp only [UnaryActionTree.leafCostSum, ihZero, ihOne]
+  cases toggleAfter <;>
+    simp only [rangeScanUnitary, Bool.false_eq_true, if_false, if_true,
+      eeaXCount_append] <;>
+    rw [zeroMap_unaryActionUnitary_xCount _ _ _ _ _ hlayout, hleaf] <;>
+    simp [eeaXCount]
+
+private theorem upperZeroMapUnitary_xCount_closed
+    (k K : Nat) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary : Wire) (path : List Wire)
+    (bitAt dirtyAt : Nat → Wire)
+    (hlayout : tree.Layout control path) :
+    eeaXCount
+        (upperZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) =
+      tree.leafCostSum
+          (fun label _ ↦ eeaXCount
+            (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+              rangeAccumulator)) control path +
+        tree.leafCostSum
+          (fun label _ ↦ eeaXCount
+            (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+              rangeAccumulator)) control path +
+        8 * tree.internalNodes := by
+  rw [upperZeroMapUnitary, eeaXCount_append,
+    zeroMap_rangeScanUnitary_xCount true .inc tree control rangeAccumulator path
+      (upperZeroForwardLeaf k K control temporary bitAt dirtyAt) hlayout,
+    zeroMap_rangeScanUnitary_xCount false .dec tree control rangeAccumulator path
+      (upperZeroReverseLeaf k K temporary bitAt dirtyAt) hlayout]
+  omega
+
+private theorem lowerZeroMapUnitary_xCount_closed
+    (k K : Nat) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary : Wire) (path : List Wire)
+    (bitAt dirtyAt : Nat → Wire)
+    (hlayout : tree.Layout control path) :
+    eeaXCount
+        (lowerZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) =
+      tree.leafCostSum
+          (fun label _ ↦ eeaXCount
+            (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+              rangeAccumulator)) control path +
+        tree.leafCostSum
+          (fun label _ ↦ eeaXCount
+            (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+              rangeAccumulator)) control path +
+        8 * tree.internalNodes := by
+  rw [lowerZeroMapUnitary, eeaXCount_append,
+    zeroMap_rangeScanUnitary_xCount true .dec tree control rangeAccumulator path
+      (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt) hlayout,
+    zeroMap_rangeScanUnitary_xCount false .inc tree control rangeAccumulator path
+      (lowerZeroReverseLeaf k K temporary bitAt dirtyAt) hlayout]
+  omega
+
+/-- Closed exact resources of an upper source-range tree.  This hides the deliberately private
+base-cell implementation while allowing downstream source composites to certify exact totals. -/
+theorem upperZeroMapUnitary_resourceCounts
+    (k K : Nat) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary : Wire) (path : List Wire)
+    (bitAt dirtyAt : Nat → Wire)
+    (hkK : k ≤ K)
+    (hlayout : tree.Layout control path)
+    (hlabels : tree.visitLabels .inc = zeroMapLabels k K) :
+    eeaToffoliCount
+        (upperZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) = 10 * (K + 1 - k) - 7 ∧
+      eeaCnotCount
+        (upperZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) = 6 * (K + 1 - k) - 2 ∧
+      eeaXCount
+        (upperZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) = 12 * (K + 1 - k) - 10 ∧
+      ShorECDLP.tCount
+        (upperZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) = 70 * (K + 1 - k) - 49 := by
+  have htreeLabels : tree.labels = zeroMapLabels k K := by
+    simpa only [UnaryActionTree.visitLabels_inc] using hlabels
+  have hleaves : tree.leaves = K + 1 - k := by
+    rw [zeroMap_leaves_eq_labels_length, htreeLabels]
+    simp [zeroMapLabels]
+  have hinternal : tree.internalNodes = K - k := by
+    have hnodes := zeroMap_internalNodes_succ_eq_leaves tree
+    omega
+  have hforwardToffoli :
+      tree.leafCostSum
+          (fun label _ ↦ eeaToffoliCount
+            (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        (K + 1 - k) * 3 := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaToffoliCount
+              (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map (fun _ ↦ 3) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (upperZeroForwardLeaf_resourceCounts k K label control temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).1
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hreverseToffoli :
+      tree.leafCostSum
+          (fun label _ ↦ eeaToffoliCount
+            (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        3 * (K - k) := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaToffoliCount
+              (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map
+            (fun label ↦ if label = K then 0 else 3) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (upperZeroReverseLeaf_resourceCounts k K label temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).1
+    rw [hmap, zeroMap_sum_last_zero k K 3 hkK]
+  have hforwardCnot :
+      tree.leafCostSum
+          (fun label _ ↦ eeaCnotCount
+              (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                rangeAccumulator) + 1) control path =
+        K + 1 - k := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaCnotCount
+                (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                  rangeAccumulator) + 1) =
+          (zeroMapLabels k K).map (fun _ ↦ 1) := by
+      apply List.map_congr_left
+      intro label hlabel
+      rw [(upperZeroForwardLeaf_resourceCounts k K label control temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.1]
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hreverseCnot :
+      tree.leafCostSum
+          (fun label _ ↦ eeaCnotCount
+              (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+                rangeAccumulator) + 1) control path =
+        K + 1 - k := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaCnotCount
+                (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+                  rangeAccumulator) + 1) =
+          (zeroMapLabels k K).map (fun _ ↦ 1) := by
+      apply List.map_congr_left
+      intro label hlabel
+      rw [(upperZeroReverseLeaf_resourceCounts k K label temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.1]
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hforwardX :
+      tree.leafCostSum
+          (fun label _ ↦ eeaXCount
+            (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        (K + 1 - k) * 2 := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaXCount
+              (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map (fun _ ↦ 2) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (upperZeroForwardLeaf_resourceCounts k K label control temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.2.1
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hreverseX :
+      tree.leafCostSum
+          (fun label _ ↦ eeaXCount
+            (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        2 * (K - k) := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaXCount
+              (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map
+            (fun label ↦ if label = K then 0 else 2) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (upperZeroReverseLeaf_resourceCounts k K label temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.2.1
+    rw [hmap, zeroMap_sum_last_zero k K 2 hkK]
+  have hforwardT :
+      tree.leafCostSum
+          (fun label _ ↦ ShorECDLP.tCount
+            (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        (K + 1 - k) * 21 := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ ShorECDLP.tCount
+              (upperZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map (fun _ ↦ 21) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (upperZeroForwardLeaf_resourceCounts k K label control temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.2.2
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hreverseT :
+      tree.leafCostSum
+          (fun label _ ↦ ShorECDLP.tCount
+            (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        21 * (K - k) := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ ShorECDLP.tCount
+              (upperZeroReverseLeaf k K temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map
+            (fun label ↦ if label = K then 0 else 21) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (upperZeroReverseLeaf_resourceCounts k K label temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.2.2
+    rw [hmap, zeroMap_sum_last_zero k K 21 hkK]
+  constructor
+  · rw [upperZeroMapUnitary_toffoliCount k K tree control rangeAccumulator
+      temporary path bitAt dirtyAt hlayout, hforwardToffoli,
+      hreverseToffoli, hinternal]
+    omega
+  constructor
+  · rw [upperZeroMapUnitary_cnotCount k K tree control rangeAccumulator
+      temporary path bitAt dirtyAt hlayout, hforwardCnot, hreverseCnot,
+      hinternal]
+    omega
+  constructor
+  · rw [upperZeroMapUnitary_xCount_closed k K tree control rangeAccumulator
+      temporary path bitAt dirtyAt hlayout, hforwardX, hreverseX, hinternal]
+    omega
+  · rw [upperZeroMapUnitary_tCount k K tree control rangeAccumulator
+      temporary path bitAt dirtyAt hlayout, hforwardT, hreverseT, hinternal]
+    omega
+
+/-- Closed exact resources of the lower source-range mirror. -/
+theorem lowerZeroMapUnitary_resourceCounts
+    (k K : Nat) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary : Wire) (path : List Wire)
+    (bitAt dirtyAt : Nat → Wire)
+    (hkK : k ≤ K)
+    (hlayout : tree.Layout control path)
+    (hlabels : tree.visitLabels .inc = zeroMapLabels k K) :
+    eeaToffoliCount
+        (lowerZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) = 10 * (K + 1 - k) - 7 ∧
+      eeaCnotCount
+        (lowerZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) = 6 * (K + 1 - k) - 2 ∧
+      eeaXCount
+        (lowerZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) = 12 * (K + 1 - k) - 10 ∧
+      ShorECDLP.tCount
+        (lowerZeroMapUnitary k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt) = 70 * (K + 1 - k) - 49 := by
+  have htreeLabels : tree.labels = zeroMapLabels k K := by
+    simpa only [UnaryActionTree.visitLabels_inc] using hlabels
+  have hleaves : tree.leaves = K + 1 - k := by
+    rw [zeroMap_leaves_eq_labels_length, htreeLabels]
+    simp [zeroMapLabels]
+  have hinternal : tree.internalNodes = K - k := by
+    have hnodes := zeroMap_internalNodes_succ_eq_leaves tree
+    omega
+  have hforwardToffoli :
+      tree.leafCostSum
+          (fun label _ ↦ eeaToffoliCount
+            (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        (K + 1 - k) * 3 := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaToffoliCount
+              (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map (fun _ ↦ 3) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (lowerZeroForwardLeaf_resourceCounts k K label control temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).1
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hreverseToffoli :
+      tree.leafCostSum
+          (fun label _ ↦ eeaToffoliCount
+            (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        3 * (K - k) := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaToffoliCount
+              (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map
+            (fun label ↦ if label = k then 0 else 3) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (lowerZeroReverseLeaf_resourceCounts k K label temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).1
+    rw [hmap, zeroMap_sum_first_zero k K 3 hkK]
+  have hforwardCnot :
+      tree.leafCostSum
+          (fun label _ ↦ eeaCnotCount
+              (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                rangeAccumulator) + 1) control path =
+        K + 1 - k := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaCnotCount
+                (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                  rangeAccumulator) + 1) =
+          (zeroMapLabels k K).map (fun _ ↦ 1) := by
+      apply List.map_congr_left
+      intro label hlabel
+      rw [(lowerZeroForwardLeaf_resourceCounts k K label control temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.1]
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hreverseCnot :
+      tree.leafCostSum
+          (fun label _ ↦ eeaCnotCount
+              (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+                rangeAccumulator) + 1) control path =
+        K + 1 - k := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaCnotCount
+                (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+                  rangeAccumulator) + 1) =
+          (zeroMapLabels k K).map (fun _ ↦ 1) := by
+      apply List.map_congr_left
+      intro label hlabel
+      rw [(lowerZeroReverseLeaf_resourceCounts k K label temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.1]
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hforwardX :
+      tree.leafCostSum
+          (fun label _ ↦ eeaXCount
+            (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        (K + 1 - k) * 2 := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaXCount
+              (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map (fun _ ↦ 2) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (lowerZeroForwardLeaf_resourceCounts k K label control temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.2.1
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hreverseX :
+      tree.leafCostSum
+          (fun label _ ↦ eeaXCount
+            (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        2 * (K - k) := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ eeaXCount
+              (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map
+            (fun label ↦ if label = k then 0 else 2) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (lowerZeroReverseLeaf_resourceCounts k K label temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.2.1
+    rw [hmap, zeroMap_sum_first_zero k K 2 hkK]
+  have hforwardT :
+      tree.leafCostSum
+          (fun label _ ↦ ShorECDLP.tCount
+            (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        (K + 1 - k) * 21 := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ ShorECDLP.tCount
+              (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map (fun _ ↦ 21) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (lowerZeroForwardLeaf_resourceCounts k K label control temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.2.2
+    rw [hmap, zeroMap_sum_map_const]
+    simp [zeroMapLabels]
+  have hreverseT :
+      tree.leafCostSum
+          (fun label _ ↦ ShorECDLP.tCount
+            (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+              rangeAccumulator)) control path =
+        21 * (K - k) := by
+    rw [zeroMap_leafCostSum_eq_labelsSum tree control path _ hlayout,
+      htreeLabels]
+    have hmap :
+        (zeroMapLabels k K).map
+            (fun label ↦ ShorECDLP.tCount
+              (lowerZeroReverseLeaf k K temporary bitAt dirtyAt label
+                rangeAccumulator)) =
+          (zeroMapLabels k K).map
+            (fun label ↦ if label = k then 0 else 21) := by
+      apply List.map_congr_left
+      intro label hlabel
+      exact (lowerZeroReverseLeaf_resourceCounts k K label temporary
+        rangeAccumulator bitAt dirtyAt hkK hlabel).2.2.2
+    rw [hmap, zeroMap_sum_first_zero k K 21 hkK]
+  constructor
+  · rw [lowerZeroMapUnitary_toffoliCount k K tree control rangeAccumulator
+      temporary path bitAt dirtyAt hlayout, hforwardToffoli,
+      hreverseToffoli, hinternal]
+    omega
+  constructor
+  · rw [lowerZeroMapUnitary_cnotCount k K tree control rangeAccumulator
+      temporary path bitAt dirtyAt hlayout, hforwardCnot, hreverseCnot,
+      hinternal]
+    omega
+  constructor
+  · rw [lowerZeroMapUnitary_xCount_closed k K tree control rangeAccumulator
+      temporary path bitAt dirtyAt hlayout, hforwardX, hreverseX, hinternal]
+    omega
+  · rw [lowerZeroMapUnitary_tCount k K tree control rangeAccumulator
+      temporary path bitAt dirtyAt hlayout, hforwardT, hreverseT, hinternal]
+    omega
+
 theorem run_upperZeroForwardLeaf
     (k K : Nat) (hkK : k ≤ K)
     (tree : UnaryActionTree) (control rangeAccumulator temporary : Wire)

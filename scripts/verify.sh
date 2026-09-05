@@ -746,6 +746,63 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_tCount
 #print axioms ShorECDLP.Paper2607_13816.terminalPadding_widthTwo_source_regression
 #print axioms ShorECDLP.Paper2607_13816.terminalPadding_secp256k1_resources
+#print axioms ShorECDLP.Paper2607_13816.constantWriteWord_involutive
+#print axioms ShorECDLP.Paper2607_13816.highestPositionWordAction_involutive
+#print axioms ShorECDLP.Paper2607_13816.rightLengthWordAction_involutive
+#print axioms ShorECDLP.Paper2607_13816.highestPositionWordActions_involutive
+#print axioms ShorECDLP.Paper2607_13816.rightLengthWordActions_involutive
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_correct_shared
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_correct_shared
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_wellFormed_shared
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_wellFormed_shared
+#print axioms ShorECDLP.Paper2607_13816.upperZeroMapUnitary_resourceCounts
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroMapUnitary_resourceCounts
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_HPFree
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_HPFree
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_xCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_tCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_xCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_tCount
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_control
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_control
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_preservesOutsideWords
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_preservesOutsideWords
+#print axioms ShorECDLP.Paper2607_13816.EndIterationRegisters.upperTree_visitLabels
+#print axioms ShorECDLP.Paper2607_13816.EndIterationRegisters.lowerTree_visitLabels
+#print axioms ShorECDLP.Paper2607_13816.EndIterationRegisters.upperTree_routeLabel_eq
+#print axioms ShorECDLP.Paper2607_13816.EndIterationRegisters.lowerTree_routeLabel_eq
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_resourceCounts
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_HPFree
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_HPFree
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_tCount
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_xCount
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_xCount
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_tCount
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_correct
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_correct
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_roundTrip
+#print axioms ShorECDLP.Paper2607_13816.endIterationProduction_windows
+#print axioms ShorECDLP.Paper2607_13816.endIterationProduction_layout
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_secp256k1_resources
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_small_resources
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_HPFree
@@ -799,8 +856,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 775 ]]; then
-  printf 'expected seven hundred seventy-five #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 832 ]]; then
+  printf 'expected eight hundred thirty-two #print axioms results\n' >&2
   exit 1
 fi
 

@@ -130,6 +130,58 @@ theorem constantWriteWord_pair
                 ih lefts rights _ hlefts hrights,
                 gatedXorConstantBits_combine]
 
+/-- Repeating one source constant-write stream with unchanged selectors cancels. -/
+theorem constantWriteWord_involutive
+    (labels : List Nat) (selectors : List Bool)
+    (valueAt : Nat → Nat) (bits : List Bool)
+    (hlength : selectors.length = labels.length) :
+    constantWriteWord valueAt labels selectors
+        (constantWriteWord valueAt labels selectors bits) = bits := by
+  induction labels generalizing selectors bits with
+  | nil =>
+      have : selectors = [] := List.length_eq_zero_iff.mp hlength
+      subst selectors
+      rfl
+  | cons label labels ih =>
+      cases selectors with
+      | nil => simp at hlength
+      | cons selector selectors =>
+          have htail : selectors.length = labels.length := by simpa using hlength
+          change constantWriteWord valueAt labels selectors
+              (gatedXorConstantBits selector
+                (constantWriteWord valueAt labels selectors
+                  (gatedXorConstantBits selector bits (valueAt label)))
+                (valueAt label)) = bits
+          rw [constantWriteWord_gatedXor_comm,
+            gatedXorConstantBits_combine, Bool.xor_self,
+            gatedXorConstantBits_false, ih selectors bits htail]
+
+private theorem constantWriteWord_comm
+    (leftLabels rightLabels : List Nat)
+    (leftSelectors rightSelectors : List Bool)
+    (leftValue rightValue : Nat → Nat) (bits : List Bool) :
+    constantWriteWord rightValue rightLabels rightSelectors
+        (constantWriteWord leftValue leftLabels leftSelectors bits) =
+      constantWriteWord leftValue leftLabels leftSelectors
+        (constantWriteWord rightValue rightLabels rightSelectors bits) := by
+  induction leftLabels generalizing leftSelectors bits with
+  | nil => rfl
+  | cons label labels ih =>
+      cases leftSelectors with
+      | nil => rfl
+      | cons selector selectors =>
+          change constantWriteWord rightValue rightLabels rightSelectors
+              (constantWriteWord leftValue labels selectors
+                (gatedXorConstantBits selector bits (leftValue label))) =
+            constantWriteWord leftValue labels selectors
+              (gatedXorConstantBits selector
+                (constantWriteWord rightValue rightLabels rightSelectors bits)
+                (leftValue label))
+          rw [ih]
+          congr 1
+          exact (constantWriteWord_gatedXor_comm rightLabels rightSelectors
+            rightValue selector (leftValue label) bits).symm
+
 theorem xorWords_reverse'
     (left right : List Bool) (hlength : left.length = right.length) :
     (xorWords left right).reverse = xorWords left.reverse right.reverse := by
@@ -714,6 +766,153 @@ def rightLengthWordAction
     (gateWord enabled (prefixZeroFlags rangeBits))
     (gatedXorConstantBits enabled targetBits
       (rightLengthValue n width k))
+
+/-- The gate-independent upper writer is an XOR update and hence cancels when its decoded range
+and enable bit are unchanged. -/
+theorem highestPositionWordAction_involutive
+    (width k K : Nat) (enabled : Bool) (rangeBits targetBits : List Bool)
+    (hrange : rangeBits.length = (zeroMapLabels k K).length) :
+    highestPositionWordAction width k K enabled rangeBits
+        (highestPositionWordAction width k K enabled rangeBits targetBits) =
+      targetBits := by
+  unfold highestPositionWordAction
+  let labels := (zeroMapLabels k K).reverse
+  let selectors := (gateWord enabled (suffixZeroFlags rangeBits)).reverse
+  have hselectors : selectors.length = labels.length := by
+    simp [labels, selectors, gateWord, hrange]
+  change constantWriteWord (highestPositionWriteValue width k) labels selectors
+      (gatedXorConstantBits enabled
+        (constantWriteWord (highestPositionWriteValue width k) labels selectors
+          (gatedXorConstantBits enabled targetBits
+            (truthMinusOneValue width K)))
+        (truthMinusOneValue width K)) = targetBits
+  rw [constantWriteWord_gatedXor_comm labels selectors
+      (highestPositionWriteValue width k) enabled
+      (truthMinusOneValue width K),
+    gatedXorConstantBits_combine, Bool.xor_self,
+    gatedXorConstantBits_false,
+    constantWriteWord_involutive labels selectors
+      (highestPositionWriteValue width k) targetBits hselectors]
+
+/-- The gate-independent lower writer has the same unchanged-selector involution law. -/
+theorem rightLengthWordAction_involutive
+    (n width k K : Nat) (enabled : Bool) (rangeBits targetBits : List Bool)
+    (hrange : rangeBits.length = (zeroMapLabels k K).length) :
+    rightLengthWordAction n width k K enabled rangeBits
+        (rightLengthWordAction n width k K enabled rangeBits targetBits) =
+      targetBits := by
+  unfold rightLengthWordAction
+  let labels := zeroMapLabels k K
+  let selectors := gateWord enabled (prefixZeroFlags rangeBits)
+  have hselectors : selectors.length = labels.length := by
+    simp [labels, selectors, gateWord, hrange]
+  change constantWriteWord (rightLengthWriteValue n width K) labels selectors
+      (gatedXorConstantBits enabled
+        (constantWriteWord (rightLengthWriteValue n width K) labels selectors
+          (gatedXorConstantBits enabled targetBits
+            (rightLengthValue n width k)))
+        (rightLengthValue n width k)) = targetBits
+  rw [constantWriteWord_gatedXor_comm labels selectors
+      (rightLengthWriteValue n width K) enabled
+      (rightLengthValue n width k),
+    gatedXorConstantBits_combine, Bool.xor_self,
+    gatedXorConstantBits_false,
+    constantWriteWord_involutive labels selectors
+      (rightLengthWriteValue n width K) targetBits hselectors]
+
+private theorem highestPositionWordAction_comm
+    (width k K : Nat) (enabled : Bool)
+    (leftRange rightRange targetBits : List Bool) :
+    highestPositionWordAction width k K enabled leftRange
+        (highestPositionWordAction width k K enabled rightRange targetBits) =
+      highestPositionWordAction width k K enabled rightRange
+        (highestPositionWordAction width k K enabled leftRange targetBits) := by
+  unfold highestPositionWordAction
+  let labels := (zeroMapLabels k K).reverse
+  let leftSelectors := (gateWord enabled (suffixZeroFlags leftRange)).reverse
+  let rightSelectors := (gateWord enabled (suffixZeroFlags rightRange)).reverse
+  change constantWriteWord (highestPositionWriteValue width k) labels leftSelectors
+      (gatedXorConstantBits enabled
+        (constantWriteWord (highestPositionWriteValue width k) labels rightSelectors
+          (gatedXorConstantBits enabled targetBits
+            (truthMinusOneValue width K)))
+        (truthMinusOneValue width K)) =
+    constantWriteWord (highestPositionWriteValue width k) labels rightSelectors
+      (gatedXorConstantBits enabled
+        (constantWriteWord (highestPositionWriteValue width k) labels leftSelectors
+          (gatedXorConstantBits enabled targetBits
+            (truthMinusOneValue width K)))
+        (truthMinusOneValue width K))
+  rw [constantWriteWord_gatedXor_comm labels rightSelectors,
+    constantWriteWord_gatedXor_comm labels leftSelectors,
+    gatedXorConstantBits_combine, Bool.xor_self,
+    gatedXorConstantBits_false]
+  exact (constantWriteWord_comm labels labels leftSelectors rightSelectors
+    (highestPositionWriteValue width k) (highestPositionWriteValue width k)
+    targetBits).symm
+
+private theorem rightLengthWordAction_comm
+    (n width k K : Nat) (enabled : Bool)
+    (leftRange rightRange targetBits : List Bool) :
+    rightLengthWordAction n width k K enabled leftRange
+        (rightLengthWordAction n width k K enabled rightRange targetBits) =
+      rightLengthWordAction n width k K enabled rightRange
+        (rightLengthWordAction n width k K enabled leftRange targetBits) := by
+  unfold rightLengthWordAction
+  let labels := zeroMapLabels k K
+  let leftSelectors := gateWord enabled (prefixZeroFlags leftRange)
+  let rightSelectors := gateWord enabled (prefixZeroFlags rightRange)
+  change constantWriteWord (rightLengthWriteValue n width K) labels leftSelectors
+      (gatedXorConstantBits enabled
+        (constantWriteWord (rightLengthWriteValue n width K) labels rightSelectors
+          (gatedXorConstantBits enabled targetBits
+            (rightLengthValue n width k)))
+        (rightLengthValue n width k)) =
+    constantWriteWord (rightLengthWriteValue n width K) labels rightSelectors
+      (gatedXorConstantBits enabled
+        (constantWriteWord (rightLengthWriteValue n width K) labels leftSelectors
+          (gatedXorConstantBits enabled targetBits
+            (rightLengthValue n width k)))
+        (rightLengthValue n width k))
+  rw [constantWriteWord_gatedXor_comm labels rightSelectors,
+    constantWriteWord_gatedXor_comm labels leftSelectors,
+    gatedXorConstantBits_combine, Bool.xor_self,
+    gatedXorConstantBits_false]
+  exact (constantWriteWord_comm labels labels leftSelectors rightSelectors
+    (rightLengthWriteValue n width K) (rightLengthWriteValue n width K)
+    targetBits).symm
+
+/-- The two upper source writers, repeated in the same order with unchanged range masks, cancel. -/
+theorem highestPositionWordActions_involutive
+    (width k K : Nat) (enabled : Bool)
+    (firstRange secondRange targetBits : List Bool)
+    (hfirst : firstRange.length = (zeroMapLabels k K).length)
+    (hsecond : secondRange.length = (zeroMapLabels k K).length) :
+    highestPositionWordAction width k K enabled firstRange
+        (highestPositionWordAction width k K enabled secondRange
+          (highestPositionWordAction width k K enabled firstRange
+            (highestPositionWordAction width k K enabled secondRange targetBits))) =
+      targetBits := by
+  rw [highestPositionWordAction_comm width k K enabled secondRange firstRange]
+  rw [highestPositionWordAction_involutive width k K enabled firstRange _ hfirst]
+  exact highestPositionWordAction_involutive width k K enabled secondRange
+    targetBits hsecond
+
+/-- The two lower source writers obey the analogous unchanged-mask cancellation law. -/
+theorem rightLengthWordActions_involutive
+    (n width k K : Nat) (enabled : Bool)
+    (firstRange secondRange targetBits : List Bool)
+    (hfirst : firstRange.length = (zeroMapLabels k K).length)
+    (hsecond : secondRange.length = (zeroMapLabels k K).length) :
+    rightLengthWordAction n width k K enabled firstRange
+        (rightLengthWordAction n width k K enabled secondRange
+          (rightLengthWordAction n width k K enabled firstRange
+            (rightLengthWordAction n width k K enabled secondRange targetBits))) =
+      targetBits := by
+  rw [rightLengthWordAction_comm n width k K enabled secondRange firstRange]
+  rw [rightLengthWordAction_involutive n width k K enabled firstRange _ hfirst]
+  exact rightLengthWordAction_involutive n width k K enabled secondRange
+    targetBits hsecond
 
 /-- The literal upper writer has exactly the source seed followed by the suffix-zero-selected
 telescoping constants.  This theorem is intentionally stated at the Boolean-word boundary; the
@@ -2110,6 +2309,15 @@ def lengthBlockWriterSupport
     rangeAccumulator :: temporary ::
       (zeroMapLabels k K).map work1At ++ (zeroMapLabels k K).map work2At
 
+/-- Wires of a grouped writer which are not the read-only boundary-index bank.  The low-aux
+source intentionally uses the affine boundary register itself as the unary tree's index word;
+this support isolates exactly the roles that the surrounding affine transform must leave alone. -/
+def lengthBlockNonAffineSupport
+    (k K : Nat) (control rangeAccumulator temporary : Wire) (path : List Wire)
+    (work1At work2At : Nat → Wire) (target : List Wire) : List Wire :=
+  target ++ control :: path ++ rangeAccumulator :: temporary ::
+    (zeroMapLabels k K).map work1At ++ (zeroMapLabels k K).map work2At
+
 /-- Shared physical allocation certificate for either complete length block. -/
 structure LengthBlockLayout
     (k K : Nat) (tree : UnaryActionTree)
@@ -2125,57 +2333,100 @@ structure LengthBlockLayout
     (lengthBlockWriterSupport k K tree control rangeAccumulator temporary path
       work1At work2At target)
 
-private theorem LengthBlockLayout.writer_not_affineRegister
+/-- Sequential physical allocation certificate for the paper's low-aux length blocks.
+
+The affine primitive and the zero-map writers run serially and each restores its scratch before
+the next block starts.  The supplement therefore aliases `constants ++ [carry]` with decoder
+scratch.  Only the live affine register must be disjoint from the complete writer footprint, and
+the shared scratch must stay outside the writer target.  `LengthBlockLayout` remains the stronger
+fully-disjoint interface used by earlier callers. -/
+structure SharedLengthBlockLayout
+    (k K : Nat) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary carry : Wire) (path : List Wire)
+    (work1At work2At : Nat → Wire)
+    (affineRegister target constants : List Wire) : Prop where
+  affine : ConstantLayout affineRegister constants carry
+  work1Bits : LengthWriterLayout k K tree control rangeAccumulator temporary path
+    work1At work2At target
+  work2Bits : LengthWriterLayout k K tree control rangeAccumulator temporary path
+    work2At work1At target
+  affineRegisterDisjoint : List.Disjoint affineRegister
+    (lengthBlockNonAffineSupport k K control rangeAccumulator temporary path
+      work1At work2At target)
+  constantCarryDisjointTarget : List.Disjoint (constants ++ [carry]) target
+
+/-- A fully separated layout is, in particular, valid for the source's serial scratch-sharing
+contract. -/
+def LengthBlockLayout.toShared
     {k K : Nat} {tree : UnaryActionTree}
     {control rangeAccumulator temporary carry : Wire} {path : List Wire}
     {work1At work2At : Nat → Wire} {affineRegister target constants : List Wire}
     (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
+      work1At work2At affineRegister target constants) :
+    SharedLengthBlockLayout k K tree control rangeAccumulator temporary carry path
+      work1At work2At affineRegister target constants where
+  affine := hlayout.affine
+  work1Bits := hlayout.work1Bits
+  work2Bits := hlayout.work2Bits
+  affineRegisterDisjoint := by
+    apply List.disjoint_left.mpr
+    intro wire hregister hwriter
+    have hleft : wire ∈ constants ++ affineRegister ++ [carry] := by
+      simp [hregister]
+    have hright : wire ∈ lengthBlockWriterSupport k K tree control
+        rangeAccumulator temporary path work1At work2At target := by
+      simp [lengthBlockNonAffineSupport, lengthBlockWriterSupport,
+        zeroMapProtectedWires] at hwriter ⊢
+      aesop
+    exact List.disjoint_left.mp hlayout.affineDisjoint hleft hright
+  constantCarryDisjointTarget := by
+    apply List.disjoint_left.mpr
+    intro wire hscratch htarget
+    have hleft : wire ∈ constants ++ affineRegister ++ [carry] := by
+      simp only [List.mem_append, List.mem_singleton] at hscratch ⊢
+      rcases hscratch with hconstant | hcarry
+      · exact Or.inl (Or.inl hconstant)
+      · exact Or.inr hcarry
+    have hright : wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator
+        temporary path work1At work2At target := by
+      simp [lengthBlockWriterSupport, htarget]
+    exact List.disjoint_left.mp hlayout.affineDisjoint hleft hright
+
+private theorem SharedLengthBlockLayout.writer_not_affineRegister
+    {k K : Nat} {tree : UnaryActionTree}
+    {control rangeAccumulator temporary carry : Wire} {path : List Wire}
+    {work1At work2At : Nat → Wire} {affineRegister target constants : List Wire}
+    (hlayout : SharedLengthBlockLayout k K tree control rangeAccumulator temporary carry path
       work1At work2At affineRegister target constants)
     {wire : Wire}
-    (hwire : wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator
+    (hwire : wire ∈ lengthBlockNonAffineSupport k K control rangeAccumulator
       temporary path work1At work2At target) :
     wire ∉ affineRegister := by
   intro haffine
-  have hleft : wire ∈ constants ++ affineRegister ++ [carry] := by
-    simp [haffine]
-  exact List.disjoint_left.mp hlayout.affineDisjoint hleft hwire
+  exact List.disjoint_left.mp hlayout.affineRegisterDisjoint haffine hwire
 
-private theorem LengthBlockLayout.affine_not_target
+private theorem SharedLengthBlockLayout.affine_not_target
     {k K : Nat} {tree : UnaryActionTree}
     {control rangeAccumulator temporary carry : Wire} {path : List Wire}
     {work1At work2At : Nat → Wire} {affineRegister target constants : List Wire}
-    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
+    (hlayout : SharedLengthBlockLayout k K tree control rangeAccumulator temporary carry path
       work1At work2At affineRegister target constants)
     {wire : Wire} (hwire : wire ∈ affineRegister) :
     wire ∉ target := by
   intro htarget
-  have hleft : wire ∈ constants ++ affineRegister ++ [carry] := by
-    simp [hwire]
-  have hright : wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator
-      temporary path work1At work2At target := by
-    simp only [lengthBlockWriterSupport, List.mem_append]
-    exact Or.inl (Or.inl (Or.inl htarget))
-  exact List.disjoint_left.mp hlayout.affineDisjoint hleft hright
+  exact List.disjoint_left.mp hlayout.affineRegisterDisjoint hwire (by
+    simp [lengthBlockNonAffineSupport, htarget])
 
-private theorem LengthBlockLayout.constantCarry_not_target
+private theorem SharedLengthBlockLayout.constantCarry_not_target
     {k K : Nat} {tree : UnaryActionTree}
     {control rangeAccumulator temporary carry : Wire} {path : List Wire}
     {work1At work2At : Nat → Wire} {affineRegister target constants : List Wire}
-    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
+    (hlayout : SharedLengthBlockLayout k K tree control rangeAccumulator temporary carry path
       work1At work2At affineRegister target constants)
     {wire : Wire} (hwire : wire ∈ constants ++ [carry]) :
     wire ∉ target := by
   intro htarget
-  have haffine : wire ∈ constants ++ affineRegister ++ [carry] := by
-    simp only [List.mem_append, List.mem_singleton] at hwire ⊢
-    rcases hwire with hconstant | hcarry
-    · exact Or.inl (Or.inl hconstant)
-    · exact Or.inr hcarry
-  have hright : wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator
-      temporary path work1At work2At target := by
-    simp only [lengthBlockWriterSupport, List.mem_append]
-    exact Or.inl (Or.inl (Or.inl htarget))
-  exact List.disjoint_left.mp hlayout.affineDisjoint haffine hright
+  exact List.disjoint_left.mp hlayout.constantCarryDisjointTarget hwire htarget
 
 /-- Literal `len_update_lt_unary_gate`: reflect the right boundary, apply the two upper writers
 with exchanged work banks, and reflect the boundary back. -/
@@ -2208,7 +2459,7 @@ def lenUpdateLrpUnary
 /-- Direct whole-state semantics of the literal upper length block.  The target length receives
 the two source writers in their emitted order; the reflected boundary, both borrowed banks, and
 all scratch are restored. -/
-theorem lenUpdateLtUnary_correct
+theorem lenUpdateLtUnary_correct_shared
     (n k K boundary : Nat) (hkK : k ≤ K)
     (hboundary : k ≤ boundary ∧ boundary ≤ K)
     (tree : UnaryActionTree)
@@ -2217,7 +2468,7 @@ theorem lenUpdateLtUnary_correct
     (lengthT lengthRP constants : List Wire) (state : BasisState)
     (hpositive : 0 < lengthRP.length)
     (hlength : constants.length = lengthRP.length)
-    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
+    (hlayout : SharedLengthBlockLayout k K tree control rangeAccumulator temporary carry path
       work1At work2At lengthRP lengthT constants)
     (hlabels : tree.visitLabels .inc = zeroMapLabels k K)
     (hroute : tree.routeLabel
@@ -2250,21 +2501,21 @@ theorem lenUpdateLtUnary_correct
       work1At work2At lengthT) first
   let after := run (constMinus lengthRP constants carry (n + 2)) second
   have hreflectedSupport : ∀ wire,
-      wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator temporary path
+      wire ∈ lengthBlockNonAffineSupport k K control rangeAccumulator temporary path
         work1At work2At lengthT → reflected wire = state wire := by
     intro wire hwire
     exact hreflect.2.2 wire (hlayout.writer_not_affineRegister hwire)
   have hreflectedPath : Clean path reflected := by
     intro wire hwire
     rw [hreflectedSupport wire (by
-      simp [lengthBlockWriterSupport, zeroMapProtectedWires, hwire])]
+      simp [lengthBlockNonAffineSupport, hwire])]
     exact hcleanPath wire hwire
   have hreflectedRange : reflected rangeAccumulator = false := by
     rw [hreflectedSupport rangeAccumulator (by
-      simp [lengthBlockWriterSupport]), hcleanRange]
+      simp [lengthBlockNonAffineSupport]), hcleanRange]
   have hreflectedTemporary : reflected temporary = false := by
     rw [hreflectedSupport temporary (by
-      simp [lengthBlockWriterSupport]), hcleanTemporary]
+      simp [lengthBlockNonAffineSupport]), hcleanTemporary]
   have hfirstWord := highestPositionXorWrite_wordAction k K boundary hkK hboundary
     tree control rangeAccumulator temporary path work2At work1At lengthT reflected
     hlayout.work2Bits hlabels hroute hreflectedPath hreflectedRange hreflectedTemporary
@@ -2314,12 +2565,12 @@ theorem lenUpdateLtUnary_correct
     hpositive hlength hlayout.affine hconstantsSecond
   have hreflectedControl : reflected control = state control :=
     hreflectedSupport control (by
-      simp [lengthBlockWriterSupport, zeroMapProtectedWires])
+      simp [lengthBlockNonAffineSupport])
   have hreflectedTarget : wireValues lengthT reflected = wireValues lengthT state := by
     apply wireValues_congr
     intro wire hwire
     exact hreflectedSupport wire (by
-      simp [lengthBlockWriterSupport, hwire])
+      simp [lengthBlockNonAffineSupport, hwire])
   have hreflectedWork2 :
       upperRangeBits (reflected control) boundary (zeroMapLabels k K) work2At reflected =
         upperRangeBits (state control) boundary (zeroMapLabels k K) work2At state := by
@@ -2328,7 +2579,7 @@ theorem lenUpdateLtUnary_correct
     intro label hlabel
     rw [hreflectedControl]
     rw [hreflectedSupport (work2At label) (by
-      simp only [lengthBlockWriterSupport, List.mem_append, List.mem_cons,
+      simp only [lengthBlockNonAffineSupport, List.mem_append, List.mem_cons,
         List.mem_map]
       exact Or.inr ⟨label, hlabel, rfl⟩)]
   have hfirstControl : first control = state control := by
@@ -2344,7 +2595,7 @@ theorem lenUpdateLtUnary_correct
     rw [hfirstOutside (work1At label)
       (hlayout.work2Bits.dirty_not_target hlabel)]
     rw [hreflectedSupport (work1At label) (by
-      simp only [lengthBlockWriterSupport, List.mem_append, List.mem_cons,
+      simp only [lengthBlockNonAffineSupport, List.mem_append, List.mem_cons,
         List.mem_map]
       exact Or.inl (Or.inr (Or.inr
         (Or.inr ⟨label, hlabel, rfl⟩))))]
@@ -2366,7 +2617,7 @@ theorem lenUpdateLtUnary_correct
     apply wireValues_congr
     intro wire hwire
     exact hfinal.2.2 wire (hlayout.writer_not_affineRegister (by
-      simp only [lengthBlockWriterSupport, List.mem_append, List.mem_cons,
+      simp only [lengthBlockNonAffineSupport, List.mem_append, List.mem_cons,
         List.mem_map]
       exact Or.inl (Or.inl (Or.inl hwire))))
   have hboundarySecond : wireValues lengthRP second = wireValues lengthRP reflected := by
@@ -2380,7 +2631,7 @@ theorem lenUpdateLtUnary_correct
     intro wire hwire
     change run (constMinus lengthRP constants carry (n + 2)) second wire = false
     rw [hfinal.2.2 wire (hlayout.writer_not_affineRegister (by
-      simp [lengthBlockWriterSupport, zeroMapProtectedWires] at hwire ⊢
+      simp [lengthBlockNonAffineSupport] at hwire ⊢
       aesop))]
     exact hsecondRestores.2 wire hwire
   rw [lenUpdateLtUnary, Classical.run_append, Classical.run_append,
@@ -2400,10 +2651,48 @@ theorem lenUpdateLtUnary_correct
       _ = reflected wire := hfirstOutside wire hwireTarget
       _ = state wire := hreflect.2.2 wire hwireAffine
 
+/-- Backwards-compatible fully-disjoint specialization of
+`lenUpdateLtUnary_correct_shared`. -/
+theorem lenUpdateLtUnary_correct
+    (n k K boundary : Nat) (hkK : k ≤ K)
+    (hboundary : k ≤ boundary ∧ boundary ≤ K)
+    (tree : UnaryActionTree)
+    (control rangeAccumulator temporary carry : Wire) (path : List Wire)
+    (work1At work2At : Nat → Wire)
+    (lengthT lengthRP constants : List Wire) (state : BasisState)
+    (hpositive : 0 < lengthRP.length)
+    (hlength : constants.length = lengthRP.length)
+    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
+      work1At work2At lengthRP lengthT constants)
+    (hlabels : tree.visitLabels .inc = zeroMapLabels k K)
+    (hroute : tree.routeLabel
+      (run (constMinus lengthRP constants carry (n + 2)) state) = boundary)
+    (hcleanConstants : Clean (constants ++ [carry]) state)
+    (hcleanPath : Clean path state)
+    (hcleanRange : state rangeAccumulator = false)
+    (hcleanTemporary : state temporary = false) :
+    let after := run
+      (lenUpdateLtUnary n k K tree control rangeAccumulator temporary carry path
+        work1At work2At lengthT lengthRP constants) state
+    wireValues lengthT after =
+        highestPositionWordAction lengthT.length k K (state control)
+          (upperRangeBits (state control) boundary (zeroMapLabels k K) work1At state)
+          (highestPositionWordAction lengthT.length k K (state control)
+            (upperRangeBits (state control) boundary (zeroMapLabels k K) work2At state)
+            (wireValues lengthT state)) ∧
+      wireValues lengthRP after = wireValues lengthRP state ∧
+      Clean (constants ++ [carry]) after ∧
+      Clean (path ++ [rangeAccumulator, temporary]) after ∧
+      ∀ wire, wire ∉ lengthT → after wire = state wire := by
+  exact lenUpdateLtUnary_correct_shared n k K boundary hkK hboundary tree control
+    rangeAccumulator temporary carry path work1At work2At lengthT lengthRP constants state
+    hpositive hlength hlayout.toShared hlabels hroute hcleanConstants hcleanPath hcleanRange
+    hcleanTemporary
+
 /-- Direct whole-state semantics of the literal lower length block.  The target length receives
 the two source writers in their emitted order; the shifted boundary, both borrowed banks, and
 all scratch are restored. -/
-theorem lenUpdateLrpUnary_correct
+theorem lenUpdateLrpUnary_correct_shared
     (n k K boundary : Nat) (hkK : k ≤ K)
     (hboundary : k ≤ boundary ∧ boundary ≤ K)
     (tree : UnaryActionTree)
@@ -2411,7 +2700,7 @@ theorem lenUpdateLrpUnary_correct
     (work1At work2At : Nat → Wire)
     (lengthT lengthRP constants : List Wire) (state : BasisState)
     (hlength : constants.length = lengthT.length)
-    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
+    (hlayout : SharedLengthBlockLayout k K tree control rangeAccumulator temporary carry path
       work1At work2At lengthT lengthRP constants)
     (hlabels : tree.visitLabels .inc = zeroMapLabels k K)
     (hroute : tree.routeLabel
@@ -2444,21 +2733,21 @@ theorem lenUpdateLrpUnary_correct
       work2At work1At lengthRP) first
   let after := run (subConstant lengthT constants carry 3) second
   have hshiftedSupport : ∀ wire,
-      wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator temporary path
+      wire ∈ lengthBlockNonAffineSupport k K control rangeAccumulator temporary path
         work1At work2At lengthRP → shifted wire = state wire := by
     intro wire hwire
     exact hshift.2.2 wire (hlayout.writer_not_affineRegister hwire)
   have hshiftedPath : Clean path shifted := by
     intro wire hwire
     rw [hshiftedSupport wire (by
-      simp [lengthBlockWriterSupport, zeroMapProtectedWires, hwire])]
+      simp [lengthBlockNonAffineSupport, hwire])]
     exact hcleanPath wire hwire
   have hshiftedRange : shifted rangeAccumulator = false := by
     rw [hshiftedSupport rangeAccumulator (by
-      simp [lengthBlockWriterSupport]), hcleanRange]
+      simp [lengthBlockNonAffineSupport]), hcleanRange]
   have hshiftedTemporary : shifted temporary = false := by
     rw [hshiftedSupport temporary (by
-      simp [lengthBlockWriterSupport]), hcleanTemporary]
+      simp [lengthBlockNonAffineSupport]), hcleanTemporary]
   have hfirstWord := rightLengthXorWrite_wordAction n k K boundary hkK hboundary
     tree control rangeAccumulator temporary path work1At work2At lengthRP shifted
     hlayout.work1Bits hlabels hroute hshiftedPath hshiftedRange hshiftedTemporary
@@ -2508,12 +2797,12 @@ theorem lenUpdateLrpUnary_correct
     hlength hlayout.affine hconstantsSecond
   have hshiftedControl : shifted control = state control :=
     hshiftedSupport control (by
-      simp [lengthBlockWriterSupport, zeroMapProtectedWires])
+      simp [lengthBlockNonAffineSupport])
   have hshiftedTarget : wireValues lengthRP shifted = wireValues lengthRP state := by
     apply wireValues_congr
     intro wire hwire
     exact hshiftedSupport wire (by
-      simp [lengthBlockWriterSupport, hwire])
+      simp [lengthBlockNonAffineSupport, hwire])
   have hshiftedWork1 :
       lowerRangeBits (shifted control) boundary (zeroMapLabels k K) work1At shifted =
         lowerRangeBits (state control) boundary (zeroMapLabels k K) work1At state := by
@@ -2522,7 +2811,7 @@ theorem lenUpdateLrpUnary_correct
     intro label hlabel
     rw [hshiftedControl]
     rw [hshiftedSupport (work1At label) (by
-      simp only [lengthBlockWriterSupport, List.mem_append, List.mem_cons,
+      simp only [lengthBlockNonAffineSupport, List.mem_append, List.mem_cons,
         List.mem_map]
       exact Or.inl (Or.inr (Or.inr
         (Or.inr ⟨label, hlabel, rfl⟩))))]
@@ -2539,7 +2828,7 @@ theorem lenUpdateLrpUnary_correct
     rw [hfirstOutside (work2At label)
       (hlayout.work1Bits.dirty_not_target hlabel)]
     rw [hshiftedSupport (work2At label) (by
-      simp only [lengthBlockWriterSupport, List.mem_append, List.mem_cons,
+      simp only [lengthBlockNonAffineSupport, List.mem_append, List.mem_cons,
         List.mem_map]
       exact Or.inr ⟨label, hlabel, rfl⟩)]
   have hfirstTarget :
@@ -2560,7 +2849,7 @@ theorem lenUpdateLrpUnary_correct
     apply wireValues_congr
     intro wire hwire
     exact hfinal.2.2 wire (hlayout.writer_not_affineRegister (by
-      simp only [lengthBlockWriterSupport, List.mem_append, List.mem_cons,
+      simp only [lengthBlockNonAffineSupport, List.mem_append, List.mem_cons,
         List.mem_map]
       exact Or.inl (Or.inl (Or.inl hwire))))
   have hboundarySecond : wireValues lengthT second = wireValues lengthT shifted := by
@@ -2576,7 +2865,7 @@ theorem lenUpdateLrpUnary_correct
     intro wire hwire
     change run (subConstant lengthT constants carry 3) second wire = false
     rw [hfinal.2.2 wire (hlayout.writer_not_affineRegister (by
-      simp [lengthBlockWriterSupport, zeroMapProtectedWires] at hwire ⊢
+      simp [lengthBlockNonAffineSupport] at hwire ⊢
       aesop))]
     exact hsecondRestores.2 wire hwire
   rw [lenUpdateLrpUnary, Classical.run_append, Classical.run_append,
@@ -2595,6 +2884,43 @@ theorem lenUpdateLrpUnary_correct
       _ = first wire := hsecondOutside wire hwireTarget
       _ = shifted wire := hfirstOutside wire hwireTarget
       _ = state wire := hshift.2.2 wire hwireAffine
+
+/-- Backwards-compatible fully-disjoint specialization of
+`lenUpdateLrpUnary_correct_shared`. -/
+theorem lenUpdateLrpUnary_correct
+    (n k K boundary : Nat) (hkK : k ≤ K)
+    (hboundary : k ≤ boundary ∧ boundary ≤ K)
+    (tree : UnaryActionTree)
+    (control rangeAccumulator temporary carry : Wire) (path : List Wire)
+    (work1At work2At : Nat → Wire)
+    (lengthT lengthRP constants : List Wire) (state : BasisState)
+    (hlength : constants.length = lengthT.length)
+    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
+      work1At work2At lengthT lengthRP constants)
+    (hlabels : tree.visitLabels .inc = zeroMapLabels k K)
+    (hroute : tree.routeLabel
+      (run (addConstant lengthT constants carry 3) state) = boundary)
+    (hcleanConstants : Clean (constants ++ [carry]) state)
+    (hcleanPath : Clean path state)
+    (hcleanRange : state rangeAccumulator = false)
+    (hcleanTemporary : state temporary = false) :
+    let after := run
+      (lenUpdateLrpUnary n k K tree control rangeAccumulator temporary carry path
+        work1At work2At lengthT lengthRP constants) state
+    wireValues lengthRP after =
+        rightLengthWordAction n lengthRP.length k K (state control)
+          (lowerRangeBits (state control) boundary (zeroMapLabels k K) work2At state)
+          (rightLengthWordAction n lengthRP.length k K (state control)
+            (lowerRangeBits (state control) boundary (zeroMapLabels k K) work1At state)
+            (wireValues lengthRP state)) ∧
+      wireValues lengthT after = wireValues lengthT state ∧
+      Clean (constants ++ [carry]) after ∧
+      Clean (path ++ [rangeAccumulator, temporary]) after ∧
+      ∀ wire, wire ∉ lengthRP → after wire = state wire := by
+  exact lenUpdateLrpUnary_correct_shared n k K boundary hkK hboundary tree control
+    rangeAccumulator temporary carry path work1At work2At lengthT lengthRP constants state
+    hlength hlayout.toShared hlabels hroute hcleanConstants hcleanPath hcleanRange
+    hcleanTemporary
 
 /-! ## Complete-block structural and resource contracts -/
 
@@ -2761,6 +3087,48 @@ theorem lenUpdateLrpUnary_wellFormed
     (lengthT lengthRP constants : List Wire)
     (hlength : constants.length = lengthT.length)
     (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
+      work1At work2At lengthT lengthRP constants) :
+    CircuitWellFormed
+      (lenUpdateLrpUnary n k K tree control rangeAccumulator temporary carry path
+        work1At work2At lengthT lengthRP constants) := by
+  simp only [lenUpdateLrpUnary, circuitWellFormed_append]
+  exact ⟨⟨⟨
+    addConstant_wellFormed lengthT constants carry 3 hlength hlayout.affine,
+    rightLengthXorWrite_wellFormed n k K hkK tree control rangeAccumulator
+      temporary path work1At work2At lengthRP hlayout.work1Bits⟩,
+    rightLengthXorWrite_wellFormed n k K hkK tree control rangeAccumulator
+      temporary path work2At work1At lengthRP hlayout.work2Bits⟩,
+    subConstant_wellFormed lengthT constants carry 3 hlength hlayout.affine⟩
+
+/-- Physical well-formedness under the supplement's serial shared-scratch layout. -/
+theorem lenUpdateLtUnary_wellFormed_shared
+    (n k K : Nat) (hkK : k ≤ K) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary carry : Wire) (path : List Wire)
+    (work1At work2At : Nat → Wire)
+    (lengthT lengthRP constants : List Wire)
+    (hlength : constants.length = lengthRP.length)
+    (hlayout : SharedLengthBlockLayout k K tree control rangeAccumulator temporary carry path
+      work1At work2At lengthRP lengthT constants) :
+    CircuitWellFormed
+      (lenUpdateLtUnary n k K tree control rangeAccumulator temporary carry path
+        work1At work2At lengthT lengthRP constants) := by
+  simp only [lenUpdateLtUnary, circuitWellFormed_append]
+  exact ⟨⟨⟨
+    constMinus_wellFormed lengthRP constants carry (n + 2) hlength hlayout.affine,
+    highestPositionXorWrite_wellFormed k K hkK tree control rangeAccumulator
+      temporary path work2At work1At lengthT hlayout.work2Bits⟩,
+    highestPositionXorWrite_wellFormed k K hkK tree control rangeAccumulator
+      temporary path work1At work2At lengthT hlayout.work1Bits⟩,
+    constMinus_wellFormed lengthRP constants carry (n + 2) hlength hlayout.affine⟩
+
+/-- Physical well-formedness of the lower block under the same serial allocation. -/
+theorem lenUpdateLrpUnary_wellFormed_shared
+    (n k K : Nat) (hkK : k ≤ K) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary carry : Wire) (path : List Wire)
+    (work1At work2At : Nat → Wire)
+    (lengthT lengthRP constants : List Wire)
+    (hlength : constants.length = lengthT.length)
+    (hlayout : SharedLengthBlockLayout k K tree control rangeAccumulator temporary carry path
       work1At work2At lengthT lengthRP constants) :
     CircuitWellFormed
       (lenUpdateLrpUnary n k K tree control rangeAccumulator temporary carry path
