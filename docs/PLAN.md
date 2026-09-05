@@ -12,8 +12,9 @@ are on `main@7b0b302c9d065d8507218fff4f49fe876eb05609`. PR #56 → PR #57 → PR
 → PR #78 → PR #79 → PR #80 → PR #81 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
 bounds/windows, and twenty concrete circuit units ending with the exact end-of-iteration
-work/length aggregate. The current Phase-5 unit composes the source-ordered indexed four-phase
-microstep, its explicit reverse stream, direct forward whole-state semantics and scratch cleanup,
+work/length aggregate. Phase 5 circuit unit 21 is current in PR #82: it composes the source-ordered
+indexed four-phase microstep, its explicit reverse stream, direct forward whole-state semantics and
+scratch cleanup,
 adaptive coherent refinement, and blockwise resources. The 1,620-step forward/reverse schedule,
 its model-level refinement, and aggregate paper resources remain Phase 6 work.
 A `✓` means a
@@ -381,7 +382,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 active/padding state; counts are symbolic over the active window.
 
 **Status:** the first twenty dependency-closed construction units are merged through PR #81;
-the source-ordered indexed four-phase microstep is the current unit. PR #62 contains
+the twenty-first, source-ordered indexed four-phase microstep is current in PR #82. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -826,7 +827,7 @@ They are equal only if Phase 11 proves the required reuse.
   `(1,258,164,259)` window/allocation witness are included. The production witness declares 549
   dense roles and certifies `14463 CCX`, `12034 CX`, `16948 X`, and `101241 T` for either
   direction.
-- **Phase-5 circuit unit 21 (current):** the exact indexed four-phase microstep. It composes the
+- **PR #82, Phase-5 circuit unit 21 (current):** the exact indexed four-phase microstep. It composes the
   eight source blocks over the certified active windows, defines the explicit reverse stream,
   proves direct forward whole-state semantics and complete shared-scratch restoration, and gives
   well-formedness/HP-free contracts plus coherent adaptive refinement for the same source term.
@@ -869,6 +870,6 @@ Runzhou approved the five roadmap choices on 2026-09-02:
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
 Phases 0--4 and Phase 5 circuit units 1--20 are merged through PR #81 at `main@7b0b302c`. Phase 5
-circuit unit 21, the exact indexed four-phase source step, is current. Phase 6 remains the
+circuit unit 21, the exact indexed four-phase source step, is current in PR #82. Phase 6 remains the
 1,620-step forward/reverse program, reachable-state encoding/refinement, and aggregate resource
 boundary.
