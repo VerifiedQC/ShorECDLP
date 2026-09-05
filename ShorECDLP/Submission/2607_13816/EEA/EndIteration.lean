@@ -655,11 +655,6 @@ def EndIterationRegisters.allWires
   registers.control :: registers.work1 ++ registers.work2 ++
     registers.lengthT ++ registers.lengthRP ++ registers.scratch
 
-def EndIterationRegisters.usedScratch
-    (registers : EndIterationRegisters) (n : Nat)
-    (windows : EndIterationWindows) : List Wire :=
-  registers.scratch.take (endIterationScratchSize registers n windows)
-
 def EndIterationReady
     (registers : EndIterationRegisters) (state : BasisState) : Prop :=
   Clean registers.scratch state
