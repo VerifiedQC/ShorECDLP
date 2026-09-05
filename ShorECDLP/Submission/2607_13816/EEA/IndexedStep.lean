@@ -1866,12 +1866,6 @@ private theorem IndexedStepLayout.scratch_view
       simp [IndexedStepRegisters.terminal, IndexedStepRegisters.blockScratch,
         hscratch]
 
-private theorem IndexedStepLayout.remainderRepairScratch_length
-    {registers : IndexedStepRegisters} {n T : Nat}
-    (hlayout : IndexedStepLayout registers n T) :
-    registers.remainderRepairScratch.length = 2 := by
-  simp [IndexedStepRegisters.remainderRepairScratch, hlayout.aux_length]
-
 private theorem IndexedStepLayout.aux_view_nodup
     {registers : IndexedStepRegisters} {n T : Nat}
     (hlayout : IndexedStepLayout registers n T) :
