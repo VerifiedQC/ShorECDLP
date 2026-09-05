@@ -827,6 +827,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_tCount
 #print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_correct_routed
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_correct
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.mem_secp256k1ScheduleIndices_iff
+#print axioms ShorECDLP.Paper2607_13816.secp256k1Schedule_indexedFrame
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardUnitary_correct
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardAdaptive_coherent
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_HPFree
@@ -880,8 +892,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 856 ]]; then
-  printf 'expected eight hundred fifty-six #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 868 ]]; then
+  printf 'expected eight hundred sixty-eight #print axioms results\n' >&2
   exit 1
 fi
 
