@@ -453,7 +453,7 @@ private theorem quotientSwap_path_mem_scratch
   intro wire hwire
   exact List.mem_of_mem_take hwire
 
-private theorem quotientSwapTree_indexWires_mem_lengthQ
+theorem quotientSwapTree_indexWires_mem_lengthQ
     (registers : QuotientSwapRegisters) {k K : Nat}
     (hlayout : QuotientSwapLayout registers k K) :
     ∀ wire, wire ∈ (quotientSwapTree registers k K).indexWires →

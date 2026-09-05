@@ -19,6 +19,7 @@ import ShorECDLP.Submission.«2607_13816».EEA.Interval
 import ShorECDLP.Submission.«2607_13816».EEA.PhaseUpdate
 import ShorECDLP.Submission.«2607_13816».EEA.Shift
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientSwap
+import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrefix
 import ShorECDLP.Submission.«2607_13816».EEA.Windows
 
 /-!
