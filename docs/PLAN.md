@@ -12,7 +12,7 @@ are on `main@42b8fa02ea8c90bf97e5fef9ede53f6c2c153fb5`. PR #56 → PR #57 → PR
 → PR #78 landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
 measurement-based uncomputation, pure EEA model, indexed EEA bounds/windows, and seventeen
 concrete circuit units ending with the phase-dependent coefficient-boundary preparation/restoration
-pair. Phase 5 circuit unit 18 is current on this branch: it implements the pinned explicit
+pair. Phase 5 circuit unit 18 is current in PR #79: it implements the pinned explicit
 coefficient-prefix inverse. The full indexed four-phase step remains open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
@@ -379,7 +379,7 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 active/padding state; counts are symbolic over the active window.
 
 **Status:** the first seventeen dependency-closed construction units are merged through PR #78;
-the eighteenth is the current explicit coefficient-prefix inverse on this branch. PR #62 contains
+the eighteenth is the current explicit coefficient-prefix inverse in PR #79. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -774,7 +774,7 @@ They are equal only if Phase 11 proves the required reuse.
   preparation/restoration pair surrounding the forward prefix block. It includes direct word and
   whole-state semantics, shared-scratch restoration, outside preservation, locality/HP-free/WF,
   two-sided round trips, and exact source-order and production resource witnesses.
-- **Phase-5 circuit unit 18 (current branch):** the pinned explicit coefficient-prefix inverse as
+- **PR #79, Phase-5 circuit unit 18 (current):** the pinned explicit coefficient-prefix inverse as
   the same source traversal at opposite ripple mode. It includes the exact adjoint identity, direct
   gate-independent reverse semantics, full scratch restoration, two-sided circuit and recurrence
   round trips, locality/well-formedness, adaptive coherent refinement, flattened source
@@ -815,5 +815,5 @@ Runzhou approved the five roadmap choices on 2026-09-02:
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
 Phases 0--4 and Phase 5 circuit units 1--17 are merged through PR #78 at `main@42b8fa02`. Phase 5
-circuit unit 18, the pinned explicit coefficient-prefix inverse, is current on this branch. The
+circuit unit 18, the pinned explicit coefficient-prefix inverse, is current in PR #79. The
 full indexed four-phase step remains open.
