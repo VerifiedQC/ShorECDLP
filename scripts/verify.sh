@@ -683,6 +683,69 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseNarrow_source_regressions
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseNarrow_resources
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseProduction_resources
+#print axioms ShorECDLP.Paper2607_13816.run_computeControl
+#print axioms ShorECDLP.Paper2607_13816.computeControl_selfAdjoint
+#print axioms ShorECDLP.Paper2607_13816.run_computeControl_twice
+#print axioms ShorECDLP.Paper2607_13816.computeControl_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.computeControl_HPFree
+#print axioms ShorECDLP.Paper2607_13816.computeControl_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.computeControl_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.computeControl_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.computeControl_tCount
+#print axioms ShorECDLP.Paper2607_13816.computeControl_xCount
+#print axioms ShorECDLP.Paper2607_13816.computeControl_reverseMask_source_regression
+#print axioms ShorECDLP.Paper2607_13816.run_rControlNonterminal
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminalPredicate_eq
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_selfAdjoint
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.run_rControlNonterminal_twice
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_HPFree
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_tCount
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_source_regression
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochRestore_eq_adjoint
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochSpill_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochRestore_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.run_terminalEpochRestore_after_spill
+#print axioms ShorECDLP.Paper2607_13816.run_terminalEpochSpill_after_restore
+#print axioms ShorECDLP.Paper2607_13816.run_terminalEpochSpill_terminal
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochSpill_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochRestore_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochSpill_HPFree
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochRestore_HPFree
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochSpill_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochSpill_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochSpill_tCount
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochSpill_xCount
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochRestore_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochRestore_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochRestore_tCount
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochRestore_xCount
+#print axioms ShorECDLP.Paper2607_13816.terminalEpoch_source_regression
+#print axioms ShorECDLP.Paper2607_13816.run_terminalPaddingForward
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward_clean
+#print axioms ShorECDLP.Paper2607_13816.run_terminalPaddingInverse
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_clean
+#print axioms ShorECDLP.Paper2607_13816.run_terminalPaddingInverse_after_forward
+#print axioms ShorECDLP.Paper2607_13816.run_terminalPaddingForward_after_inverse
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward_HPFree
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_HPFree
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward_xCount
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward_tCount
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_xCount
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse_tCount
+#print axioms ShorECDLP.Paper2607_13816.terminalPadding_widthTwo_source_regression
+#print axioms ShorECDLP.Paper2607_13816.terminalPadding_secp256k1_resources
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_HPFree
@@ -736,8 +799,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 712 ]]; then
-  printf 'expected seven hundred twelve #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 775 ]]; then
+  printf 'expected seven hundred seventy-five #print axioms results\n' >&2
   exit 1
 fi
 
