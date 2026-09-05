@@ -464,6 +464,48 @@ def unaryAction
                     (eraseZeroAnd control indexBit path)))))
   | .node _ _ _, _, [] => .done
 
+/-- Source traversal with a genuinely adaptive program at every leaf.  Decoder
+compute/toggle/cleanup order is identical to `unaryAction`; only the leaf payload differs. -/
+def unaryAdaptiveAction
+    (order : UnaryOrder)
+    (leafAction : Nat → Wire → AdaptiveCircuit) :
+    UnaryActionTree → Wire → List Wire → AdaptiveCircuit
+  | .leaf label, control, _ => leafAction label control
+  | .node indexBit zero one, control, path :: rest =>
+      match order with
+      | .inc =>
+          .unitary (computeZeroAnd control indexBit path)
+            ((unaryAdaptiveAction order leafAction zero path rest).seq
+              (.unitary [.CX control path]
+                ((unaryAdaptiveAction order leafAction one path rest).seq
+                  (.unitary [.CX control path]
+                    (eraseZeroAnd control indexBit path)))))
+      | .dec =>
+          .unitary (computeZeroAnd control indexBit path)
+            (.unitary [.CX control path]
+              ((unaryAdaptiveAction order leafAction one path rest).seq
+                (.unitary [.CX control path]
+                  ((unaryAdaptiveAction order leafAction zero path rest).seq
+                    (eraseZeroAnd control indexBit path)))))
+  | .node _ _ _, _, [] => .done
+
+@[simp]
+private theorem unaryAdaptiveAction_unitary
+    (order : UnaryOrder) (leafAction : Nat → Wire → Circuit)
+    (tree : UnaryActionTree) (control : Wire) (ancillas : List Wire) :
+    unaryAdaptiveAction order
+        (fun label dynamic ↦ .unitary (leafAction label dynamic) .done)
+        tree control ancillas =
+      unaryAction order leafAction tree control ancillas := by
+  induction tree generalizing control ancillas with
+  | leaf label => rfl
+  | node indexBit zero one ihZero ihOne =>
+      cases ancillas with
+      | nil => rfl
+      | cons path rest =>
+          cases order <;>
+            simp [unaryAdaptiveAction, unaryAction, ihZero, ihOne]
+
 /-- A leaf action preserves a declared set of decoder wires, including its dynamic path
 control. -/
 def UnaryLeafPreserves
@@ -476,12 +518,31 @@ def UnaryLeafPreserves
 def UnaryLeafHPFree (leafAction : Nat → Wire → Circuit) : Prop :=
   ∀ label control, HPFree (leafAction label control)
 
+/-- Every adaptive leaf coherently refines the corresponding coherent leaf on a clean
+caller-supplied work bank. -/
+def UnaryAdaptiveLeafCoherentOn
+    (leafAdaptive : Nat → Wire → AdaptiveCircuit)
+    (leafUnitary : Nat → Wire → Circuit)
+    (labels : List Nat) (dynamicWires extraWires : List Wire) : Prop :=
+  ∀ label, label ∈ labels → ∀ control, control ∈ dynamicWires →
+    CoherentlyImplementsOn
+      (leafAdaptive label control)
+      (Quantum.run (leafUnitary label control))
+      (fun state ↦ Clean extraWires state)
+
 /-- Every leaf action reached by this tree is physically well formed. -/
 def UnaryLeafWellFormed
     (leafAction : Nat → Wire → Circuit)
     (tree : UnaryActionTree) (protectedWires : List Wire) : Prop :=
   ∀ label ∈ tree.labels, ∀ control ∈ protectedWires,
     CircuitWellFormed (leafAction label control)
+
+/-- Every adaptive leaf reached by this tree is physically well formed. -/
+def UnaryAdaptiveLeafWellFormed
+    (leafAction : Nat → Wire → AdaptiveCircuit)
+    (tree : UnaryActionTree) (protectedWires : List Wire) : Prop :=
+  ∀ label ∈ tree.labels, ∀ control ∈ protectedWires,
+    (leafAction label control).WellFormed
 
 /-- Direct classical meaning of every circuit-valued leaf. -/
 def UnaryLeafRunsAs
@@ -1623,6 +1684,48 @@ private theorem unaryAction_coherent_seq_circuits
   intro state _
   exact (Quantum.run_append firstCircuit secondCircuit (ket state)).symm
 
+private theorem unary_clean_preserved_by_circuit
+    (support extra : List Wire) (circuit : Circuit)
+    (huses : PaperCircuitUsesOnly support circuit)
+    (hdisjoint : List.Disjoint support extra) :
+    ∀ state, Clean extra state → Clean extra (run circuit state) := by
+  rw [List.disjoint_left] at hdisjoint
+  intro state hclean wire hwire
+  rw [huses.preservesOutside state (fun hsupport ↦ hdisjoint hsupport hwire)]
+  exact hclean wire hwire
+
+private theorem unaryNode_compute_usesOnly
+    (indexBit control path : Wire) (zero one : UnaryActionTree)
+    (rest : List Wire) :
+    PaperCircuitUsesOnly
+      (control ::
+        (UnaryActionTree.node indexBit zero one).indexWires.dedup ++
+          path :: rest)
+      (computeZeroAnd control indexBit path) := by
+  simp [computeZeroAnd, PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires,
+    UnaryActionTree.indexWires]
+
+private theorem unaryNode_toggle_usesOnly
+    (indexBit control path : Wire) (zero one : UnaryActionTree)
+    (rest : List Wire) :
+    PaperCircuitUsesOnly
+      (control ::
+        (UnaryActionTree.node indexBit zero one).indexWires.dedup ++
+          path :: rest)
+      ([.CX control path] : Circuit) := by
+  simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires,
+    UnaryActionTree.indexWires]
+
+theorem unaryLayout_decoderNodup
+    {tree : UnaryActionTree} {control : Wire} {ancillas : List Wire}
+    (hlayout : tree.Layout control ancillas) :
+    (control :: tree.indexWires.dedup ++ ancillas).Nodup := by
+  cases hlayout with
+  | leaf label control ancillas hlocal =>
+      simpa [UnaryActionTree.indexWires] using hlocal
+  | node indexBit control path zero one rest hlocal hzero hone =>
+      exact hlocal
+
 /-- Replacing every reverse path-AND by X-measure/reset coherently implements the same
 leaf-action traversal.  The only cross-layer obligation is that each classical leaf action leaves
 the decoder interface unchanged. -/
@@ -1787,6 +1890,285 @@ theorem unaryAction_coherent
           simpa only [unaryAction, unaryActionUnitary,
             AdaptiveCircuit.seq, List.append_assoc] using hall
 
+/-- A source traversal whose leaf payloads also use measurement uncomputation coherently
+implements the literal coherent traversal. `extraWires` is the clean leaf-work bank; the combined
+layout prevents decoder operations from touching it. -/
+theorem unaryAdaptiveAction_coherent_on
+    (order : UnaryOrder)
+    (leafAdaptive : Nat → Wire → AdaptiveCircuit)
+    (leafUnitary : Nat → Wire → Circuit)
+    (tree : UnaryActionTree) (control : Wire)
+    (ancillas extraWires : List Wire)
+    (hlayout : tree.Layout control ancillas)
+    (hfullLayout :
+      ((control :: tree.indexWires.dedup ++ ancillas) ++ extraWires).Nodup)
+    (hleaf : UnaryLeafPreserves leafUnitary
+      ((control :: tree.indexWires.dedup ++ ancillas) ++ extraWires))
+    (hleafCoherent : UnaryAdaptiveLeafCoherentOn leafAdaptive leafUnitary
+      tree.labels (control :: tree.indexWires.dedup ++ ancillas) extraWires)
+    (hhp : UnaryLeafHPFree leafUnitary) :
+    CoherentlyImplementsOn
+      (unaryAdaptiveAction order leafAdaptive tree control ancillas)
+      (Quantum.run
+        (unaryActionUnitary order leafUnitary tree control ancillas))
+      (fun state ↦ Clean ancillas state ∧ Clean extraWires state) := by
+  induction hlayout with
+  | leaf label control ancillas hlocal =>
+      apply unaryAction_coherent_mono
+        (hleafCoherent label (by simp [UnaryActionTree.labels]) control (by simp))
+      exact fun _ hready ↦ hready.2
+  | node indexBit control path zero one rest hlocal hzero hone ihZero ihOne =>
+      obtain ⟨hci, hcp, hip, hpathRest⟩ :=
+        unaryActionNode_parts indexBit control path zero one rest hlocal
+      let decoderWires :=
+        control ::
+          (UnaryActionTree.node indexBit zero one).indexWires.dedup ++
+            path :: rest
+      let protectedWires := decoderWires ++ extraWires
+      have hfullParts := List.nodup_append.mp hfullLayout
+      have hdecoderExtra : List.Disjoint decoderWires extraWires := by
+        rw [List.disjoint_left]
+        intro wire hdecoder hextra
+        exact hfullParts.2.2 wire hdecoder wire hextra rfl
+      have hzeroRoles : ∀ wire,
+          wire ∈ path :: zero.indexWires.dedup ++ rest →
+            wire ∈ decoderWires :=
+        actionTree_zero_decoder_subset indexBit control path zero one rest
+      have honeRoles : ∀ wire,
+          wire ∈ path :: one.indexWires.dedup ++ rest →
+            wire ∈ decoderWires :=
+        actionTree_one_decoder_subset indexBit control path zero one rest
+      have hzeroFull :
+          ((path :: zero.indexWires.dedup ++ rest) ++ extraWires).Nodup := by
+        refine List.nodup_append.mpr
+          ⟨unaryLayout_decoderNodup hzero, hfullParts.2.1, ?_⟩
+        intro first hfirst second hsecond
+        exact hfullParts.2.2 first (hzeroRoles first hfirst) second hsecond
+      have honeFull :
+          ((path :: one.indexWires.dedup ++ rest) ++ extraWires).Nodup := by
+        refine List.nodup_append.mpr
+          ⟨unaryLayout_decoderNodup hone, hfullParts.2.1, ?_⟩
+        intro first hfirst second hsecond
+        exact hfullParts.2.2 first (honeRoles first hfirst) second hsecond
+      have hzeroLeaf : UnaryLeafPreserves leafUnitary
+          ((path :: zero.indexWires.dedup ++ rest) ++ extraWires) := by
+        intro label childControl hchildControl state wire hwire
+        apply hleaf label childControl (by
+          rcases List.mem_append.mp hchildControl with hchildControl | hchildControl
+          · exact List.mem_append.mpr
+              (Or.inl (hzeroRoles childControl hchildControl))
+          · exact List.mem_append.mpr (Or.inr hchildControl)) state wire
+        rcases List.mem_append.mp hwire with hwire | hwire
+        · exact List.mem_append.mpr (Or.inl (hzeroRoles wire hwire))
+        · exact List.mem_append.mpr (Or.inr hwire)
+      have honeLeaf : UnaryLeafPreserves leafUnitary
+          ((path :: one.indexWires.dedup ++ rest) ++ extraWires) := by
+        intro label childControl hchildControl state wire hwire
+        apply hleaf label childControl (by
+          rcases List.mem_append.mp hchildControl with hchildControl | hchildControl
+          · exact List.mem_append.mpr
+              (Or.inl (honeRoles childControl hchildControl))
+          · exact List.mem_append.mpr (Or.inr hchildControl)) state wire
+        rcases List.mem_append.mp hwire with hwire | hwire
+        · exact List.mem_append.mpr (Or.inl (honeRoles wire hwire))
+        · exact List.mem_append.mpr (Or.inr hwire)
+      have hzeroCoherent : UnaryAdaptiveLeafCoherentOn leafAdaptive leafUnitary
+          zero.labels (path :: zero.indexWires.dedup ++ rest) extraWires := by
+        intro label hlabel childControl hchildControl
+        exact hleafCoherent label (by
+          simp [UnaryActionTree.labels, hlabel]) childControl
+          (hzeroRoles childControl hchildControl)
+      have honeCoherent : UnaryAdaptiveLeafCoherentOn leafAdaptive leafUnitary
+          one.labels (path :: one.indexWires.dedup ++ rest) extraWires := by
+        intro label hlabel childControl hchildControl
+        exact hleafCoherent label (by
+          simp [UnaryActionTree.labels, hlabel]) childControl
+          (honeRoles childControl hchildControl)
+      have hleafProtected : UnaryLeafPreserves leafUnitary protectedWires := by
+        simpa [protectedWires, decoderWires] using hleaf
+      have hcontrolDecoder : control ∈ decoderWires := by
+        simp [decoderWires]
+      have hindexDecoder : indexBit ∈ decoderWires := by
+        simp [decoderWires, UnaryActionTree.indexWires]
+      have hpathDecoder : path ∈ decoderWires := by
+        simp [decoderWires]
+      have hzeroPreservesAll : ∀ state,
+          (ActionZeroPathReady control indexBit path rest state ∧
+            Clean extraWires state) →
+          ∀ wire, wire ∈ protectedWires →
+            run (unaryActionUnitary order leafUnitary zero path rest) state wire =
+              state wire := by
+        intro state hready
+        exact unaryActionUnitary_preservesProtected order leafUnitary zero
+          path rest protectedWires state hzero hleafProtected
+          (fun wire hwire ↦ List.mem_append.mpr
+            (Or.inl (hzeroRoles wire hwire))) hready.1.1
+      have honePreservesAll : ∀ state,
+          (ActionOnePathReady control indexBit path rest state ∧
+            Clean extraWires state) →
+          ∀ wire, wire ∈ protectedWires →
+            run (unaryActionUnitary order leafUnitary one path rest) state wire =
+              state wire := by
+        intro state hready
+        exact unaryActionUnitary_preservesProtected order leafUnitary one
+          path rest protectedWires state hone hleafProtected
+          (fun wire hwire ↦ List.mem_append.mpr
+            (Or.inl (honeRoles wire hwire))) hready.1.1
+      have hzeroPreserves : ∀ state,
+          (ActionZeroPathReady control indexBit path rest state ∧
+            Clean extraWires state) →
+          (ActionZeroPathReady control indexBit path rest
+              (run (unaryActionUnitary order leafUnitary zero path rest) state) ∧
+            Clean extraWires
+              (run (unaryActionUnitary order leafUnitary zero path rest) state)) := by
+        intro state hready
+        have hpreserves := hzeroPreservesAll state hready
+        constructor
+        · refine ⟨?_, ?_⟩
+          · intro wire hwire
+            rw [hpreserves wire (List.mem_append.mpr
+              (Or.inl (hzeroRoles wire (by simp [hwire]))))]
+            exact hready.1.1 wire hwire
+          · unfold ActionZeroPathReady at hready
+            unfold ZeroAndComputed at hready ⊢
+            rw [hpreserves control (List.mem_append.mpr (Or.inl hcontrolDecoder)),
+              hpreserves indexBit (List.mem_append.mpr (Or.inl hindexDecoder)),
+              hpreserves path (List.mem_append.mpr (Or.inl hpathDecoder))]
+            exact hready.1.2
+        · intro wire hwire
+          rw [hpreserves wire (List.mem_append.mpr (Or.inr hwire))]
+          exact hready.2 wire hwire
+      have honePreserves : ∀ state,
+          (ActionOnePathReady control indexBit path rest state ∧
+            Clean extraWires state) →
+          (ActionOnePathReady control indexBit path rest
+              (run (unaryActionUnitary order leafUnitary one path rest) state) ∧
+            Clean extraWires
+              (run (unaryActionUnitary order leafUnitary one path rest) state)) := by
+        intro state hready
+        have hpreserves := honePreservesAll state hready
+        constructor
+        · refine ⟨?_, ?_⟩
+          · intro wire hwire
+            rw [hpreserves wire (List.mem_append.mpr
+              (Or.inl (honeRoles wire (by simp [hwire]))))]
+            exact hready.1.1 wire hwire
+          · unfold ActionOnePathReady at hready
+            rw [hpreserves path (List.mem_append.mpr (Or.inl hpathDecoder)),
+              hpreserves control (List.mem_append.mpr (Or.inl hcontrolDecoder)),
+              hpreserves indexBit (List.mem_append.mpr (Or.inl hindexDecoder))]
+            exact hready.1.2
+        · intro wire hwire
+          rw [hpreserves wire (List.mem_append.mpr (Or.inr hwire))]
+          exact hready.2 wire hwire
+      have ihZeroReady : CoherentlyImplementsOn
+          (unaryAdaptiveAction order leafAdaptive zero path rest)
+          (Quantum.run (unaryActionUnitary order leafUnitary zero path rest))
+          (fun state ↦ ActionZeroPathReady control indexBit path rest state ∧
+            Clean extraWires state) :=
+        unaryAction_coherent_mono
+          (ihZero hzeroFull hzeroLeaf hzeroCoherent)
+          (fun _ hready ↦ ⟨hready.1.1, hready.2⟩)
+      have ihOneReady : CoherentlyImplementsOn
+          (unaryAdaptiveAction order leafAdaptive one path rest)
+          (Quantum.run (unaryActionUnitary order leafUnitary one path rest))
+          (fun state ↦ ActionOnePathReady control indexBit path rest state ∧
+            Clean extraWires state) :=
+        unaryAction_coherent_mono
+          (ihOne honeFull honeLeaf honeCoherent)
+          (fun _ hready ↦ ⟨hready.1.1, hready.2⟩)
+      have herase := eraseZeroAnd_coherent control indexBit path hci hcp hip
+      have heraseExtra : CoherentlyImplementsOn
+          (eraseZeroAnd control indexBit path)
+          (Quantum.run (computeZeroAnd control indexBit path))
+          (fun state ↦ ActionZeroPathReady control indexBit path rest state ∧
+            Clean extraWires state) :=
+        unaryAction_coherent_mono herase (fun _ hready ↦ hready.1.2)
+      have htoggleOne := CoherentlyImplementsOn.unitary [.CX control path]
+        (fun state ↦ ActionOnePathReady control indexBit path rest state ∧
+          Clean extraWires state)
+      have htoggleZero := CoherentlyImplementsOn.unitary [.CX control path]
+        (fun state ↦ ActionZeroPathReady control indexBit path rest state ∧
+          Clean extraWires state)
+      have hcompute := CoherentlyImplementsOn.unitary
+        (computeZeroAnd control indexBit path)
+        (fun state ↦ Clean (path :: rest) state ∧ Clean extraWires state)
+      have hcomputeExtra := unary_clean_preserved_by_circuit
+        decoderWires extraWires (computeZeroAnd control indexBit path)
+        (unaryNode_compute_usesOnly indexBit control path zero one rest)
+        hdecoderExtra
+      have htoggleExtra := unary_clean_preserved_by_circuit
+        decoderWires extraWires ([.CX control path] : Circuit)
+        (unaryNode_toggle_usesOnly indexBit control path zero one rest)
+        hdecoderExtra
+      have hcomputeReady : ∀ state,
+          (Clean (path :: rest) state ∧ Clean extraWires state) →
+          (ActionZeroPathReady control indexBit path rest
+              (run (computeZeroAnd control indexBit path) state) ∧
+            Clean extraWires
+              (run (computeZeroAnd control indexBit path) state)) := by
+        intro state hclean
+        exact ⟨actionZeroPathReady_after_compute control indexBit path rest state
+          hci hcp hip hpathRest hclean.1, hcomputeExtra state hclean.2⟩
+      have htoOneReady : ∀ state,
+          (ActionZeroPathReady control indexBit path rest state ∧
+            Clean extraWires state) →
+          (ActionOnePathReady control indexBit path rest
+              (run [.CX control path] state) ∧
+            Clean extraWires (run [.CX control path] state)) := by
+        intro state hready
+        constructor
+        · simpa only [Classical.run_cons, Classical.run_nil] using
+            actionOnePathReady_after_zero_toggle control indexBit path rest state
+              hcp hip hpathRest hready.1
+        · exact htoggleExtra state hready.2
+      have htoZeroReady : ∀ state,
+          (ActionOnePathReady control indexBit path rest state ∧
+            Clean extraWires state) →
+          (ActionZeroPathReady control indexBit path rest
+              (run [.CX control path] state) ∧
+            Clean extraWires (run [.CX control path] state)) := by
+        intro state hready
+        constructor
+        · simpa only [Classical.run_cons, Classical.run_nil] using
+            actionZeroPathReady_after_one_toggle control indexBit path rest state
+              hcp hip hpathRest hready.1
+        · exact htoggleExtra state hready.2
+      cases order with
+      | inc =>
+          have hback := unaryAction_coherent_seq_circuits htoggleOne heraseExtra
+            (by simp) htoZeroReady
+          have honeChunk := unaryAction_coherent_seq_circuits ihOneReady hback
+            (unaryActionUnitary_HPFree .inc leafUnitary one path rest hhp)
+            honePreserves
+          have htoggleChunk := unaryAction_coherent_seq_circuits
+            htoggleZero honeChunk (by simp) htoOneReady
+          have hzeroChunk := unaryAction_coherent_seq_circuits
+            ihZeroReady htoggleChunk
+            (unaryActionUnitary_HPFree .inc leafUnitary zero path rest hhp)
+            hzeroPreserves
+          have hall := unaryAction_coherent_seq_circuits hcompute hzeroChunk
+            (computeZeroAnd_HPFree control indexBit path) hcomputeReady
+          simpa only [unaryAdaptiveAction, unaryActionUnitary,
+            AdaptiveCircuit.seq, List.append_assoc] using hall
+      | dec =>
+          have hzeroErase := unaryAction_coherent_seq_circuits
+            ihZeroReady heraseExtra
+            (unaryActionUnitary_HPFree .dec leafUnitary zero path rest hhp)
+            hzeroPreserves
+          have htoggleZeroChunk := unaryAction_coherent_seq_circuits
+            htoggleOne hzeroErase (by simp) htoZeroReady
+          have honeChunk := unaryAction_coherent_seq_circuits
+            ihOneReady htoggleZeroChunk
+            (unaryActionUnitary_HPFree .dec leafUnitary one path rest hhp)
+            honePreserves
+          have htoggleOneChunk := unaryAction_coherent_seq_circuits
+            htoggleZero honeChunk (by simp) htoOneReady
+          have hall := unaryAction_coherent_seq_circuits hcompute htoggleOneChunk
+            (computeZeroAnd_HPFree control indexBit path) hcomputeReady
+          simpa only [unaryAdaptiveAction, unaryActionUnitary,
+            AdaptiveCircuit.seq, List.append_assoc] using hall
+
 /-- Physical well-formedness of every adaptive branch. -/
 theorem unaryAction_wellFormed
     (order : UnaryOrder) (leafAction : Nat → Wire → Circuit)
@@ -1832,6 +2214,55 @@ theorem unaryAction_wellFormed
                   ⟨htoggle, herase⟩⟩⟩
       | dec =>
           rw [unaryAction]
+          exact ⟨hcompute, ⟨htoggle,
+            AdaptiveCircuit.WellFormed.seq (ihOne honeLeaf)
+              ⟨htoggle,
+                AdaptiveCircuit.WellFormed.seq (ihZero hzeroLeaf) herase⟩⟩⟩
+
+/-- Physical well-formedness when the unary leaf payloads are themselves adaptive. -/
+theorem unaryAdaptiveAction_wellFormed
+    (order : UnaryOrder)
+    (leafAction : Nat → Wire → AdaptiveCircuit)
+    (tree : UnaryActionTree) (control : Wire) (ancillas : List Wire)
+    (hlayout : tree.Layout control ancillas)
+    (hleaf : UnaryAdaptiveLeafWellFormed leafAction tree
+      (control :: tree.indexWires.dedup ++ ancillas)) :
+    (unaryAdaptiveAction order leafAction tree control ancillas).WellFormed := by
+  induction hlayout with
+  | leaf label control ancillas hlocal =>
+      exact hleaf label (by simp [UnaryActionTree.labels]) control (by simp)
+  | node indexBit control path zero one rest hlocal hzero hone ihZero ihOne =>
+      obtain ⟨hci, hcp, hip, _⟩ :=
+        unaryActionNode_parts indexBit control path zero one rest hlocal
+      have hzeroLeaf : UnaryAdaptiveLeafWellFormed leafAction zero
+          (path :: zero.indexWires.dedup ++ rest) := by
+        intro label hlabel childControl hchildControl
+        exact hleaf label (by
+          simp [UnaryActionTree.labels, hlabel]) childControl
+          (actionTree_zero_decoder_subset indexBit control path zero one rest
+            childControl hchildControl)
+      have honeLeaf : UnaryAdaptiveLeafWellFormed leafAction one
+          (path :: one.indexWires.dedup ++ rest) := by
+        intro label hlabel childControl hchildControl
+        exact hleaf label (by
+          simp [UnaryActionTree.labels, hlabel]) childControl
+          (actionTree_one_decoder_subset indexBit control path zero one rest
+            childControl hchildControl)
+      have hcompute :=
+        computeZeroAnd_wellFormed control indexBit path hci hcp hip
+      have htoggle : CircuitWellFormed [.CX control path] := by
+        simp [CircuitWellFormed, Gate.WellFormed, hcp]
+      have herase := eraseZeroAnd_wellFormed control indexBit path hci hcp hip
+      cases order with
+      | inc =>
+          rw [unaryAdaptiveAction]
+          exact ⟨hcompute,
+            AdaptiveCircuit.WellFormed.seq (ihZero hzeroLeaf)
+              ⟨htoggle,
+                AdaptiveCircuit.WellFormed.seq (ihOne honeLeaf)
+                  ⟨htoggle, herase⟩⟩⟩
+      | dec =>
+          rw [unaryAdaptiveAction]
           exact ⟨hcompute, ⟨htoggle,
             AdaptiveCircuit.WellFormed.seq (ihOne honeLeaf)
               ⟨htoggle,
@@ -1893,6 +2324,50 @@ theorem unaryAction_tCount
   | node indexBit control path zero one rest hlocal hzero hone ihZero ihOne =>
       cases order <;>
         rw [unaryAction] <;>
+        simp [AdaptiveCircuit.tCount, unaryAction_tCount_seq,
+          ihZero, ihOne, UnaryActionTree.leafCostSum,
+          UnaryActionTree.internalNodes, tCost] <;>
+        omega
+
+/-- Adaptive measurements are the leaf-local measurements plus one decoder erasure at each
+internal node. -/
+theorem unaryAdaptiveAction_measurementCount
+    (order : UnaryOrder)
+    (leafAction : Nat → Wire → AdaptiveCircuit)
+    (tree : UnaryActionTree) (control : Wire) (ancillas : List Wire)
+    (hlayout : tree.Layout control ancillas) :
+    (unaryAdaptiveAction order leafAction tree control ancillas).measurementCount =
+      tree.leafCostSum
+          (fun label dynamic ↦ (leafAction label dynamic).measurementCount)
+          control ancillas +
+        tree.internalNodes := by
+  induction hlayout with
+  | leaf label control ancillas hlocal => rfl
+  | node indexBit control path zero one rest hlocal hzero hone ihZero ihOne =>
+      cases order <;>
+        rw [unaryAdaptiveAction] <;>
+        simp [AdaptiveCircuit.measurementCount,
+          unaryAction_measurementCount_seq, ihZero, ihOne,
+          UnaryActionTree.leafCostSum, UnaryActionTree.internalNodes] <;>
+        omega
+
+/-- Adaptive T cost is the sum of the actual leaf programs plus the one forward decoder AND at
+each internal node. -/
+theorem unaryAdaptiveAction_tCount
+    (order : UnaryOrder)
+    (leafAction : Nat → Wire → AdaptiveCircuit)
+    (tree : UnaryActionTree) (control : Wire) (ancillas : List Wire)
+    (hlayout : tree.Layout control ancillas) :
+    (unaryAdaptiveAction order leafAction tree control ancillas).tCount =
+      tree.leafCostSum
+          (fun label dynamic ↦ (leafAction label dynamic).tCount)
+          control ancillas +
+        7 * tree.internalNodes := by
+  induction hlayout with
+  | leaf label control ancillas hlocal => rfl
+  | node indexBit control path zero one rest hlocal hzero hone ihZero ihOne =>
+      cases order <;>
+        rw [unaryAdaptiveAction] <;>
         simp [AdaptiveCircuit.tCount, unaryAction_tCount_seq,
           ihZero, ihOne, UnaryActionTree.leafCostSum,
           UnaryActionTree.internalNodes, tCost] <;>

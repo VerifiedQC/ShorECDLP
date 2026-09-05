@@ -356,19 +356,21 @@ def QuotientSwapReady
     (registers : QuotientSwapRegisters) (state : BasisState) : Prop :=
   Clean registers.scratch state
 
-/-- On an in-range quotient value, the source-built decision tree routes to that exact numeric
-label.  This is the semantic bridge from the little-endian `lengthQ` word to the selected
-`Work1[label-k]` lane. -/
-theorem quotientSwapTree_routeLabel_eq
+/-- On an in-range value, the source-built decision tree routes to that exact numeric label.
+Only the nonempty-label and index-width facts are needed; the quotient selector's arithmetic
+registers play no role in this reusable routing boundary. -/
+theorem quotientSwapTree_routeLabel_eq_of_width
     (registers : QuotientSwapRegisters) {k K : Nat}
-    (state : BasisState) (hlayout : QuotientSwapLayout registers k K)
+    (state : BasisState) (hkK : k ≤ K)
+    (hindexWidth : DualUnaryActionTree.sourceWidth
+      (quotientSwapLabels k K).toFinset ≤ registers.lengthQ.length)
     (hvalue : boolWordToNat (wireValues registers.lengthQ state) ∈
       quotientSwapLabels k K) :
     (quotientSwapTree registers k K).routeLabel state =
       boolWordToNat (wireValues registers.lengthQ state) := by
   let labels := (quotientSwapLabels k K).toFinset
   let value := boolWordToNat (wireValues registers.lengthQ state)
-  have hbuildList := quotientSwapDualTree_built registers hlayout.k_le_K
+  have hbuildList := quotientSwapDualTree_built registers hkK
   have hbuildSource : DualUnaryActionTree.buildSource
       registers.index registers.index labels =
         some (quotientSwapDualTree registers k K) := by
@@ -390,7 +392,7 @@ theorem quotientSwapTree_routeLabel_eq
     simpa only [Finset.mem_sort, List.mem_toFinset, labels, value] using hvalue
   · intro bit hbit
     have hbitQ : bit < registers.lengthQ.length :=
-      lt_of_lt_of_le hbit hlayout.index_width
+      lt_of_lt_of_le hbit hindexWidth
     have hbitValues : bit < (wireValues registers.lengthQ state).length := by
       simpa only [wireValues, List.length_map] using hbitQ
     calc
@@ -403,6 +405,17 @@ theorem quotientSwapTree_routeLabel_eq
       _ = value.testBit bit :=
         getD_false_eq_testBit_boolWordToNat
           (wireValues registers.lengthQ state) hbitValues
+
+/-- Quotient-selector specialization of the reusable source-tree routing theorem. -/
+theorem quotientSwapTree_routeLabel_eq
+    (registers : QuotientSwapRegisters) {k K : Nat}
+    (state : BasisState) (hlayout : QuotientSwapLayout registers k K)
+    (hvalue : boolWordToNat (wireValues registers.lengthQ state) ∈
+      quotientSwapLabels k K) :
+    (quotientSwapTree registers k K).routeLabel state =
+      boolWordToNat (wireValues registers.lengthQ state) :=
+  quotientSwapTree_routeLabel_eq_of_width registers state hlayout.k_le_K
+    hlayout.index_width hvalue
 
 private theorem list_getD_mem
     (list : List α) (index : Nat) (fallback : α)
@@ -453,9 +466,11 @@ private theorem quotientSwap_path_mem_scratch
   intro wire hwire
   exact List.mem_of_mem_take hwire
 
-private theorem quotientSwapTree_indexWires_mem_lengthQ
+theorem quotientSwapTree_indexWires_mem_lengthQ
     (registers : QuotientSwapRegisters) {k K : Nat}
-    (hlayout : QuotientSwapLayout registers k K) :
+    (hkK : k ≤ K)
+    (hindexWidth : DualUnaryActionTree.sourceWidth
+      (quotientSwapLabels k K).toFinset ≤ registers.lengthQ.length) :
     ∀ wire, wire ∈ (quotientSwapTree registers k K).indexWires →
       wire ∈ registers.lengthQ := by
   intro wire hwire
@@ -467,9 +482,9 @@ private theorem quotientSwapTree_indexWires_mem_lengthQ
     (quotientSwapDualTree registers k K) (by
       simpa [DualUnaryActionTree.buildSourceFromList,
         DualUnaryActionTree.buildSource] using
-          quotientSwapDualTree_built registers hlayout.k_le_K) hwire
+          quotientSwapDualTree_built registers hkK) hwire
   have hindex : bit < registers.lengthQ.length :=
-    lt_of_lt_of_le hbit hlayout.index_width
+    lt_of_lt_of_le hbit hindexWidth
   exact list_getD_mem registers.lengthQ bit 0 hindex
 
 private theorem quotientSwap_decoder_classify
@@ -486,7 +501,8 @@ private theorem quotientSwap_decoder_classify
   rcases hwire with (rfl | hindex) | hpath
   · exact Or.inl rfl
   · exact Or.inr (Or.inl <|
-      quotientSwapTree_indexWires_mem_lengthQ registers hlayout wire
+      quotientSwapTree_indexWires_mem_lengthQ registers hlayout.k_le_K
+        hlayout.index_width wire
         (by simpa using hindex))
   · exact Or.inr (Or.inr <|
       quotientSwap_path_mem_scratch registers k K wire hpath)
@@ -1447,7 +1463,7 @@ theorem quotientSwapUnitary_usesOnly
     · simp [QuotientSwapRegisters.allWires]
     · intro wire hwire
       have hlengthQ := quotientSwapTree_indexWires_mem_lengthQ
-        registers hlayout wire hwire
+        registers hlayout.k_le_K hlayout.index_width wire hwire
       simp [QuotientSwapRegisters.allWires, hlengthQ]
     · intro wire hwire
       have hscratch := quotientSwap_path_mem_scratch registers k K wire hwire

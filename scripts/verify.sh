@@ -291,6 +291,11 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.unaryAction_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.unaryAction_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.unaryAction_tCount
+#print axioms ShorECDLP.Paper2607_13816.unaryLayout_decoderNodup
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveAction_coherent_on
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveAction_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveAction_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveAction_tCount
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_preservesDecoder
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_clean
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryActionUnitary_HPFree
@@ -604,6 +609,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_source_regression
 #print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_secp256k1_resources
 #print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_secp256k1_resources
+#print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_routeLabel_eq_of_width
+#print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_indexWires_mem_lengthQ
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_labels
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_routeLabel_eq
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapUnitary_correct
@@ -625,6 +632,36 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapSmall_tree_regression
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapSmall_resources
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapSmall_surface_regression
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixTree_labels
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixTree_routeLabel_eq
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixFirstLeaf_state
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixSecondLeaf_state
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixFirstTraversal_state
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixSecondTraversal_state
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixUnitary_state
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_clean
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_adjoint_roundtrip
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSmall_tree_regression
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSmall_resources
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSmall_surface_regression
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixNarrow_tree_regression
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixNarrow_source_regression
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixNarrow_layout
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixNarrow_resources
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixNarrow_surface_regression
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixProduction_layout_inhabited
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixProduction_resources
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -656,8 +693,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 632 ]]; then
-  printf 'expected six hundred thirty-two #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 669 ]]; then
+  printf 'expected six hundred sixty-nine #print axioms results\n' >&2
   exit 1
 fi
 
