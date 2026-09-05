@@ -16,10 +16,10 @@ four-phase microstep. Phase 6 schedule unit 1 serially composes the exact
 1,620 one-based forward steps, the descending explicit reverse stream, the adaptive forward
 program, and the direct automatically routed trace. That trace is noncircular relative to the
 complete schedule, but its route extraction and Block-B endpoint semantics remain circuit-bound.
-The current schedule-cancellation unit proves that the same forward-route invariant suffices for
-the pinned reverse to restore the complete basis state: inverse decoder routes are derived inside
-the proof rather than assumed. The concrete schedule-layout/encoding witness, maximum live
-allocation, and aggregate paper resources remain open.
+Phase 6 schedule-cancellation unit 2 is current in PR #84. It proves that the same forward-route
+invariant suffices for the pinned reverse to restore the complete basis state: inverse decoder
+routes are derived inside the proof rather than assumed. The concrete schedule-layout/encoding
+witness, maximum live allocation, and aggregate paper resources remain open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -568,12 +568,12 @@ forward, descending explicit-reverse, adaptive-forward, and direct automatically
 proves forward whole-state semantics, structural well-formedness/HP-freedom, and adaptive coherent
 refinement; and fixes the secp256k1 horizon to indices `1, ..., 1620`. The routed trace avoids the
 complete schedule circuit but retains circuit-bound route extraction and Block-B endpoint
-semantics. The current schedule-cancellation unit derives the inverse decoder routes from those
-forward routes, proves each literal indexed step cancels, lifts cancellation through the descending
-schedule, and instantiates the exact 1,620-step secp256k1 round trip. These theorems remain
-conditional on the existing threaded layout/state invariant; the concrete EEA encoding must next
-inhabit that invariant. No unconditional nonzero-input inversion or aggregate resource claim is
-attached yet.
+semantics. Schedule-cancellation unit 2 is current in PR #84; it derives the inverse decoder routes
+from those forward routes, proves each literal indexed step cancels, lifts cancellation through the
+descending schedule, and instantiates the exact 1,620-step secp256k1 round trip. These theorems
+remain conditional on the existing threaded layout/state invariant; the concrete EEA encoding must
+next inhabit that invariant. No unconditional nonzero-input inversion or aggregate resource claim
+is attached yet.
 
 The pinned source target is `2n + 6 floor(log2 n) + 19`, or 579 wires at `n = 256` including the
 external point-add control. The presently verified conservative remainder repair needs two more
@@ -880,8 +880,8 @@ other live storage.
   readiness, and input-independent coherent measurement-uncomputation under a threaded schedule
   invariant. That unit intentionally made no reverse-decoder agreement or identity claim; the
   concrete invariant witness, live-wire allocation, and aggregate paper vector remained open.
-- **Phase-6 schedule cancellation unit 2 (current):** derives the explicit inverse decoder routes
-  from the already required forward routes, proves all eight literal indexed-step blocks cancel,
+- **PR #84, Phase-6 schedule cancellation unit 2 (current):** derives the explicit inverse decoder
+  routes from the already required forward routes, proves all eight literal indexed-step blocks cancel,
   composes that result through the descending reverse schedule, and closes the exact 1,620-step
   secp256k1 round trip. The result uses the same threaded layout/state invariant as forward
   correctness and adds no reverse-correctness premise. A concrete reachable-state encoding/layout
@@ -920,7 +920,7 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--5 and Phase 6 schedule unit 1 are merged through PR #83 at `main@f5d91bef`. The current
-schedule-cancellation unit proves conditional explicit-reverse identity from the existing forward
-invariant. The concrete reachable-state encoding/layout witness, maximum-live allocation, and
-aggregate resource boundary remain open.
+Phases 0--5 and Phase 6 schedule unit 1 are merged through PR #83 at `main@f5d91bef`. Phase 6
+schedule-cancellation unit 2 is current in PR #84 and proves conditional explicit-reverse identity
+from the existing forward invariant. The concrete reachable-state encoding/layout witness,
+maximum-live allocation, and aggregate resource boundary remain open.
