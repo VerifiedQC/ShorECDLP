@@ -5,16 +5,16 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-18 paper foundation below
-are on `main@29abb3d005417e7a33ed6687e78a7668478b847a`. PR #56 → PR #57 → PR #58 → PR #59
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-19 paper foundation below
+are on `main@1812e5766c341034848b00e3f28b7a7810690406`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
 → PR #69 → PR #70 → PR #71 → PR #72 → PR #73 → PR #74 → PR #75 → PR #76 → PR #77
-→ PR #78 → PR #79 landed the source split, adaptive Kraus semantics,
+→ PR #78 → PR #79 → PR #80 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and eighteen concrete circuit units ending with the explicit coefficient-prefix
-inverse. Phase 5 circuit unit 19 is current in PR #80: it implements the source-exact mixed-polarity
-control, nonterminal-R control, terminal epoch spill/restore, and borrowed-epoch padding rotation.
-The end-of-iteration aggregate and full indexed four-phase step remain open.
+bounds/windows, and nineteen concrete circuit units ending with the source-exact control and
+terminal helpers. Phase 5 circuit unit 20 is current in this change: it composes the exact
+end-of-iteration work swap and upper/lower length updates, with an explicit reverse aggregate.
+The full indexed four-phase step remains open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -379,8 +379,8 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first eighteen dependency-closed construction units are merged through PR #79;
-the nineteenth is the current control/terminal prerequisite in PR #80. PR #62 contains
+**Status:** the first nineteen dependency-closed construction units are merged through PR #80;
+the twentieth is the current end-of-iteration aggregate in this change. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -521,8 +521,16 @@ regressions, and constructor-derived resources. At the production 259-bit Work2 
 width, the minimum source-valid standalone terminal-padding witness declares 279 roles and touches
 278. The full-step caller supplies 287 formal roles from its shared auxiliary pool but emits the
 identical 278-wire stream: `305 CCX`, `527 CX`, and `2135 T`, with respectively 36 and 68
-standalone X gates in the forward and inverse. The end-of-iteration aggregate and full indexed
-four-phase step remain open within Phase 5.
+standalone X gates in the forward and inverse. The twentieth unit composes the pinned
+`swap_work_and_len_unary_shared_gate` literally: a controlled full-Work Fredkin swap followed by
+the upper and lower length updates in serial over one restored scratch pool; its inverse reverses
+those blocks explicitly. Direct circuit-free and whole-state semantics, clean-scratch restoration,
+outside preservation, locality/HP-free/well-formedness, and a forward-then-inverse round trip are
+proved for the exact aggregate. Its constructor-derived formulas are closed by both a small
+regression and the production windows `(k₄,K₄,k₅,K₅)=(1,258,164,259)`. The production allocation
+declares 549 dense roles, and either direction has `14463 CCX`, `12034 CX`, `16948 X`, and
+`101241 T`; this is a declared-role capacity witness, not an exact touched-wire claim. The full
+indexed four-phase step remains open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -792,12 +800,19 @@ They are equal only if Phase 11 proves the required reuse.
   gate-independent reverse semantics, full scratch restoration, two-sided circuit and recurrence
   round trips, locality/well-formedness, adaptive coherent refinement, flattened source
   comparisons, and equal forward/inverse symbolic and production resource equations.
-- **PR #80, Phase-5 circuit unit 19 (current):** the source-exact control/terminal prerequisite:
+- **PR #80, Phase-5 circuit unit 19:** merged at `1812e576`; the source-exact control/terminal prerequisite:
   reverse-cleanup mixed-polarity control, nonterminal R-control, borrowed terminal-epoch
   spill/restore, and the terminal padding rotation with its inverse. Direct whole-state semantics,
   complete scratch restoration, two-sided cancellation, locality/well-formedness, flattened source
-  regressions, and exact production resource equations are included. The end-of-iteration
-  aggregate and full indexed four-phase step remain open.
+  regressions, and exact production resource equations are included.
+- **Phase-5 circuit unit 20 (current change):** the exact end-of-iteration work/length aggregate
+  and its explicit reverse. The literal circuit performs the full controlled Work-register swap,
+  then the upper and lower length updates serially over shared restored scratch. Direct semantics,
+  cleanup and outside preservation, locality/HP-free/well-formedness, a forward-then-inverse
+  whole-state round trip, symbolic counts, a small constructor regression, and the production
+  `(1,258,164,259)` window/allocation witness are included. The production witness declares 549
+  dense roles and certifies `14463 CCX`, `12034 CX`, `16948 X`, and `101241 T` for either
+  direction. The full indexed four-phase step remains open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -832,6 +847,6 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--18 are merged through PR #79 at `main@29abb3d0`. Phase 5
-circuit unit 19, the source-exact control and terminal prerequisite, is current in PR #80. The
-end-of-iteration aggregate and full indexed four-phase step remain open.
+Phases 0--4 and Phase 5 circuit units 1--19 are merged through PR #80 at `main@1812e576`. Phase 5
+circuit unit 20, the exact end-of-iteration work/length aggregate, is current in this change. The
+full indexed four-phase step remains open.
