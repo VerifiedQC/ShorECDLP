@@ -3464,6 +3464,138 @@ theorem coefficientPrefixUnitary_clean
     simpa [seeded, seed, Classical.run, Classical.applyGate, upd,
       haccumulator] using hready wire hwire
 
+/-- The enclosing indexed step may compute the coefficient selector once, run the complete
+prepared-boundary block, and erase the same selector afterwards. -/
+theorem coefficientPrefixUnitary_preserves_control
+    (registers : CoefficientPrefixRegisters) {k K : Nat}
+    (mode : RippleMode) (signUpdate : Bool) (target : CoefficientTarget)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K) :
+    Classical.run
+        (coefficientPrefixUnitary registers k K mode signUpdate target) state
+        registers.control =
+      state registers.control := by
+  let seed : Circuit := [.CX registers.control (registers.accumulator k K)]
+  let firstCircuit := unaryActionUnitary .inc
+    (coefficientPrefixFirstLeaf registers k K mode target)
+    (coefficientPrefixTree registers k K) registers.control (registers.path k K)
+  let signCircuit := coefficientPrefixSignCircuit registers k K signUpdate
+  let secondCircuit := unaryActionUnitary .dec
+    (coefficientPrefixSecondLeaf registers k K mode target)
+    (coefficientPrefixTree registers k K) registers.control (registers.path k K)
+  let targets := (coefficientPrefixTree registers k K).labels.map
+    (registers.targetAt target k)
+  let seeded := Classical.run seed state
+  let afterFirst := Classical.run firstCircuit seeded
+  let afterSign := Classical.run signCircuit afterFirst
+  let afterSecond := Classical.run secondCircuit afterSign
+  have hpair : AgreesOutside targets
+      (Classical.run secondCircuit (Classical.run firstCircuit seeded)) seeded := by
+    simpa only [targets, firstCircuit, secondCircuit, Classical.run_append] using
+      coefficientPrefixTraversals_pair_preservesOutsideTargets registers mode target
+        seeded hlayout
+  have htransport : AgreesOutside [registers.sign] afterSecond
+      (Classical.run secondCircuit afterFirst) := by
+    exact (coefficientPrefixSecondTraversal_avoidsSign registers mode target
+      hlayout).run_agreesOutside
+        (coefficientPrefixSign_agreesOutsideSign registers k K signUpdate afterFirst)
+  have hcontrolSign : registers.control ≠ registers.sign := by
+    have hfixed := (coefficientPrefix_physical_parts registers hlayout).1
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+      or_false] at hfixed
+    exact hfixed.1
+  have hcontrolTargets : registers.control ∉ targets := by
+    intro htarget
+    simp only [targets, List.mem_map] at htarget
+    obtain ⟨label, hlabel, equality⟩ := htarget
+    apply coefficientPrefix_targetAt_not_decoder registers target hlayout
+    rw [equality]
+    simp
+  have hbodyControl : afterSecond registers.control = seeded registers.control := by
+    calc
+      afterSecond registers.control =
+          Classical.run secondCircuit afterFirst registers.control :=
+        htransport registers.control (by simpa using hcontrolSign)
+      _ = seeded registers.control := hpair registers.control hcontrolTargets
+  have hshape : Classical.run
+      (coefficientPrefixUnitary registers k K mode signUpdate target) state =
+      Classical.run seed afterSecond := by
+    simp only [coefficientPrefixUnitary, seed, firstCircuit, signCircuit,
+      secondCircuit, seeded, afterFirst, afterSign, afterSecond,
+      Classical.run_append]
+  rw [hshape]
+  have hcontrolAcc := coefficientPrefix_control_ne_accumulator registers hlayout
+  simp only [seed, Classical.run, List.foldl, Classical.applyGate]
+  rw [upd_other _ _ _ hcontrolAcc, hbodyControl]
+  simp [seeded, seed, Classical.run, Classical.applyGate, upd, hcontrolAcc]
+
+/-- With the optional sign update disabled, the complete coefficient block reads but does not
+write the sign selector. -/
+theorem coefficientPrefixUnitary_preserves_sign_of_false
+    (registers : CoefficientPrefixRegisters) {k K : Nat}
+    (mode : RippleMode) (target : CoefficientTarget)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K) :
+    Classical.run
+        (coefficientPrefixUnitary registers k K mode false target) state
+        registers.sign =
+      state registers.sign := by
+  let seed : Circuit := [.CX registers.control (registers.accumulator k K)]
+  let firstCircuit := unaryActionUnitary .inc
+    (coefficientPrefixFirstLeaf registers k K mode target)
+    (coefficientPrefixTree registers k K) registers.control (registers.path k K)
+  let secondCircuit := unaryActionUnitary .dec
+    (coefficientPrefixSecondLeaf registers k K mode target)
+    (coefficientPrefixTree registers k K) registers.control (registers.path k K)
+  let targets := (coefficientPrefixTree registers k K).labels.map
+    (registers.targetAt target k)
+  let seeded := Classical.run seed state
+  have hpair : AgreesOutside targets
+      (Classical.run secondCircuit (Classical.run firstCircuit seeded)) seeded := by
+    simpa only [targets, firstCircuit, secondCircuit, Classical.run_append] using
+      coefficientPrefixTraversals_pair_preservesOutsideTargets registers mode target
+        seeded hlayout
+  have hsignTargets : registers.sign ∉ targets := by
+    have hphysical := hlayout.physical
+    rw [CoefficientPrefixRegisters.allWires] at hphysical
+    have hsignNotTail : registers.sign ∉
+        registers.work1 ++
+          (registers.work2 ++ (registers.boundary ++ registers.scratch)) := by
+      intro htail
+      exact (List.nodup_append.mp hphysical).2.2 registers.sign (by simp)
+        registers.sign htail rfl
+    intro htarget
+    simp only [targets, List.mem_map] at htarget
+    obtain ⟨label, hlabel, equality⟩ := htarget
+    cases target with
+    | work1 =>
+        exact hsignNotTail (by
+          simp [CoefficientPrefixRegisters.targetAt] at equality
+          rw [← equality]
+          exact List.mem_append_left _
+            (coefficientPrefix_work1At_mem_any registers hlayout label))
+    | work2 =>
+        exact hsignNotTail (by
+          simp [CoefficientPrefixRegisters.targetAt] at equality
+          rw [← equality]
+          exact List.mem_append_right registers.work1
+            (List.mem_append_left _
+              (coefficientPrefix_work2At_mem_any registers hlayout label)))
+  have hshape : Classical.run
+      (coefficientPrefixUnitary registers k K mode false target) state =
+      Classical.run seed
+        (Classical.run secondCircuit (Classical.run firstCircuit seeded)) := by
+    simp [coefficientPrefixUnitary, coefficientPrefixSignCircuit, seed,
+      firstCircuit, secondCircuit, seeded, Classical.run_append]
+  rw [hshape]
+  have hsignAcc : registers.sign ≠ registers.accumulator k K := by
+    intro equality
+    exact (coefficientPrefix_fixed_not_mem_scratch registers hlayout).2
+      (equality ▸ coefficientPrefix_accumulator_mem_scratch registers hlayout)
+  simp only [seed, Classical.run_cons, Classical.run_nil, Classical.applyGate]
+  rw [upd_other _ _ _ hsignAcc,
+    hpair registers.sign hsignTargets]
+  simp [seeded, seed, Classical.run_cons, Classical.run_nil,
+    Classical.applyGate, upd, hsignAcc]
+
 /-- The literal coherent block has the ordinary exact whole-state adjoint round trip. -/
 theorem coefficientPrefixUnitary_adjoint_roundtrip
     (registers : CoefficientPrefixRegisters) {k K : Nat}

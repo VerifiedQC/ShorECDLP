@@ -803,6 +803,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.endIterationProduction_layout
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_secp256k1_resources
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_small_resources
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_preserves_phase1
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_preserves_sign_of_false
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_preserves_control
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_preserves_control
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_preserves_sign_of_false
+#print axioms ShorECDLP.Paper2607_13816.indexedStepLayout_inhabited
+#print axioms ShorECDLP.Paper2607_13816.indexedStepProduction_layout_inhabited
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_correct
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_xCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_xCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_HPFree
@@ -856,8 +880,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 832 ]]; then
-  printf 'expected eight hundred thirty-two #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 856 ]]; then
+  printf 'expected eight hundred fifty-six #print axioms results\n' >&2
   exit 1
 fi
 

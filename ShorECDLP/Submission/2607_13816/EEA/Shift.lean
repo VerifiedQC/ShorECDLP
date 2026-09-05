@@ -2764,6 +2764,48 @@ theorem run_preShiftUnitary
     hrunCleared]
   rfl
 
+/-- The negative-control setup and cleanup never alter the phase bit itself.  This sharper
+composition lemma is useful when a caller temporarily toggles `phase1` around the pre-shift. -/
+theorem preShiftUnitary_preserves_phase1
+    (registers : ShiftRegisters) (state : BasisState)
+    (hlayout : ShiftLayout registers) (hready : ShiftReady registers state) :
+    run (preShiftUnitary registers) state registers.phase1 =
+      state registers.phase1 := by
+  rw [run_preShiftUnitary registers state hlayout hready]
+  have hphysical :
+      (registers.phase1 :: registers.phase1IsZero :: registers.phase2 ::
+        registers.both :: (registers.work ++ registers.lengthS ++
+          registers.carries ++ registers.reserved)).Nodup := by
+    simpa [ShiftRegisters.allWires, List.append_assoc] using hlayout.physical
+  have houtside := (List.nodup_cons.mp hphysical).1
+  have hwork : registers.phase1 ∉ registers.work := by
+    intro hmem
+    exact houtside (by simp [hmem])
+  have hlength : registers.phase1 ∉ registers.lengthS := by
+    intro hmem
+    exact houtside (by simp [hmem])
+  have hboth : registers.phase1 ≠ registers.both := by
+    intro equality
+    exact houtside (by simp [equality])
+  have hphaseFlag := hlayout.phaseFlagNodup
+  have hphaseFlagNe : registers.phase1 ≠ registers.phase1IsZero := by
+    intro equality
+    exact (List.nodup_cons.mp hphaseFlag).1 (by simp [equality])
+  let marked := state[registers.phase1IsZero ↦
+    Bool.xor (state registers.phase1IsZero) (!state registers.phase1)]
+  have hmarked : marked registers.phase1 = state registers.phase1 := by
+    simp [marked, upd, hphaseFlagNe]
+  let shifted := shiftPayloadState (marked registers.phase1IsZero)
+    (marked registers.phase2) registers.work registers.lengthS
+    registers.both marked
+  have hshifted : shifted registers.phase1 = marked registers.phase1 := by
+    exact shiftPayloadState_preservesOutside _ _ _ _ _ _
+      hwork hlength hboth
+  change shifted[registers.phase1IsZero ↦
+      Bool.xor (shifted registers.phase1IsZero) (!shifted registers.phase1)]
+      registers.phase1 = state registers.phase1
+  rw [upd_other _ _ _ hphaseFlagNe, hshifted, hmarked]
+
 /-- Direct whole-state semantics of the literal post-shift wrapper. -/
 theorem run_postShiftUnitary
     (registers : ShiftRegisters) (state : BasisState)

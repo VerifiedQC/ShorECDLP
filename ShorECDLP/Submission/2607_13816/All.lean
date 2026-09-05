@@ -24,6 +24,7 @@ import ShorECDLP.Submission.«2607_13816».EEA.TBoundary
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrefixInverse
 import ShorECDLP.Submission.«2607_13816».EEA.StepControl
 import ShorECDLP.Submission.«2607_13816».EEA.EndIteration
+import ShorECDLP.Submission.«2607_13816».EEA.IndexedStep
 import ShorECDLP.Submission.«2607_13816».EEA.Windows
 
 /-!
