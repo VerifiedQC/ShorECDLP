@@ -10,11 +10,9 @@ noncircular relative to the complete schedule, but it is not circuit-free: route
 the landed decoder circuits, and Block B retains its circuit-bound endpoint semantics.  The state
 invariant records only obligations that depend on the concrete EEA encoding: clean shared scratch,
 the borrowed epoch, and the two decoded iteration-end routes.  Those obligations are discharged
-by the concrete encoding layer rather than hidden inside this scheduler.  This first schedule
-boundary proves forward semantics and adaptive coherent refinement.  Cancellation of the explicit
-reverse also needs the source inverse decoders to select the forward boundaries; that
-state-dependent fact is intentionally left to the concrete encoding layer rather than assumed
-here.
+by the concrete encoding layer rather than hidden inside this scheduler.  The same forward-route
+invariant now also proves cancellation of the pinned explicit reverse: the component proofs derive
+the inverse decoder routes from the forward execution, so no reverse-correctness premise is added.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -206,6 +204,42 @@ theorem indexedScheduleUnitary_correct
           · simpa only [indexedScheduleUnitary, Classical.run_append,
               hhead.1] using hrest.2
 
+/-- The descending pinned reverse schedule cancels the chronological forward schedule under the
+same routed-state invariant used by forward correctness.  No inverse-route hypothesis is needed. -/
+theorem indexedScheduleInverseUnitary_after_forward
+    (registers : IndexedStepRegisters) (n start count : Nat)
+    (state : BasisState)
+    (hlayout : IndexedScheduleLayout registers n start count)
+    (hinvariant : IndexedScheduleInvariant registers n start count state) :
+    run (indexedScheduleInverseUnitary registers n start count)
+        (run (indexedScheduleUnitary registers n start count) state) = state := by
+  induction hlayout generalizing state with
+  | done start =>
+      cases hinvariant
+      rfl
+  | @step start count head tail ih =>
+      cases hinvariant with
+      | step hready hencoded hroutes htail =>
+          let routes := indexedStepEndRoutes registers n start state
+          have hbounds :
+              (endIterationWindowsAt n start).k4 ≤ routes.1 ∧
+                routes.1 ≤ (endIterationWindowsAt n start).K4 ∧
+                (endIterationWindowsAt n start).k5 ≤ routes.2 ∧
+                routes.2 ≤ (endIterationWindowsAt n start).K5Decode n := by
+            simpa only [IndexedStepRoutesValid, routes] using hroutes
+          have hhead := indexedStepUnitary_correct_routed registers n start state
+            head hready hencoded hroutes
+          have htailCancel := ih
+            (indexedStepRoutedState registers n start state) htail
+          have hstepCancel := indexedStepInverseUnitary_after_forward
+            registers n start routes.1 routes.2
+            ⟨hbounds.1, hbounds.2.1⟩ ⟨hbounds.2.2.1, hbounds.2.2.2⟩
+            state head hready hencoded (fun _ ↦ rfl)
+          simp only [indexedScheduleInverseUnitary, indexedScheduleUnitary,
+            Classical.run_append]
+          rw [hhead.1, htailCancel]
+          simpa only [hhead.1] using hstepCancel
+
 private theorem indexedSchedule_coherent_strengthen
     {program : AdaptiveCircuit} {ideal : State →ₗ[ℂ] State}
     {Valid Stronger : BasisState → Prop}
@@ -330,6 +364,17 @@ theorem secp256k1EEAForwardUnitary_correct
       IndexedStepReady registers
         (run (secp256k1EEAForwardUnitary registers) state) := by
   exact indexedScheduleUnitary_correct registers 256 1
+    secp256k1ScheduleLength state hlayout hinvariant
+
+/-- The exact 1,620-step pinned reverse restores the complete initial basis state after the exact
+forward schedule. -/
+theorem secp256k1EEAReverseUnitary_after_forward
+    (registers : IndexedStepRegisters) (state : BasisState)
+    (hlayout : Secp256k1ScheduleLayout registers)
+    (hinvariant : Secp256k1ScheduleInvariant registers state) :
+    run (secp256k1EEAReverseUnitary registers)
+        (run (secp256k1EEAForwardUnitary registers) state) = state := by
+  exact indexedScheduleInverseUnitary_after_forward registers 256 1
     secp256k1ScheduleLength state hlayout hinvariant
 
 theorem secp256k1EEAForwardAdaptive_coherent

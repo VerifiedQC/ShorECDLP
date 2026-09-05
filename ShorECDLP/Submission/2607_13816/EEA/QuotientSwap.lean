@@ -1184,6 +1184,198 @@ theorem quotientSwap_prepared_value
   simp only [Nat.add_mod, Nat.mod_mod]
   ac_rfl
 
+private theorem quotientSwap_wireValues_congr
+    (register : List Wire) (left right : BasisState)
+    (h : ∀ wire ∈ register, left wire = right wire) :
+    wireValues register left = wireValues register right := by
+  unfold wireValues
+  exact List.map_congr_left h
+
+private theorem quotientSwap_wireValues_eq_at
+    (register : List Wire) (left right : BasisState)
+    (hvalues : wireValues register left = wireValues register right)
+    {wire : Wire} (hwire : wire ∈ register) :
+    left wire = right wire := by
+  induction register with
+  | nil => simp at hwire
+  | cons head tail ih =>
+      simp only [wireValues, List.map_cons, List.cons.injEq] at hvalues
+      rcases List.mem_cons.mp hwire with rfl | htail
+      · exact hvalues.1
+      · exact ih hvalues.2 htail
+
+private theorem quotientSwapState_preserves_lengthWords
+    (registers : QuotientSwapRegisters) {k K label : Nat}
+    (enabled : Bool) (state : BasisState)
+    (hlayout : QuotientSwapLayout registers k K) :
+    wireValues registers.lengthT
+        (quotientSwapState registers k label enabled state) =
+        wireValues registers.lengthT state ∧
+      wireValues registers.lengthQ
+        (quotientSwapState registers k label enabled state) =
+        wireValues registers.lengthQ state := by
+  have hsignLengthT : registers.sign ∉ registers.lengthT := by
+    intro hmem
+    exact (quotientSwap_physical_parts registers hlayout).2.2.2.1
+      registers.sign (by simp) registers.sign (by simp [hmem]) rfl
+  have hsignLengthQ : registers.sign ∉ registers.lengthQ := by
+    intro hmem
+    exact (quotientSwap_physical_parts registers hlayout).2.2.2.1
+      registers.sign (by simp) registers.sign (by simp [hmem]) rfl
+  have hworkLengthT : registers.workAt k label ∉ registers.lengthT := by
+    intro hmem
+    exact (quotientSwap_physical_parts registers hlayout).2.2.2.2
+      (registers.workAt k label)
+      (quotientSwap_workAt_mem_any registers hlayout label)
+      (registers.workAt k label) (by simp [hmem]) rfl
+  have hworkLengthQ : registers.workAt k label ∉ registers.lengthQ := by
+    intro hmem
+    exact (quotientSwap_physical_parts registers hlayout).2.2.2.2
+      (registers.workAt k label)
+      (quotientSwap_workAt_mem_any registers hlayout label)
+      (registers.workAt k label) (by simp [hmem]) rfl
+  constructor
+  · apply quotientSwap_wireValues_congr
+    intro wire hwire
+    have hwireSign : wire ≠ registers.sign := fun equality ↦
+      hsignLengthT (equality ▸ hwire)
+    have hwireWork : wire ≠ registers.workAt k label := fun equality ↦
+      hworkLengthT (equality ▸ hwire)
+    cases enabled <;>
+      simp [quotientSwapState, upd, hwireSign, hwireWork]
+  · apply quotientSwap_wireValues_congr
+    intro wire hwire
+    have hwireSign : wire ≠ registers.sign := fun equality ↦
+      hsignLengthQ (equality ▸ hwire)
+    have hwireWork : wire ≠ registers.workAt k label := fun equality ↦
+      hworkLengthQ (equality ▸ hwire)
+    cases enabled <;>
+      simp [quotientSwapState, upd, hwireSign, hwireWork]
+
+private theorem quotientSwapState_involutive
+    (registers : QuotientSwapRegisters) (k label : Nat)
+    (enabled : Bool) (state : BasisState)
+    (hdistinct : registers.sign ≠ registers.workAt k label) :
+    quotientSwapState registers k label enabled
+        (quotientSwapState registers k label enabled state) = state := by
+  cases enabled with
+  | false => rfl
+  | true =>
+      funext wire
+      by_cases hsign : wire = registers.sign
+      · subst wire
+        simp [quotientSwapState, upd, hdistinct]
+      · by_cases hwork : wire = registers.workAt k label
+        · subst wire
+          simp [quotientSwapState, upd, hdistinct]
+        · simp [quotientSwapState, upd, hsign, hwork]
+
+/-- Running the literal quotient selector twice restores the complete basis state.  The first
+run restores both stored length words and shared scratch, so the second unary decoder necessarily
+chooses the same lane; no caller-supplied route equality is needed. -/
+theorem run_quotientSwapUnitary_after_forward
+    (registers : QuotientSwapRegisters) {k K : Nat}
+    (state : BasisState) (hlayout : QuotientSwapLayout registers k K)
+    (hready : QuotientSwapReady registers state) :
+    Classical.run (quotientSwapUnitary registers k K)
+        (Classical.run (quotientSwapUnitary registers k K) state) = state := by
+  let prepareState := fun input : BasisState ↦
+    Classical.run
+      (addConstant registers.lengthQ registers.constantScratch
+        (registers.carry k K) 3)
+      (Classical.run
+        (cuccaroAdd registers.lengthT registers.lengthQ
+          (registers.carry k K)) input)
+  let firstRoute := (quotientSwapTree registers k K).routeLabel
+    (prepareState state)
+  let middle := Classical.run (quotientSwapUnitary registers k K) state
+  let secondRoute := (quotientSwapTree registers k K).routeLabel
+    (prepareState middle)
+  have hfirst := quotientSwapUnitary_correct registers state hlayout hready
+  have hmiddle : middle = quotientSwapState registers k firstRoute
+      (state registers.control) state := by
+    simpa only [middle, firstRoute, prepareState] using hfirst.1
+  have hreadyMiddle : QuotientSwapReady registers middle := by
+    rw [hmiddle]
+    intro wire hwire
+    have hwireSign : wire ≠ registers.sign := by
+      intro equality
+      subst wire
+      exact (quotientSwap_physical_parts registers hlayout).2.2.2.1
+        registers.sign (by simp) registers.sign
+        (by simp [hwire]) rfl
+    have hwireWork : wire ≠ registers.workAt k firstRoute := by
+      intro equality
+      subst wire
+      exact (quotientSwap_physical_parts registers hlayout).2.2.2.2
+        (registers.workAt k firstRoute)
+        (quotientSwap_workAt_mem_any registers hlayout firstRoute)
+        (registers.workAt k firstRoute)
+        (by simp [hwire]) rfl
+    cases state registers.control <;>
+      simp [quotientSwapState, upd, hwireSign, hwireWork,
+        hready wire hwire]
+  have hsecond := quotientSwapUnitary_correct registers middle hlayout hreadyMiddle
+  have hsecondState : Classical.run (quotientSwapUnitary registers k K) middle =
+      quotientSwapState registers k secondRoute
+        (middle registers.control) middle := by
+    simpa only [secondRoute, prepareState] using hsecond.1
+  have hlengths := quotientSwapState_preserves_lengthWords registers
+    (state registers.control) state hlayout (label := firstRoute)
+  have hmiddleLengthT : wireValues registers.lengthT middle =
+      wireValues registers.lengthT state := by
+    rw [hmiddle]
+    exact hlengths.1
+  have hmiddleLengthQ : wireValues registers.lengthQ middle =
+      wireValues registers.lengthQ state := by
+    rw [hmiddle]
+    exact hlengths.2
+  have hfirstValue : boolWordToNat
+      (wireValues registers.lengthQ (prepareState state)) =
+      (boolWordToNat (wireValues registers.lengthT state) +
+          boolWordToNat (wireValues registers.lengthQ state) + 3) %
+        2 ^ registers.lengthQ.length := by
+    simpa only [prepareState] using
+      (quotientSwap_prepared_value registers state hlayout hready)
+  have hsecondValue : boolWordToNat
+      (wireValues registers.lengthQ (prepareState middle)) =
+      (boolWordToNat (wireValues registers.lengthT middle) +
+          boolWordToNat (wireValues registers.lengthQ middle) + 3) %
+        2 ^ registers.lengthQ.length := by
+    simpa only [prepareState] using
+      (quotientSwap_prepared_value registers middle hlayout hreadyMiddle)
+  have hpreparedWords : wireValues registers.lengthQ (prepareState middle) =
+      wireValues registers.lengthQ (prepareState state) := by
+    apply boolWordToNat_injective_of_length
+    · simp [wireValues]
+    · rw [hsecondValue, hfirstValue, hmiddleLengthT, hmiddleLengthQ]
+  have hroutes : secondRoute = firstRoute := by
+    apply (quotientSwapTree registers k K).routeLabel_congr
+    intro wire hwire
+    have hlengthQ := quotientSwapTree_indexWires_mem_lengthQ registers
+      hlayout.k_le_K hlayout.index_width wire hwire
+    exact quotientSwap_wireValues_eq_at registers.lengthQ
+      (prepareState middle) (prepareState state) hpreparedWords hlengthQ
+  have hcontrol : middle registers.control = state registers.control := by
+    rw [hmiddle]
+    have hcontrolNeSign : registers.control ≠ registers.sign := by
+      simpa using (List.nodup_cons.mp
+        (quotientSwap_physical_parts registers hlayout).1).1
+    have hcontrolNeWork : registers.control ≠ registers.workAt k firstRoute := by
+      intro equality
+      exact (quotientSwap_physical_parts registers hlayout).2.2.2.1
+        registers.control (by simp) (registers.workAt k firstRoute)
+        (by simp [quotientSwap_workAt_mem_any registers hlayout firstRoute]) equality
+    cases hactive : state registers.control <;>
+      simp [quotientSwapState, hactive, upd, hcontrolNeSign, hcontrolNeWork]
+  rw [show Classical.run (quotientSwapUnitary registers k K) middle =
+      quotientSwapState registers k secondRoute
+        (middle registers.control) middle from hsecondState,
+    hroutes, hcontrol, hmiddle]
+  exact quotientSwapState_involutive registers k firstRoute
+    (state registers.control) state
+    (quotientSwap_sign_ne_workAt_any registers hlayout firstRoute)
+
 /-- Direct in-range source semantics: when the prepared quotient value lies in `k, ..., K`, the
 controlled swap uses exactly that numeric value as its `Work1[value-k]` label. -/
 theorem quotientSwapUnitary_correct_in_range

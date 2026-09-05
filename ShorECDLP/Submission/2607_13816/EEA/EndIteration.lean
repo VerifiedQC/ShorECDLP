@@ -2990,6 +2990,356 @@ theorem swapWorkAndLengthUnaryShared_roundTrip
       (hmiddleOutside wire hwork1Mem hwork2Mem hlengthTMem hlengthRPMem)
   simpa only [after, middle] using hstate
 
+/-- The decoder routes required by the explicit reverse are consequences of the forward
+routes.  The lower block leaves the left-boundary decoder word unchanged, and running that
+block a second time cancels its two Boolean-word actions.  The upper inverse decoder therefore
+sees the original reflected right boundary as well. -/
+theorem swapWorkAndLengthUnaryShared_inverseRoutes
+    (registers : EndIterationRegisters) (n : Nat)
+    (windows : EndIterationWindows)
+    (boundary4 boundary5 : Nat)
+    (hboundary4 : windows.k4 ≤ boundary4 ∧ boundary4 ≤ windows.K4)
+    (hboundary5 : windows.k5 ≤ boundary5 ∧
+      boundary5 ≤ windows.K5Decode n)
+    (state : BasisState)
+    (hlayout : EndIterationLayout registers n windows)
+    (hroute4Forward : (registers.upperTree windows).routeLabel
+      (run (constMinus registers.lengthRP registers.constants registers.carry (n + 2))
+        (run (controlledWorkSwap registers.control registers.work1 registers.work2)
+          state)) = boundary4)
+    (hroute5Forward : (registers.lowerTree n windows).routeLabel
+      (run (addConstant registers.lengthT registers.constants registers.carry 3)
+        (run
+          (lenUpdateLtUnary n windows.k4 windows.K4 (registers.upperTree windows)
+            registers.control (registers.rangeAccumulator windows.k4 windows.K4)
+            (registers.temporary windows.k4 windows.K4) registers.carry
+            (registers.path windows.k4 windows.K4)
+            registers.work1At registers.work2At registers.lengthT registers.lengthRP
+            registers.constants)
+          (run (controlledWorkSwap registers.control registers.work1 registers.work2)
+            state))) = boundary5)
+    (hready : EndIterationReady registers state) :
+    let middle := run (swapWorkAndLengthUnaryShared registers n windows) state
+    let afterLower := run
+      (lenUpdateLrpUnary n windows.k5 (windows.K5Decode n)
+        (registers.lowerTree n windows) registers.control
+        (registers.rangeAccumulator windows.k5 (windows.K5Decode n))
+        (registers.temporary windows.k5 (windows.K5Decode n)) registers.carry
+        (registers.path windows.k5 (windows.K5Decode n))
+        registers.work1At registers.work2At registers.lengthT registers.lengthRP
+        registers.constants) middle
+    (registers.lowerTree n windows).routeLabel
+        (run (addConstant registers.lengthT registers.constants registers.carry 3)
+          middle) = boundary5 ∧
+      (registers.upperTree windows).routeLabel
+        (run (constMinus registers.lengthRP registers.constants registers.carry (n + 2))
+          afterLower) = boundary4 := by
+  let swapped := run
+    (controlledWorkSwap registers.control registers.work1 registers.work2) state
+  let afterUpper := run
+    (lenUpdateLtUnary n windows.k4 windows.K4 (registers.upperTree windows)
+      registers.control (registers.rangeAccumulator windows.k4 windows.K4)
+      (registers.temporary windows.k4 windows.K4) registers.carry
+      (registers.path windows.k4 windows.K4)
+      registers.work1At registers.work2At registers.lengthT registers.lengthRP
+      registers.constants) swapped
+  let middle := run
+    (lenUpdateLrpUnary n windows.k5 (windows.K5Decode n)
+      (registers.lowerTree n windows) registers.control
+      (registers.rangeAccumulator windows.k5 (windows.K5Decode n))
+      (registers.temporary windows.k5 (windows.K5Decode n)) registers.carry
+      (registers.path windows.k5 (windows.K5Decode n))
+      registers.work1At registers.work2At registers.lengthT registers.lengthRP
+      registers.constants) afterUpper
+  let afterLower := run
+    (lenUpdateLrpUnary n windows.k5 (windows.K5Decode n)
+      (registers.lowerTree n windows) registers.control
+      (registers.rangeAccumulator windows.k5 (windows.K5Decode n))
+      (registers.temporary windows.k5 (windows.K5Decode n)) registers.carry
+      (registers.path windows.k5 (windows.K5Decode n))
+      registers.work1At registers.work2At registers.lengthT registers.lengthRP
+      registers.constants) middle
+  have hworkLength : registers.work1.length = registers.work2.length :=
+    hlayout.work1_length.trans hlayout.work2_length.symm
+  have hcontrolLeft : registers.control ∉ registers.work1 := by
+    intro hmem
+    exact (List.nodup_cons.mp hlayout.work_nodup).1
+      (List.mem_append_left registers.work2 hmem)
+  have hcontrolRight : registers.control ∉ registers.work2 := by
+    intro hmem
+    exact (List.nodup_cons.mp hlayout.work_nodup).1
+      (List.mem_append_right registers.work1 hmem)
+  have hswapOutside (wire : Wire)
+      (hleft : wire ∉ registers.work1) (hright : wire ∉ registers.work2) :
+      swapped wire = state wire := by
+    exact controlledWorkSwap_preservesOutsideWords registers.control registers.work1
+      registers.work2 state hcontrolLeft hcontrolRight wire hleft hright
+  have hreadySwapped : EndIterationReady registers swapped := by
+    intro wire hwire
+    rw [hswapOutside wire (hlayout.scratch_not_work1 hwire)
+      (hlayout.scratch_not_work2 hwire)]
+    exact hready wire hwire
+  obtain ⟨hconstants4, hpath4, hrange4, htemporary4⟩ :=
+    hlayout.clean_components4 hreadySwapped
+  have hpositiveRP : 0 < registers.lengthRP.length := by
+    rw [hlayout.lengthRP_length]
+    exact hlayout.width_positive
+  have hconstantsRP : registers.constants.length = registers.lengthRP.length :=
+    hlayout.constants_length.trans hlayout.lengthRP_length.symm
+  have hupper := lenUpdateLtUnary_correct_shared n windows.k4 windows.K4 boundary4
+    hlayout.k4_le_K4 hboundary4 (registers.upperTree windows) registers.control
+    (registers.rangeAccumulator windows.k4 windows.K4)
+    (registers.temporary windows.k4 windows.K4) registers.carry
+    (registers.path windows.k4 windows.K4)
+    registers.work1At registers.work2At registers.lengthT registers.lengthRP
+    registers.constants swapped hpositiveRP hconstantsRP hlayout.upper
+    (registers.upperTree_visitLabels windows hlayout.k4_le_K4)
+    (by simpa only [swapped] using hroute4Forward)
+    hconstants4 hpath4 hrange4 htemporary4
+  have hupperBoundary : wireValues registers.lengthRP afterUpper =
+      wireValues registers.lengthRP swapped := by
+    simpa only [afterUpper] using hupper.2.1
+  have hupperOutside : ∀ wire, wire ∉ registers.lengthT →
+      afterUpper wire = swapped wire := by
+    simpa only [afterUpper] using hupper.2.2.2.2
+  have hreadyUpper : EndIterationReady registers afterUpper := by
+    intro wire hwire
+    rw [hupperOutside wire (hlayout.scratch_not_lengthT hwire)]
+    exact hreadySwapped wire hwire
+  obtain ⟨hconstants5, hpath5, hrange5, htemporary5⟩ :=
+    hlayout.clean_components5 hreadyUpper
+  have hconstantsT : registers.constants.length = registers.lengthT.length := by
+    simpa only [EndIterationRegisters.width] using hlayout.constants_length
+  have hlowerForward := lenUpdateLrpUnary_correct_shared n windows.k5
+    (windows.K5Decode n) boundary5 hlayout.k5_le_decode hboundary5
+    (registers.lowerTree n windows) registers.control
+    (registers.rangeAccumulator windows.k5 (windows.K5Decode n))
+    (registers.temporary windows.k5 (windows.K5Decode n)) registers.carry
+    (registers.path windows.k5 (windows.K5Decode n))
+    registers.work1At registers.work2At registers.lengthT registers.lengthRP
+    registers.constants afterUpper hconstantsT hlayout.lower
+    (registers.lowerTree_visitLabels n windows hlayout.k5_le_decode)
+    (by simpa only [afterUpper, swapped] using hroute5Forward)
+    hconstants5 hpath5 hrange5 htemporary5
+  have hlowerForwardOutside : ∀ wire, wire ∉ registers.lengthRP →
+      middle wire = afterUpper wire := by
+    simpa only [middle] using hlowerForward.2.2.2.2
+  have hreadyMiddle : EndIterationReady registers middle := by
+    intro wire hwire
+    rw [hlowerForwardOutside wire (hlayout.scratch_not_lengthRP hwire)]
+    exact hreadyUpper wire hwire
+  have hroute5AtUpper : (registers.lowerTree n windows).routeLabel
+      (run (addConstant registers.lengthT registers.constants registers.carry 3)
+        afterUpper) = boundary5 := by
+    simpa only [afterUpper, swapped] using hroute5Forward
+  have hroute5Inverse : (registers.lowerTree n windows).routeLabel
+      (run (addConstant registers.lengthT registers.constants registers.carry 3)
+        middle) = boundary5 := by
+    calc
+      (registers.lowerTree n windows).routeLabel
+          (run (addConstant registers.lengthT registers.constants registers.carry 3)
+            middle) =
+        (registers.lowerTree n windows).routeLabel
+          (run (addConstant registers.lengthT registers.constants registers.carry 3)
+            afterUpper) := by
+              apply (registers.lowerTree n windows).routeLabel_congr
+              intro wire hwire
+              have hnotTarget : wire ∉ registers.lengthRP :=
+                hlayout.lower.work1Bits.mapWire_not_target (by
+                  simp [zeroMapWires, zeroMapProtectedWires, hwire])
+              by_cases hsupport : wire ∈
+                  registers.constants ++ registers.lengthT ++ [registers.carry]
+              · apply (addConstant_usesOnly registers.lengthT registers.constants
+                    registers.carry 3).run_congrOn
+                  middle afterUpper _ wire hsupport
+                intro next hnext
+                apply hlowerForwardOutside
+                rcases List.mem_append.mp hnext with hnext | hcarry
+                · rcases List.mem_append.mp hnext with hconstant | hlengthT
+                  · exact List.disjoint_left.mp
+                      hlayout.lower.constantCarryDisjointTarget
+                      (List.mem_append_left [registers.carry] hconstant)
+                  · exact hlayout.lengthT_not_lengthRP hlengthT
+                · exact List.disjoint_left.mp
+                    hlayout.lower.constantCarryDisjointTarget
+                    (List.mem_append_right registers.constants hcarry)
+              · rw [(addConstant_usesOnly registers.lengthT registers.constants
+                    registers.carry 3).preservesOutside middle hsupport,
+                  (addConstant_usesOnly registers.lengthT registers.constants
+                    registers.carry 3).preservesOutside afterUpper hsupport]
+                exact hlowerForwardOutside wire hnotTarget
+      _ = boundary5 := hroute5AtUpper
+  obtain ⟨hconstants5Middle, hpath5Middle, hrange5Middle, htemporary5Middle⟩ :=
+    hlayout.clean_components5 hreadyMiddle
+  have hlowerInverse := lenUpdateLrpUnary_correct_shared n windows.k5
+    (windows.K5Decode n) boundary5 hlayout.k5_le_decode hboundary5
+    (registers.lowerTree n windows) registers.control
+    (registers.rangeAccumulator windows.k5 (windows.K5Decode n))
+    (registers.temporary windows.k5 (windows.K5Decode n)) registers.carry
+    (registers.path windows.k5 (windows.K5Decode n))
+    registers.work1At registers.work2At registers.lengthT registers.lengthRP
+    registers.constants middle hconstantsT hlayout.lower
+    (registers.lowerTree_visitLabels n windows hlayout.k5_le_decode)
+    hroute5Inverse hconstants5Middle hpath5Middle hrange5Middle htemporary5Middle
+  have hlowerInverseOutside : ∀ wire, wire ∉ registers.lengthRP →
+      afterLower wire = middle wire := by
+    simpa only [afterLower] using hlowerInverse.2.2.2.2
+  have hcontrolMiddle : middle registers.control = afterUpper registers.control :=
+    hlowerForwardOutside registers.control hlayout.lower.work1Bits.control_not_target
+  have hwork1Middle :
+      lowerRangeBits (middle registers.control) boundary5
+          (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work1At middle =
+        lowerRangeBits (afterUpper registers.control) boundary5
+          (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work1At afterUpper := by
+    unfold lowerRangeBits
+    apply List.map_congr_left
+    intro label hlabel
+    rw [hcontrolMiddle,
+      hlowerForwardOutside (registers.work1At label)
+        (hlayout.lower.work2Bits.dirty_not_target hlabel)]
+  have hwork2Middle :
+      lowerRangeBits (middle registers.control) boundary5
+          (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work2At middle =
+        lowerRangeBits (afterUpper registers.control) boundary5
+          (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work2At afterUpper := by
+    unfold lowerRangeBits
+    apply List.map_congr_left
+    intro label hlabel
+    rw [hcontrolMiddle,
+      hlowerForwardOutside (registers.work2At label)
+        (hlayout.lower.work1Bits.dirty_not_target hlabel)]
+  have hlowerForwardTarget : wireValues registers.lengthRP middle =
+      rightLengthWordAction n registers.lengthRP.length windows.k5
+        (windows.K5Decode n) (afterUpper registers.control)
+        (lowerRangeBits (afterUpper registers.control) boundary5
+          (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work2At afterUpper)
+        (rightLengthWordAction n registers.lengthRP.length windows.k5
+          (windows.K5Decode n) (afterUpper registers.control)
+          (lowerRangeBits (afterUpper registers.control) boundary5
+            (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work1At afterUpper)
+          (wireValues registers.lengthRP afterUpper)) := by
+    simpa only [middle] using hlowerForward.1
+  have hlowerInverseTarget : wireValues registers.lengthRP afterLower =
+      rightLengthWordAction n registers.lengthRP.length windows.k5
+        (windows.K5Decode n) (middle registers.control)
+        (lowerRangeBits (middle registers.control) boundary5
+          (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work2At middle)
+        (rightLengthWordAction n registers.lengthRP.length windows.k5
+          (windows.K5Decode n) (middle registers.control)
+          (lowerRangeBits (middle registers.control) boundary5
+            (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work1At middle)
+          (wireValues registers.lengthRP middle)) := by
+    simpa only [afterLower] using hlowerInverse.1
+  have hafterLowerBoundary : wireValues registers.lengthRP afterLower =
+      wireValues registers.lengthRP afterUpper := by
+    rw [hlowerInverseTarget, hwork1Middle, hwork2Middle, hcontrolMiddle,
+      hlowerForwardTarget]
+    exact rightLengthWordActions_involutive n registers.lengthRP.length
+      windows.k5 (windows.K5Decode n) (afterUpper registers.control)
+      (lowerRangeBits (afterUpper registers.control) boundary5
+        (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work2At afterUpper)
+      (lowerRangeBits (afterUpper registers.control) boundary5
+        (zeroMapLabels windows.k5 (windows.K5Decode n)) registers.work1At afterUpper)
+      (wireValues registers.lengthRP afterUpper)
+      (by simp [lowerRangeBits]) (by simp [lowerRangeBits])
+  have hrightBoundary : wireValues registers.lengthRP afterLower =
+      wireValues registers.lengthRP swapped :=
+    hafterLowerBoundary.trans hupperBoundary
+  have hconstantsAfterLower :
+      Clean (registers.constants ++ [registers.carry]) afterLower := by
+    simpa only [afterLower] using hlowerInverse.2.2.1
+  have hroute4AtSwapped : (registers.upperTree windows).routeLabel
+      (run (constMinus registers.lengthRP registers.constants registers.carry (n + 2))
+        swapped) = boundary4 := by
+    simpa only [swapped] using hroute4Forward
+  have hroute4Inverse : (registers.upperTree windows).routeLabel
+      (run (constMinus registers.lengthRP registers.constants registers.carry (n + 2))
+        afterLower) = boundary4 := by
+    calc
+      (registers.upperTree windows).routeLabel
+          (run (constMinus registers.lengthRP registers.constants registers.carry (n + 2))
+            afterLower) =
+        (registers.upperTree windows).routeLabel
+          (run (constMinus registers.lengthRP registers.constants registers.carry (n + 2))
+            swapped) := by
+              apply (registers.upperTree windows).routeLabel_congr
+              intro wire hwire
+              have hnotTarget : wire ∉ registers.lengthT :=
+                hlayout.upper.work1Bits.mapWire_not_target (by
+                  simp [zeroMapWires, zeroMapProtectedWires, hwire])
+              by_cases hsupport : wire ∈
+                  registers.constants ++ registers.lengthRP ++ [registers.carry]
+              · apply (constMinus_usesOnly registers.lengthRP registers.constants
+                    registers.carry (n + 2)).run_congrOn
+                  afterLower swapped _ wire hsupport
+                intro next hnext
+                by_cases hlengthRP : next ∈ registers.lengthRP
+                · exact endIteration_wireValues_eq_at registers.lengthRP afterLower swapped
+                    hrightBoundary next hlengthRP
+                · have hconstantCarry : next ∈ registers.constants ++ [registers.carry] := by
+                    rcases List.mem_append.mp hnext with hnext | hcarry
+                    · rcases List.mem_append.mp hnext with hconstant | hfalse
+                      · exact List.mem_append_left [registers.carry] hconstant
+                      · exact (hlengthRP hfalse).elim
+                    · exact List.mem_append_right registers.constants hcarry
+                  rw [hconstantsAfterLower next hconstantCarry,
+                    hconstants4 next hconstantCarry]
+              · have hnotRP : wire ∉ registers.lengthRP := by
+                  intro hmem
+                  exact hsupport (by simp [hmem])
+                calc
+                  run (constMinus registers.lengthRP registers.constants registers.carry
+                      (n + 2)) afterLower wire = afterLower wire :=
+                    (constMinus_usesOnly registers.lengthRP registers.constants
+                      registers.carry (n + 2)).preservesOutside afterLower hsupport
+                  _ = middle wire := hlowerInverseOutside wire hnotRP
+                  _ = afterUpper wire := hlowerForwardOutside wire hnotRP
+                  _ = swapped wire := hupperOutside wire hnotTarget
+                  _ = run (constMinus registers.lengthRP registers.constants registers.carry
+                      (n + 2)) swapped wire :=
+                    ((constMinus_usesOnly registers.lengthRP registers.constants
+                      registers.carry (n + 2)).preservesOutside swapped hsupport).symm
+      _ = boundary4 := hroute4AtSwapped
+  simpa only [swapWorkAndLengthUnaryShared, Classical.run_append,
+    middle, afterUpper, swapped, afterLower] using
+      (And.intro hroute5Inverse hroute4Inverse)
+
+/-- The source forward aggregate followed by its explicit reverse restores the complete basis
+state using only the forward decoder certificates. -/
+theorem swapWorkAndLengthUnaryShared_roundTrip_auto
+    (registers : EndIterationRegisters) (n : Nat)
+    (windows : EndIterationWindows)
+    (boundary4 boundary5 : Nat)
+    (hboundary4 : windows.k4 ≤ boundary4 ∧ boundary4 ≤ windows.K4)
+    (hboundary5 : windows.k5 ≤ boundary5 ∧
+      boundary5 ≤ windows.K5Decode n)
+    (state : BasisState)
+    (hlayout : EndIterationLayout registers n windows)
+    (hroute4Forward : (registers.upperTree windows).routeLabel
+      (run (constMinus registers.lengthRP registers.constants registers.carry (n + 2))
+        (run (controlledWorkSwap registers.control registers.work1 registers.work2)
+          state)) = boundary4)
+    (hroute5Forward : (registers.lowerTree n windows).routeLabel
+      (run (addConstant registers.lengthT registers.constants registers.carry 3)
+        (run
+          (lenUpdateLtUnary n windows.k4 windows.K4 (registers.upperTree windows)
+            registers.control (registers.rangeAccumulator windows.k4 windows.K4)
+            (registers.temporary windows.k4 windows.K4) registers.carry
+            (registers.path windows.k4 windows.K4)
+            registers.work1At registers.work2At registers.lengthT registers.lengthRP
+            registers.constants)
+          (run (controlledWorkSwap registers.control registers.work1 registers.work2)
+            state))) = boundary5)
+    (hready : EndIterationReady registers state) :
+    run (swapWorkAndLengthUnarySharedInverse registers n windows)
+      (run (swapWorkAndLengthUnaryShared registers n windows) state) = state := by
+  obtain ⟨hroute5Inverse, hroute4Inverse⟩ :=
+    swapWorkAndLengthUnaryShared_inverseRoutes registers n windows boundary4 boundary5
+      hboundary4 hboundary5 state hlayout hroute4Forward hroute5Forward hready
+  exact swapWorkAndLengthUnaryShared_roundTrip registers n windows boundary4 boundary5
+    hboundary4 hboundary5 state hlayout hroute4Forward hroute5Forward
+    hroute5Inverse hroute4Inverse hready
+
 /-! ## Concrete secp256k1 production allocation -/
 
 private def endIterationProductionTreeDepth : UnaryActionTree → Nat
