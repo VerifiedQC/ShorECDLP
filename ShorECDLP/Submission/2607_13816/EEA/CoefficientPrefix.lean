@@ -42,16 +42,16 @@ def CoefficientPrefixRegisters.scratchBase
     (registers : CoefficientPrefixRegisters) (k K : Nat) : Nat :=
   max (quotientSwapUnaryDepth k K) registers.boundary.length
 
-/-- The routing-only view reuses a prefix of `work2` as the quotient block's otherwise-unused
-length-T register and the decoder/carry prefix of scratch. -/
+/-- Tree-routing view of the prepared boundary.  The quotient selector's `lengthT` arithmetic
+register is deliberately empty here: coefficient routing depends only on the boundary word. -/
 def CoefficientPrefixRegisters.routing
-    (registers : CoefficientPrefixRegisters) (k K : Nat) : QuotientSwapRegisters where
+    (registers : CoefficientPrefixRegisters) (_k _K : Nat) : QuotientSwapRegisters where
   control := registers.control
   sign := registers.sign
   work1 := registers.work1
-  lengthT := registers.work2.take registers.boundary.length
+  lengthT := []
   lengthQ := registers.boundary
-  scratch := registers.scratch.take (registers.scratchBase k K + 1)
+  scratch := registers.scratch
 
 def coefficientPrefixTree
     (registers : CoefficientPrefixRegisters) (k K : Nat) : UnaryActionTree :=
@@ -107,15 +107,20 @@ def CoefficientPrefixRegisters.allWires
     (registers.work1 ++
       (registers.work2 ++ (registers.boundary ++ registers.scratch)))
 
-/-- Source-level register contract.  `routing` pins the exact quotient-tree construction while
-the remaining fields cover the full second work bank and the two scratch roles beyond that
-tree's decoder/carry prefix. -/
+/-- Source-level register contract.  The coefficient block needs only the source-tree's
+nonempty-label, boundary-width, and path-layout obligations; it does not inherit the quotient
+selector's unrelated equal-width arithmetic-register premise. -/
 structure CoefficientPrefixLayout
     (registers : CoefficientPrefixRegisters) (k K : Nat) : Prop where
+  k_le_K : k ≤ K
+  work1_length : registers.work1.length = K - k + 1
   work2_length : registers.work2.length = K - k + 1
+  index_width : DualUnaryActionTree.sourceWidth
+    (quotientSwapLabels k K).toFinset ≤ registers.boundary.length
   scratch_length : registers.scratch.length = registers.scratchBase k K + 3
   physical : registers.allWires.Nodup
-  routing : QuotientSwapLayout (registers.routing k K) k K
+  tree : (coefficientPrefixTree registers k K).Layout registers.control
+    (registers.path k K)
 
 /-- All shared source scratch is clean at the prepared-boundary block boundary. -/
 def CoefficientPrefixReady
@@ -127,7 +132,7 @@ theorem coefficientPrefixTree_labels
     (hlayout : CoefficientPrefixLayout registers k K) :
     (coefficientPrefixTree registers k K).labels =
       (quotientSwapLabels k K).toFinset.sort (· ≤ ·) := by
-  exact quotientSwapTree_labels (registers.routing k K) hlayout.routing.k_le_K
+  exact quotientSwapTree_labels (registers.routing k K) hlayout.k_le_K
 
 /-- A prepared in-range boundary routes to its exact absolute label. -/
 theorem coefficientPrefixTree_routeLabel_eq
@@ -137,7 +142,9 @@ theorem coefficientPrefixTree_routeLabel_eq
       quotientSwapLabels k K) :
     (coefficientPrefixTree registers k K).routeLabel state =
       boolWordToNat (wireValues registers.boundary state) := by
-  exact quotientSwapTree_routeLabel_eq (registers.routing k K) state hlayout.routing hvalue
+  exact quotientSwapTree_routeLabel_eq_of_width (registers.routing k K) state
+    hlayout.k_le_K (by simpa [CoefficientPrefixRegisters.routing] using hlayout.index_width)
+    (by simpa [CoefficientPrefixRegisters.routing] using hvalue)
 
 private theorem coefficientPrefix_getD_mem
     (list : List α) (index : Nat) (fallback : α)
@@ -156,41 +163,11 @@ private theorem coefficientPrefix_label_bounds
   simp only [quotientSwapLabels, List.mem_range'] at this
   omega
 
-private theorem coefficientPrefix_work1At_mem
-    (registers : CoefficientPrefixRegisters) {k K label : Nat}
-    (hlayout : CoefficientPrefixLayout registers k K)
-    (hlabel : label ∈ (coefficientPrefixTree registers k K).labels) :
-    registers.work1At k label ∈ registers.work1 := by
-  have hb := coefficientPrefix_label_bounds registers hlayout hlabel
-  have hlength : registers.work1.length = K - k + 1 := by
-    simpa [CoefficientPrefixRegisters.routing] using
-      hlayout.routing.work1_length
-  have hindex : registers.laneAt k label < registers.work1.length := by
-    simp only [CoefficientPrefixRegisters.laneAt]
-    rw [hlength]
-    omega
-  exact coefficientPrefix_getD_mem registers.work1 (registers.laneAt k label)
-    (registers.work1.getD 0 0) hindex
-
-private theorem coefficientPrefix_work2At_mem
-    (registers : CoefficientPrefixRegisters) {k K label : Nat}
-    (hlayout : CoefficientPrefixLayout registers k K)
-    (hlabel : label ∈ (coefficientPrefixTree registers k K).labels) :
-    registers.work2At k label ∈ registers.work2 := by
-  have hb := coefficientPrefix_label_bounds registers hlayout hlabel
-  have hindex : registers.laneAt k label < registers.work2.length := by
-    simp only [CoefficientPrefixRegisters.laneAt]
-    rw [hlayout.work2_length]
-    omega
-  exact coefficientPrefix_getD_mem registers.work2 (registers.laneAt k label)
-    (registers.work2.getD 0 0) hindex
-
 private theorem coefficientPrefix_firstWork1_mem
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (hlayout : CoefficientPrefixLayout registers k K) :
     registers.work1.getD 0 0 ∈ registers.work1 := by
-  have hlength : registers.work1.length = K - k + 1 := by
-    simpa [CoefficientPrefixRegisters.routing] using hlayout.routing.work1_length
+  have hlength : registers.work1.length = K - k + 1 := hlayout.work1_length
   exact coefficientPrefix_getD_mem registers.work1 0 0 (by rw [hlength]; omega)
 
 private theorem coefficientPrefix_firstWork2_mem
@@ -297,12 +274,7 @@ private theorem coefficientPrefix_scratch_roles_nodup
 private theorem coefficientPrefix_path_eq_take
     (registers : CoefficientPrefixRegisters) (k K : Nat) :
     registers.path k K = registers.scratch.take (quotientSwapUnaryDepth k K) := by
-  simp only [CoefficientPrefixRegisters.path, QuotientSwapRegisters.path,
-    CoefficientPrefixRegisters.routing]
-  rw [List.take_take]
-  congr 1
-  apply Nat.min_eq_left
-  exact le_trans (Nat.le_max_left _ _) (Nat.le_succ _)
+  rfl
 
 private theorem coefficientPrefix_path_not_scratchAt
     (registers : CoefficientPrefixRegisters) {k K index : Nat}
@@ -373,7 +345,9 @@ private theorem coefficientPrefix_decoder_classify
   · exact Or.inl rfl
   · exact Or.inr (Or.inl (by
       have hmem := quotientSwapTree_indexWires_mem_lengthQ
-        (registers.routing k K) hlayout.routing wire (by simpa using hindex)
+        (registers.routing k K) hlayout.k_le_K
+          (by simpa [CoefficientPrefixRegisters.routing] using hlayout.index_width)
+          wire (by simpa using hindex)
       simpa [CoefficientPrefixRegisters.routing] using hmem))
   · exact Or.inr (Or.inr hpath)
 
@@ -658,35 +632,31 @@ def coefficientPrefixSecondLeafState
       (readRippleCell (registers.targetAt target k label)
         (registers.addendAt target k label) (registers.carry k K) switched)) switched
 
-/-- Total first-leaf semantics.  The public ready-state theorem reduces the first branch to the
-gate-independent Boolean action; the fallback avoids assigning a fictional meaning to the clean
-v-chain realization on dirty scratch. -/
-def coefficientPrefixFirstLeafTotalState
+/-- Total circuit-level trace for one first-pass leaf, with the dynamic decoder wire erased to its
+Boolean pulse.  This remains private proof infrastructure; the public recurrence below uses only
+`coefficientPrefixFirstLeafState`. -/
+private def coefficientPrefixFirstLeafTraceState
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
-    (label : Nat) (equalityControl : Wire) (state : BasisState) : BasisState :=
-  if equalityControl ∈ registers.control ::
-      (coefficientPrefixTree registers k K).indexWires.dedup ++ registers.path k K ∧
-      state (registers.cellScratch k K) = false then
-    coefficientPrefixFirstLeafState registers k K mode target label
-      (state equalityControl) state
-  else
-    Classical.run
-      (coefficientPrefixFirstLeaf registers k K mode target label equalityControl) state
+    (label : Nat) (active : Bool) (state : BasisState) : BasisState :=
+  let afterCell := Classical.run
+    (rippleFirstCell mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K)) state
+  afterCell[registers.accumulator k K ↦
+    Bool.xor (afterCell (registers.accumulator k K)) active]
 
-/-- Total second-leaf semantics with the same clean-cell boundary. -/
-def coefficientPrefixSecondLeafTotalState
+/-- Total circuit-level trace for one second-pass leaf. -/
+private def coefficientPrefixSecondLeafTraceState
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
-    (label : Nat) (equalityControl : Wire) (state : BasisState) : BasisState :=
-  if equalityControl ∈ registers.control ::
-      (coefficientPrefixTree registers k K).indexWires.dedup ++ registers.path k K ∧
-      state (registers.cellScratch k K) = false then
-    coefficientPrefixSecondLeafState registers k K mode target label
-      (state equalityControl) state
-  else
-    Classical.run
-      (coefficientPrefixSecondLeaf registers k K mode target label equalityControl) state
+    (label : Nat) (active : Bool) (state : BasisState) : BasisState :=
+  let switched := state[registers.accumulator k K ↦
+    Bool.xor (state (registers.accumulator k K)) active]
+  Classical.run
+    (rippleSecondCell mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K)) switched
 
 theorem run_coefficientPrefixFirstLeaf_state
     (registers : CoefficientPrefixRegisters) {k K label : Nat}
@@ -881,8 +851,321 @@ private theorem coefficientPrefixSecondLeaf_preservesCellScratch
     (registers.targetAt target k label) (registers.addendAt target k label)
     (registers.carry k K) (registers.cellScratch k K) switched hcell, hswitched]
 
+private theorem coefficientPrefix_runFirstLeaf_trace
+    (registers : CoefficientPrefixRegisters) {k K label : Nat}
+    (mode : RippleMode) (target : CoefficientTarget) (equalityControl : Wire)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K)
+    (hcontrol : equalityControl ∈ registers.control ::
+      (coefficientPrefixTree registers k K).indexWires.dedup ++ registers.path k K) :
+    Classical.run
+        (coefficientPrefixFirstLeaf registers k K mode target label equalityControl) state =
+      coefficientPrefixFirstLeafTraceState registers k K mode target label
+        (state equalityControl) state := by
+  let cell := rippleFirstCell mode (registers.accumulator k K)
+    (registers.targetAt target k label) (registers.addendAt target k label)
+    (registers.carry k K) (registers.cellScratch k K)
+  have houtside := coefficientPrefix_decoder_disjoint_leafRoles
+    (label := label) registers target hlayout
+  rw [List.disjoint_left] at houtside
+  have hequalityOutside : equalityControl ∉
+      [registers.accumulator k K, registers.targetAt target k label,
+        registers.addendAt target k label, registers.carry k K,
+        registers.cellScratch k K] := houtside hcontrol
+  have hequality : Classical.run cell state equalityControl = state equalityControl :=
+    (rippleFirstCell_usesOnly mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K)).preservesOutside
+        state hequalityOutside
+  rw [coefficientPrefixFirstLeaf, Classical.run_append]
+  change Classical.run ([.CX equalityControl (registers.accumulator k K)] : Circuit)
+      (Classical.run cell state) = _
+  simp only [coefficientPrefixFirstLeafTraceState, Classical.run_cons,
+    Classical.run_nil, Classical.applyGate]
+  rw [hequality]
+
+private theorem coefficientPrefix_runSecondLeaf_trace
+    (registers : CoefficientPrefixRegisters) (k K label : Nat)
+    (mode : RippleMode) (target : CoefficientTarget) (equalityControl : Wire)
+    (state : BasisState) :
+    Classical.run
+        (coefficientPrefixSecondLeaf registers k K mode target label equalityControl) state =
+      coefficientPrefixSecondLeafTraceState registers k K mode target label
+        (state equalityControl) state := by
+  rw [coefficientPrefixSecondLeaf, Classical.run_append]
+  rfl
+
+private theorem coefficientPrefix_run_agreesOutside_of_disjoint
+    (support protectedWires : List Wire) (circuit : Circuit)
+    (left right : BasisState)
+    (huses : PaperCircuitUsesOnly support circuit)
+    (hdisjoint : List.Disjoint protectedWires support)
+    (houtside : AgreesOutside protectedWires left right) :
+    AgreesOutside protectedWires
+      (Classical.run circuit left) (Classical.run circuit right) := by
+  rw [List.disjoint_left] at hdisjoint
+  intro wire hwire
+  by_cases hsupport : wire ∈ support
+  · exact huses.run_congrOn left right (by
+      intro used hused
+      exact houtside used (fun hprotected => hdisjoint hprotected hused))
+        wire hsupport
+  · rw [huses.preservesOutside left hsupport,
+      huses.preservesOutside right hsupport]
+    exact houtside wire hwire
+
+private theorem coefficientPrefix_update_agreesOutside
+    (protectedWires : List Wire) (left right : BasisState)
+    (target : Wire) (leftValue rightValue : Bool)
+    (houtside : AgreesOutside protectedWires left right)
+    (hvalue : leftValue = rightValue) :
+    AgreesOutside protectedWires
+      (left[target ↦ leftValue]) (right[target ↦ rightValue]) := by
+  intro wire hwire
+  by_cases htarget : wire = target
+  · subst wire
+    simpa [upd] using hvalue
+  · simp [upd, htarget, houtside wire hwire]
+
+private theorem coefficientPrefixFirstLeafTrace_preservesDecoder
+    (registers : CoefficientPrefixRegisters) {k K : Nat}
+    (mode : RippleMode) (target : CoefficientTarget)
+    (hlayout : CoefficientPrefixLayout registers k K) :
+    LogicalLeafPreserves
+      (fun nextLabel active next =>
+        coefficientPrefixFirstLeafTraceState registers k K mode target
+          nextLabel active next)
+      (registers.control ::
+        (coefficientPrefixTree registers k K).indexWires.dedup ++
+          registers.path k K) := by
+  intro nextLabel active state wire hwire
+  have houtside := coefficientPrefix_decoder_disjoint_leafRoles
+    (label := nextLabel) registers target hlayout
+  rw [List.disjoint_left] at houtside
+  have hnot := houtside hwire
+  have hwireAcc : wire ≠ registers.accumulator k K := by
+    intro equality
+    exact hnot (by simp [equality])
+  simp only [coefficientPrefixFirstLeafTraceState]
+  rw [upd_other _ _ _ hwireAcc]
+  exact (rippleFirstCell_usesOnly mode (registers.accumulator k K)
+    (registers.targetAt target k nextLabel) (registers.addendAt target k nextLabel)
+    (registers.carry k K) (registers.cellScratch k K)).preservesOutside state hnot
+
+private theorem coefficientPrefixSecondLeafTrace_preservesDecoder
+    (registers : CoefficientPrefixRegisters) {k K : Nat}
+    (mode : RippleMode) (target : CoefficientTarget)
+    (hlayout : CoefficientPrefixLayout registers k K) :
+    LogicalLeafPreserves
+      (fun nextLabel active next =>
+        coefficientPrefixSecondLeafTraceState registers k K mode target
+          nextLabel active next)
+      (registers.control ::
+        (coefficientPrefixTree registers k K).indexWires.dedup ++
+          registers.path k K) := by
+  intro nextLabel active state wire hwire
+  have houtside := coefficientPrefix_decoder_disjoint_leafRoles
+    (label := nextLabel) registers target hlayout
+  rw [List.disjoint_left] at houtside
+  have hnot := houtside hwire
+  have hwireAcc : wire ≠ registers.accumulator k K := by
+    intro equality
+    exact hnot (by simp [equality])
+  let switched := state[registers.accumulator k K ↦
+    Bool.xor (state (registers.accumulator k K)) active]
+  simp only [coefficientPrefixSecondLeafTraceState]
+  change Classical.run
+      (rippleSecondCell mode (registers.accumulator k K)
+        (registers.targetAt target k nextLabel)
+        (registers.addendAt target k nextLabel) (registers.carry k K)
+        (registers.cellScratch k K)) switched wire = state wire
+  rw [(rippleSecondCell_usesOnly mode (registers.accumulator k K)
+    (registers.targetAt target k nextLabel) (registers.addendAt target k nextLabel)
+    (registers.carry k K) (registers.cellScratch k K)).preservesOutside switched hnot]
+  exact upd_other state (registers.accumulator k K) _ hwireAcc
+
+private theorem coefficientPrefixFirstLeafTrace_respectsOutside
+    (registers : CoefficientPrefixRegisters) {k K : Nat}
+    (mode : RippleMode) (target : CoefficientTarget)
+    (hlayout : CoefficientPrefixLayout registers k K) :
+    LogicalLeafRespectsOutside
+      (fun label active state =>
+        coefficientPrefixFirstLeafTraceState registers k K mode target
+          label active state)
+      (registers.control ::
+        (coefficientPrefixTree registers k K).indexWires.dedup ++
+          registers.path k K) registers.control := by
+  intro label active left right houtside _
+  let decoder := registers.control ::
+    (coefficientPrefixTree registers k K).indexWires.dedup ++ registers.path k K
+  let support := [registers.accumulator k K, registers.targetAt target k label,
+    registers.addendAt target k label, registers.carry k K,
+    registers.cellScratch k K]
+  let cell := rippleFirstCell mode (registers.accumulator k K)
+    (registers.targetAt target k label) (registers.addendAt target k label)
+    (registers.carry k K) (registers.cellScratch k K)
+  have hdisjoint : List.Disjoint decoder support := by
+    simpa only [decoder, support] using
+      coefficientPrefix_decoder_disjoint_leafRoles
+        (label := label) registers target hlayout
+  have huses : PaperCircuitUsesOnly support cell := by
+    dsimp only [support, cell]
+    exact rippleFirstCell_usesOnly mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K)
+  have hrun : AgreesOutside decoder
+      (Classical.run cell left) (Classical.run cell right) :=
+    coefficientPrefix_run_agreesOutside_of_disjoint support decoder cell left right
+      huses hdisjoint (by simpa only [decoder] using houtside)
+  have hacc : registers.accumulator k K ∉ decoder := by
+    rw [List.disjoint_left] at hdisjoint
+    exact fun hmem => hdisjoint hmem (by simp [support])
+  change AgreesOutside decoder
+    (coefficientPrefixFirstLeafTraceState registers k K mode target label active left)
+    (coefficientPrefixFirstLeafTraceState registers k K mode target label active right)
+  simpa [coefficientPrefixFirstLeafTraceState, cell] using
+    coefficientPrefix_update_agreesOutside decoder
+      (Classical.run cell left) (Classical.run cell right)
+      (registers.accumulator k K)
+      (Bool.xor (Classical.run cell left (registers.accumulator k K)) active)
+      (Bool.xor (Classical.run cell right (registers.accumulator k K)) active)
+      hrun (by rw [hrun (registers.accumulator k K) hacc])
+
+private theorem coefficientPrefixSecondLeafTrace_respectsOutside
+    (registers : CoefficientPrefixRegisters) {k K : Nat}
+    (mode : RippleMode) (target : CoefficientTarget)
+    (hlayout : CoefficientPrefixLayout registers k K) :
+    LogicalLeafRespectsOutside
+      (fun label active state =>
+        coefficientPrefixSecondLeafTraceState registers k K mode target
+          label active state)
+      (registers.control ::
+        (coefficientPrefixTree registers k K).indexWires.dedup ++
+          registers.path k K) registers.control := by
+  intro label active left right houtside _
+  let decoder := registers.control ::
+    (coefficientPrefixTree registers k K).indexWires.dedup ++ registers.path k K
+  let support := [registers.accumulator k K, registers.targetAt target k label,
+    registers.addendAt target k label, registers.carry k K,
+    registers.cellScratch k K]
+  let cell := rippleSecondCell mode (registers.accumulator k K)
+    (registers.targetAt target k label) (registers.addendAt target k label)
+    (registers.carry k K) (registers.cellScratch k K)
+  have hdisjoint : List.Disjoint decoder support := by
+    simpa only [decoder, support] using
+      coefficientPrefix_decoder_disjoint_leafRoles
+        (label := label) registers target hlayout
+  have huses : PaperCircuitUsesOnly support cell := by
+    dsimp only [support, cell]
+    exact rippleSecondCell_usesOnly mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K)
+  have hacc : registers.accumulator k K ∉ decoder := by
+    rw [List.disjoint_left] at hdisjoint
+    exact fun hmem => hdisjoint hmem (by simp [support])
+  let leftSwitched := left[registers.accumulator k K ↦
+    Bool.xor (left (registers.accumulator k K)) active]
+  let rightSwitched := right[registers.accumulator k K ↦
+    Bool.xor (right (registers.accumulator k K)) active]
+  have hswitched : AgreesOutside decoder leftSwitched rightSwitched := by
+    apply coefficientPrefix_update_agreesOutside decoder left right
+      (registers.accumulator k K) _ _ (by simpa only [decoder] using houtside)
+    rw [houtside (registers.accumulator k K) (by simpa only [decoder] using hacc)]
+  change AgreesOutside decoder
+    (coefficientPrefixSecondLeafTraceState registers k K mode target label active left)
+    (coefficientPrefixSecondLeafTraceState registers k K mode target label active right)
+  simpa [coefficientPrefixSecondLeafTraceState, leftSwitched,
+    rightSwitched, cell] using
+    coefficientPrefix_run_agreesOutside_of_disjoint support decoder cell
+      leftSwitched rightSwitched huses hdisjoint hswitched
+
+private theorem coefficientPrefixFirstLeafTrace_eq_direct
+    (registers : CoefficientPrefixRegisters) {k K label : Nat}
+    (mode : RippleMode) (target : CoefficientTarget) (active : Bool)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K)
+    (hclean : state (registers.cellScratch k K) = false) :
+    coefficientPrefixFirstLeafTraceState registers k K mode target label active state =
+      coefficientPrefixFirstLeafState registers k K mode target label active state := by
+  rw [coefficientPrefixFirstLeafTraceState,
+    run_rippleFirstCell_state mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K) state
+      (coefficientPrefix_cellLayout (label := label) registers target hlayout) hclean]
+  rfl
+
+private theorem coefficientPrefixSecondLeafTrace_eq_direct
+    (registers : CoefficientPrefixRegisters) {k K label : Nat}
+    (mode : RippleMode) (target : CoefficientTarget) (active : Bool)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K)
+    (hclean : state (registers.cellScratch k K) = false) :
+    coefficientPrefixSecondLeafTraceState registers k K mode target label active state =
+      coefficientPrefixSecondLeafState registers k K mode target label active state := by
+  let switched := state[registers.accumulator k K ↦
+    Bool.xor (state (registers.accumulator k K)) active]
+  have hcellLayout := coefficientPrefix_cellLayout
+    (label := label) registers target hlayout
+  have haccScratch : registers.accumulator k K ≠ registers.cellScratch k K := by
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+      or_false, not_or] at hcellLayout
+    exact hcellLayout.1.2.2.2
+  have hcleanSwitched : switched (registers.cellScratch k K) = false := by
+    rw [show switched = state[registers.accumulator k K ↦
+        Bool.xor (state (registers.accumulator k K)) active] by rfl,
+      upd_other state (registers.accumulator k K) _ (Ne.symm haccScratch)]
+    exact hclean
+  rw [coefficientPrefixSecondLeafTraceState,
+    run_rippleSecondCell_state mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K) switched hcellLayout
+      hcleanSwitched]
+  rfl
+
+private theorem coefficientPrefixFirstLeafTrace_preservesCellScratch
+    (registers : CoefficientPrefixRegisters) {k K label : Nat}
+    (mode : RippleMode) (target : CoefficientTarget) (active : Bool)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K)
+    (hclean : state (registers.cellScratch k K) = false) :
+    coefficientPrefixFirstLeafTraceState registers k K mode target label active state
+        (registers.cellScratch k K) = false := by
+  rw [coefficientPrefixFirstLeafTraceState]
+  have hcellLayout := coefficientPrefix_cellLayout
+    (label := label) registers target hlayout
+  have haccScratch : registers.cellScratch k K ≠ registers.accumulator k K := by
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+      or_false, not_or] at hcellLayout
+    exact Ne.symm hcellLayout.1.2.2.2
+  rw [upd_other _ _ _ haccScratch,
+    rippleFirstCell_preservesScratch mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K) state hcellLayout,
+    hclean]
+
+private theorem coefficientPrefixSecondLeafTrace_preservesCellScratch
+    (registers : CoefficientPrefixRegisters) {k K label : Nat}
+    (mode : RippleMode) (target : CoefficientTarget) (active : Bool)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K)
+    (hclean : state (registers.cellScratch k K) = false) :
+    coefficientPrefixSecondLeafTraceState registers k K mode target label active state
+        (registers.cellScratch k K) = false := by
+  let switched := state[registers.accumulator k K ↦
+    Bool.xor (state (registers.accumulator k K)) active]
+  have hcellLayout := coefficientPrefix_cellLayout
+    (label := label) registers target hlayout
+  have haccScratch : registers.cellScratch k K ≠ registers.accumulator k K := by
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+      or_false, not_or] at hcellLayout
+    exact Ne.symm hcellLayout.1.2.2.2
+  have hswitched : switched (registers.cellScratch k K) = false := by
+    rw [show switched = state[registers.accumulator k K ↦
+        Bool.xor (state (registers.accumulator k K)) active] by rfl,
+      upd_other state (registers.accumulator k K) _ haccScratch, hclean]
+  rw [coefficientPrefixSecondLeafTraceState,
+    rippleSecondCell_preservesScratch mode (registers.accumulator k K)
+      (registers.targetAt target k label) (registers.addendAt target k label)
+      (registers.carry k K) (registers.cellScratch k K) switched hcellLayout,
+    hswitched]
+
 @[simp]
-theorem coefficientPrefixFirstLeaf_HPFree
+private theorem coefficientPrefixFirstLeaf_HPFree
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -890,14 +1173,14 @@ theorem coefficientPrefixFirstLeaf_HPFree
   simp [coefficientPrefixFirstLeaf]
 
 @[simp]
-theorem coefficientPrefixSecondLeaf_HPFree
+private theorem coefficientPrefixSecondLeaf_HPFree
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
     HPFree (coefficientPrefixSecondLeaf registers k K mode target label equalityControl) := by
   simp [coefficientPrefixSecondLeaf]
 
-theorem coefficientPrefixFirstLeaf_wellFormed
+private theorem coefficientPrefixFirstLeaf_wellFormed
     (registers : CoefficientPrefixRegisters) {k K label : Nat}
     (mode : RippleMode) (target : CoefficientTarget) (equalityControl : Wire)
     (hlayout : CoefficientPrefixLayout registers k K)
@@ -918,7 +1201,7 @@ theorem coefficientPrefixFirstLeaf_wellFormed
       (coefficientPrefix_cellLayout (label := label) registers target hlayout),
     by simp [CircuitWellFormed, Gate.WellFormed, hcontrolAcc]⟩
 
-theorem coefficientPrefixSecondLeaf_wellFormed
+private theorem coefficientPrefixSecondLeaf_wellFormed
     (registers : CoefficientPrefixRegisters) {k K label : Nat}
     (mode : RippleMode) (target : CoefficientTarget) (equalityControl : Wire)
     (hlayout : CoefficientPrefixLayout registers k K)
@@ -960,18 +1243,7 @@ private theorem coefficientPrefix_coherent_seq_circuits
   intro state _
   exact (Quantum.run_append firstCircuit secondCircuit (Quantum.ket state)).symm
 
-private theorem coefficientPrefix_coherent_mono
-    {program : AdaptiveCircuit} {ideal : State →ₗ[ℂ] State}
-    {Valid Stronger : BasisState → Prop}
-    (hrefines : CoherentlyImplementsOn program ideal Valid)
-    (hsub : ∀ state, Stronger state → Valid state) :
-    CoherentlyImplementsOn program ideal Stronger := by
-  rcases hrefines with ⟨coefficients, haligned, hmass⟩
-  refine ⟨coefficients, ?_, hmass⟩
-  exact haligned.imp fun branch coefficient hbranch state hstate ↦
-    hbranch state (hsub state hstate)
-
-theorem coefficientPrefixFirstLeafAdaptive_coherent
+private theorem coefficientPrefixFirstLeafAdaptive_coherent
     (registers : CoefficientPrefixRegisters) {k K label : Nat}
     (mode : RippleMode) (target : CoefficientTarget) (equalityControl : Wire)
     (hlayout : CoefficientPrefixLayout registers k K) :
@@ -994,7 +1266,7 @@ theorem coefficientPrefixFirstLeafAdaptive_coherent
   simpa [coefficientPrefixFirstLeafAdaptive, coefficientPrefixFirstLeaf,
     List.append_assoc] using hseq
 
-theorem coefficientPrefixSecondLeafAdaptive_coherent
+private theorem coefficientPrefixSecondLeafAdaptive_coherent
     (registers : CoefficientPrefixRegisters) {k K label : Nat}
     (mode : RippleMode) (target : CoefficientTarget) (equalityControl : Wire)
     (hlayout : CoefficientPrefixLayout registers k K) :
@@ -1026,7 +1298,7 @@ theorem coefficientPrefixSecondLeafAdaptive_coherent
   simpa [coefficientPrefixSecondLeafAdaptive, coefficientPrefixSecondLeaf,
     List.append_assoc] using hseq
 
-theorem coefficientPrefixFirstLeafAdaptive_wellFormed
+private theorem coefficientPrefixFirstLeafAdaptive_wellFormed
     (registers : CoefficientPrefixRegisters) {k K label : Nat}
     (mode : RippleMode) (target : CoefficientTarget) (equalityControl : Wire)
     (hlayout : CoefficientPrefixLayout registers k K)
@@ -1044,7 +1316,7 @@ theorem coefficientPrefixFirstLeafAdaptive_wellFormed
       (coefficientPrefix_cellLayout (label := label) registers target hlayout))
     ⟨hcoherent.2, trivial⟩
 
-theorem coefficientPrefixSecondLeafAdaptive_wellFormed
+private theorem coefficientPrefixSecondLeafAdaptive_wellFormed
     (registers : CoefficientPrefixRegisters) {k K label : Nat}
     (mode : RippleMode) (target : CoefficientTarget) (equalityControl : Wire)
     (hlayout : CoefficientPrefixLayout registers k K)
@@ -1062,7 +1334,7 @@ theorem coefficientPrefixSecondLeafAdaptive_wellFormed
       (coefficientPrefix_cellLayout (label := label) registers target hlayout)⟩
 
 @[simp]
-theorem coefficientPrefixFirstLeaf_toffoliCount
+private theorem coefficientPrefixFirstLeaf_toffoliCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1074,7 +1346,7 @@ theorem coefficientPrefixFirstLeaf_toffoliCount
   rfl
 
 @[simp]
-theorem coefficientPrefixSecondLeaf_toffoliCount
+private theorem coefficientPrefixSecondLeaf_toffoliCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1086,7 +1358,7 @@ theorem coefficientPrefixSecondLeaf_toffoliCount
   simp [eeaToffoliCount]
 
 @[simp]
-theorem coefficientPrefixFirstLeaf_cnotCount
+private theorem coefficientPrefixFirstLeaf_cnotCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1097,7 +1369,7 @@ theorem coefficientPrefixFirstLeaf_cnotCount
   rfl
 
 @[simp]
-theorem coefficientPrefixSecondLeaf_cnotCount
+private theorem coefficientPrefixSecondLeaf_cnotCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1108,7 +1380,7 @@ theorem coefficientPrefixSecondLeaf_cnotCount
   rfl
 
 @[simp]
-theorem coefficientPrefixFirstLeaf_tCount
+private theorem coefficientPrefixFirstLeaf_tCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1119,7 +1391,7 @@ theorem coefficientPrefixFirstLeaf_tCount
   rfl
 
 @[simp]
-theorem coefficientPrefixSecondLeaf_tCount
+private theorem coefficientPrefixSecondLeaf_tCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1153,7 +1425,7 @@ private theorem coefficientPrefix_tCount_seq
         ihFalse, ihTrue, Nat.add_max_add_right]
 
 @[simp]
-theorem coefficientPrefixFirstLeafAdaptive_measurementCount
+private theorem coefficientPrefixFirstLeafAdaptive_measurementCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1164,7 +1436,7 @@ theorem coefficientPrefixFirstLeafAdaptive_measurementCount
   rfl
 
 @[simp]
-theorem coefficientPrefixSecondLeafAdaptive_measurementCount
+private theorem coefficientPrefixSecondLeafAdaptive_measurementCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1175,7 +1447,7 @@ theorem coefficientPrefixSecondLeafAdaptive_measurementCount
     rippleSecondCellAdaptive_measurementCount]
 
 @[simp]
-theorem coefficientPrefixFirstLeafAdaptive_tCount
+private theorem coefficientPrefixFirstLeafAdaptive_tCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1186,7 +1458,7 @@ theorem coefficientPrefixFirstLeafAdaptive_tCount
   rfl
 
 @[simp]
-theorem coefficientPrefixSecondLeafAdaptive_tCount
+private theorem coefficientPrefixSecondLeafAdaptive_tCount
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (label : Nat) (equalityControl : Wire) :
@@ -1199,105 +1471,227 @@ theorem coefficientPrefixSecondLeafAdaptive_tCount
 
 /-! ## Ordered traversal and whole-state semantics -/
 
+/-- Circuit-free increasing source-order semantics: the frozen boundary bits determine one Boolean
+equality pulse per source label, and the first-cell transition is folded over those pulses. -/
 def coefficientPrefixFirstTraversalState
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (state : BasisState) : BasisState :=
-  (coefficientPrefixTree registers k K).runLeafState .inc
-    (coefficientPrefixFirstLeafTotalState registers k K mode target)
-    registers.control (registers.path k K) state
+  ((coefficientPrefixTree registers k K).visitPulses .inc
+      (state registers.control) state).foldl
+    (fun next pulse => coefficientPrefixFirstLeafState registers k K mode target
+      pulse.1 pulse.2 next) state
 
+/-- Circuit-free decreasing source-order semantics, expressed by the reverse pulse fold. -/
 def coefficientPrefixSecondTraversalState
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget)
     (state : BasisState) : BasisState :=
-  (coefficientPrefixTree registers k K).runLeafState .dec
-    (coefficientPrefixSecondLeafTotalState registers k K mode target)
-    registers.control (registers.path k K) state
+  ((coefficientPrefixTree registers k K).visitPulses .dec
+      (state registers.control) state).foldl
+    (fun next pulse => coefficientPrefixSecondLeafState registers k K mode target
+      pulse.1 pulse.2 next) state
+
+private theorem coefficientPrefix_foldl_eq_of_cleanWire
+    {α : Type} (steps : List α)
+    (totalState directState : α → BasisState → BasisState)
+    (cleanWire : Wire)
+    (hreduces : ∀ step next, next cleanWire = false →
+      totalState step next = directState step next)
+    (hpreserves : ∀ step next, next cleanWire = false →
+      directState step next cleanWire = false)
+    (state : BasisState) (hclean : state cleanWire = false) :
+    steps.foldl (fun next step => totalState step next) state =
+        steps.foldl (fun next step => directState step next) state ∧
+      steps.foldl (fun next step => directState step next) state cleanWire = false := by
+  induction steps generalizing state with
+  | nil => exact ⟨rfl, hclean⟩
+  | cons step rest ih =>
+      simp only [List.foldl_cons]
+      rw [hreduces step state hclean]
+      exact ih (directState step state) (hpreserves step state hclean)
 
 theorem run_coefficientPrefixFirstTraversal_state
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (target : CoefficientTarget) (state : BasisState)
     (hlayout : CoefficientPrefixLayout registers k K)
-    (hclean : Clean (registers.path k K) state) :
+    (hclean : Clean (registers.path k K) state)
+    (hcellClean : state (registers.cellScratch k K) = false) :
     Classical.run
         (unaryActionUnitary .inc
           (coefficientPrefixFirstLeaf registers k K mode target)
           (coefficientPrefixTree registers k K) registers.control
           (registers.path k K)) state =
       coefficientPrefixFirstTraversalState registers k K mode target state := by
-  have htree : (coefficientPrefixTree registers k K).Layout registers.control
-      (registers.path k K) := by
-    simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
-  let decoder := registers.control ::
-    (coefficientPrefixTree registers k K).indexWires.dedup ++ registers.path k K
+  let tree := coefficientPrefixTree registers k K
+  let decoder := registers.control :: tree.indexWires.dedup ++ registers.path k K
+  let physicalLeafState := fun label equalityControl next =>
+    Classical.run
+      (coefficientPrefixFirstLeaf registers k K mode target label equalityControl) next
+  let traceLeafState := fun label active next =>
+    coefficientPrefixFirstLeafTraceState registers k K mode target label active next
+  have htree : tree.Layout registers.control (registers.path k K) := by
+    simpa only [tree, coefficientPrefixTree, CoefficientPrefixRegisters.path] using
+      hlayout.tree
   have hruns : UnaryLeafRunsAs
-      (coefficientPrefixFirstLeaf registers k K mode target)
-      (coefficientPrefixFirstLeafTotalState registers k K mode target) := by
+      (coefficientPrefixFirstLeaf registers k K mode target) physicalLeafState := by
     intro label equalityControl next
-    by_cases hready : equalityControl ∈ decoder ∧
-        next (registers.cellScratch k K) = false
-    · rw [coefficientPrefixFirstLeafTotalState, if_pos]
-      · exact run_coefficientPrefixFirstLeaf_state registers mode target
-          equalityControl next hlayout hready.1 hready.2
-      · simpa only [decoder] using hready
-    · rw [coefficientPrefixFirstLeafTotalState, if_neg]
-      simpa only [decoder] using hready
+    rfl
+  have hlogical : UnaryLeafRunsLogically physicalLeafState traceLeafState decoder := by
+    intro label equalityControl hcontrol next
+    exact coefficientPrefix_runFirstLeaf_trace registers mode target equalityControl next
+      hlayout (by simpa only [decoder, tree] using hcontrol)
   have hleaf : UnaryLeafPreserves
       (coefficientPrefixFirstLeaf registers k K mode target) decoder := by
     intro label equalityControl _ next wire hwire
     exact coefficientPrefixFirstLeaf_preservesDecoder
       (label := label) registers mode target hlayout equalityControl next wire
-      (by simpa only [decoder] using hwire)
-  rw [coefficientPrefixFirstTraversalState]
-  exact run_unaryActionUnitary_as_runLeafState .inc
-    (coefficientPrefixFirstLeaf registers k K mode target)
-    (coefficientPrefixFirstLeafTotalState registers k K mode target)
-    (coefficientPrefixTree registers k K) registers.control (registers.path k K)
-    decoder state htree hruns hleaf (fun _ hwire ↦ hwire) hclean
+      (by simpa only [decoder, tree] using hwire)
+  have hlogicalPreserves : LogicalLeafPreserves traceLeafState decoder := by
+    simpa only [traceLeafState, decoder, tree] using
+      coefficientPrefixFirstLeafTrace_preservesDecoder registers mode target hlayout
+  have hlogicalOutside : LogicalLeafRespectsOutside traceLeafState decoder
+      registers.control := by
+    simpa only [traceLeafState, decoder, tree] using
+      coefficientPrefixFirstLeafTrace_respectsOutside registers mode target hlayout
+  have htrace : Classical.run
+        (unaryActionUnitary .inc
+          (coefficientPrefixFirstLeaf registers k K mode target)
+          tree registers.control (registers.path k K)) state =
+      tree.runLogicalTree .inc traceLeafState
+        (state registers.control) state state :=
+    run_unaryActionUnitary_as_runLogicalTree .inc
+      (coefficientPrefixFirstLeaf registers k K mode target)
+      physicalLeafState traceLeafState tree registers.control (registers.path k K)
+      decoder state htree hruns hlogical hleaf hlogicalPreserves hlogicalOutside
+      (by intro wire hwire; exact hwire) hclean
+  let pulses := tree.visitPulses .inc (state registers.control) state
+  have hpure := coefficientPrefix_foldl_eq_of_cleanWire pulses
+    (fun pulse next => traceLeafState pulse.1 pulse.2 next)
+    (fun pulse next => coefficientPrefixFirstLeafState registers k K mode target
+      pulse.1 pulse.2 next)
+    (registers.cellScratch k K)
+    (by
+      intro pulse next hcell
+      exact coefficientPrefixFirstLeafTrace_eq_direct registers mode target pulse.2 next
+        hlayout hcell)
+    (by
+      intro pulse next hcell
+      change coefficientPrefixFirstLeafState registers k K mode target
+        pulse.1 pulse.2 next (registers.cellScratch k K) = false
+      rw [← coefficientPrefixFirstLeafTrace_eq_direct registers mode target pulse.2 next
+        hlayout hcell]
+      exact coefficientPrefixFirstLeafTrace_preservesCellScratch registers mode target
+        pulse.2 next hlayout hcell)
+    state hcellClean
+  calc
+    Classical.run
+        (unaryActionUnitary .inc
+          (coefficientPrefixFirstLeaf registers k K mode target)
+          (coefficientPrefixTree registers k K) registers.control
+          (registers.path k K)) state =
+        tree.runLogicalTree .inc traceLeafState
+          (state registers.control) state state := by simpa only [tree] using htrace
+    _ = pulses.foldl
+          (fun next pulse => traceLeafState pulse.1 pulse.2 next) state := by
+        simpa only [pulses] using UnaryActionTree.runLogicalTree_eq_foldl
+          .inc traceLeafState tree (state registers.control) state state
+    _ = pulses.foldl
+          (fun next pulse => coefficientPrefixFirstLeafState registers k K mode target
+            pulse.1 pulse.2 next) state := hpure.1
+    _ = coefficientPrefixFirstTraversalState registers k K mode target state := by
+      rfl
 
 theorem run_coefficientPrefixSecondTraversal_state
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (target : CoefficientTarget) (state : BasisState)
     (hlayout : CoefficientPrefixLayout registers k K)
-    (hclean : Clean (registers.path k K) state) :
+    (hclean : Clean (registers.path k K) state)
+    (hcellClean : state (registers.cellScratch k K) = false) :
     Classical.run
         (unaryActionUnitary .dec
           (coefficientPrefixSecondLeaf registers k K mode target)
           (coefficientPrefixTree registers k K) registers.control
           (registers.path k K)) state =
       coefficientPrefixSecondTraversalState registers k K mode target state := by
-  have htree : (coefficientPrefixTree registers k K).Layout registers.control
-      (registers.path k K) := by
-    simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
-  let decoder := registers.control ::
-    (coefficientPrefixTree registers k K).indexWires.dedup ++ registers.path k K
+  let tree := coefficientPrefixTree registers k K
+  let decoder := registers.control :: tree.indexWires.dedup ++ registers.path k K
+  let physicalLeafState := fun label equalityControl next =>
+    Classical.run
+      (coefficientPrefixSecondLeaf registers k K mode target label equalityControl) next
+  let traceLeafState := fun label active next =>
+    coefficientPrefixSecondLeafTraceState registers k K mode target label active next
+  have htree : tree.Layout registers.control (registers.path k K) := by
+    simpa only [tree, coefficientPrefixTree, CoefficientPrefixRegisters.path] using
+      hlayout.tree
   have hruns : UnaryLeafRunsAs
-      (coefficientPrefixSecondLeaf registers k K mode target)
-      (coefficientPrefixSecondLeafTotalState registers k K mode target) := by
+      (coefficientPrefixSecondLeaf registers k K mode target) physicalLeafState := by
     intro label equalityControl next
-    by_cases hready : equalityControl ∈ decoder ∧
-        next (registers.cellScratch k K) = false
-    · rw [coefficientPrefixSecondLeafTotalState, if_pos]
-      · exact run_coefficientPrefixSecondLeaf_state registers mode target
-          equalityControl next hlayout hready.1 hready.2
-      · simpa only [decoder] using hready
-    · rw [coefficientPrefixSecondLeafTotalState, if_neg]
-      simpa only [decoder] using hready
+    rfl
+  have hlogical : UnaryLeafRunsLogically physicalLeafState traceLeafState decoder := by
+    intro label equalityControl _ next
+    exact coefficientPrefix_runSecondLeaf_trace registers k K label mode target
+      equalityControl next
   have hleaf : UnaryLeafPreserves
       (coefficientPrefixSecondLeaf registers k K mode target) decoder := by
     intro label equalityControl _ next wire hwire
     exact coefficientPrefixSecondLeaf_preservesDecoder
       (label := label) registers mode target hlayout equalityControl next wire
-      (by simpa only [decoder] using hwire)
-  rw [coefficientPrefixSecondTraversalState]
-  exact run_unaryActionUnitary_as_runLeafState .dec
-    (coefficientPrefixSecondLeaf registers k K mode target)
-    (coefficientPrefixSecondLeafTotalState registers k K mode target)
-    (coefficientPrefixTree registers k K) registers.control (registers.path k K)
-    decoder state htree hruns hleaf (fun _ hwire ↦ hwire) hclean
+      (by simpa only [decoder, tree] using hwire)
+  have hlogicalPreserves : LogicalLeafPreserves traceLeafState decoder := by
+    simpa only [traceLeafState, decoder, tree] using
+      coefficientPrefixSecondLeafTrace_preservesDecoder registers mode target hlayout
+  have hlogicalOutside : LogicalLeafRespectsOutside traceLeafState decoder
+      registers.control := by
+    simpa only [traceLeafState, decoder, tree] using
+      coefficientPrefixSecondLeafTrace_respectsOutside registers mode target hlayout
+  have htrace : Classical.run
+        (unaryActionUnitary .dec
+          (coefficientPrefixSecondLeaf registers k K mode target)
+          tree registers.control (registers.path k K)) state =
+      tree.runLogicalTree .dec traceLeafState
+        (state registers.control) state state :=
+    run_unaryActionUnitary_as_runLogicalTree .dec
+      (coefficientPrefixSecondLeaf registers k K mode target)
+      physicalLeafState traceLeafState tree registers.control (registers.path k K)
+      decoder state htree hruns hlogical hleaf hlogicalPreserves hlogicalOutside
+      (by intro wire hwire; exact hwire) hclean
+  let pulses := tree.visitPulses .dec (state registers.control) state
+  have hpure := coefficientPrefix_foldl_eq_of_cleanWire pulses
+    (fun pulse next => traceLeafState pulse.1 pulse.2 next)
+    (fun pulse next => coefficientPrefixSecondLeafState registers k K mode target
+      pulse.1 pulse.2 next)
+    (registers.cellScratch k K)
+    (by
+      intro pulse next hcell
+      exact coefficientPrefixSecondLeafTrace_eq_direct registers mode target pulse.2 next
+        hlayout hcell)
+    (by
+      intro pulse next hcell
+      change coefficientPrefixSecondLeafState registers k K mode target
+        pulse.1 pulse.2 next (registers.cellScratch k K) = false
+      rw [← coefficientPrefixSecondLeafTrace_eq_direct registers mode target pulse.2 next
+        hlayout hcell]
+      exact coefficientPrefixSecondLeafTrace_preservesCellScratch registers mode target
+        pulse.2 next hlayout hcell)
+    state hcellClean
+  calc
+    Classical.run
+        (unaryActionUnitary .dec
+          (coefficientPrefixSecondLeaf registers k K mode target)
+          (coefficientPrefixTree registers k K) registers.control
+          (registers.path k K)) state =
+        tree.runLogicalTree .dec traceLeafState
+          (state registers.control) state state := by simpa only [tree] using htrace
+    _ = pulses.foldl
+          (fun next pulse => traceLeafState pulse.1 pulse.2 next) state := by
+        simpa only [pulses] using UnaryActionTree.runLogicalTree_eq_foldl
+          .dec traceLeafState tree (state registers.control) state state
+    _ = pulses.foldl
+          (fun next pulse => coefficientPrefixSecondLeafState registers k K mode target
+            pulse.1 pulse.2 next) state := hpure.1
+    _ = coefficientPrefixSecondTraversalState registers k K mode target state := by
+      rfl
 
 private theorem coefficientPrefix_decoder_nodup
     (registers : CoefficientPrefixRegisters) {k K : Nat}
@@ -1308,7 +1702,7 @@ private theorem coefficientPrefix_decoder_nodup
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   exact unaryLayout_decoderNodup htree
 
 private theorem coefficientPrefix_decoder_cell_nodup
@@ -1350,7 +1744,7 @@ private theorem coefficientPrefixFirstTraversal_preservesDecoderCell
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   have hleaf : UnaryLeafPreserves
       (coefficientPrefixFirstLeaf registers k K mode target) protectedWires := by
     intro label equalityControl _ next wire hwire
@@ -1369,47 +1763,8 @@ private theorem coefficientPrefixFirstTraversal_preservesDecoderCell
       intro wire hwire
       exact List.mem_append.mpr (Or.inl (by simpa only [decoder] using hwire))) hclean
 
-private theorem coefficientPrefixSecondTraversal_preservesDecoderCell
-    (registers : CoefficientPrefixRegisters) {k K : Nat}
-    (mode : RippleMode) (target : CoefficientTarget) (state : BasisState)
-    (hlayout : CoefficientPrefixLayout registers k K)
-    (hclean : Clean (registers.path k K) state) :
-    ∀ wire,
-      wire ∈ (registers.control ::
-        (coefficientPrefixTree registers k K).indexWires.dedup ++
-          registers.path k K) ++ [registers.cellScratch k K] →
-      Classical.run
-          (unaryActionUnitary .dec
-            (coefficientPrefixSecondLeaf registers k K mode target)
-            (coefficientPrefixTree registers k K) registers.control
-            (registers.path k K)) state wire = state wire := by
-  let decoder := registers.control ::
-    (coefficientPrefixTree registers k K).indexWires.dedup ++ registers.path k K
-  let protectedWires := decoder ++ [registers.cellScratch k K]
-  have htree : (coefficientPrefixTree registers k K).Layout registers.control
-      (registers.path k K) := by
-    simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
-  have hleaf : UnaryLeafPreserves
-      (coefficientPrefixSecondLeaf registers k K mode target) protectedWires := by
-    intro label equalityControl _ next wire hwire
-    rcases List.mem_append.mp hwire with hdecoder | hcell
-    · exact coefficientPrefixSecondLeaf_preservesDecoder
-        (label := label) registers mode target hlayout equalityControl next wire
-        (by simpa only [protectedWires, decoder] using hdecoder)
-    · have hwire : wire = registers.cellScratch k K := by simpa using hcell
-      subst wire
-      exact coefficientPrefixSecondLeaf_preservesCellScratch
-        (label := label) registers mode target equalityControl next hlayout
-  exact unaryActionUnitary_preserves .dec
-    (coefficientPrefixSecondLeaf registers k K mode target)
-    (coefficientPrefixTree registers k K) registers.control (registers.path k K)
-    protectedWires state htree hleaf (by
-      intro wire hwire
-      exact List.mem_append.mpr (Or.inl (by simpa only [decoder] using hwire))) hclean
-
 @[simp]
-theorem coefficientPrefixFirstTraversal_HPFree
+private theorem coefficientPrefixFirstTraversal_HPFree
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget) :
     HPFree
@@ -1422,7 +1777,7 @@ theorem coefficientPrefixFirstTraversal_HPFree
   exact coefficientPrefixFirstLeaf_HPFree registers k K mode target label equalityControl
 
 @[simp]
-theorem coefficientPrefixSecondTraversal_HPFree
+private theorem coefficientPrefixSecondTraversal_HPFree
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget) :
     HPFree
@@ -1434,7 +1789,7 @@ theorem coefficientPrefixSecondTraversal_HPFree
   intro label equalityControl
   exact coefficientPrefixSecondLeaf_HPFree registers k K mode target label equalityControl
 
-theorem coefficientPrefixFirstTraversal_wellFormed
+private theorem coefficientPrefixFirstTraversal_wellFormed
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (target : CoefficientTarget)
     (hlayout : CoefficientPrefixLayout registers k K) :
@@ -1445,12 +1800,12 @@ theorem coefficientPrefixFirstTraversal_wellFormed
         (registers.path k K)) := by
   apply unaryActionUnitary_wellFormed
   · simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   · intro label hlabel equalityControl hcontrol
     exact coefficientPrefixFirstLeaf_wellFormed (label := label) registers mode target
       equalityControl hlayout hcontrol
 
-theorem coefficientPrefixSecondTraversal_wellFormed
+private theorem coefficientPrefixSecondTraversal_wellFormed
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (target : CoefficientTarget)
     (hlayout : CoefficientPrefixLayout registers k K) :
@@ -1461,12 +1816,12 @@ theorem coefficientPrefixSecondTraversal_wellFormed
         (registers.path k K)) := by
   apply unaryActionUnitary_wellFormed
   · simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   · intro label hlabel equalityControl hcontrol
     exact coefficientPrefixSecondLeaf_wellFormed (label := label) registers mode target
       equalityControl hlayout hcontrol
 
-theorem coefficientPrefixFirstTraversalAdaptive_wellFormed
+private theorem coefficientPrefixFirstTraversalAdaptive_wellFormed
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (target : CoefficientTarget)
     (hlayout : CoefficientPrefixLayout registers k K) :
@@ -1476,12 +1831,12 @@ theorem coefficientPrefixFirstTraversalAdaptive_wellFormed
       (registers.path k K)).WellFormed := by
   apply unaryAdaptiveAction_wellFormed
   · simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   · intro label hlabel equalityControl hcontrol
     exact coefficientPrefixFirstLeafAdaptive_wellFormed (label := label) registers
       mode target equalityControl hlayout hcontrol
 
-theorem coefficientPrefixSecondTraversalAdaptive_wellFormed
+private theorem coefficientPrefixSecondTraversalAdaptive_wellFormed
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (target : CoefficientTarget)
     (hlayout : CoefficientPrefixLayout registers k K) :
@@ -1491,12 +1846,12 @@ theorem coefficientPrefixSecondTraversalAdaptive_wellFormed
       (registers.path k K)).WellFormed := by
   apply unaryAdaptiveAction_wellFormed
   · simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   · intro label hlabel equalityControl hcontrol
     exact coefficientPrefixSecondLeafAdaptive_wellFormed (label := label) registers
       mode target equalityControl hlayout hcontrol
 
-theorem coefficientPrefixFirstTraversalAdaptive_coherent
+private theorem coefficientPrefixFirstTraversalAdaptive_coherent
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (target : CoefficientTarget)
     (hlayout : CoefficientPrefixLayout registers k K) :
@@ -1535,7 +1890,7 @@ theorem coefficientPrefixFirstTraversalAdaptive_coherent
     (ancillas := registers.path k K)
     (extraWires := [registers.cellScratch k K])
     (by simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree)
+      hlayout.tree)
     (by simpa only [decoder] using
       coefficientPrefix_decoder_cell_nodup registers target hlayout)
     hleaf (by
@@ -1544,7 +1899,7 @@ theorem coefficientPrefixFirstTraversalAdaptive_coherent
         equalityControl hlayout)
     (by intro label equalityControl; simp)
 
-theorem coefficientPrefixSecondTraversalAdaptive_coherent
+private theorem coefficientPrefixSecondTraversalAdaptive_coherent
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (target : CoefficientTarget)
     (hlayout : CoefficientPrefixLayout registers k K) :
@@ -1583,7 +1938,7 @@ theorem coefficientPrefixSecondTraversalAdaptive_coherent
     (ancillas := registers.path k K)
     (extraWires := [registers.cellScratch k K])
     (by simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree)
+      hlayout.tree)
     (by simpa only [decoder] using
       coefficientPrefix_decoder_cell_nodup registers target hlayout)
     hleaf (by
@@ -1592,19 +1947,24 @@ theorem coefficientPrefixSecondTraversalAdaptive_coherent
         equalityControl hlayout)
     (by intro label equalityControl; simp)
 
-/-- Direct source-order execution of the complete prepared-boundary block. -/
+/-- Circuit-free Boolean/source recurrence for the complete prepared-boundary block: seed the
+accumulator, run the increasing leaf recurrence, update the sign directly when requested, run the
+decreasing leaf recurrence, and clear the accumulator. -/
 def coefficientPrefixState
     (registers : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (signUpdate : Bool) (target : CoefficientTarget)
     (state : BasisState) : BasisState :=
-  let seeded := Classical.run
-    ([.CX registers.control (registers.accumulator k K)] : Circuit) state
+  let seeded := state[registers.accumulator k K ↦
+    Bool.xor (state (registers.accumulator k K)) (state registers.control)]
   let afterFirst := coefficientPrefixFirstTraversalState registers k K mode target seeded
-  let afterSign := Classical.run
-    (coefficientPrefixSignCircuit registers k K signUpdate) afterFirst
+  let afterSign := if signUpdate then
+      afterFirst[registers.sign ↦
+        Bool.xor (afterFirst registers.sign) (afterFirst (registers.carry k K))]
+    else afterFirst
   let afterSecond := coefficientPrefixSecondTraversalState registers k K mode target afterSign
-  Classical.run ([.CX registers.control (registers.accumulator k K)] : Circuit)
-    afterSecond
+  afterSecond[registers.accumulator k K ↦
+    Bool.xor (afterSecond (registers.accumulator k K))
+      (afterSecond registers.control)]
 
 private theorem coefficientPrefix_carry_mem_scratch
     (registers : CoefficientPrefixRegisters) {k K : Nat}
@@ -1681,14 +2041,34 @@ theorem run_coefficientPrefixUnitary_state
     Classical.run
         (coefficientPrefixUnitary registers k K mode signUpdate target) state =
       coefficientPrefixState registers k K mode signUpdate target state := by
-  let seeded := Classical.run
-    ([.CX registers.control (registers.accumulator k K)] : Circuit) state
+  let seeded := state[registers.accumulator k K ↦
+    Bool.xor (state (registers.accumulator k K)) (state registers.control)]
+  have hseedRun : Classical.run
+      ([.CX registers.control (registers.accumulator k K)] : Circuit) state = seeded := by
+    rfl
   have hpath : Clean (registers.path k K) state :=
     coefficientPrefix_cleanPath_of_ready registers k K state hready
   have hseededPath : Clean (registers.path k K) seeded := by
-    exact clean_run_singleCX_of_target_not_mem registers.control
+    have hphysical := clean_run_singleCX_of_target_not_mem registers.control
       (registers.accumulator k K) (registers.path k K) state hpath
       (coefficientPrefix_path_not_accumulator registers hlayout)
+    rw [hseedRun] at hphysical
+    exact hphysical
+  have hcell : state (registers.cellScratch k K) = false :=
+    hready (registers.cellScratch k K)
+      (coefficientPrefix_cellScratch_mem_scratch registers hlayout)
+  have haccCell : registers.accumulator k K ≠ registers.cellScratch k K := by
+    have hcellLayout := coefficientPrefix_cellLayout
+      (label := k) registers target hlayout
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil,
+      or_false, not_or] at hcellLayout
+    exact hcellLayout.1.2.2.2
+  have hseededCell : seeded (registers.cellScratch k K) = false := by
+    rw [show seeded = state[registers.accumulator k K ↦
+        Bool.xor (state (registers.accumulator k K))
+          (state registers.control)] by rfl,
+      upd_other state (registers.accumulator k K) _ (Ne.symm haccCell)]
+    exact hcell
   let afterFirst := coefficientPrefixFirstTraversalState registers k K mode target seeded
   have hfirstRun : Classical.run
         (unaryActionUnitary .inc
@@ -1696,7 +2076,7 @@ theorem run_coefficientPrefixUnitary_state
           (coefficientPrefixTree registers k K) registers.control
           (registers.path k K)) seeded = afterFirst := by
     exact run_coefficientPrefixFirstTraversal_state registers mode target seeded
-      hlayout hseededPath
+      hlayout hseededPath hseededCell
   have hfirstPath : Clean (registers.path k K) afterFirst := by
     intro wire hwire
     have hpreserved := coefficientPrefixFirstTraversal_preservesDecoderCell
@@ -1704,10 +2084,34 @@ theorem run_coefficientPrefixUnitary_state
         exact List.mem_append.mpr (Or.inl (by simp [hwire])))
     rw [hfirstRun] at hpreserved
     exact hpreserved.trans (hseededPath wire hwire)
-  let afterSign := Classical.run
-    (coefficientPrefixSignCircuit registers k K signUpdate) afterFirst
+  have hfirstCell : afterFirst (registers.cellScratch k K) = false := by
+    have hpreserved := coefficientPrefixFirstTraversal_preservesDecoderCell
+      registers mode target seeded hlayout hseededPath
+      (registers.cellScratch k K) (by
+        exact List.mem_append.mpr (Or.inr (by simp)))
+    rw [hfirstRun] at hpreserved
+    exact hpreserved.trans hseededCell
+  let afterSign := if signUpdate then
+      afterFirst[registers.sign ↦
+        Bool.xor (afterFirst registers.sign) (afterFirst (registers.carry k K))]
+    else afterFirst
+  have hsignRun : Classical.run
+      (coefficientPrefixSignCircuit registers k K signUpdate) afterFirst = afterSign := by
+    cases signUpdate <;> rfl
   have hsignPath : Clean (registers.path k K) afterSign :=
-    coefficientPrefixSign_preservesPath registers signUpdate afterFirst hlayout hfirstPath
+    by
+      have hphysical := coefficientPrefixSign_preservesPath registers signUpdate
+        afterFirst hlayout hfirstPath
+      rw [hsignRun] at hphysical
+      exact hphysical
+  have hcellSign : registers.cellScratch k K ≠ registers.sign := by
+    intro equality
+    apply (coefficientPrefix_fixed_not_mem_scratch registers hlayout).2
+    rw [← equality]
+    exact coefficientPrefix_cellScratch_mem_scratch registers hlayout
+  have hsignCell : afterSign (registers.cellScratch k K) = false := by
+    cases signUpdate <;>
+      simp [afterSign, upd, hcellSign, hfirstCell]
   let afterSecond := coefficientPrefixSecondTraversalState registers k K mode target afterSign
   have hsecondRun : Classical.run
         (unaryActionUnitary .dec
@@ -1715,10 +2119,11 @@ theorem run_coefficientPrefixUnitary_state
           (coefficientPrefixTree registers k K) registers.control
           (registers.path k K)) afterSign = afterSecond := by
     exact run_coefficientPrefixSecondTraversal_state registers mode target afterSign
-      hlayout hsignPath
+      hlayout hsignPath hsignCell
   simp only [coefficientPrefixUnitary, coefficientPrefixState,
     Classical.run_append]
-  rw [hfirstRun, hsecondRun]
+  rw [hseedRun, hfirstRun, hsignRun, hsecondRun]
+  rfl
 
 private theorem coefficientPrefix_control_ne_accumulator
     (registers : CoefficientPrefixRegisters) {k K : Nat}
@@ -1973,8 +2378,7 @@ private theorem coefficientPrefix_targetAt_injective
   have hrightBounds := coefficientPrefix_label_bounds registers hlayout hright
   cases target with
   | work1 =>
-      have hlength : registers.work1.length = K - k + 1 := by
-        simpa [CoefficientPrefixRegisters.routing] using hlayout.routing.work1_length
+      have hlength : registers.work1.length = K - k + 1 := hlayout.work1_length
       have hleftIndex : registers.laneAt k left < registers.work1.length := by
         rw [hlength]
         simp only [CoefficientPrefixRegisters.laneAt]
@@ -2266,7 +2670,9 @@ theorem coefficientPrefixUnitary_usesOnly
         wire ∈ registers.allWires := by
     intro wire hwire
     have hboundary := quotientSwapTree_indexWires_mem_lengthQ
-      (registers.routing k K) hlayout.routing wire (by simpa using hwire)
+      (registers.routing k K) hlayout.k_le_K
+        (by simpa [CoefficientPrefixRegisters.routing] using hlayout.index_width)
+        wire (by simpa using hwire)
     exact hboundaryMem wire (by
       simpa only [CoefficientPrefixRegisters.routing] using hboundary)
   have hpath : ∀ wire, wire ∈ registers.path k K →
@@ -2791,7 +3197,7 @@ private theorem coefficientPrefixTraversals_pair_preservesOutsideTargets
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   apply coefficientPrefix_unaryActionPair_preservesOutsideTargets
     (coefficientPrefixFirstLeaf registers k K mode target)
     (coefficientPrefixSecondLeaf registers k K mode target)
@@ -2921,7 +3327,7 @@ private theorem coefficientPrefixSecondTraversal_avoidsSign
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   apply coefficientPrefix_unaryActionUnitary_avoids
     (order := .dec)
     (leafAction := coefficientPrefixSecondLeaf registers k K mode target)
@@ -3117,7 +3523,7 @@ theorem coefficientPrefixUnitary_toffoliCount
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   have hfirst : (coefficientPrefixTree registers k K).leafCostSum
       (fun label wire ↦ eeaToffoliCount
         (coefficientPrefixFirstLeaf registers k K mode target label wire))
@@ -3163,7 +3569,7 @@ theorem coefficientPrefixUnitary_cnotCount
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   have hfirst : (coefficientPrefixTree registers k K).leafCostSum
       (fun label wire ↦ eeaCnotCount
         (coefficientPrefixFirstLeaf registers k K mode target label wire))
@@ -3206,7 +3612,7 @@ theorem coefficientPrefixUnitary_tCount
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   have hfirst : (coefficientPrefixTree registers k K).leafCostSum
       (fun label wire ↦ ShorECDLP.tCount
         (coefficientPrefixFirstLeaf registers k K mode target label wire))
@@ -3250,7 +3656,7 @@ theorem coefficientPrefixAdaptive_measurementCount
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   have hfirst : (coefficientPrefixTree registers k K).leafCostSum
       (fun label wire ↦
         (coefficientPrefixFirstLeafAdaptive registers k K mode target label wire).measurementCount)
@@ -3292,7 +3698,7 @@ theorem coefficientPrefixAdaptive_tCount
   have htree : (coefficientPrefixTree registers k K).Layout registers.control
       (registers.path k K) := by
     simpa [coefficientPrefixTree, CoefficientPrefixRegisters.path] using
-      hlayout.routing.tree
+      hlayout.tree
   have hfirst : (coefficientPrefixTree registers k K).leafCostSum
       (fun label wire ↦
         (coefficientPrefixFirstLeafAdaptive registers k K mode target label wire).tCount)
@@ -3327,6 +3733,70 @@ theorem coefficientPrefixAdaptive_tCount
 
 /-! ## Pinned-source regressions -/
 
+private def coefficientPrefixTreeDepth : UnaryActionTree → Nat
+  | .leaf _ => 0
+  | .node _ zero one =>
+      1 + max (coefficientPrefixTreeDepth zero) (coefficientPrefixTreeDepth one)
+
+/-- A separated path stack with enough cells realizes the recursive unary-decoder layout. -/
+private theorem coefficientPrefixTree_layout_of_separated
+    (tree : UnaryActionTree) (control : Wire) (path : List Wire)
+    (hdepth : coefficientPrefixTreeDepth tree ≤ path.length)
+    (hcontrolIndex : control ∉ tree.indexWires)
+    (hcontrolPath : control ∉ path)
+    (hpathNodup : path.Nodup)
+    (hindexPath : ∀ wire ∈ tree.indexWires, wire ∉ path) :
+    tree.Layout control path := by
+  induction tree generalizing control path with
+  | leaf label =>
+      exact .leaf label control path (by
+        simp only [List.nodup_cons]
+        exact ⟨hcontrolPath, hpathNodup⟩)
+  | node indexBit zero one ihZero ihOne =>
+      cases path with
+      | nil => simp [coefficientPrefixTreeDepth] at hdepth
+      | cons next rest =>
+          have hrestNodup : rest.Nodup :=
+            (List.nodup_cons.mp hpathNodup).2
+          have hnextRest : next ∉ rest :=
+            (List.nodup_cons.mp hpathNodup).1
+          have hlocal :
+              (control ::
+                ((UnaryActionTree.node indexBit zero one).indexWires.dedup ++
+                  (next :: rest))).Nodup := by
+            rw [List.nodup_cons, List.nodup_append]
+            refine ⟨?_, List.nodup_dedup _, hpathNodup, ?_⟩
+            · intro hmem
+              rw [List.mem_append] at hmem
+              exact hmem.elim
+                (fun h => hcontrolIndex (by simpa using h)) hcontrolPath
+            · intro wire hwire pathWire hpathWire heq
+              exact hindexPath wire (by simpa using hwire)
+                (by simpa [← heq] using hpathWire)
+          exact .node indexBit control next zero one rest hlocal
+            (ihZero next rest
+              (by simp [coefficientPrefixTreeDepth] at hdepth; omega)
+              (by
+                intro hmem
+                exact hindexPath next
+                  (by simp [UnaryActionTree.indexWires, hmem]) (by simp))
+              hnextRest hrestNodup
+              (by
+                intro wire hwire hrest
+                exact hindexPath wire
+                  (by simp [UnaryActionTree.indexWires, hwire]) (by simp [hrest])))
+            (ihOne next rest
+              (by simp [coefficientPrefixTreeDepth] at hdepth; omega)
+              (by
+                intro hmem
+                exact hindexPath next
+                  (by simp [UnaryActionTree.indexWires, hmem]) (by simp))
+              hnextRest hrestNodup
+              (by
+                intro wire hwire hrest
+                exact hindexPath wire
+                  (by simp [UnaryActionTree.indexWires, hwire]) (by simp [hrest])))
+
 private def coefficientPrefixSmallRegisters : CoefficientPrefixRegisters where
   control := 0
   sign := 1
@@ -3344,7 +3814,6 @@ theorem coefficientPrefixSmall_tree_regression :
 
 private theorem coefficientPrefixSmall_layout :
     CoefficientPrefixLayout coefficientPrefixSmallRegisters 2 5 := by
-  refine ⟨by decide, by decide, by decide, ?_⟩
   refine ⟨by decide, by decide, by decide, by decide, by decide, by decide, ?_⟩
   change (coefficientPrefixTree coefficientPrefixSmallRegisters 2 5).Layout
     0 ([13, 14, 15] : List Wire)
@@ -3397,6 +3866,90 @@ theorem coefficientPrefixSmall_surface_regression :
           .add true .work2) = 17 := by
   decide
 
+private def coefficientPrefixNarrowRegisters : CoefficientPrefixRegisters where
+  control := 0
+  sign := 1
+  work1 := [2, 3]
+  work2 := [4, 5]
+  boundary := [6, 7, 8, 9, 10, 11, 12, 13, 14]
+  scratch := [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]
+
+/-- Exact source tree for the first narrow production T-prefix window `(k,K,len_width)=(1,2,9)`. -/
+theorem coefficientPrefixNarrow_tree_regression :
+    coefficientPrefixTree coefficientPrefixNarrowRegisters 1 2 =
+      .node 7 (.leaf 1) (.leaf 2) := by
+  decide
+
+/-- Literal source-order comparison for the first narrow production T-prefix call. -/
+theorem coefficientPrefixNarrow_source_regression :
+    coefficientPrefixUnitary coefficientPrefixNarrowRegisters 1 2
+        .sub false .work2 =
+      [.CX 0 25] ++
+      computeZeroAnd 0 7 15 ++
+      controlledUmaInv 25 4 2 24 26 ++ [.CX 15 25] ++
+      [.CX 0 15] ++
+      controlledUmaInv 25 5 3 24 26 ++ [.CX 15 25] ++
+      [.CX 0 15] ++ computeZeroAnd 0 7 15 ++
+      computeZeroAnd 0 7 15 ++ [.CX 0 15] ++
+      [.CX 15 25] ++ controlledMajInv 25 5 3 24 26 ++
+      [.CX 0 15] ++ [.CX 15 25] ++
+      controlledMajInv 25 4 2 24 26 ++
+      computeZeroAnd 0 7 15 ++ [.CX 0 25] := by
+  decide
+
+/-- The first narrow production T-prefix call has an inhabited 27-role physical layout. -/
+theorem coefficientPrefixNarrow_layout :
+    CoefficientPrefixLayout coefficientPrefixNarrowRegisters 1 2 := by
+  refine ⟨by decide, by decide, by decide, by decide, by decide, by decide, ?_⟩
+  change (coefficientPrefixTree coefficientPrefixNarrowRegisters 1 2).Layout
+    0 ([15] : List Wire)
+  rw [coefficientPrefixNarrow_tree_regression]
+  exact .node 7 0 15 _ _ ([] : List Wire) (by decide)
+    (.leaf 1 15 ([] : List Wire) (by decide))
+    (.leaf 2 15 ([] : List Wire) (by decide))
+
+/-- Exact resources for the first pinned production T-prefix call: subtract into Work2 without a
+sign update. -/
+theorem coefficientPrefixNarrow_resources :
+    eeaToffoliCount
+        (coefficientPrefixUnitary coefficientPrefixNarrowRegisters 1 2
+          .sub false .work2) = 18 ∧
+      eeaCnotCount
+        (coefficientPrefixUnitary coefficientPrefixNarrowRegisters 1 2
+          .sub false .work2) = 18 ∧
+      ShorECDLP.tCount
+        (coefficientPrefixUnitary coefficientPrefixNarrowRegisters 1 2
+          .sub false .work2) = 126 ∧
+      (coefficientPrefixAdaptive coefficientPrefixNarrowRegisters 1 2
+          .sub false .work2).measurementCount = 6 ∧
+      (coefficientPrefixAdaptive coefficientPrefixNarrowRegisters 1 2
+          .sub false .work2).tCount = 84 := by
+  rw [coefficientPrefixUnitary_toffoliCount coefficientPrefixNarrowRegisters
+      .sub false .work2 coefficientPrefixNarrow_layout,
+    coefficientPrefixUnitary_cnotCount coefficientPrefixNarrowRegisters
+      .sub false .work2 coefficientPrefixNarrow_layout,
+    coefficientPrefixUnitary_tCount coefficientPrefixNarrowRegisters
+      .sub false .work2 coefficientPrefixNarrow_layout,
+    coefficientPrefixAdaptive_measurementCount coefficientPrefixNarrowRegisters
+      .sub false .work2 coefficientPrefixNarrow_layout,
+    coefficientPrefixAdaptive_tCount coefficientPrefixNarrowRegisters
+      .sub false .work2 coefficientPrefixNarrow_layout,
+    coefficientPrefixNarrow_tree_regression]
+  norm_num [UnaryActionTree.leaves, UnaryActionTree.internalNodes]
+
+set_option maxRecDepth 10000 in
+/-- The first narrow production call allocates 27 physical roles; its pruned source term touches
+exactly ten of them and contains eight X gates. -/
+theorem coefficientPrefixNarrow_surface_regression :
+    coefficientPrefixNarrowRegisters.allWires.length = 27 ∧
+      eeaXCount
+        (coefficientPrefixUnitary coefficientPrefixNarrowRegisters 1 2
+          .sub false .work2) = 8 ∧
+      qubitCount
+        (coefficientPrefixUnitary coefficientPrefixNarrowRegisters 1 2
+          .sub false .work2) = 10 := by
+  decide
+
 private theorem coefficientPrefix_leaves_eq_labels_length
     (tree : UnaryActionTree) :
     tree.leaves = tree.labels.length := by
@@ -3413,6 +3966,32 @@ private theorem coefficientPrefix_internalNodes_succ_eq_leaves
   | node indexBit zero one ihZero ihOne =>
       simp only [UnaryActionTree.internalNodes, UnaryActionTree.leaves]
       omega
+
+private def coefficientPrefixProductionRegisters : CoefficientPrefixRegisters where
+  control := 0
+  sign := 1
+  work1 := List.range' 2 257
+  work2 := List.range' 259 257
+  boundary := List.range' 516 9
+  scratch := List.range' 525 12
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 800000 in
+/-- The advertised production `(k,K,len_width)=(1,257,9)` surface is inhabited by one explicit
+537-role physical allocation.  Its nine source bits and nine decoder-path cells are disjoint. -/
+theorem coefficientPrefixProduction_layout_inhabited :
+    ∃ registers : CoefficientPrefixRegisters,
+      registers.allWires.length = 537 ∧
+        registers.boundary.length = 9 ∧
+        CoefficientPrefixLayout registers 1 257 := by
+  refine ⟨coefficientPrefixProductionRegisters, by decide, by decide, ?_⟩
+  refine ⟨by decide, by decide, by decide, by decide, by decide, by decide, ?_⟩
+  apply coefficientPrefixTree_layout_of_separated
+  · decide
+  · decide
+  · decide
+  · decide
+  · decide
 
 set_option maxRecDepth 10000 in
 private theorem coefficientPrefixProduction_tree_shape
@@ -3438,7 +4017,8 @@ optional carry-to-sign CNOT distinguishes the additive call from the subtractive
 theorem coefficientPrefixProduction_resources
     (registers : CoefficientPrefixRegisters)
     (mode : RippleMode) (signUpdate : Bool) (target : CoefficientTarget)
-    (hlayout : CoefficientPrefixLayout registers 1 257) :
+    (hlayout : CoefficientPrefixLayout registers 1 257)
+    (hboundary : registers.boundary.length = 9) :
     eeaToffoliCount
         (coefficientPrefixUnitary registers 1 257 mode signUpdate target) = 2823 ∧
       eeaCnotCount
@@ -3449,6 +4029,7 @@ theorem coefficientPrefixProduction_resources
       (coefficientPrefixAdaptive registers 1 257 mode signUpdate target).measurementCount =
         1026 ∧
       (coefficientPrefixAdaptive registers 1 257 mode signUpdate target).tCount = 12579 := by
+  have _hboundaryWidth : registers.boundary.length = 9 := hboundary
   obtain ⟨hleaves, hinternal⟩ :=
     coefficientPrefixProduction_tree_shape registers hlayout
   rw [coefficientPrefixUnitary_toffoliCount registers mode signUpdate target hlayout,

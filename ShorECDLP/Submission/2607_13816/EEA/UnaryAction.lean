@@ -490,7 +490,7 @@ def unaryAdaptiveAction
   | .node _ _ _, _, [] => .done
 
 @[simp]
-theorem unaryAdaptiveAction_unitary
+private theorem unaryAdaptiveAction_unitary
     (order : UnaryOrder) (leafAction : Nat → Wire → Circuit)
     (tree : UnaryActionTree) (control : Wire) (ancillas : List Wire) :
     unaryAdaptiveAction order

@@ -488,8 +488,13 @@ refinement, exact adjoint cancellation, and constructor-derived counts are certi
 four-label regression touches 17 roles and has `40 CCX`, `39 CX`, `24 X`, and `280` coherent T
 gates, or 14 measurements and `182` adaptive T gates. At the production 257-lane window the
 symbolic formulas give `2823 CCX`, `2568 + signUpdate CX`, and `19761` coherent T gates, or 1026
-measurements and `12579` adaptive T gates. Phase-dependent boundary preparation, the explicit
-inverse, and indexed four-phase composition remain open within Phase 5.
+measurements and `12579` adaptive T gates; an explicit 537-role allocation witnesses that full
+`(1,257,9)` layout. Its coefficient-specific contract does not inherit the quotient selector's
+unrelated equal-width arithmetic-register condition: the first actual narrow production call
+`(k,K,len_width)=(1,2,9)` has an inhabited 27-role layout, touches 10 wires, and certifies `18 CCX`,
+`18 CX`, `8 X`, and `126` coherent T gates, or 6 measurements and `84` adaptive T gates.
+Phase-dependent boundary preparation, the explicit inverse, and indexed four-phase composition
+remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -748,8 +753,9 @@ They are equal only if Phase 11 proves the required reuse.
 - **PR #77, Phase-5 circuit unit 16 (current):** the exact forward prepared-boundary
   coefficient-prefix block, including both ordered unary traversals, the optional sign update,
   direct whole-state semantics, scratch restoration, locality/well-formedness, adaptive coherent
-  refinement, exact cancellation, and small/production resource regressions. Boundary preparation,
-  the explicit inverse, and the full indexed four-phase step remain open.
+  refinement, exact cancellation, and small/production resource regressions. Its dedicated routing
+  contract permits the pinned schedule's narrow `(1,2,9)` window without dummy coefficient lanes.
+  Boundary preparation, the explicit inverse, and the full indexed four-phase step remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
