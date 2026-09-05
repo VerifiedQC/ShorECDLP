@@ -2392,58 +2392,6 @@ def LengthBlockLayout.toShared
       simp [lengthBlockWriterSupport, htarget]
     exact List.disjoint_left.mp hlayout.affineDisjoint hleft hright
 
-private theorem LengthBlockLayout.writer_not_affineRegister
-    {k K : Nat} {tree : UnaryActionTree}
-    {control rangeAccumulator temporary carry : Wire} {path : List Wire}
-    {work1At work2At : Nat → Wire} {affineRegister target constants : List Wire}
-    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
-      work1At work2At affineRegister target constants)
-    {wire : Wire}
-    (hwire : wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator
-      temporary path work1At work2At target) :
-    wire ∉ affineRegister := by
-  intro haffine
-  have hleft : wire ∈ constants ++ affineRegister ++ [carry] := by
-    simp [haffine]
-  exact List.disjoint_left.mp hlayout.affineDisjoint hleft hwire
-
-private theorem LengthBlockLayout.affine_not_target
-    {k K : Nat} {tree : UnaryActionTree}
-    {control rangeAccumulator temporary carry : Wire} {path : List Wire}
-    {work1At work2At : Nat → Wire} {affineRegister target constants : List Wire}
-    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
-      work1At work2At affineRegister target constants)
-    {wire : Wire} (hwire : wire ∈ affineRegister) :
-    wire ∉ target := by
-  intro htarget
-  have hleft : wire ∈ constants ++ affineRegister ++ [carry] := by
-    simp [hwire]
-  have hright : wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator
-      temporary path work1At work2At target := by
-    simp only [lengthBlockWriterSupport, List.mem_append]
-    exact Or.inl (Or.inl (Or.inl htarget))
-  exact List.disjoint_left.mp hlayout.affineDisjoint hleft hright
-
-private theorem LengthBlockLayout.constantCarry_not_target
-    {k K : Nat} {tree : UnaryActionTree}
-    {control rangeAccumulator temporary carry : Wire} {path : List Wire}
-    {work1At work2At : Nat → Wire} {affineRegister target constants : List Wire}
-    (hlayout : LengthBlockLayout k K tree control rangeAccumulator temporary carry path
-      work1At work2At affineRegister target constants)
-    {wire : Wire} (hwire : wire ∈ constants ++ [carry]) :
-    wire ∉ target := by
-  intro htarget
-  have haffine : wire ∈ constants ++ affineRegister ++ [carry] := by
-    simp only [List.mem_append, List.mem_singleton] at hwire ⊢
-    rcases hwire with hconstant | hcarry
-    · exact Or.inl (Or.inl hconstant)
-    · exact Or.inr hcarry
-  have hright : wire ∈ lengthBlockWriterSupport k K tree control rangeAccumulator
-      temporary path work1At work2At target := by
-    simp only [lengthBlockWriterSupport, List.mem_append]
-    exact Or.inl (Or.inl (Or.inl htarget))
-  exact List.disjoint_left.mp hlayout.affineDisjoint haffine hright
-
 private theorem SharedLengthBlockLayout.writer_not_affineRegister
     {k K : Nat} {tree : UnaryActionTree}
     {control rangeAccumulator temporary carry : Wire} {path : List Wire}
