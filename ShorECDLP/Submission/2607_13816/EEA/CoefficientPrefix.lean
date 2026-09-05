@@ -12,8 +12,9 @@ updates `sign` from the carry, and visits the same labels in decreasing order wi
 cell before clearing the accumulator.
 
 Both the literal coherent stream and the measurement-uncomputed stream use the same source-built
-tree and leaf order.  Preparing the phase-dependent boundary and the explicit inverse block remain
-the next indexed-step composition boundary.
+tree and leaf order.  Phase-dependent boundary preparation/restoration and the explicit inverse
+are provided by the adjacent `TBoundary` and `CoefficientPrefixInverse` modules; their indexed-step
+composition remains a later boundary.
 -/
 
 namespace ShorECDLP.Paper2607_13816

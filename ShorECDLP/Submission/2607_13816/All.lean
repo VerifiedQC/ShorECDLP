@@ -21,6 +21,7 @@ import ShorECDLP.Submission.«2607_13816».EEA.Shift
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientSwap
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrefix
 import ShorECDLP.Submission.«2607_13816».EEA.TBoundary
+import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrefixInverse
 import ShorECDLP.Submission.«2607_13816».EEA.Windows
 
 /-!

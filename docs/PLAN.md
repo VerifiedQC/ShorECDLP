@@ -5,15 +5,15 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-16 paper foundation below
-are on `main@9f5485e7469f3c17a1d1f0a5bc0a9e3a95a67d12`. PR #56 → PR #57 → PR #58 → PR #59
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-17 paper foundation below
+are on `main@42b8fa02ea8c90bf97e5fef9ede53f6c2c153fb5`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
 → PR #69 → PR #70 → PR #71 → PR #72 → PR #73 → PR #74 → PR #75 → PR #76 → PR #77
-landed the source split, adaptive Kraus semantics, coherent-refinement bridge, measurement-based
-uncomputation, pure EEA model, indexed EEA bounds/windows, and sixteen concrete circuit units
-ending with the forward prepared-boundary coefficient-prefix update. Phase 5 circuit unit 17 is
-current in PR #78: it implements the phase-dependent coefficient-boundary preparation/restoration
-pair. The coefficient-prefix inverse and the full indexed four-phase step remain open.
+→ PR #78 landed the source split, adaptive Kraus semantics, coherent-refinement bridge,
+measurement-based uncomputation, pure EEA model, indexed EEA bounds/windows, and seventeen
+concrete circuit units ending with the phase-dependent coefficient-boundary preparation/restoration
+pair. Phase 5 circuit unit 18 is current on this branch: it implements the pinned explicit
+coefficient-prefix inverse. The full indexed four-phase step remains open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -378,8 +378,8 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first sixteen dependency-closed construction units are merged; the seventeenth is
-the current phase-dependent coefficient-boundary pair in PR #78. PR #62 contains
+**Status:** the first seventeen dependency-closed construction units are merged through PR #78;
+the eighteenth is the current explicit coefficient-prefix inverse on this branch. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -500,8 +500,16 @@ with the literal bitwise Fredkin loop. Pure-word and complete-basis-state semant
 two-sided round trips, restore the shared width-plus-one arithmetic scratch, preserve every wire
 outside the two boundary words, and establish locality, `HPFree`, and well-formedness. At the
 production width nine, either block borrows ten clean scratch roles, touches exactly 38 wires, and
-has `77 CCX`, `136 CX`, `16 X`, and `539` coherent T gates. The explicit coefficient-prefix inverse
-and indexed four-phase composition remain open within Phase 5.
+has `77 CCX`, `136 CX`, `16 X`, and `539` coherent T gates. The eighteenth unit implements the
+exact `lc_prefix_addsub_prepared_boundary_gate(..., inverse=True)` branch. It preserves the pinned
+tree and block order while replacing the second/first Figure-11 cells by opposite-mode first/second
+cells, proves that literal specialization is exactly the coherent forward term's adjoint, and gives
+a circuit-free reverse recurrence with direct whole-state semantics. Complete scratch restoration,
+locality/HP-free/well-formedness, both circuit and recurrence round trips, adaptive coherent
+refinement, two flattened narrow source comparisons, and constructor-derived coherent/adaptive
+resource equations are certified. The inverse has the same `2823 CCX`,
+`2568 + signUpdate CX`, `19761` coherent T, `1026` measurements, and `12579` adaptive T formulas
+at the production 257-lane window. Indexed four-phase composition remains open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -762,11 +770,16 @@ They are equal only if Phase 11 proves the required reuse.
   direct whole-state semantics, scratch restoration, locality/well-formedness, adaptive coherent
   refinement, exact cancellation, and small/production resource regressions. Its dedicated routing
   contract permits the pinned schedule's narrow `(1,2,9)` window without dummy coefficient lanes.
-- **PR #78, Phase-5 circuit unit 17 (current):** the exact phase-dependent coefficient-boundary
+- **PR #78, Phase-5 circuit unit 17:** merged at `42b8fa02`; the exact phase-dependent coefficient-boundary
   preparation/restoration pair surrounding the forward prefix block. It includes direct word and
   whole-state semantics, shared-scratch restoration, outside preservation, locality/HP-free/WF,
-  two-sided round trips, exact source-order and production resource witnesses, and leaves the
-  coefficient-prefix inverse and full indexed four-phase step open.
+  two-sided round trips, and exact source-order and production resource witnesses.
+- **Phase-5 circuit unit 18 (current branch):** the pinned explicit coefficient-prefix inverse as
+  the same source traversal at opposite ripple mode. It includes the exact adjoint identity, direct
+  gate-independent reverse semantics, full scratch restoration, two-sided circuit and recurrence
+  round trips, locality/well-formedness, adaptive coherent refinement, flattened source
+  comparisons, and equal forward/inverse symbolic and production resource equations. The full
+  indexed four-phase step remains open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -801,6 +814,6 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--16 are merged through PR #77. Phase 5 circuit unit 17,
-the phase-dependent coefficient-boundary preparation/restoration pair, is current in PR #78 on
-that foundation. The coefficient-prefix inverse and the full indexed four-phase step remain open.
+Phases 0--4 and Phase 5 circuit units 1--17 are merged through PR #78 at `main@42b8fa02`. Phase 5
+circuit unit 18, the pinned explicit coefficient-prefix inverse, is current on this branch. The
+full indexed four-phase step remains open.
