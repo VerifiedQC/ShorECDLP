@@ -615,6 +615,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_routeLabel_eq
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapUnitary_correct
 #print axioms ShorECDLP.Paper2607_13816.quotientSwap_prepared_value
+#print axioms ShorECDLP.Paper2607_13816.run_quotientSwapUnitary_after_forward
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapUnitary_correct_in_range
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapUnitary_clean
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapUnitary_HPFree
@@ -799,6 +800,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_correct
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_correct
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_roundTrip
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_inverseRoutes
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_roundTrip_auto
 #print axioms ShorECDLP.Paper2607_13816.endIterationProduction_windows
 #print axioms ShorECDLP.Paper2607_13816.endIterationProduction_layout
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_secp256k1_resources
@@ -828,16 +831,19 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_correct_routed
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_after_forward
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseUnitary_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_HPFree
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseUnitary_HPFree
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_correct
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseUnitary_after_forward
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_coherent
 #print axioms ShorECDLP.Paper2607_13816.mem_secp256k1ScheduleIndices_iff
 #print axioms ShorECDLP.Paper2607_13816.secp256k1Schedule_indexedFrame
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardUnitary_correct
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseUnitary_after_forward
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardAdaptive_coherent
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_usesOnly
@@ -892,8 +898,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 868 ]]; then
-  printf 'expected eight hundred sixty-eight #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 874 ]]; then
+  printf 'expected eight hundred seventy-four #print axioms results\n' >&2
   exit 1
 fi
 
