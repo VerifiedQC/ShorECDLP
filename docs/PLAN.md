@@ -5,16 +5,17 @@ submissions against secp256k1. It currently contains one complete, deliberately 
 The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
-**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-19 paper foundation below
-are on `main@1812e5766c341034848b00e3f28b7a7810690406`. PR #56 → PR #57 → PR #58 → PR #59
+**Status snapshot.** The verified Naive result and merged Phase-0--5 unit-20 paper foundation below
+are on `main@7b0b302c9d065d8507218fff4f49fe876eb05609`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
 → PR #69 → PR #70 → PR #71 → PR #72 → PR #73 → PR #74 → PR #75 → PR #76 → PR #77
-→ PR #78 → PR #79 → PR #80 landed the source split, adaptive Kraus semantics,
+→ PR #78 → PR #79 → PR #80 → PR #81 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and nineteen concrete circuit units ending with the source-exact control and
-terminal helpers. Phase 5 circuit unit 20 is current in PR #81: it composes the exact
-end-of-iteration work swap and upper/lower length updates, with an explicit reverse aggregate.
-The full indexed four-phase step remains open.
+bounds/windows, and twenty concrete circuit units ending with the exact end-of-iteration
+work/length aggregate. The current Phase-5 unit composes the source-ordered indexed four-phase
+microstep, its explicit reverse stream, direct forward whole-state semantics and scratch cleanup,
+adaptive coherent refinement, and blockwise resources. The 1,620-step forward/reverse schedule,
+its model-level refinement, and aggregate paper resources remain Phase 6 work.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -379,8 +380,8 @@ claim that the unindexed stuttering `paperStep` is injective on every invariant 
 **Gate:** the adaptive step coherently implements the indexed Phase-3 transition on every reachable
 active/padding state; counts are symbolic over the active window.
 
-**Status:** the first nineteen dependency-closed construction units are merged through PR #80;
-the twentieth is the current end-of-iteration aggregate in PR #81. PR #62 contains
+**Status:** the first twenty dependency-closed construction units are merged through PR #81;
+the source-ordered indexed four-phase microstep is the current unit. PR #62 contains
 standalone exact Fredkin and dirty-`C³X` decompositions, controlled circular shifts,
 the supplement's controlled increment, reusable measurement-assisted path-AND erasure, and the
 pruned measured unary iteration. Each exported block has basis-state semantics, restoration or
@@ -529,8 +530,20 @@ outside preservation, locality/HP-free/well-formedness, and a forward-then-inver
 proved for the exact aggregate. Its constructor-derived formulas are closed by both a small
 regression and the production windows `(k₄,K₄,k₅,K₅)=(1,258,164,259)`. The production allocation
 declares 549 dense roles, and either direction has `14463 CCX`, `12034 CX`, `16948 X`, and
-`101241 T`; this is a declared-role capacity witness, not an exact touched-wire claim. The full
-indexed four-phase step remains open within Phase 5.
+`101241 T`; this is a declared-role capacity witness, not an exact touched-wire claim. The
+twenty-first unit composes all eight literal source blocks A--H over `certifiedActiveWindows`,
+together with the supplement's explicit reverse block order. The coherent forward term has direct
+gate-independent whole-state semantics under the encoded borrowed-epoch boundary and decoded
+end-of-iteration routes; it restores every shared temporary. The same physical contract proves
+the forward, reverse, and adaptive terms well formed and the two unitary terms HP-free. A closed
+44-role nonterminal allocation makes the contract non-vacuous, while the already certified
+production end-of-iteration layout covers the optional fourth-step aggregate. The adaptive term
+replaces exactly the two interval calls, two coefficient-prefix calls, and the phase update, and
+coherently refines the same forward circuit on clean, epoch-encoded inputs. Constructor-derived
+formulas expose all eight coherent forward and reverse blocks and the exact adaptive
+measurement/worst-branch-T sums. This closes the source-level single-step composition; the
+1,620-step reachable-state encoding/refinement, reverse-program cancellation, maximum-live-wire
+allocation, and aggregate paper vector remain Phase 6 rather than being inferred here.
 
 ### Phase 6 — forward and reverse EEA programs
 
@@ -805,14 +818,22 @@ They are equal only if Phase 11 proves the required reuse.
   spill/restore, and the terminal padding rotation with its inverse. Direct whole-state semantics,
   complete scratch restoration, two-sided cancellation, locality/well-formedness, flattened source
   regressions, and exact production resource equations are included.
-- **PR #81, Phase-5 circuit unit 20 (current):** the exact end-of-iteration work/length aggregate
+- **PR #81, Phase-5 circuit unit 20:** merged at `7b0b302c`; the exact end-of-iteration work/length aggregate
   and its explicit reverse. The literal circuit performs the full controlled Work-register swap,
   then the upper and lower length updates serially over shared restored scratch. Direct semantics,
   cleanup and outside preservation, locality/HP-free/well-formedness, a forward-then-inverse
   whole-state round trip, symbolic counts, a small constructor regression, and the production
   `(1,258,164,259)` window/allocation witness are included. The production witness declares 549
   dense roles and certifies `14463 CCX`, `12034 CX`, `16948 X`, and `101241 T` for either
-  direction. The full indexed four-phase step remains open.
+  direction.
+- **Phase-5 circuit unit 21 (current):** the exact indexed four-phase microstep. It composes the
+  eight source blocks over the certified active windows, defines the explicit reverse stream,
+  proves direct forward whole-state semantics and complete shared-scratch restoration, and gives
+  well-formedness/HP-free contracts plus coherent adaptive refinement for the same source term.
+  Exact resource theorems decompose both coherent directions and the adaptive measurement/T
+  realization. A compact 44-role nonterminal witness closes contract non-vacuity without claiming
+  the later full-program wire bound. The 1,620-step physical encoding/refinement, reverse-program
+  identity, maximum live allocation, and aggregate resource theorem remain Phase 6.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -847,6 +868,7 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--4 and Phase 5 circuit units 1--19 are merged through PR #80 at `main@1812e576`. Phase 5
-circuit unit 20, the exact end-of-iteration work/length aggregate, is current in PR #81. The
-full indexed four-phase step remains open.
+Phases 0--4 and Phase 5 circuit units 1--20 are merged through PR #81 at `main@7b0b302c`. Phase 5
+circuit unit 21, the exact indexed four-phase source step, is current. Phase 6 remains the
+1,620-step forward/reverse program, reachable-state encoding/refinement, and aggregate resource
+boundary.
