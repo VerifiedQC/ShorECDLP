@@ -518,9 +518,11 @@ borrowed terminal epoch; and the terminal padding left-rotate/increment/wrap upd
 inverse. Each circuit has complete-basis-state semantics, scratch restoration, two-sided
 cancellation where an inverse exists, locality/HP-free/well-formedness, flattened source
 regressions, and constructor-derived resources. At the production 259-bit Work2 and 9-bit shift
-width, terminal padding allocates 279 roles and emits `305 CCX`, `527 CX`, and `2135 T`; the forward
-and inverse contain respectively 36 and 68 standalone X gates. The end-of-iteration aggregate and
-full indexed four-phase step remain open within Phase 5.
+width, the minimum source-valid standalone terminal-padding witness declares 279 roles and touches
+278. The full-step caller supplies 287 formal roles from its shared auxiliary pool but emits the
+identical 278-wire stream: `305 CCX`, `527 CX`, and `2135 T`, with respectively 36 and 68
+standalone X gates in the forward and inverse. The end-of-iteration aggregate and full indexed
+four-phase step remain open within Phase 5.
 
 ### Phase 6 — forward and reverse EEA programs
 

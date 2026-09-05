@@ -2262,9 +2262,11 @@ private theorem terminalPaddingSecp256k1Layout :
     TerminalPaddingRegisters.carries], ?_⟩
   decide
 
-/-- Closed production witness for the borrowed-epoch terminal padding.  The source allocates 279
-roles (including one surplus equality-pool wire).  At `n = 256`, `T_max = 1620`, the 9-bit low
-word plus its borrowed epoch fits the entire padding horizon. -/
+/-- Closed production-width witness for the borrowed-epoch terminal padding.  The minimum
+source-valid standalone slice declares 279 roles and touches 278 (one equality-pool wire is
+inert).  The full-step `n = 256` caller supplies 287 formal roles from its shared auxiliary pool
+but emits the identical 278-wire stream.  At `T_max = 1620`, the 9-bit low word plus its borrowed
+epoch fits the entire padding horizon. -/
 theorem terminalPadding_secp256k1_resources :
     TerminalPaddingScheduleFits terminalPaddingSecp256k1Registers 256 1620 ∧
       terminalPaddingSecp256k1Registers.scratch.length = 9 ∧
