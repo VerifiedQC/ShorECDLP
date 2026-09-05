@@ -12,8 +12,15 @@ explicit reverse bodies of `append_one_step_T` from the pinned arXiv:2607.13816v
 The scheduler uses `certifiedActiveWindows`: in particular the remainder block keeps the proved
 one-lane conservative repair, while the other four windows agree with Appendix A.2.
 
-The twenty-wire source auxiliary pool is shared serially.  `Aux[0]` is the temporary control,
-`Aux[1]` is the borrowed shift epoch, and `Aux[2:]` supplies the block-local scratch views below.
+The certified implementation uses twenty-two serially shared auxiliary wires.  `Aux[0]` is the
+temporary control, `Aux[1]` is the borrowed shift epoch, and `Aux[2:]` supplies the block-local
+scratch views below.  The final two wires are the explicit capacity repair required when the
+certified remainder window widens the pinned 257-lane source interval to 258 lanes.
+
+Consequently the untouched generator remains a 578-internal / 579-with-external-control source
+artifact, while the presently verified repaired step has 580 internal roles and 581 after adding
+that control.  Recovering the paper's 579-role target requires either tightening the remainder
+window proof or proving a safe allocator reuse; this module claims neither.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -49,9 +56,13 @@ def control (registers : IndexedStepRegisters) : Wire :=
 def shiftEpoch (registers : IndexedStepRegisters) : Wire :=
   registers.aux.getD 1 0
 
-/-- `Aux[2:]`, called `scratch` by the pinned source. -/
+/-- `Aux[2:20]`, called `scratch` by the pinned source. -/
 def sourceScratch (registers : IndexedStepRegisters) : List Wire :=
-  registers.aux.drop 2
+  (registers.aux.take 20).drop 2
+
+/-- Two repair-only ancillas appended after the pinned source's twenty-wire `Aux` bank. -/
+def remainderRepairScratch (registers : IndexedStepRegisters) : List Wire :=
+  registers.aux.drop 20
 
 /-- `scratch[0]`, the terminal flag and the later temporary condition bit. -/
 def terminal (registers : IndexedStepRegisters) : Wire :=
@@ -103,9 +114,9 @@ def postShift (registers : IndexedStepRegisters) : ShiftRegisters where
   phase2 := registers.phase2
   work := registers.work2
   lengthS := registers.lengthS
-  phase1IsZero := registers.sourceScratch.getD 0 0
-  both := registers.sourceScratch.getD 1 0
-  carries := (registers.sourceScratch.drop 2).take (registers.lengthS.length - 1)
+  phase1IsZero := registers.sourceScratch.getD registers.lengthS.length 0
+  both := registers.sourceScratch.getD 0 0
+  carries := (registers.sourceScratch.drop 1).take (registers.lengthS.length - 1)
   reserved := (registers.sourceScratch.drop (registers.lengthS.length + 1)).take 3
 
 /-- Scratch-free skeleton used only to compute the exact interval scratch arity. -/
@@ -126,11 +137,14 @@ def remainderScratchSize
   intervalScratchBase (registers.remainderBase window) window.start window.stop + 3
 
 /-- Exact `lc_interval_addsub_unary_gate` view.  Its scratch starts at `Aux[1]`, after the
-borrowed epoch has been spilled and cleared. -/
+borrowed epoch has been spilled and cleared, and ends with the two certified-window repair
+ancillas. -/
 def remainder
     (registers : IndexedStepRegisters) (window : ActiveWindow) : IntervalRegisters :=
   { registers.remainderBase window with
-    scratch := (registers.aux.drop 1).take (registers.remainderScratchSize window) }
+    scratch := (registers.shiftEpoch :: (registers.sourceScratch ++
+      registers.remainderRepairScratch)).take
+        (registers.remainderScratchSize window) }
 
 /-- Exact Figure-9 quotient-selector view. -/
 def quotient
@@ -574,7 +588,7 @@ private def blockEAdaptive
 to a literal source block above; the contract adds no semantic oracle for the composed circuit. -/
 structure IndexedStepLayout
     (registers : IndexedStepRegisters) (n T : Nat) : Prop where
-  aux_length : registers.aux.length = 20
+  aux_length : registers.aux.length = 22
   work1_length : registers.work1.length = n + 3
   work2_length : registers.work2.length = n + 3
   physical : registers.allWires.Nodup
@@ -641,9 +655,89 @@ structure IndexedStepLayout
   endIteration : T % 4 = 0 → EndIterationLayout (registers.endIteration n T) n
     (endIterationWindowsAt n T)
 
+/-! The closed production witness below uses executable checks only to discharge the finite
+decoder trees.  The soundness lemmas turn those checks back into the ordinary inductive layout
+judgments; no executable checker enters the public contract. -/
+
+private def dualTreeLayoutCheck :
+    DualUnaryActionTree → Wire → Wire → List Wire → List Wire → Bool
+  | .leaf label, controlA, controlB, pathsA, pathsB =>
+      decide
+        (DualUnaryActionTree.decoderWires (.leaf label)
+          controlA controlB pathsA pathsB).Nodup
+  | .node indexA indexB zero one, controlA, controlB,
+      pathA :: restA, pathB :: restB =>
+      decide
+          (DualUnaryActionTree.decoderWires
+            (.node indexA indexB zero one) controlA controlB
+              (pathA :: restA) (pathB :: restB)).Nodup &&
+        dualTreeLayoutCheck zero pathA pathB restA restB &&
+          dualTreeLayoutCheck one pathA pathB restA restB
+  | .node _ _ _ _, _, _, _, _ => false
+
+private theorem dualTreeLayoutCheck_sound
+    (tree : DualUnaryActionTree) (controlA controlB : Wire)
+    (pathsA pathsB : List Wire)
+    (hcheck : dualTreeLayoutCheck tree controlA controlB pathsA pathsB = true) :
+    tree.Layout controlA controlB pathsA pathsB := by
+  induction tree generalizing controlA controlB pathsA pathsB with
+  | leaf label =>
+      simp only [dualTreeLayoutCheck, decide_eq_true_eq] at hcheck
+      exact .leaf label controlA controlB pathsA pathsB hcheck
+  | node indexA indexB zero one ihZero ihOne =>
+      cases pathsA with
+      | nil => simp [dualTreeLayoutCheck] at hcheck
+      | cons pathA restA =>
+          cases pathsB with
+          | nil => simp [dualTreeLayoutCheck] at hcheck
+          | cons pathB restB =>
+              simp only [dualTreeLayoutCheck, Bool.and_eq_true,
+                decide_eq_true_eq] at hcheck
+              exact .node indexA indexB controlA controlB pathA pathB zero one
+                restA restB hcheck.1.1
+                (ihZero pathA pathB restA restB hcheck.1.2)
+                (ihOne pathA pathB restA restB hcheck.2)
+
+private def intervalTraversalLeavesCheck
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire) : Bool :=
+  tree.labels.all fun label =>
+    decide
+        [rightTop, leftTop, accumulator, targetAt label, addendAt label,
+          carry, scratch].Nodup &&
+      (tree.decoderWires rightRoot leftRoot rightPaths leftPaths).all fun wire =>
+        decide (wire ∉
+          [rightTop, leftTop, accumulator, targetAt label, addendAt label,
+            carry, scratch])
+
+private theorem intervalTraversalLeavesCheck_sound
+    (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
+    (rightPaths leftPaths : List Wire)
+    (rightTop leftTop accumulator carry scratch : Wire)
+    (targetAt addendAt : Nat → Wire)
+    (hcheck : intervalTraversalLeavesCheck tree rightRoot leftRoot
+      rightPaths leftPaths rightTop leftTop accumulator carry scratch
+        targetAt addendAt = true) :
+    ∀ label, label ∈ tree.labels →
+      [rightTop, leftTop, accumulator, targetAt label, addendAt label,
+        carry, scratch].Nodup ∧
+      DecoderOutsideIntervalRoles
+        (tree.decoderWires rightRoot leftRoot rightPaths leftPaths)
+        rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch := by
+  intro label hlabel
+  have hlabelCheck := (List.all_eq_true.mp hcheck) label hlabel
+  simp only [Bool.and_eq_true] at hlabelCheck
+  refine ⟨of_decide_eq_true hlabelCheck.1, ?_⟩
+  rw [DecoderOutsideIntervalRoles, List.disjoint_left]
+  intro wire hdecoder harithmetic
+  have hwire := (List.all_eq_true.mp hlabelCheck.2) wire hdecoder
+  exact (of_decide_eq_true hwire) harithmetic
+
 /-! ## Closed nonterminal layout witness -/
 
-/-- A compact, source-shaped allocation for the first nonterminal step at `n = T = 1`.
+/-- A compact repaired allocation for the first nonterminal step at `n = T = 1`.
 The optional end-of-iteration block is absent at this index; its production layout is certified
 separately by `endIterationProduction_layout`. -/
 private def indexedStepSmallRegisters : IndexedStepRegisters where
@@ -657,7 +751,7 @@ private def indexedStepSmallRegisters : IndexedStepRegisters where
   lengthQ := List.range' 15 3
   lengthS := List.range' 18 3
   lengthRPrime := List.range' 21 3
-  aux := List.range' 24 20
+  aux := List.range' 24 22
 
 private theorem indexedStepSmall_remainder_tree :
     intervalTree
@@ -846,37 +940,251 @@ private theorem indexedStepSmall_layout :
     endIteration := by norm_num
   }
 
-/-- The full indexed-step physical contract is inhabited by a 44-role nonterminal source
+/-- The full indexed-step physical contract is inhabited by a compact 46-role repaired
 allocation.  The theorem keeps the concrete fixture private while making non-vacuity explicit. -/
 theorem indexedStepLayout_inhabited :
     ∃ registers : IndexedStepRegisters,
-      registers.allWires.length = 44 ∧ IndexedStepLayout registers 1 1 := by
+      registers.allWires.length = 46 ∧ IndexedStepLayout registers 1 1 := by
   exact ⟨indexedStepSmallRegisters, by decide, indexedStepSmall_layout⟩
+
+/-! ## Closed production layout witness -/
+
+/-- Dense physical allocation for the first secp256k1 microstep.  The first 578 roles are the
+pinned source allocation; wires 578 and 579 are the certified-remainder repair suffix. -/
+private def indexedStepProductionRegisters : IndexedStepRegisters where
+  phase1 := 0
+  phase2 := 1
+  iter := 2
+  sign := 3
+  work1 := List.range' 4 259
+  work2 := List.range' 263 259
+  lengthT := List.range' 522 9
+  lengthQ := List.range' 531 9
+  lengthS := List.range' 540 9
+  lengthRPrime := List.range' 549 9
+  aux := List.range' 558 22
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
+private theorem indexedStepProduction_remainder_layout :
+    IntervalLayout
+      (indexedStepProductionRegisters.remainder
+        (certifiedActiveWindows 256 1).remainder)
+      (certifiedActiveWindows 256 1).remainder.start
+      (certifiedActiveWindows 256 1).remainder.stop .work1 := by
+  let registers := indexedStepProductionRegisters.remainder
+    (certifiedActiveWindows 256 1).remainder
+  refine {
+    k_le_K := by decide
+    work1_length := by decide
+    work2_length := by decide
+    lengthT_eq_lengthQ := by decide
+    lengthT_two_le := by decide
+    lengthS_two_le := by decide
+    right_index_capacity := by decide
+    left_index_capacity := by decide
+    right_top_capacity := by decide
+    left_top_capacity := by decide
+    scratch_length := by decide
+    physical := by decide
+    endpoints := by
+      change IntervalEndpointLayout (List.range' 522 9)
+        (List.range' 531 9) (List.range' 540 9)
+        (List.range' 559 9) 577
+      norm_num [IntervalEndpointLayout]
+      decide
+    traversal := ?_
+    topSpecial := by
+      intro hspecial
+      have hnotSpecial : intervalHasTopSpecial
+          (certifiedActiveWindows 256 1).remainder.start
+          (certifiedActiveWindows 256 1).remainder.stop = false := by
+        decide
+      rw [hnotSpecial] at hspecial
+      contradiction
+  }
+  rw [IntervalTraversalLayout]
+  constructor
+  · apply dualTreeLayoutCheck_sound
+    decide
+  · apply intervalTraversalLeavesCheck_sound
+    decide
+
+private theorem indexedStepProduction_quotient_tree :
+    quotientSwapTree
+      (indexedStepProductionRegisters.quotient
+        (certifiedActiveWindows 256 1).quotientSwap) 2 2 = .leaf 2 := by
+  rfl
+
+private theorem indexedStepProduction_quotient_layout :
+    QuotientSwapLayout
+      (indexedStepProductionRegisters.quotient
+        (certifiedActiveWindows 256 1).quotientSwap) 2 2 := by
+  refine {
+    k_le_K := by decide
+    work1_length := by decide
+    lengthT_eq_lengthQ := by decide
+    index_width := by decide
+    scratch_length := by decide
+    physical := by decide
+    tree := ?_
+  }
+  rw [indexedStepProduction_quotient_tree]
+  change UnaryActionTree.Layout (.leaf 2) 558 ([] : List Wire)
+  exact UnaryActionTree.Layout.leaf 2 558 ([] : List Wire) (by decide)
+
+private theorem indexedStepProduction_coefficient_tree :
+    coefficientPrefixTree
+      (indexedStepProductionRegisters.coefficient
+        (certifiedActiveWindows 256 1).coefficient) 1 2 =
+      .node 523 (.leaf 1) (.leaf 2) := by
+  rfl
+
+private theorem indexedStepProduction_coefficient_layout :
+    CoefficientPrefixLayout
+      (indexedStepProductionRegisters.coefficient
+        (certifiedActiveWindows 256 1).coefficient) 1 2 := by
+  refine {
+    k_le_K := by decide
+    work1_length := by decide
+    work2_length := by decide
+    index_width := by decide
+    scratch_length := by decide
+    physical := by decide
+    tree := ?_
+  }
+  rw [indexedStepProduction_coefficient_tree]
+  change UnaryActionTree.Layout
+    (.node 523 (.leaf 1) (.leaf 2)) 558 ([561] : List Wire)
+  exact .node 523 558 561 (.leaf 1) (.leaf 2) ([] : List Wire) (by decide)
+    (.leaf 1 561 ([] : List Wire) (by decide))
+    (.leaf 2 561 ([] : List Wire) (by decide))
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
+private theorem indexedStepProduction_layout :
+    IndexedStepLayout indexedStepProductionRegisters 256 1 := by
+  refine {
+    aux_length := by decide
+    work1_length := by decide
+    work2_length := by decide
+    physical := by decide
+    terminalControl := by
+      change 8 ≤ 17 ∧
+        (((0 :: List.range' 549 9) : List Wire) ++
+          560 :: List.range' 561 17).Nodup
+      decide
+    terminalPaddingCapacity := by decide
+    terminalPadding := ⟨by decide, by decide⟩
+    terminalPhase := by decide
+    terminalEpoch := by decide
+    preShift := ⟨by decide, by decide, by decide⟩
+    remainderSub := by
+      refine ⟨?_, ?_, by decide⟩
+      · change 7 ≤ 17 ∧
+          ((List.range' 549 9 : List Wire) ++
+            560 :: List.range' 561 17).Nodup
+        decide
+      · change 0 ≤ 17 ∧
+          (([0, 560] : List Wire) ++
+            558 :: List.range' 561 17).Nodup
+        decide
+    remainderPhase2 := by
+      refine ⟨?_, ?_, by decide⟩
+      · change 7 ≤ 17 ∧
+          ((List.range' 549 9 : List Wire) ++
+            560 :: List.range' 561 17).Nodup
+        decide
+      · change 1 ≤ 17 ∧
+          (([0, 1, 560] : List Wire) ++
+            558 :: List.range' 561 17).Nodup
+        decide
+    remainderRestoreCCX := by decide
+    controlSign := by decide
+    remainderRestore := by
+      refine ⟨?_, ?_, by decide⟩
+      · change 7 ≤ 16 ∧
+          ((List.range' 549 9 : List Wire) ++
+            561 :: List.range' 562 16).Nodup
+        decide
+      · change 1 ≤ 16 ∧
+          (([0, 560, 561] : List Wire) ++
+            558 :: List.range' 562 16).Nodup
+        decide
+    remainder := indexedStepProduction_remainder_layout
+    lengthQ_positive := by decide
+    phase2Length := by
+      change 0 ≤ 18 ∧
+        (([0, 1] : List Wire) ++ 558 :: List.range' 560 18).Nodup
+      decide
+    phase3Length := by
+      change 0 ≤ 18 ∧
+        (([0, 1] : List Wire) ++ 558 :: List.range' 560 18).Nodup
+      decide
+    lengthCarryCapacity := by decide
+    lengthCarryPhysical := by decide
+    quotientControls := by decide
+    quotient := by
+      simpa using indexedStepProduction_quotient_layout
+    coefficientTemporary := by
+      change 0 ≤ 17 ∧
+        (([1, 3] : List Wire) ++ 560 :: List.range' 561 17).Nodup
+      decide
+    coefficientSub := by
+      change 0 ≤ 17 ∧
+        (([0, 560] : List Wire) ++ 558 :: List.range' 561 17).Nodup
+      decide
+    coefficientAdd := by
+      change 0 ≤ 17 ∧
+        (([0] : List Wire) ++ 558 :: List.range' 561 17).Nodup
+      decide
+    coefficientSign := by decide
+    tBoundary := ⟨by decide, by decide, by decide, by decide, by decide⟩
+    coefficient := by
+      simpa using indexedStepProduction_coefficient_layout
+    postShift := ⟨by decide, by decide, by decide⟩
+    phaseUpdate := ⟨by decide, by decide, by decide, by decide, by decide⟩
+    endQ := by
+      change 7 ≤ 16 ∧
+        ((List.range' 531 9 : List Wire) ++
+          560 :: List.range' 562 16).Nodup
+      decide
+    endS := by
+      change 8 ≤ 16 ∧
+        (((List.range' 540 9 : List Wire) ++ [559]) ++
+          561 :: List.range' 562 16).Nodup
+      decide
+    endControls := by decide
+    endIteration := by norm_num
+  }
+
+set_option maxRecDepth 100000 in
+/-- The complete repaired first-step layout is inhabited by exactly 580 internal roles.  A
+caller that adds the external point-add control therefore allocates 581 roles. -/
+theorem indexedStepProduction_layout_inhabited :
+    ∃ registers : IndexedStepRegisters,
+      registers.allWires.length = 580 ∧
+        IndexedStepLayout registers 256 1 := by
+  exact ⟨indexedStepProductionRegisters, by decide,
+    indexedStepProduction_layout⟩
 
 /-- Scratch that is genuinely temporary at an indexed step boundary.  The borrowed epoch is
 deliberately excluded: it is persistent padding state, not a clean ancilla. -/
 def IndexedStepRegisters.sharedScratch
     (registers : IndexedStepRegisters) : List Wire :=
-  registers.control :: registers.sourceScratch
+  registers.control ::
+    (registers.sourceScratch ++ registers.remainderRepairScratch)
 
 /-- Every temporary source role is clean at a step boundary. -/
 def IndexedStepReady
     (registers : IndexedStepRegisters) (state : BasisState) : Prop :=
   Clean registers.sharedScratch state
 
-/-- During remainder arithmetic the borrowed epoch has been spilled, so the entire source Aux
+/-- During remainder arithmetic the borrowed epoch has been spilled, so the entire auxiliary
 bank—including `Aux[1]`—is a clean serial workspace. -/
-def IndexedStepBorrowedReady
+private def IndexedStepBorrowedReady
     (registers : IndexedStepRegisters) (state : BasisState) : Prop :=
   Clean registers.aux state
-
-/-- Reachable terminal branches store logical `ell_q = 0` in truth-minus-one form, so its low bit
-is one and can receive the borrowed epoch. -/
-def IndexedStepTerminalEncoded
-    (registers : IndexedStepRegisters) (state : BasisState) : Prop :=
-  registerMatches (terminalConditionWires registers)
-      (terminalConditionValue registers) state = true →
-    state registers.quotientLow = true
 
 /-- The borrowed high shift bit is live only on padding frames.  On an active frame it is zero;
 on a terminal frame the truth-minus-one quotient word provides the clean spill destination. -/
@@ -1480,17 +1788,14 @@ private theorem IndexedStepLayout.sourceScratch_mem_aux
     (_hlayout : IndexedStepLayout registers n T)
     {wire : Wire} (hwire : wire ∈ registers.sourceScratch) :
     wire ∈ registers.aux := by
-  exact List.mem_of_mem_drop hwire
+  exact List.mem_of_mem_take (List.mem_of_mem_drop hwire)
 
-private theorem IndexedStepLayout.sharedScratch_mem_aux
+private theorem IndexedStepLayout.remainderRepairScratch_mem_aux
     {registers : IndexedStepRegisters} {n T : Nat}
-    (hlayout : IndexedStepLayout registers n T)
-    {wire : Wire} (hwire : wire ∈ registers.sharedScratch) :
+    (_hlayout : IndexedStepLayout registers n T)
+    {wire : Wire} (hwire : wire ∈ registers.remainderRepairScratch) :
     wire ∈ registers.aux := by
-  simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hwire
-  rcases hwire with rfl | hsource
-  · exact hlayout.control_mem_aux
-  · exact hlayout.sourceScratch_mem_aux hsource
+  exact List.mem_of_mem_drop hwire
 
 private theorem IndexedStepLayout.blockScratch_mem_aux
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -1499,10 +1804,32 @@ private theorem IndexedStepLayout.blockScratch_mem_aux
     wire ∈ registers.aux := by
   exact hlayout.sourceScratch_mem_aux (List.mem_of_mem_drop hwire)
 
+private theorem IndexedStepLayout.sourceScratch_mem_sharedScratch
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (_hlayout : IndexedStepLayout registers n T)
+    {wire : Wire} (hwire : wire ∈ registers.sourceScratch) :
+    wire ∈ registers.sharedScratch := by
+  simp [IndexedStepRegisters.sharedScratch, hwire]
+
+private theorem IndexedStepLayout.remainderRepairScratch_mem_sharedScratch
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (_hlayout : IndexedStepLayout registers n T)
+    {wire : Wire} (hwire : wire ∈ registers.remainderRepairScratch) :
+    wire ∈ registers.sharedScratch := by
+  simp [IndexedStepRegisters.sharedScratch, hwire]
+
+private theorem IndexedStepLayout.blockScratch_mem_sharedScratch
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T)
+    {wire : Wire} (hwire : wire ∈ registers.blockScratch) :
+    wire ∈ registers.sharedScratch := by
+  exact hlayout.sourceScratch_mem_sharedScratch (List.mem_of_mem_drop hwire)
+
 private theorem IndexedStepLayout.aux_view
     {registers : IndexedStepRegisters} {n T : Nat}
     (hlayout : IndexedStepLayout registers n T) :
-    [registers.control, registers.shiftEpoch] ++ registers.sourceScratch =
+    [registers.control, registers.shiftEpoch] ++
+        (registers.sourceScratch ++ registers.remainderRepairScratch) =
       registers.aux := by
   cases haux : registers.aux with
   | nil =>
@@ -1514,8 +1841,17 @@ private theorem IndexedStepLayout.aux_view
           have hlength := hlayout.aux_length
           simp [haux, htail] at hlength
       | cons second rest =>
+          have hsplit := List.take_append_drop 18 rest
           simp [IndexedStepRegisters.control, IndexedStepRegisters.shiftEpoch,
-            IndexedStepRegisters.sourceScratch, haux, htail]
+            IndexedStepRegisters.sourceScratch,
+            IndexedStepRegisters.remainderRepairScratch,
+            haux, htail, hsplit]
+
+private theorem IndexedStepLayout.sourceScratch_length
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) :
+    registers.sourceScratch.length = 18 := by
+  simp [IndexedStepRegisters.sourceScratch, hlayout.aux_length]
 
 private theorem IndexedStepLayout.scratch_view
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -1524,27 +1860,105 @@ private theorem IndexedStepLayout.scratch_view
       registers.sourceScratch := by
   cases hscratch : registers.sourceScratch with
   | nil =>
-      have hview := congrArg List.length hlayout.aux_view
-      simp [hscratch, hlayout.aux_length] at hview
+      have hlength := hlayout.sourceScratch_length
+      simp [hscratch] at hlength
   | cons terminal rest =>
       simp [IndexedStepRegisters.terminal, IndexedStepRegisters.blockScratch,
         hscratch]
 
-private theorem IndexedStepLayout.sourceScratch_length
+private theorem IndexedStepLayout.remainderRepairScratch_length
     {registers : IndexedStepRegisters} {n T : Nat}
     (hlayout : IndexedStepLayout registers n T) :
-    registers.sourceScratch.length = 18 := by
-  have hview := congrArg List.length hlayout.aux_view
-  simp [hlayout.aux_length] at hview
-  omega
+    registers.remainderRepairScratch.length = 2 := by
+  simp [IndexedStepRegisters.remainderRepairScratch, hlayout.aux_length]
 
 private theorem IndexedStepLayout.aux_view_nodup
     {registers : IndexedStepRegisters} {n T : Nat}
     (hlayout : IndexedStepLayout registers n T) :
     ([registers.control, registers.shiftEpoch] ++
-      registers.sourceScratch).Nodup := by
+      (registers.sourceScratch ++ registers.remainderRepairScratch)).Nodup := by
   rw [hlayout.aux_view]
   exact hlayout.aux_nodup
+
+private theorem IndexedStepLayout.sourceAux_view_nodup
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) :
+    ([registers.control, registers.shiftEpoch] ++
+      registers.sourceScratch).Nodup := by
+  have hfull := hlayout.aux_view_nodup
+  rw [← List.append_assoc] at hfull
+  exact (List.nodup_append.mp hfull).1
+
+private theorem IndexedStepLayout.remainderRepairScratch_not_sourceAux
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) {wire : Wire}
+    (hrepair : wire ∈ registers.remainderRepairScratch) :
+    wire ∉ [registers.control, registers.shiftEpoch] ++
+      registers.sourceScratch := by
+  have hfull := hlayout.aux_view_nodup
+  rw [← List.append_assoc] at hfull
+  have hcross := (List.nodup_append.mp hfull).2.2
+  intro hsource
+  exact hcross wire hsource wire hrepair rfl
+
+private theorem IndexedStepLayout.remainderRepairScratch_not_sourceScratch
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) {wire : Wire}
+    (hrepair : wire ∈ registers.remainderRepairScratch) :
+    wire ∉ registers.sourceScratch := by
+  intro hsource
+  exact hlayout.remainderRepairScratch_not_sourceAux hrepair (by simp [hsource])
+
+private theorem IndexedStepLayout.remainderRepairScratch_ne_control
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) {wire : Wire}
+    (hrepair : wire ∈ registers.remainderRepairScratch) :
+    wire ≠ registers.control := by
+  intro equality
+  exact hlayout.remainderRepairScratch_not_sourceAux hrepair (by simp [equality])
+
+private theorem IndexedStepLayout.remainderRepairScratch_ne_shiftEpoch
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) {wire : Wire}
+    (hrepair : wire ∈ registers.remainderRepairScratch) :
+    wire ≠ registers.shiftEpoch := by
+  intro equality
+  exact hlayout.remainderRepairScratch_not_sourceAux hrepair (by simp [equality])
+
+private theorem IndexedStepLayout.remainderRepairScratch_not_payload
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) {wire : Wire}
+    (hrepair : wire ∈ registers.remainderRepairScratch) :
+    wire ∉ indexedStepPayload registers := by
+  intro hpayload
+  exact (hlayout.aux_not_payload
+    (hlayout.remainderRepairScratch_mem_aux hrepair) hpayload) rfl
+
+private theorem IndexedStepLayout.control_ne_shiftEpoch
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) :
+    registers.control ≠ registers.shiftEpoch := by
+  have hnodup :
+      (registers.control :: registers.shiftEpoch ::
+        registers.sourceScratch).Nodup := by
+    simpa only [List.cons_append, List.nil_append] using
+      hlayout.sourceAux_view_nodup
+  intro equality
+  exact (List.nodup_cons.mp hnodup).1 (by simp [equality])
+
+private theorem IndexedStepLayout.shiftEpoch_not_sharedScratch
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) :
+    registers.shiftEpoch ∉ registers.sharedScratch := by
+  have hfull :
+      (registers.control :: registers.shiftEpoch ::
+        (registers.sourceScratch ++ registers.remainderRepairScratch)).Nodup := by
+    simpa only [List.cons_append, List.nil_append] using hlayout.aux_view_nodup
+  have hshiftNotTail := (List.nodup_cons.mp (List.nodup_cons.mp hfull).2).1
+  simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append,
+    not_or]
+  exact ⟨hlayout.control_ne_shiftEpoch.symm, by
+    simpa only [List.mem_append, not_or] using hshiftNotTail⟩
 
 private theorem IndexedStepLayout.control_not_sourceScratch
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -1552,7 +1966,8 @@ private theorem IndexedStepLayout.control_not_sourceScratch
     registers.control ∉ registers.sourceScratch := by
   have hcross := (List.nodup_append.mp hlayout.aux_view_nodup).2.2
   intro hmem
-  exact hcross registers.control (by simp) registers.control hmem rfl
+  exact hcross registers.control (by simp) registers.control
+    (by simp [hmem]) rfl
 
 private theorem IndexedStepLayout.shiftEpoch_not_sourceScratch
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -1560,13 +1975,17 @@ private theorem IndexedStepLayout.shiftEpoch_not_sourceScratch
     registers.shiftEpoch ∉ registers.sourceScratch := by
   have hcross := (List.nodup_append.mp hlayout.aux_view_nodup).2.2
   intro hmem
-  exact hcross registers.shiftEpoch (by simp) registers.shiftEpoch hmem rfl
+  exact hcross registers.shiftEpoch (by simp) registers.shiftEpoch
+    (by simp [hmem]) rfl
 
 private theorem IndexedStepLayout.sourceScratch_nodup
     {registers : IndexedStepRegisters} {n T : Nat}
     (hlayout : IndexedStepLayout registers n T) :
-    registers.sourceScratch.Nodup :=
-  (List.nodup_append.mp hlayout.aux_view_nodup).2.1
+    registers.sourceScratch.Nodup := by
+  have htail :
+      (registers.sourceScratch ++ registers.remainderRepairScratch).Nodup :=
+    (List.nodup_append.mp hlayout.aux_view_nodup).2.1
+  exact (List.nodup_append.mp htail).1
 
 private theorem IndexedStepLayout.sourceScratch_view2
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -1597,10 +2016,16 @@ private theorem IndexedStepLayout.terminal_not_blockScratch
 
 private theorem IndexedStepLayout.remainder_scratch_sub_aux
     {registers : IndexedStepRegisters} {n T : Nat}
-    (_hlayout : IndexedStepLayout registers n T) (window : ActiveWindow) :
+    (hlayout : IndexedStepLayout registers n T) (window : ActiveWindow) :
     ∀ wire ∈ (registers.remainder window).scratch, wire ∈ registers.aux := by
   intro wire hwire
-  exact List.mem_of_mem_drop (List.mem_of_mem_take hwire)
+  have hsource := List.mem_of_mem_take hwire
+  simp only [List.mem_cons, List.mem_append] at hsource
+  rcases hsource with hshift | hsource | hrepair
+  · rw [hshift]
+    exact hlayout.shiftEpoch_mem_aux
+  · exact hlayout.sourceScratch_mem_aux hsource
+  · exact hlayout.remainderRepairScratch_mem_aux hrepair
 
 private theorem IndexedStepLayout.control_not_remainder_scratch
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -1888,17 +2313,19 @@ private theorem IndexedStepLayout.postShift_scratch_sub_source
     omega
   intro wire hwire
   change wire ∈
-    [registers.sourceScratch.getD 0 0, registers.sourceScratch.getD 1 0] ++
-      (registers.sourceScratch.drop 2).take (registers.lengthS.length - 1) ++
+    [registers.sourceScratch.getD registers.lengthS.length 0,
+      registers.sourceScratch.getD 0 0] ++
+      (registers.sourceScratch.drop 1).take (registers.lengthS.length - 1) ++
         (registers.sourceScratch.drop (registers.lengthS.length + 1)).take 3 at hwire
   rcases List.mem_append.mp hwire with hprefix | hreservedWire
   · rcases List.mem_append.mp hprefix with hflag | hcarry
     · simp only [List.mem_cons, List.not_mem_nil, or_false] at hflag
       rcases hflag with hzero | hboth
       · rw [hzero]
-        exact indexedStep_getD_mem registers.sourceScratch 0 0 (by omega)
+        exact indexedStep_getD_mem registers.sourceScratch
+          registers.lengthS.length 0 (by omega)
       · rw [hboth]
-        exact indexedStep_getD_mem registers.sourceScratch 1 0 (by omega)
+        exact indexedStep_getD_mem registers.sourceScratch 0 0 (by omega)
     · exact List.mem_of_mem_drop (List.mem_of_mem_take hcarry)
   · exact List.mem_of_mem_drop (List.mem_of_mem_take hreservedWire)
 
@@ -1912,21 +2339,23 @@ private theorem IndexedStepLayout.postShift_support_intersection
   by_cases hscratch : wire ∈ registers.postShift.scratch
   · exact hscratch
   · have haux : wire ∈ registers.aux := by
-      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hshared
-      rcases hshared with rfl | hsource
+      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons,
+        List.mem_append] at hshared
+      rcases hshared with rfl | hsource | hrepair
       · exact hlayout.control_mem_aux
       · exact hlayout.sourceScratch_mem_aux hsource
+      · exact hlayout.remainderRepairScratch_mem_aux hrepair
     have hpayload : wire ∈ indexedStepPayload registers := by
       change wire ∈
         [registers.phase1, registers.phase2,
-          registers.sourceScratch.getD 1 0] ++
+          registers.sourceScratch.getD 0 0] ++
           registers.work2 ++ registers.lengthS ++
-            (registers.sourceScratch.drop 2).take
+            (registers.sourceScratch.drop 1).take
               (registers.lengthS.length - 1) at hsupport
       change wire ∉
-        [registers.sourceScratch.getD 0 0,
-          registers.sourceScratch.getD 1 0] ++
-          (registers.sourceScratch.drop 2).take
+        [registers.sourceScratch.getD registers.lengthS.length 0,
+          registers.sourceScratch.getD 0 0] ++
+          (registers.sourceScratch.drop 1).take
               (registers.lengthS.length - 1) ++
             (registers.sourceScratch.drop
               (registers.lengthS.length + 1)).take 3 at hscratch
@@ -1983,10 +2412,12 @@ private theorem IndexedStepLayout.phaseUpdate_support_intersection
   by_cases hscratch : wire ∈ registers.phaseUpdate.scratch
   · exact hscratch
   · have haux : wire ∈ registers.aux := by
-      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hshared
-      rcases hshared with rfl | hsource
+      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons,
+        List.mem_append] at hshared
+      rcases hshared with rfl | hsource | hrepair
       · exact hlayout.control_mem_aux
       · exact hlayout.sourceScratch_mem_aux hsource
+      · exact hlayout.remainderRepairScratch_mem_aux hrepair
     have hpayloadOrEpoch :
         wire ∈ indexedStepPayload registers ∨ wire = registers.shiftEpoch := by
       change wire ∈
@@ -2001,18 +2432,7 @@ private theorem IndexedStepLayout.phaseUpdate_support_intersection
     · exact (hlayout.aux_not_payload (auxWire := wire) (payloadWire := wire)
         haux hpayload rfl).elim
     · subst wire
-      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hshared
-      rcases hshared with hcontrol | hsource
-      · have hnodup :
-            (registers.control :: registers.shiftEpoch ::
-              registers.sourceScratch).Nodup := by
-            simpa only [List.cons_append, List.nil_append] using
-              hlayout.aux_view_nodup
-        have hne : registers.control ≠ registers.shiftEpoch := by
-          intro equality
-          exact (List.nodup_cons.mp hnodup).1 (by simp [equality])
-        exact (hne hcontrol.symm).elim
-      · exact (hlayout.shiftEpoch_not_sourceScratch hsource).elim
+      exact (hlayout.shiftEpoch_not_sharedScratch hshared).elim
 
 private theorem IndexedStepLayout.tBoundary_usedScratch_sub_block
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -2091,6 +2511,35 @@ private theorem IndexedStepLayout.blockScratch_outside_coefficient
             (hlayout.blockScratch_mem_aux hblock)
             (by simp [indexedStepPayload, hlengthT])) rfl
         · exact hscratch hscratchUsed
+
+private theorem IndexedStepLayout.remainderRepairScratch_not_coefficient
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) (window : ActiveWindow)
+    {wire : Wire} (hrepair : wire ∈ registers.remainderRepairScratch) :
+    wire ∉ (registers.coefficient window).allWires := by
+  intro hused
+  have hnotPayload := hlayout.remainderRepairScratch_not_payload hrepair
+  have hnotSource := hlayout.remainderRepairScratch_not_sourceScratch hrepair
+  change wire ∈
+    [registers.control, registers.sign] ++
+      (IndexedStepRegisters.windowSlice registers.work1 window ++
+        (IndexedStepRegisters.windowSlice registers.work2 window ++
+          (registers.lengthT ++ (registers.coefficient window).scratch))) at hused
+  rcases List.mem_append.mp hused with hfixed | hrest
+  · simp only [List.mem_cons, List.not_mem_nil, or_false] at hfixed
+    rcases hfixed with hcontrol | hsign
+    · exact (hlayout.remainderRepairScratch_ne_control hrepair hcontrol).elim
+    · exact hnotPayload (by simp [indexedStepPayload, hsign])
+  · rcases List.mem_append.mp hrest with hwork1 | hrest
+    · exact hnotPayload (by simp [indexedStepPayload,
+        windowSlice_mem registers.work1 window hwork1])
+    · rcases List.mem_append.mp hrest with hwork2 | hrest
+      · exact hnotPayload (by simp [indexedStepPayload,
+          windowSlice_mem registers.work2 window hwork2])
+      · rcases List.mem_append.mp hrest with hlengthT | hscratch
+        · exact hnotPayload (by simp [indexedStepPayload, hlengthT])
+        · exact hnotSource (List.mem_of_mem_drop
+            (hlayout.coefficient_scratch_sub_block window wire hscratch))
 
 private theorem IndexedStepLayout.phase1_not_coefficient
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -2201,6 +2650,21 @@ private theorem IndexedStepLayout.preShift_used_payload_or_scratch
     IndexedStepRegisters.preShift, indexedStepShiftPayload,
     List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hwire ⊢
   aesop
+
+private theorem IndexedStepLayout.remainderRepairScratch_not_preShift
+    {registers : IndexedStepRegisters} {n T : Nat}
+    (hlayout : IndexedStepLayout registers n T) {wire : Wire}
+    (hrepair : wire ∈ registers.remainderRepairScratch) :
+    wire ∉ registers.preShift.preUsedWires := by
+  intro hused
+  rcases hlayout.preShift_used_payload_or_scratch hused with hpayload | hscratch
+  · apply hlayout.remainderRepairScratch_not_payload hrepair
+    simp only [indexedStepShiftPayload, indexedStepPayload,
+      List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hpayload ⊢
+    aesop
+  · apply hlayout.remainderRepairScratch_not_sourceScratch hrepair
+    exact List.mem_of_mem_drop
+      (hlayout.preShift_scratch_sub_block wire hscratch)
 
 private theorem IndexedStepLayout.lengthRPrime_not_preShift
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -2420,17 +2884,6 @@ private theorem IndexedStepLayout.terminalCondition_payload
   simp only [terminalConditionWires, indexedStepPayload,
     List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hwire ⊢
   aesop
-
-private theorem IndexedStepLayout.control_ne_shiftEpoch
-    {registers : IndexedStepRegisters} {n T : Nat}
-    (hlayout : IndexedStepLayout registers n T) :
-    registers.control ≠ registers.shiftEpoch := by
-  have hnodup :
-      (registers.control :: registers.shiftEpoch ::
-        registers.sourceScratch).Nodup := by
-    simpa only [List.cons_append, List.nil_append] using hlayout.aux_view_nodup
-  intro equality
-  exact (List.nodup_cons.mp hnodup).1 (by simp [equality])
 
 private theorem IndexedStepLayout.control_ne_phase1
     {registers : IndexedStepRegisters} {n T : Nat}
@@ -3124,7 +3577,7 @@ private theorem blockAForward_correct
   have hblock : Clean registers.blockScratch state := by
     apply clean_mono hready
     intro wire hwire
-    exact List.mem_cons_of_mem registers.control (List.mem_of_mem_drop hwire)
+    exact hlayout.blockScratch_mem_sharedScratch hwire
   have hmarkedRun : run (toggleTerminal registers) state = marked := by
     simpa [toggleTerminal, marked, matchXorState] using
       run_computeControl (terminalConditionWires registers)
@@ -3243,7 +3696,7 @@ private theorem blockAForward_borrowedReady
   have hblock : Clean registers.blockScratch state := by
     apply clean_mono hready
     intro wire hwire
-    exact List.mem_cons_of_mem registers.control (List.mem_of_mem_drop hwire)
+    exact hlayout.blockScratch_mem_sharedScratch hwire
   have hterminalEpoch := hlayout.terminalEpoch
   simp only [List.nodup_cons, List.mem_cons,
     List.not_mem_nil, or_false, not_or] at hterminalEpoch
@@ -3525,6 +3978,51 @@ private theorem blockAForward_borrowedReady
         registers.control = false
     simp [matchXorState, upd, hlayout.control_ne_terminal,
       hspilledControl, hcontrolFalse]
+  have hrepairFinal : ∀ wire ∈ registers.remainderRepairScratch,
+      blockAForwardState registers state wire = false := by
+    intro wire hrepair
+    have hnotPayload := hlayout.remainderRepairScratch_not_payload hrepair
+    have hnotSource := hlayout.remainderRepairScratch_not_sourceScratch hrepair
+    have hterminal : wire ≠ registers.terminal := by
+      intro equality
+      apply hnotSource
+      rw [equality, ← hlayout.scratch_view]
+      simp
+    have hphase1 : wire ≠ registers.phase1 := by
+      intro equality
+      apply hnotPayload
+      simp [indexedStepPayload, equality]
+    have hshift : wire ≠ registers.shiftEpoch :=
+      hlayout.remainderRepairScratch_ne_shiftEpoch hrepair
+    have hquotient : wire ≠ registers.quotientLow := by
+      intro equality
+      apply hnotPayload
+      simp [indexedStepPayload, equality, hlayout.quotientLow_mem_lengthQ]
+    have hwork2 : wire ∉ registers.work2 := by
+      intro hmem
+      exact hnotPayload (by simp [indexedStepPayload, hmem])
+    have hlengthS : wire ∉ registers.lengthS := by
+      intro hmem
+      exact hnotPayload (by simp [indexedStepPayload, hmem])
+    calc
+      blockAForwardState registers state wire = spilled wire := by
+        change matchXorState (terminalConditionWires registers)
+          (terminalConditionValue registers) registers.terminal spilled wire =
+            spilled wire
+        exact matchXorState_preserves _ _ _ _ hterminal
+      _ = restoredPhase wire := terminalEpochSpillState_preserves _ _ _ _
+        hshift hquotient hterminalQuotient
+      _ = shifted wire := xorWireState_preserves _ _ _ hphase1
+      _ = disabled wire := by
+        rw [← hpreRun]
+        exact preShiftUnitary_preservesOutside registers.preShift disabled
+          (hlayout.remainderRepairScratch_not_preShift hrepair)
+      _ = padded wire := xorWireState_preserves _ _ _ hphase1
+      _ = marked wire := terminalPaddingForwardState_preserves
+        registers.terminalPadding marked hwork2 hlengthS hshift
+      _ = state wire := matchXorState_preserves _ _ _ _ hterminal
+      _ = false := hready wire
+        (hlayout.remainderRepairScratch_mem_sharedScratch hrepair)
   intro wire hwire
   rw [← hlayout.aux_view] at hwire
   simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hwire
@@ -3534,16 +4032,20 @@ private theorem blockAForward_borrowedReady
   by_cases hepoch : wire = registers.shiftEpoch
   · rw [hepoch, hcorrect.1]
     exact hfinalEpoch
-  have hsource : wire ∈ registers.sourceScratch := by
+  have htail :
+      wire ∈ registers.sourceScratch ++ registers.remainderRepairScratch := by
     simpa [hcontrol, hepoch] using hwire
-  rw [← hlayout.scratch_view] at hsource
-  simp only [List.mem_cons] at hsource
-  by_cases hterminal : wire = registers.terminal
-  · rw [hterminal, hcorrect.1]
-    exact hfinalTerminal
-  have hblockWire : wire ∈ registers.blockScratch := by
-    simpa [hterminal] using hsource
-  exact hcorrect.2 wire hblockWire
+  rcases List.mem_append.mp htail with hsource | hrepair
+  · rw [← hlayout.scratch_view] at hsource
+    simp only [List.mem_cons] at hsource
+    by_cases hterminal : wire = registers.terminal
+    · rw [hterminal, hcorrect.1]
+      exact hfinalTerminal
+    · have hblockWire : wire ∈ registers.blockScratch := by
+        simpa [hterminal] using hsource
+      exact hcorrect.2 wire hblockWire
+  · rw [hcorrect.1]
+    exact hrepairFinal wire hrepair
 
 private theorem blockB1Forward_correct
     (registers : IndexedStepRegisters) (n T : Nat) (window : ActiveWindow)
@@ -4290,18 +4792,46 @@ private theorem blockCForward_correct
     simp only [blockCForward, Classical.run_append]
     rw [hmarkedRun, hrestoredRun, hunmarkedRun]
     rfl
+  have hrepairFinal : ∀ wire ∈ registers.remainderRepairScratch,
+      blockCForwardState registers state wire = false := by
+    intro wire hrepair
+    have hnotPayload := hlayout.remainderRepairScratch_not_payload hrepair
+    have hnotSource := hlayout.remainderRepairScratch_not_sourceScratch hrepair
+    have hterminal : wire ≠ registers.terminal := by
+      intro equality
+      apply hnotSource
+      rw [equality, ← hlayout.scratch_view]
+      simp
+    have hshift := hlayout.remainderRepairScratch_ne_shiftEpoch hrepair
+    have hquotient : wire ≠ registers.quotientLow := by
+      intro equality
+      apply hnotPayload
+      simp [indexedStepPayload, equality, hlayout.quotientLow_mem_lengthQ]
+    calc
+      blockCForwardState registers state wire = restored wire := by
+        change matchXorState (terminalConditionWires registers)
+          (terminalConditionValue registers) registers.terminal restored wire =
+            restored wire
+        exact matchXorState_preserves _ _ _ _ hterminal
+      _ = marked wire := terminalEpochRestoreState_preserves _ _ _ _
+        hshift hquotient
+      _ = state wire := matchXorState_preserves _ _ _ _ hterminal
+      _ = false := hready wire
+        (hlayout.remainderRepairScratch_mem_aux hrepair)
   constructor
   · exact hrun
   · rw [hrun]
     intro wire hwire
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hwire
-    rcases hwire with rfl | hsource
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons,
+      List.mem_append] at hwire
+    rcases hwire with rfl | hsource | hrepair
     · exact hfinalControl
     · rw [← hlayout.scratch_view] at hsource
       simp only [List.mem_cons] at hsource
       rcases hsource with rfl | hblockWire
       · exact hfinalTerminal
       · exact hfinalBlock wire hblockWire
+    · exact hrepairFinal wire hrepair
 
 private theorem run_quotientSwapUnitary_indexedState
     (registers : QuotientSwapRegisters) {k K : Nat} (state : BasisState)
@@ -4480,14 +5010,34 @@ private theorem blockD1Forward_correct
     simp only [Classical.run_append]
     rw [henabledRun, hchangedRun, hclearedRun]
     rfl
+  have hrepairFinal : ∀ wire ∈ registers.remainderRepairScratch,
+      blockD1ForwardState registers state wire = false := by
+    intro wire hrepair
+    have hcontrol := hlayout.remainderRepairScratch_ne_control hrepair
+    have hnotPayload := hlayout.remainderRepairScratch_not_payload hrepair
+    have hnotLengthQ : wire ∉ registers.lengthQ := by
+      intro hmem
+      exact hnotPayload (by simp [indexedStepPayload, hmem])
+    calc
+      blockD1ForwardState registers state wire = changed wire := by
+        change matchXorState [registers.phase1, registers.phase2] 2
+          registers.control changed wire = changed wire
+        exact matchXorState_preserves _ _ _ _ hcontrol
+      _ = enabled wire := indexedIncrementWordState_preservesOutside _ _ _
+        hnotLengthQ
+      _ = state wire := matchXorState_preserves _ _ _ _ hcontrol
+      _ = false := hready wire
+        (hlayout.remainderRepairScratch_mem_sharedScratch hrepair)
   constructor
   · exact hrun
   · rw [hrun]
     intro wire hwire
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hwire
-    rcases hwire with rfl | hsourceWire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons,
+      List.mem_append] at hwire
+    rcases hwire with rfl | hsourceWire | hrepair
     · exact hfinalControl
     · exact hcleared.2 wire hsourceWire
+    · exact hrepairFinal wire hrepair
 
 private theorem blockD2Forward_correct
     (registers : IndexedStepRegisters) (n T : Nat) (window : ActiveWindow)
@@ -4638,14 +5188,39 @@ private theorem blockD2Forward_correct
     simp only [Classical.run_append]
     rw [henabledRun, hchangedRun, hdisabledRun]
     rfl
+  have hrepairFinal : ∀ wire ∈ registers.remainderRepairScratch,
+      blockD2ForwardState registers window state wire = false := by
+    intro wire hrepair
+    have hcontrol := hlayout.remainderRepairScratch_ne_control hrepair
+    have hnotPayload := hlayout.remainderRepairScratch_not_payload hrepair
+    have hsign : wire ≠ registers.sign := by
+      intro equality
+      exact hnotPayload (by simp [indexedStepPayload, equality])
+    have hwork : wire ∉ (registers.quotient window).work1 := by
+      intro hwindowWire
+      apply hnotPayload
+      simp [indexedStepPayload,
+        windowSlice_mem registers.work1 window hwindowWire]
+    calc
+      blockD2ForwardState registers window state wire = disabled1 wire := by rfl
+      _ = disabled2 wire := xorWireState_preserves _ _ _ hcontrol
+      _ = changed wire := xorWireState_preserves _ _ _ hcontrol
+      _ = enabled2 wire := indexedQuotientSwapState_preserves
+        (registers.quotient window) enabled2 hqLayout hsign hwork
+      _ = enabled1 wire := xorWireState_preserves _ _ _ hcontrol
+      _ = state wire := xorWireState_preserves _ _ _ hcontrol
+      _ = false := hready wire
+        (hlayout.remainderRepairScratch_mem_sharedScratch hrepair)
   constructor
   · exact hrun
   · rw [hrun]
     intro wire hwire
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hwire
-    rcases hwire with rfl | hsourceWire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons,
+      List.mem_append] at hwire
+    rcases hwire with rfl | hsourceWire | hrepair
     · exact hfinalControl
     · exact hfinalSource wire hsourceWire
+    · exact hrepairFinal wire hrepair
 
 private theorem blockD3Forward_correct
     (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
@@ -4751,14 +5326,34 @@ private theorem blockD3Forward_correct
     simp only [Classical.run_append]
     rw [henabledRun, hchangedRun, hclearedRun]
     rfl
+  have hrepairFinal : ∀ wire ∈ registers.remainderRepairScratch,
+      blockD3ForwardState registers state wire = false := by
+    intro wire hrepair
+    have hcontrol := hlayout.remainderRepairScratch_ne_control hrepair
+    have hnotPayload := hlayout.remainderRepairScratch_not_payload hrepair
+    have hnotLengthQ : wire ∉ registers.lengthQ := by
+      intro hmem
+      exact hnotPayload (by simp [indexedStepPayload, hmem])
+    calc
+      blockD3ForwardState registers state wire = changed wire := by
+        change matchXorState [registers.phase1, registers.phase2] 1
+          registers.control changed wire = changed wire
+        exact matchXorState_preserves _ _ _ _ hcontrol
+      _ = enabled wire := indexedDecrementWordState_preservesOutside _ _ _
+        hnotLengthQ
+      _ = state wire := matchXorState_preserves _ _ _ _ hcontrol
+      _ = false := hready wire
+        (hlayout.remainderRepairScratch_mem_sharedScratch hrepair)
   constructor
   · exact hrun
   · rw [hrun]
     intro wire hwire
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hwire
-    rcases hwire with rfl | hsourceWire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons,
+      List.mem_append] at hwire
+    rcases hwire with rfl | hsourceWire | hrepair
     · exact hfinalControl
     · exact hcleared.2 wire hsourceWire
+    · exact hrepairFinal wire hrepair
 
 private theorem blockDForward_correct
     (registers : IndexedStepRegisters) (n T : Nat) (window : ActiveWindow)
@@ -4989,9 +5584,7 @@ private theorem blockEForward_correct
       simp [IndexedStepRegisters.sharedScratch, hterminalSource])
   have hblock : Clean registers.blockScratch state := by
     intro wire hwire
-    exact hready wire (by
-      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons]
-      exact Or.inr (List.mem_of_mem_drop hwire))
+    exact hready wire (hlayout.blockScratch_mem_sharedScratch hwire)
   have hterminalAux := hlayout.sourceScratch_mem_aux hterminalSource
   have hcontrolNePhase2 : registers.control ≠ registers.phase2 :=
     hlayout.aux_not_payload hlayout.control_mem_aux (by
@@ -5504,20 +6097,80 @@ private theorem blockEForward_correct
             (hfixedNotWords registers.terminal (by simp)).1
             (hfixedNotWords registers.terminal (by simp)).2
       _ = false := haddClearedTerminal
+  have hrepairFinal : ∀ wire ∈ registers.remainderRepairScratch,
+      restored wire = false := by
+    intro wire hrepair
+    have hnotPayload := hlayout.remainderRepairScratch_not_payload hrepair
+    have hnotSource := hlayout.remainderRepairScratch_not_sourceScratch hrepair
+    have hcontrol := hlayout.remainderRepairScratch_ne_control hrepair
+    have hterminal : wire ≠ registers.terminal := by
+      intro equality
+      apply hnotSource
+      rw [equality, ← hlayout.scratch_view]
+      simp
+    have hsign : wire ≠ registers.sign := by
+      intro equality
+      exact hnotPayload (by simp [indexedStepPayload, equality])
+    have hlengthT : wire ∉ registers.lengthT := by
+      intro hmem
+      exact hnotPayload (by simp [indexedStepPayload, hmem])
+    have hlengthRPrime : wire ∉ registers.lengthRPrime := by
+      intro hmem
+      exact hnotPayload (by simp [indexedStepPayload, hmem])
+    have hcoefficient :=
+      hlayout.remainderRepairScratch_not_coefficient window hrepair
+    calc
+      restored wire = addCleared wire :=
+        tBoundaryRestoreState_preservesOutside registers n addCleared
+          hlengthT hlengthRPrime
+      _ = added wire := matchXorState_preserves _ _ _ _ hcontrol
+      _ = addEnabled wire := by
+        calc
+          added wire = run
+              (coefficientPrefixUnitary (registers.coefficient window)
+                window.start window.stop .add true .work2) addEnabled wire := by
+            simpa only [added] using congrFun hadded.1.symm wire
+          _ = addEnabled wire := coefficientPrefixUnitary_preservesOutside
+            (registers.coefficient window) .add true .work2 addEnabled
+              hcoefficientLayout hcoefficient
+      _ = signChanged wire := matchXorState_preserves _ _ _ _ hcontrol
+      _ = temporaryCleared2 wire := xorWireState_preserves _ _ _ hsign
+      _ = subCleared wire := matchXorState_preserves _ _ _ _ hterminal
+      _ = temporary2 wire := matchXorState_preserves _ _ _ _ hcontrol
+      _ = subtracted wire := matchXorState_preserves _ _ _ _ hterminal
+      _ = prepared wire := by
+        calc
+          subtracted wire = run
+              (coefficientPrefixUnitary (registers.coefficient window)
+                window.start window.stop .sub false .work2) prepared wire := by
+            simpa only [subtracted] using congrFun hsubtracted.1.symm wire
+          _ = prepared wire := coefficientPrefixUnitary_preservesOutside
+            (registers.coefficient window) .sub false .work2 prepared
+              hcoefficientLayout hcoefficient
+      _ = temporaryCleared1 wire :=
+        tBoundaryPrepareState_preservesOutside registers n temporaryCleared1
+          hlengthT hlengthRPrime
+      _ = subEnabled wire := matchXorState_preserves _ _ _ _ hterminal
+      _ = temporary1 wire := matchXorState_preserves _ _ _ _ hcontrol
+      _ = state wire := matchXorState_preserves _ _ _ _ hterminal
+      _ = false := hready wire
+        (hlayout.remainderRepairScratch_mem_sharedScratch hrepair)
   have hrestoredBlock : Clean registers.blockScratch restored := by
     simpa only [restored, hrestored.1] using hrestored.2
   constructor
   · exact hrun.trans hstate
   · rw [hrun]
     intro wire hwire
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hwire
-    rcases hwire with rfl | hsource
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons,
+      List.mem_append] at hwire
+    rcases hwire with rfl | hsource | hrepair
     · exact hrestoredControl
     · rw [← hlayout.scratch_view] at hsource
       simp only [List.mem_cons] at hsource
       rcases hsource with rfl | hblockWire
       · exact hrestoredTerminal
       · exact hrestoredBlock wire hblockWire
+    · exact hrepairFinal wire hrepair
 
 private theorem blockFForward_correct
     (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
@@ -5528,8 +6181,8 @@ private theorem blockFForward_correct
   have hlocalReady : ShiftReady registers.postShift state := by
     intro wire hwire
     apply hready wire
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons]
-    exact Or.inr (hlayout.postShift_scratch_sub_source wire hwire)
+    exact hlayout.sourceScratch_mem_sharedScratch
+      (hlayout.postShift_scratch_sub_source wire hwire)
   have hrun := run_postShiftUnitary registers.postShift state
     hlayout.postShift hlocalReady
   have hlocalAfter := postShiftUnitary_ready registers.postShift state
@@ -5552,8 +6205,8 @@ private theorem blockGForward_correct
   have hlocalReady : PhaseUpdateReady registers.phaseUpdate state := by
     intro wire hwire
     apply hready wire
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons]
-    exact Or.inr (hlayout.phaseUpdate_scratch_sub_source wire hwire)
+    exact hlayout.sourceScratch_mem_sharedScratch
+      (hlayout.phaseUpdate_scratch_sub_source wire hwire)
   have hrun := run_phaseUpdateEpochUnitary registers.phaseUpdate
     registers.shiftEpoch state hlayout.phaseUpdate hlocalReady
   have hlocalAfter := phaseUpdateEpochUnitary_ready registers.phaseUpdate
@@ -5637,8 +6290,7 @@ private theorem blockHForward_run
     have hcleanTail : Clean (registers.sourceScratch.drop 2) state := by
       intro wire hwire
       apply hready wire
-      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons]
-      exact Or.inr (List.mem_of_mem_drop hwire)
+      exact hlayout.sourceScratch_mem_sharedScratch (List.mem_of_mem_drop hwire)
     have hq := run_mcxVChain_andListXorState registers.lengthQ
       (registers.sourceScratch.getD 0 0) (registers.sourceScratch.drop 2)
       state hlayout.endQ.1 hlayout.endQ.2 hcleanTail
@@ -5878,7 +6530,7 @@ private theorem blockHForwardState_ready
     have hcontrolNeEpoch : control ≠ epoch := by
       have hauxDistinct : (control :: epoch :: registers.sourceScratch).Nodup := by
         simpa only [control, epoch, List.cons_append, List.nil_append] using
-          hlayout.aux_view_nodup
+          hlayout.sourceAux_view_nodup
       intro equality
       apply (List.nodup_cons.mp hauxDistinct).1
       rw [equality]
@@ -6157,10 +6809,41 @@ private theorem blockHForwardState_ready
         _ = state wire := hpreserved
         _ = false := hready wire (by
           simp [IndexedStepRegisters.sharedScratch, hsource])
+    have hrepairAfter : Clean registers.remainderRepairScratch after := by
+      intro wire hrepair
+      have hnotSource := hlayout.remainderRepairScratch_not_sourceScratch hrepair
+      have hwireQ : wire ≠ q := by
+        intro equality
+        apply hnotSource
+        exact equality ▸ hqMem
+      have hwireS : wire ≠ s := by
+        intro equality
+        apply hnotSource
+        exact equality ▸ hsMem
+      have hwireEpoch : wire ≠ epoch := by
+        simpa only [epoch] using
+          hlayout.remainderRepairScratch_ne_shiftEpoch hrepair
+      have hwireControl : wire ≠ control := by
+        simpa only [control] using
+          hlayout.remainderRepairScratch_ne_control hrepair
+      have hwireIter : wire ≠ iter := by
+        intro equality
+        apply hlayout.remainderRepairScratch_not_payload hrepair
+        simpa only [equality] using hiterPayload
+      have hpreserved := hfull wire hwireQ hwireS hwireEpoch hwireControl
+        hwireIter (hlayout.aux_not_endIterationMutable
+          (hlayout.remainderRepairScratch_mem_aux hrepair))
+      calc
+        after wire = restoredEpochAgain wire :=
+          andListXorState_preserves registers.lengthQ q restoredEpochAgain hwireQ
+        _ = state wire := hpreserved
+        _ = false := hready wire
+          (hlayout.remainderRepairScratch_mem_sharedScratch hrepair)
     have hafterReady : IndexedStepReady registers after := by
       intro wire hwire
-      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons] at hwire
-      rcases hwire with rfl | hsource
+      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons,
+        List.mem_append] at hwire
+      rcases hwire with rfl | hsource | hrepair
       · exact hcontrolAfter
       · rw [← hview] at hsource
         simp only [List.mem_cons] at hsource
@@ -6168,6 +6851,7 @@ private theorem blockHForwardState_ready
         · exact hqAfter
         · exact hsAfter
         · exact htailAfter wire htail
+      · exact hrepairAfter wire hrepair
     simpa only [blockHForwardState, hstep, if_pos, after, restoredEpochAgain,
       clearedS, epochBeforeClear, disabled, iterated, changed, enabled,
       control, iter, q, s, epoch] using hafterReady
@@ -6913,9 +7597,7 @@ private theorem blockEPrefix_cleanBlockScratch
     Clean registers.blockScratch (run (blockEPrefix registers n) state) := by
   have hblock : Clean registers.blockScratch state := by
     intro wire hwire
-    exact hready wire (by
-      simp only [IndexedStepRegisters.sharedScratch, List.mem_cons]
-      exact Or.inr (List.mem_of_mem_drop hwire))
+    exact hready wire (hlayout.blockScratch_mem_sharedScratch hwire)
   let temporary1 := matchXorState [registers.phase2, registers.sign] 2
     registers.terminal state
   have htemporary1 := run_computeControl_state
@@ -7267,9 +7949,8 @@ private theorem phaseUpdateAdaptive_coherent_of_indexedReady
     (phaseUpdateEpochAdaptive_coherent registers.phaseUpdate registers.shiftEpoch
       hlayout.phaseUpdate)
   intro state hready wire hwire
-  exact hready wire (by
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons]
-    exact Or.inr (hlayout.phaseUpdate_scratch_sub_source wire hwire))
+  exact hready wire (hlayout.sourceScratch_mem_sharedScratch
+    (hlayout.phaseUpdate_scratch_sub_source wire hwire))
 
 private theorem blockCDForward_ready
     (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
@@ -7400,8 +8081,9 @@ private theorem indexedStepAdaptive_BCDEFGH_coherent
         hlayout rfl hready).2)
   simpa [windows, List.append_assoc] using hall
 
-/-- Replacing every eligible reverse v-chain in the full indexed source step by X-basis
-measurement/reset preserves the exact coherent step on all encoded, clean-scratch inputs. -/
+/-- Replacing the five selected cleanup sites—two remainder intervals, two coefficient prefixes,
+and the phase update—by X-basis measurement/reset preserves the exact coherent step on all
+encoded, clean-scratch inputs. -/
 theorem indexedStepAdaptive_coherent
     (registers : IndexedStepRegisters) (n T : Nat)
     (hlayout : IndexedStepLayout registers n T) :
@@ -7423,10 +8105,12 @@ theorem indexedStepAdaptive_coherent
   simpa [indexedStepAdaptive, indexedStepUnitary, Valid, adaptiveUnitary,
     List.append_assoc] using hall
 
-/-! ## Circuit-free full-step semantics -/
+/-! ## Direct blockwise full-step semantics -/
 
-/-- State immediately before the optional iteration-end block, expressed only through the
-gate-independent recurrences of Blocks A--G. -/
+/-- State immediately before the optional iteration-end block, expressed through the direct
+block recurrences of A--G.  The full composition does not appeal to its own circuit execution;
+Block B deliberately retains the interval layer's `intervalAddSubState`, whose endpoint
+preparation and restoration are still tied to the proved interval circuit. -/
 def indexedStepBeforeEndState
     (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState) : BasisState :=
   let windows := certifiedActiveWindows n T
@@ -7438,8 +8122,10 @@ def indexedStepBeforeEndState
             (blockBForwardState registers n windows.remainder
               (blockAForwardState registers state))))))
 
-/-- Gate-independent recurrence of one literal indexed Algorithm-3 microstep.  The two boundary
-arguments are the decoded end-of-iteration routes and are ignored away from `T % 4 = 0`. -/
+/-- Direct blockwise recurrence of one literal indexed Algorithm-3 microstep.  It is noncircular
+relative to the complete indexed circuit, while inheriting Block B's circuit-bound endpoint
+semantics.  The two boundary arguments are the decoded end-of-iteration routes and are ignored
+away from `T % 4 = 0`. -/
 def indexedStepForwardState
     (registers : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
     (state : BasisState) : BasisState :=
@@ -7465,8 +8151,8 @@ def indexedStepEndRoutes
     (inner.lowerTree n windows).routeLabel
       (run (addConstant inner.lengthT inner.constants inner.carry 3) afterUpper))
 
-/-- The literal coherent source stream implements the circuit-free indexed recurrence, restores
-every step-local temporary, and leaves the borrowed epoch as persistent padding state. -/
+/-- The literal coherent source stream implements the direct blockwise indexed recurrence,
+restores every step-local temporary, and leaves the borrowed epoch as persistent padding state. -/
 theorem indexedStepUnitary_correct
     (registers : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
     (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧

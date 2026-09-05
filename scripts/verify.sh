@@ -809,6 +809,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_preserves_control
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_preserves_sign_of_false
 #print axioms ShorECDLP.Paper2607_13816.indexedStepLayout_inhabited
+#print axioms ShorECDLP.Paper2607_13816.indexedStepProduction_layout_inhabited
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_wellFormed
@@ -879,8 +880,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 855 ]]; then
-  printf 'expected eight hundred fifty-five #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 856 ]]; then
+  printf 'expected eight hundred fifty-six #print axioms results\n' >&2
   exit 1
 fi
 
