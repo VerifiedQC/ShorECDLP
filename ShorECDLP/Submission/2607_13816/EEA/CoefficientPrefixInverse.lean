@@ -46,13 +46,6 @@ def coefficientPrefixInverseState
     (state : BasisState) : BasisState :=
   coefficientPrefixState registers k K mode.inverse signUpdate target state
 
-@[simp]
-private theorem coefficientPrefix_computeZeroAnd_adjoint
-    (control indexBit target : Wire) :
-    (computeZeroAnd control indexBit target).adjoint =
-      computeZeroAnd control indexBit target := by
-  simp [computeZeroAnd, Circuit.adjoint]
-
 /-- Reversing the source traversal order while adjointing each leaf gives the adjoint traversal. -/
 private theorem coefficientPrefix_unaryActionUnitary_reverse_eq_adjoint
     (order : UnaryOrder)
