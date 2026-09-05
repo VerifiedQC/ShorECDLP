@@ -1700,23 +1700,6 @@ private theorem terminalPaddingEpochUpdate_clean
     subst wire
     exact terminalPadding_shiftEpoch_not_scratch registers hlayout hwire
 
-private theorem run_terminalPaddingInverse_via_components
-    (registers : TerminalPaddingRegisters) (state : BasisState)
-    (hlayout : TerminalPaddingLayout registers)
-    (hclean : Clean registers.scratch state) :
-    let afterEpoch := state[registers.shiftEpoch ↦
-      Bool.xor (state registers.shiftEpoch)
-        (state registers.terminal &&
-          registerMatches registers.lengthS 0 state)]
-    let afterDecrement := run
-      (controlledDecrement registers.terminal registers.lengthS registers.carries)
-      afterEpoch
-    run (terminalPaddingInverse registers) state =
-      run (controlledRotateRightOne registers.terminal registers.work2)
-        afterDecrement := by
-  rw [terminalPaddingInverse, run_append, run_append,
-    run_terminalPaddingEpochUpdate registers state hlayout hclean]
-
 /-- Direct circuit-free whole-state semantics of the literal inverse wrapper. -/
 theorem run_terminalPaddingInverse
     (registers : TerminalPaddingRegisters) (state : BasisState)
