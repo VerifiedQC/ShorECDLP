@@ -662,6 +662,28 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixNarrow_surface_regression
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixProduction_layout_inhabited
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixProduction_resources
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.restore_prepareLatestPaperTBoundaryWords
+#print axioms ShorECDLP.Paper2607_13816.prepare_restoreLatestPaperTBoundaryWords
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_correct
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_correct
+#print axioms ShorECDLP.Paper2607_13816.run_restoreLatestPaperTBoundary_after_prepare
+#print axioms ShorECDLP.Paper2607_13816.run_prepareLatestPaperTBoundary_after_restore
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_xCount
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_xCount
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_tCount
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_tCount
+#print axioms ShorECDLP.Paper2607_13816.latestPaperTBoundary_widthTwo_source_regression
+#print axioms ShorECDLP.Paper2607_13816.latestPaperTBoundary_secp256k1_resources
 #print axioms ShorECDLP.independentRetrySuccessProbability_succ
 #print axioms ShorECDLP.independentRetrySuccessProbability_mono
 #print axioms ShorECDLP.Quantum.qft_correct
@@ -693,8 +715,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 669 ]]; then
-  printf 'expected six hundred sixty-nine #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 691 ]]; then
+  printf 'expected six hundred ninety-one #print axioms results\n' >&2
   exit 1
 fi
 
