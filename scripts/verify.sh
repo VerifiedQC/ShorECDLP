@@ -662,6 +662,27 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixNarrow_surface_regression
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixProduction_layout_inhabited
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixProduction_resources
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_eq_adjoint
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixInverseUnitary_state
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_ready
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_preservesOutside
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_coherent
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixInverseUnitary_after_forward
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixUnitary_after_inverse
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseState_after_forward
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixState_after_inverse
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseNarrow_source_regressions
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseNarrow_resources
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseProduction_resources
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary_HPFree
@@ -715,8 +736,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 691 ]]; then
-  printf 'expected six hundred ninety-one #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 712 ]]; then
+  printf 'expected seven hundred twelve #print axioms results\n' >&2
   exit 1
 fi
 
