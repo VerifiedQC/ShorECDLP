@@ -14,8 +14,10 @@ coherent-refinement bridge, measurement-based uncomputation, pure EEA model, ind
 bounds/windows, and all twenty-one Phase-5 circuit units ending with the source-ordered indexed
 four-phase microstep. Phase 6 schedule unit 1 is current in PR #83: it serially composes the exact
 1,620 one-based forward steps, the descending explicit reverse stream, the adaptive forward
-program, and the circuit-free routed trace. Concrete schedule-layout/encoding witnesses, explicit
-reverse cancellation, maximum live allocation, and aggregate paper resources remain open.
+program, and the direct automatically routed trace. That trace is noncircular relative to the
+complete schedule, but its route extraction and Block-B endpoint semantics remain circuit-bound.
+Concrete schedule-layout/encoding witnesses, explicit reverse cancellation, maximum live
+allocation, and aggregate paper resources remain open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -560,11 +562,13 @@ separately proved reverse schedule restores `x` and clears `Γ(x)`. Measurement 
 fictional `Circuit.adjoint` for the adaptive program.
 
 **Status:** schedule unit 1 is current in PR #83. It defines one shared recursion for the exact
-forward, descending explicit-reverse, adaptive-forward, and circuit-free routed schedules; proves
-forward whole-state semantics, structural well-formedness/HP-freedom, and adaptive coherent
-refinement; and fixes the secp256k1 horizon to indices `1, ..., 1620`. The concrete EEA encoding
-must next inhabit the threaded layout/state invariant and prove the inverse decoder agreement used
-to cancel the explicit reverse. No reverse identity or aggregate resource claim is attached yet.
+forward, descending explicit-reverse, adaptive-forward, and direct automatically routed schedules;
+proves forward whole-state semantics, structural well-formedness/HP-freedom, and adaptive coherent
+refinement; and fixes the secp256k1 horizon to indices `1, ..., 1620`. The routed trace avoids the
+complete schedule circuit but retains circuit-bound route extraction and Block-B endpoint
+semantics. The concrete EEA encoding must next inhabit the threaded layout/state invariant and
+prove the inverse decoder agreement used to cancel the explicit reverse. No reverse identity or
+aggregate resource claim is attached yet.
 
 The pinned source target is `2n + 6 floor(log2 n) + 19`, or 579 wires at `n = 256` including the
 external point-add control. The presently verified conservative remainder repair needs two more
@@ -864,10 +868,12 @@ other live storage.
   identity, maximum live allocation, and aggregate resource theorem remain Phase 6.
 - **PR #83, Phase-6 schedule unit 1 (current):** the exact one-based `1, ..., 1620` scheduler. One
   recursion binds the forward unitary, descending explicit reverse, adaptive forward program, and
-  circuit-free automatically routed state trace. It proves per-index structural composition,
-  forward whole-state semantics and final scratch readiness, and input-independent coherent
-  measurement-uncomputation under a threaded schedule invariant. The concrete invariant witness,
-  reverse-decoder agreement/identity, live-wire allocation, and aggregate paper vector remain open.
+  direct automatically routed state trace. The trace is noncircular relative to the complete
+  schedule but retains circuit-bound route extraction and Block-B endpoint semantics. The unit
+  proves per-index structural composition, forward whole-state semantics and final scratch
+  readiness, and input-independent coherent measurement-uncomputation under a threaded schedule
+  invariant. The concrete invariant witness, reverse-decoder agreement/identity, live-wire
+  allocation, and aggregate paper vector remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.

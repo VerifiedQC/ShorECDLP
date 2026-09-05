@@ -5,13 +5,16 @@ import ShorECDLP.Submission.«2607_13816».EEA.IndexedStep
 
 This module serially composes the source-indexed microstep over a one-based interval.  It keeps
 the forward circuit, the pinned explicit reverse circuit, the measurement-uncomputed forward
-program, and the circuit-free state trace on the same recursion.  The state invariant records
-only obligations that depend on the concrete EEA encoding: clean shared scratch, the borrowed
-epoch, and the two decoded iteration-end routes.  Those obligations are discharged by the
-concrete encoding layer rather than hidden inside this scheduler.  This first schedule boundary
-proves forward semantics and adaptive coherent refinement.  Cancellation of the explicit reverse
-also needs the source inverse decoders to select the forward boundaries; that state-dependent fact
-is intentionally left to the concrete encoding layer rather than assumed here.
+program, and the direct automatically routed state trace on the same recursion.  The trace is
+noncircular relative to the complete schedule, but it is not circuit-free: route extraction runs
+the landed decoder circuits, and Block B retains its circuit-bound endpoint semantics.  The state
+invariant records only obligations that depend on the concrete EEA encoding: clean shared scratch,
+the borrowed epoch, and the two decoded iteration-end routes.  Those obligations are discharged
+by the concrete encoding layer rather than hidden inside this scheduler.  This first schedule
+boundary proves forward semantics and adaptive coherent refinement.  Cancellation of the explicit
+reverse also needs the source inverse decoders to select the forward boundaries; that
+state-dependent fact is intentionally left to the concrete encoding layer rather than assumed
+here.
 -/
 
 namespace ShorECDLP.Paper2607_13816
@@ -89,7 +92,8 @@ def indexedScheduleAdaptive
       (indexedStepAdaptive registers n start).seq
         (indexedScheduleAdaptive registers n (start + 1) count)
 
-/-- Circuit-free trace of the automatically routed indexed-step recurrence. -/
+/-- Direct automatically routed trace of the indexed-step recurrence.  It does not run the
+complete schedule, but route extraction and Block B retain their landed circuit-bound semantics. -/
 def indexedScheduleState
     (registers : IndexedStepRegisters) (n start : Nat) :
     Nat → BasisState → BasisState
@@ -107,7 +111,7 @@ inductive IndexedScheduleLayout
       (tail : IndexedScheduleLayout registers n (start + 1) count) :
       IndexedScheduleLayout registers n start (count + 1)
 
-/-- State-dependent invariant threaded through the circuit-free schedule trace.  `tail` states
+/-- State-dependent invariant threaded through the direct routed schedule trace.  `tail` states
 that the same conditions hold at the next index after the exact routed recurrence. -/
 inductive IndexedScheduleInvariant
     (registers : IndexedStepRegisters) (n : Nat) :
@@ -305,7 +309,7 @@ def secp256k1EEAForwardAdaptive
     (registers : IndexedStepRegisters) : AdaptiveCircuit :=
   indexedScheduleAdaptive registers 256 1 secp256k1ScheduleLength
 
-/-- Circuit-free automatically routed trace over all 1,620 indices. -/
+/-- Direct automatically routed trace over all 1,620 indices. -/
 def secp256k1EEAState
     (registers : IndexedStepRegisters) (state : BasisState) : BasisState :=
   indexedScheduleState registers 256 1 secp256k1ScheduleLength state
