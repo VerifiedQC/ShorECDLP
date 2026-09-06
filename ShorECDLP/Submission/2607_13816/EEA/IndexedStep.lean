@@ -951,7 +951,7 @@ theorem indexedStepLayout_inhabited :
 
 /-- Dense physical allocation for the first secp256k1 microstep.  The first 578 roles are the
 pinned source allocation; wires 578 and 579 are the certified-remainder repair suffix. -/
-private def indexedStepProductionRegisters : IndexedStepRegisters where
+def indexedStepProductionRegisters : IndexedStepRegisters where
   phase1 := 0
   phase2 := 1
   iter := 2
@@ -1062,7 +1062,7 @@ private theorem indexedStepProduction_coefficient_layout :
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
-private theorem indexedStepProduction_layout :
+theorem indexedStepProduction_layout :
     IndexedStepLayout indexedStepProductionRegisters 256 1 := by
   refine {
     aux_length := by decide

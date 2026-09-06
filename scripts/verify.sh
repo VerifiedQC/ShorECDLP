@@ -611,6 +611,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.postShiftUnitary_secp256k1_resources
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_routeLabel_eq_of_width
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_indexWires_mem_lengthQ
+#print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_layout_of_separated
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_labels
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapTree_routeLabel_eq
 #print axioms ShorECDLP.Paper2607_13816.quotientSwapUnitary_correct
@@ -812,6 +813,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_preserves_control
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixUnitary_preserves_sign_of_false
 #print axioms ShorECDLP.Paper2607_13816.indexedStepLayout_inhabited
+#print axioms ShorECDLP.Paper2607_13816.indexedStepProduction_layout
 #print axioms ShorECDLP.Paper2607_13816.indexedStepProduction_layout_inhabited
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_wellFormed
@@ -842,6 +844,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_coherent
 #print axioms ShorECDLP.Paper2607_13816.mem_secp256k1ScheduleIndices_iff
 #print axioms ShorECDLP.Paper2607_13816.secp256k1Schedule_indexedFrame
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ScheduleLayout_production
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ScheduleLayout_inhabited
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardUnitary_correct
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseUnitary_after_forward
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardAdaptive_coherent
@@ -898,8 +902,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 874 ]]; then
-  printf 'expected eight hundred seventy-four #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 878 ]]; then
+  printf 'expected eight hundred seventy-eight #print axioms results\n' >&2
   exit 1
 fi
 

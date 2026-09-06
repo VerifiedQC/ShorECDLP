@@ -312,6 +312,407 @@ private theorem quotientSwapDualTree_built
   rw [htree]
   rfl
 
+/-! The source reserves `unary_depth(K-k+1)` path cells.  The generic builder starts at the
+absolute bit width of the labels, so its existing `pathDepth_le` theorem is intentionally too
+coarse for a narrow interval high in the word.  The following private argument proves the tight
+interval bound: before the first split the builder only prunes common high bits; after that split,
+the two children are respectively a suffix and a prefix of aligned power-of-two blocks. -/
+
+private inductive SourceIntervalAlignment where
+  | general
+  | prefix
+  | suffix
+
+private def sourceIntervalDepthBound : SourceIntervalAlignment → Nat → Nat
+  | .general, count =>
+      if count ≤ 1 then 0 else Nat.clog 2 (count - 1) + 1
+  | .prefix, count => Nat.clog 2 count
+  | .suffix, count => Nat.clog 2 count
+
+private def SourceIntervalOnBlock
+    (labels : Finset Nat) (depth base low high : Nat) : Prop :=
+  base ≤ low ∧ low < high ∧ high ≤ base + 2 ^ depth ∧
+    ∀ label, label ∈ DualUnaryActionTree.labelsInBlock labels depth base ↔
+      low ≤ label ∧ label < high
+
+private theorem DualUnaryActionTree.SourceBuilt.block_nonempty
+    {indexA indexB : Nat → Wire} {labels : Finset Nat}
+    {depth base : Nat} {tree : DualUnaryActionTree}
+    (hbuilt : DualUnaryActionTree.SourceBuilt indexA indexB labels depth base tree) :
+    (DualUnaryActionTree.labelsInBlock labels depth base).Nonempty := by
+  induction hbuilt with
+  | leaf base hbase =>
+      exact ⟨base, by simp [DualUnaryActionTree.labelsInBlock, hbase]⟩
+  | onlyZero depth base zero hzero hone ih =>
+      obtain ⟨label, hlabel⟩ := ih
+      refine ⟨label, ?_⟩
+      simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hlabel ⊢
+      refine ⟨hlabel.1, hlabel.2.1, lt_of_lt_of_le hlabel.2.2 ?_⟩
+      simp [Nat.pow_succ, Nat.mul_two]
+  | onlyOne depth base one hzero hone ih =>
+      obtain ⟨label, hlabel⟩ := ih
+      refine ⟨label, ?_⟩
+      simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hlabel ⊢
+      refine ⟨hlabel.1, le_trans (Nat.le_add_right base (2 ^ depth)) hlabel.2.1, ?_⟩
+      simpa [Nat.pow_succ, Nat.mul_two, Nat.add_assoc] using hlabel.2.2
+  | node depth base zero one hzero hone ihZero ihOne =>
+      obtain ⟨label, hlabel⟩ := ihZero
+      refine ⟨label, ?_⟩
+      simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hlabel ⊢
+      refine ⟨hlabel.1, hlabel.2.1, lt_of_lt_of_le hlabel.2.2 ?_⟩
+      simp [Nat.pow_succ, Nat.mul_two]
+
+private theorem sourceIntervalOnBlock_right_empty
+    {labels : Finset Nat} {depth base low high : Nat}
+    (hshape : SourceIntervalOnBlock labels (depth + 1) base low high)
+    (hempty : DualUnaryActionTree.labelsInBlock labels depth
+      (base + 2 ^ depth) = ∅) :
+    high ≤ base + 2 ^ depth := by
+  by_contra hhigh
+  have hhigh' : base + 2 ^ depth < high := Nat.lt_of_not_ge hhigh
+  by_cases hlow : low ≤ base + 2 ^ depth
+  · have hparent : base + 2 ^ depth ∈
+        DualUnaryActionTree.labelsInBlock labels (depth + 1) base :=
+      (hshape.2.2.2 _).2 ⟨hlow, hhigh'⟩
+    have hright : base + 2 ^ depth ∈
+        DualUnaryActionTree.labelsInBlock labels depth (base + 2 ^ depth) := by
+      simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hparent ⊢
+      refine ⟨hparent.1, Nat.le_refl _, ?_⟩
+      have hpow := Nat.two_pow_pos depth
+      omega
+    rw [hempty] at hright
+    simp at hright
+  · have hparent : low ∈
+        DualUnaryActionTree.labelsInBlock labels (depth + 1) base :=
+      (hshape.2.2.2 _).2 ⟨Nat.le_refl _, hshape.2.1⟩
+    have hright : low ∈
+        DualUnaryActionTree.labelsInBlock labels depth (base + 2 ^ depth) := by
+      simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hparent ⊢
+      refine ⟨hparent.1, Nat.le_of_lt (Nat.lt_of_not_ge hlow), ?_⟩
+      simpa [Nat.pow_succ, Nat.mul_two, Nat.add_assoc] using hparent.2.2
+    rw [hempty] at hright
+    simp at hright
+
+private theorem sourceIntervalOnBlock_left_empty
+    {labels : Finset Nat} {depth base low high : Nat}
+    (hshape : SourceIntervalOnBlock labels (depth + 1) base low high)
+    (hempty : DualUnaryActionTree.labelsInBlock labels depth base = ∅) :
+    base + 2 ^ depth ≤ low := by
+  by_contra hlow
+  have hlow' : low < base + 2 ^ depth := Nat.lt_of_not_ge hlow
+  have hparent : low ∈
+      DualUnaryActionTree.labelsInBlock labels (depth + 1) base :=
+    (hshape.2.2.2 _).2 ⟨Nat.le_refl _, hshape.2.1⟩
+  have hleft : low ∈ DualUnaryActionTree.labelsInBlock labels depth base := by
+    simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hparent ⊢
+    exact ⟨hparent.1, hparent.2.1, hlow'⟩
+  rw [hempty] at hleft
+  simp at hleft
+
+private theorem sourceBuilt_interval_pathDepth_le
+    {indexA indexB : Nat → Wire} {labels : Finset Nat}
+    {depth base : Nat} {tree : DualUnaryActionTree}
+    (hbuilt : DualUnaryActionTree.SourceBuilt indexA indexB labels depth base tree) :
+    ∀ {low high : Nat} (alignment : SourceIntervalAlignment),
+      SourceIntervalOnBlock labels depth base low high →
+      (match alignment with
+        | .general => True
+        | .prefix => low = base
+        | .suffix => high = base + 2 ^ depth) →
+      tree.pathDepth ≤ sourceIntervalDepthBound alignment (high - low) := by
+  induction hbuilt with
+  | leaf base hbase =>
+      intro low high alignment hshape halignment
+      have hend := hshape.2.2.1
+      simp only [pow_zero, Nat.add_one] at hend
+      have hblock : base ∈ DualUnaryActionTree.labelsInBlock labels 0 base := by
+        simp [DualUnaryActionTree.labelsInBlock, hbase]
+      have hrange := (hshape.2.2.2 base).1 hblock
+      have hlowEq : low = base := Nat.le_antisymm hrange.1 hshape.1
+      have hhighEq : high = base + 1 :=
+        Nat.le_antisymm hend (Nat.add_one_le_iff.mpr hrange.2)
+      have hinterval : high = low + 1 := by omega
+      have hcount : high - low = 1 := by simp [hinterval]
+      cases alignment <;>
+        simp [DualUnaryActionTree.pathDepth, sourceIntervalDepthBound, hcount]
+  | onlyZero depth base zero hzero hone ih =>
+      intro low high alignment hshape halignment
+      have hhigh := sourceIntervalOnBlock_right_empty hshape hone
+      have hchild : SourceIntervalOnBlock labels depth base low high := by
+        refine ⟨hshape.1, hshape.2.1, hhigh, ?_⟩
+        intro label
+        simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter]
+        have hparentEnd := hshape.2.2.1
+        have hiff := hshape.2.2.2 label
+        simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hiff
+        constructor
+        · intro hmem
+          apply hiff.1
+          refine ⟨hmem.1, hmem.2.1, lt_of_lt_of_le hmem.2.2 ?_⟩
+          simp [Nat.pow_succ, Nat.mul_two]
+        · intro hmem
+          have hparent := hiff.2 hmem
+          exact ⟨hparent.1, hparent.2.1, lt_of_lt_of_le hmem.2 hhigh⟩
+      cases alignment with
+      | general => exact ih .general hchild trivial
+      | «prefix» => exact ih .prefix hchild halignment
+      | «suffix» =>
+          exfalso
+          have hpow := Nat.two_pow_pos depth
+          rw [Nat.pow_succ] at halignment
+          omega
+  | onlyOne depth base one hzero hone ih =>
+      intro low high alignment hshape halignment
+      have hlow := sourceIntervalOnBlock_left_empty hshape hzero
+      have hchild : SourceIntervalOnBlock labels depth (base + 2 ^ depth) low high := by
+        refine ⟨hlow, hshape.2.1, ?_, ?_⟩
+        · have hparentEnd := hshape.2.2.1
+          rw [Nat.pow_succ] at hparentEnd
+          omega
+        · intro label
+          simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter]
+          have hparentEnd := hshape.2.2.1
+          have hiff := hshape.2.2.2 label
+          simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hiff
+          constructor
+          · intro hmem
+            apply hiff.1
+            refine ⟨hmem.1, le_trans (Nat.le_add_right base (2 ^ depth)) hmem.2.1, ?_⟩
+            simpa [Nat.pow_succ, Nat.mul_two, Nat.add_assoc] using hmem.2.2
+          · intro hmem
+            have hparent := hiff.2 hmem
+            refine ⟨hparent.1, le_trans hlow hmem.1, ?_⟩
+            simpa [Nat.pow_succ, Nat.mul_two, Nat.add_assoc] using hparent.2.2
+      cases alignment with
+      | general => exact ih .general hchild trivial
+      | «prefix» =>
+          exfalso
+          have hpow := Nat.two_pow_pos depth
+          omega
+      | «suffix» =>
+          apply ih .suffix hchild
+          simpa [Nat.pow_succ, Nat.mul_two, Nat.add_assoc] using halignment
+  | node depth base zero one hzero hone ihZero ihOne =>
+      intro low high alignment hshape halignment
+      obtain ⟨leftLabel, hleftLabel⟩ := hzero.block_nonempty
+      obtain ⟨rightLabel, hrightLabel⟩ := hone.block_nonempty
+      have hleftParent : leftLabel ∈
+          DualUnaryActionTree.labelsInBlock labels (depth + 1) base := by
+        simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hleftLabel ⊢
+        refine ⟨hleftLabel.1, hleftLabel.2.1, lt_of_lt_of_le hleftLabel.2.2 ?_⟩
+        simp [Nat.pow_succ, Nat.mul_two]
+      have hrightParent : rightLabel ∈
+          DualUnaryActionTree.labelsInBlock labels (depth + 1) base := by
+        simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hrightLabel ⊢
+        refine ⟨hrightLabel.1,
+          le_trans (Nat.le_add_right base (2 ^ depth)) hrightLabel.2.1, ?_⟩
+        simpa [Nat.pow_succ, Nat.mul_two, Nat.add_assoc] using hrightLabel.2.2
+      have hleftRange := (hshape.2.2.2 leftLabel).1 hleftParent
+      have hrightRange := (hshape.2.2.2 rightLabel).1 hrightParent
+      have hcrossLeft : low < base + 2 ^ depth := by
+        simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hleftLabel
+        omega
+      have hcrossRight : base + 2 ^ depth < high := by
+        simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hrightLabel
+        omega
+      have hleftShape : SourceIntervalOnBlock labels depth base low
+          (base + 2 ^ depth) := by
+        refine ⟨hshape.1, hcrossLeft, Nat.le_refl _, ?_⟩
+        intro label
+        simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter]
+        have hparentEnd := hshape.2.2.1
+        have hiff := hshape.2.2.2 label
+        simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hiff
+        constructor
+        · intro hmem
+          have hparentRange := hiff.1 ⟨hmem.1, hmem.2.1,
+            lt_of_lt_of_le hmem.2.2 (by
+              simp [Nat.pow_succ, Nat.mul_two])⟩
+          exact ⟨hparentRange.1, hmem.2.2⟩
+        · intro hmem
+          have hparent := hiff.2 ⟨hmem.1,
+            lt_of_lt_of_le hmem.2 hcrossRight.le⟩
+          exact ⟨hparent.1, hparent.2.1, hmem.2⟩
+      have hrightShape : SourceIntervalOnBlock labels depth (base + 2 ^ depth)
+          (base + 2 ^ depth) high := by
+        refine ⟨Nat.le_refl _, hcrossRight, ?_, ?_⟩
+        · have hparentEnd := hshape.2.2.1
+          rw [Nat.pow_succ] at hparentEnd
+          omega
+        · intro label
+          simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter]
+          have hparentEnd := hshape.2.2.1
+          have hiff := hshape.2.2.2 label
+          simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter] at hiff
+          constructor
+          · intro hmem
+            have hparentRange := hiff.1 ⟨hmem.1,
+              le_trans (Nat.le_add_right base (2 ^ depth)) hmem.2.1,
+              (by simpa [Nat.pow_succ, Nat.mul_two, Nat.add_assoc] using hmem.2.2)⟩
+            exact ⟨hmem.2.1, hparentRange.2⟩
+          · intro hmem
+            have hparent := hiff.2 ⟨le_trans hcrossLeft.le hmem.1, hmem.2⟩
+            refine ⟨hparent.1, hmem.1, ?_⟩
+            simpa [Nat.pow_succ, Nat.mul_two, Nat.add_assoc] using hparent.2.2
+      cases alignment with
+      | general =>
+          have hleft := ihZero .suffix hleftShape rfl
+          have hright := ihOne .prefix hrightShape rfl
+          have hcount : ¬high - low ≤ 1 := by omega
+          simp only [DualUnaryActionTree.pathDepth, sourceIntervalDepthBound,
+            if_neg hcount]
+          have hleftMono : Nat.clog 2 (base + 2 ^ depth - low) ≤
+              Nat.clog 2 (high - low - 1) :=
+            Nat.clog_mono_right 2 (by omega)
+          have hrightMono : Nat.clog 2 (high - (base + 2 ^ depth)) ≤
+              Nat.clog 2 (high - low - 1) :=
+            Nat.clog_mono_right 2 (by omega)
+          have hmax : max zero.pathDepth one.pathDepth ≤
+              Nat.clog 2 (high - low - 1) :=
+            max_le (le_trans hleft hleftMono) (le_trans hright hrightMono)
+          omega
+      | «prefix» =>
+          have hzeroDepth := hzero.pathDepth_le
+          have honeDepth := hone.pathDepth_le
+          have hpow : 2 ^ depth < high - low := by
+            rw [halignment]
+            omega
+          have hclog : depth < Nat.clog 2 (high - low) :=
+            (Nat.lt_clog_iff_pow_lt (by omega)).2 hpow
+          simp only [DualUnaryActionTree.pathDepth, sourceIntervalDepthBound]
+          have hmax : max zero.pathDepth one.pathDepth ≤ depth :=
+            max_le hzeroDepth honeDepth
+          omega
+      | «suffix» =>
+          have hzeroDepth := hzero.pathDepth_le
+          have honeDepth := hone.pathDepth_le
+          have hpow : 2 ^ depth < high - low := by
+            rw [Nat.pow_succ] at halignment
+            omega
+          have hclog : depth < Nat.clog 2 (high - low) :=
+            (Nat.lt_clog_iff_pow_lt (by omega)).2 hpow
+          simp only [DualUnaryActionTree.pathDepth, sourceIntervalDepthBound]
+          have hmax : max zero.pathDepth one.pathDepth ≤ depth :=
+            max_le hzeroDepth honeDepth
+          omega
+
+private def quotientTreeDepth : UnaryActionTree → Nat
+  | .leaf _ => 0
+  | .node _ zero one =>
+      1 + max (quotientTreeDepth zero) (quotientTreeDepth one)
+
+@[simp]
+private theorem quotientProjectA_treeDepth (tree : DualUnaryActionTree) :
+    quotientTreeDepth (quotientProjectA tree) = tree.pathDepth := by
+  induction tree with
+  | leaf => rfl
+  | node indexA indexB zero one ihZero ihOne =>
+      simp [quotientProjectA, quotientTreeDepth,
+        DualUnaryActionTree.pathDepth, ihZero, ihOne]
+
+private theorem quotientSwapTree_depth_le
+    (registers : QuotientSwapRegisters) {k K : Nat} (hkK : k ≤ K) :
+    quotientTreeDepth (quotientSwapTree registers k K) ≤
+      quotientSwapUnaryDepth k K := by
+  let labels := (quotientSwapLabels k K).toFinset
+  have hbuildSource : DualUnaryActionTree.buildSource
+      registers.index registers.index labels =
+        some (quotientSwapDualTree registers k K) := by
+    simpa only [DualUnaryActionTree.buildSourceFromList, labels] using
+      quotientSwapDualTree_built registers hkK
+  have hbuild : DualUnaryActionTree.build registers.index registers.index
+      (DualUnaryActionTree.sourceWidth labels) labels =
+        some (quotientSwapDualTree registers k K) := by
+    simpa only [DualUnaryActionTree.buildSource] using hbuildSource
+  have hsource := DualUnaryActionTree.build_sourceBuilt
+    registers.index registers.index (DualUnaryActionTree.sourceWidth labels)
+      labels (quotientSwapDualTree registers k K) hbuild
+  have hKMem : K ∈ labels := by
+    simp only [labels, List.mem_toFinset]
+    exact mem_quotientSwapLabels.mpr ⟨hkK, Nat.le_refl _⟩
+  have hKBound := DualUnaryActionTree.label_lt_two_pow_sourceWidth labels K hKMem
+  have hshape : SourceIntervalOnBlock labels
+      (DualUnaryActionTree.sourceWidth labels) 0 k (K + 1) := by
+    refine ⟨Nat.zero_le _, by omega, by simpa using hKBound, ?_⟩
+    intro label
+    simp only [DualUnaryActionTree.labelsInBlock, Finset.mem_filter,
+      Nat.zero_le, true_and]
+    constructor
+    · rintro ⟨hmem, _⟩
+      have hrange := mem_quotientSwapLabels.mp (by
+        simpa only [labels, List.mem_toFinset] using hmem)
+      omega
+    · intro hrange
+      refine ⟨?_, ?_⟩
+      · simpa only [labels, List.mem_toFinset] using
+          (mem_quotientSwapLabels.mpr ⟨hrange.1, by omega⟩)
+      · simpa using DualUnaryActionTree.label_lt_two_pow_sourceWidth labels label (by
+          simpa only [labels, List.mem_toFinset] using
+            (mem_quotientSwapLabels.mpr ⟨hrange.1, by omega⟩))
+  have hdepth := sourceBuilt_interval_pathDepth_le hsource .general hshape trivial
+  have hcount : K + 1 - k = K - k + 1 := by omega
+  rw [hcount] at hdepth
+  rw [quotientSwapTree, quotientProjectA_treeDepth]
+  simpa only [sourceIntervalDepthBound, quotientSwapUnaryDepth] using hdepth
+
+private theorem quotientTree_layout_of_separated
+    (tree : UnaryActionTree) (control : Wire) (path : List Wire)
+    (hdepth : quotientTreeDepth tree ≤ path.length)
+    (hcontrolIndex : control ∉ tree.indexWires)
+    (hcontrolPath : control ∉ path)
+    (hpathNodup : path.Nodup)
+    (hindexPath : ∀ wire ∈ tree.indexWires, wire ∉ path) :
+    tree.Layout control path := by
+  induction tree generalizing control path with
+  | leaf label =>
+      exact .leaf label control path (by
+        simp only [List.nodup_cons]
+        exact ⟨hcontrolPath, hpathNodup⟩)
+  | node indexBit zero one ihZero ihOne =>
+      cases path with
+      | nil => simp [quotientTreeDepth] at hdepth
+      | cons next rest =>
+          have hrestNodup : rest.Nodup :=
+            (List.nodup_cons.mp hpathNodup).2
+          have hnextRest : next ∉ rest :=
+            (List.nodup_cons.mp hpathNodup).1
+          have hlocal :
+              (control ::
+                ((UnaryActionTree.node indexBit zero one).indexWires.dedup ++
+                  (next :: rest))).Nodup := by
+            rw [List.nodup_cons, List.nodup_append]
+            refine ⟨?_, List.nodup_dedup _, hpathNodup, ?_⟩
+            · intro hmem
+              rw [List.mem_append] at hmem
+              exact hmem.elim
+                (fun h => hcontrolIndex (by simpa using h)) hcontrolPath
+            · intro wire hwire pathWire hpathWire heq
+              exact hindexPath wire (by simpa using hwire)
+                (by simpa [← heq] using hpathWire)
+          exact .node indexBit control next zero one rest hlocal
+            (ihZero next rest
+              (by simp [quotientTreeDepth] at hdepth; omega)
+              (by
+                intro hmem
+                exact hindexPath next
+                  (by simp [UnaryActionTree.indexWires, hmem]) (by simp))
+              hnextRest hrestNodup
+              (by
+                intro wire hwire hrest
+                exact hindexPath wire
+                  (by simp [UnaryActionTree.indexWires, hwire]) (by simp [hrest])))
+            (ihOne next rest
+              (by simp [quotientTreeDepth] at hdepth; omega)
+              (by
+                intro hmem
+                exact hindexPath next
+                  (by simp [UnaryActionTree.indexWires, hmem]) (by simp))
+              hnextRest hrestNodup
+              (by
+                intro wire hwire hrest
+                exact hindexPath wire
+                  (by simp [UnaryActionTree.indexWires, hwire]) (by simp [hrest])))
+
 theorem quotientSwapTree_labels
     (registers : QuotientSwapRegisters) {k K : Nat} (hkK : k ≤ K) :
     (quotientSwapTree registers k K).labels =
@@ -486,6 +887,33 @@ theorem quotientSwapTree_indexWires_mem_lengthQ
   have hindex : bit < registers.lengthQ.length :=
     lt_of_lt_of_le hbit hindexWidth
   exact list_getD_mem registers.lengthQ bit 0 hindex
+
+/-- A source interval's reserved unary path is sufficient for its exact highest-varying-bit tree.
+The remaining premises are the direct physical separation of the external control, index bank,
+and reusable path stack. -/
+theorem quotientSwapTree_layout_of_separated
+    (registers : QuotientSwapRegisters) {k K : Nat}
+    (hkK : k ≤ K)
+    (hindexWidth : DualUnaryActionTree.sourceWidth
+      (quotientSwapLabels k K).toFinset ≤ registers.lengthQ.length)
+    (control : Wire) (path : List Wire)
+    (hpathLength : quotientSwapUnaryDepth k K ≤ path.length)
+    (hcontrolIndex : control ∉ registers.lengthQ)
+    (hcontrolPath : control ∉ path)
+    (hpathNodup : path.Nodup)
+    (hindexPath : List.Disjoint registers.lengthQ path) :
+    (quotientSwapTree registers k K).Layout control path := by
+  apply quotientTree_layout_of_separated
+  · exact le_trans (quotientSwapTree_depth_le registers hkK) hpathLength
+  · intro hmem
+    exact hcontrolIndex <|
+      quotientSwapTree_indexWires_mem_lengthQ registers hkK hindexWidth _ hmem
+  · exact hcontrolPath
+  · exact hpathNodup
+  · intro wire hwire hpath
+    exact (List.disjoint_left.mp hindexPath)
+      (quotientSwapTree_indexWires_mem_lengthQ registers hkK hindexWidth _ hwire)
+      hpath
 
 private theorem quotientSwap_decoder_classify
     (registers : QuotientSwapRegisters) {k K : Nat}
