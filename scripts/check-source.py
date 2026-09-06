@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -13,6 +14,34 @@ from pathlib import Path
 ROOT = Path(os.environ.get("SHORECDLP_ROOT", Path(__file__).resolve().parents[1])).resolve()
 ENTRY = ROOT / "ShorECDLP.lean"
 SOURCE_ROOT = ROOT / "ShorECDLP"
+MATH_ROOT = SOURCE_ROOT / "Math"
+FRAMEWORK_ROOT = SOURCE_ROOT / "Framework"
+NAIVE_ROOT = SOURCE_ROOT / "Submission" / "Naive"
+PAPER_ROOT = SOURCE_ROOT / "Submission" / "2607_13816"
+
+LAYER_ROOTS = {
+    "Math": MATH_ROOT,
+    "Framework": FRAMEWORK_ROOT,
+    "Naive": NAIVE_ROOT,
+    "2607_13816": PAPER_ROOT,
+}
+
+ALLOWED_PROJECT_IMPORTS = {
+    "Math": {"Math"},
+    "Framework": {"Math", "Framework"},
+    "Naive": {"Math", "Framework", "Naive"},
+    "2607_13816": {"Math", "Framework", "2607_13816"},
+    "Root": {"Math", "Framework", "Naive", "2607_13816"},
+}
+
+TEXTUAL_LAYER_PREFIXES = {
+    "ShorECDLP.Math": "Math",
+    "ShorECDLP.Framework": "Framework",
+    "ShorECDLP.Submission.Naive": "Naive",
+    "ShorECDLP.Submission.«2607_13816»": "2607_13816",
+}
+
+IMPORT_RE = re.compile(r"^\s*import\s+(.+?)(?:\s+--.*)?$")
 
 
 def source_files() -> list[Path]:
@@ -69,6 +98,68 @@ def is_within(path: Path, directory: Path) -> bool:
         return False
 
 
+def source_layer(path: Path) -> str:
+    """Classify an in-repository Lean source into the approved architecture."""
+    resolved = path.resolve()
+    if resolved == ENTRY.resolve():
+        return "Root"
+    for layer, directory in LAYER_ROOTS.items():
+        if is_within(resolved, directory.resolve()):
+            return layer
+    raise ValueError(
+        "Lean source is outside the approved Math/Framework/submission layers: "
+        f"{path.relative_to(ROOT)}"
+    )
+
+
+def textual_module_layer(module: str) -> str | None:
+    """Classify a textual project import; return None for external modules."""
+    if module == "ShorECDLP":
+        return "Root"
+    for prefix, layer in TEXTUAL_LAYER_PREFIXES.items():
+        if module == prefix or module.startswith(prefix + "."):
+            return layer
+    if module.startswith("ShorECDLP."):
+        raise ValueError(f"project import is outside the approved layers: {module}")
+    return None
+
+
+def textual_project_imports(source: Path) -> list[tuple[str, str]]:
+    imports: list[tuple[str, str]] = []
+    for line in source.read_text(encoding="utf-8").splitlines():
+        match = IMPORT_RE.match(line)
+        if match is None:
+            continue
+        for module in match.group(1).split():
+            layer = textual_module_layer(module)
+            if layer is not None:
+                imports.append((module, layer))
+    return imports
+
+
+def check_textual_layering(files: list[Path]) -> None:
+    """Reject forbidden project imports using the source text itself."""
+    violations: list[str] = []
+    root_import_layers: set[str] = set()
+    for source in files:
+        layer = source_layer(source)
+        for module, imported_layer in textual_project_imports(source):
+            if layer == "Root":
+                root_import_layers.add(imported_layer)
+            if imported_layer not in ALLOWED_PROJECT_IMPORTS[layer]:
+                violations.append(
+                    f"{source.relative_to(ROOT)} ({layer}) -> {module} ({imported_layer})"
+                )
+    if violations:
+        raise ValueError("forbidden textual import edge(s): " + ", ".join(violations))
+    missing = {"Naive", "2607_13816"} - root_import_layers
+    if missing:
+        raise ValueError(
+            "ShorECDLP.lean must directly import both submission aggregators; missing layer(s): "
+            + ", ".join(sorted(missing))
+        )
+
+
 def direct_source_dependencies(source: Path) -> set[Path]:
     """Ask Lean itself to parse one module header and resolve its direct imports."""
     result = subprocess.run(
@@ -90,23 +181,35 @@ def compiler_source_closure(files: list[Path], toolchain_root: Path) -> set[Path
     with ThreadPoolExecutor(max_workers=min(8, len(files))) as executor:
         dependency_map = dict(zip(files, executor.map(direct_source_dependencies, files)))
 
-    framework_root = (SOURCE_ROOT / "Framework").resolve()
-    submission_root = (SOURCE_ROOT / "Submission").resolve()
-    layering_violations = sorted(
-        (source.resolve(), dependency)
-        for source, dependencies in dependency_map.items()
-        if is_within(source.resolve(), framework_root)
-        for dependency in dependencies
-        if is_within(dependency, submission_root)
-    )
+    sanctioned = {path.resolve() for path in files}
+    layering_violations: list[tuple[Path, str, Path, str]] = []
+    root_dependency_layers: set[str] = set()
+    for source, dependencies in dependency_map.items():
+        layer = source_layer(source)
+        for dependency in dependencies:
+            if dependency not in sanctioned:
+                continue
+            imported_layer = source_layer(dependency)
+            if layer == "Root":
+                root_dependency_layers.add(imported_layer)
+            if imported_layer not in ALLOWED_PROJECT_IMPORTS[layer]:
+                layering_violations.append(
+                    (source.resolve(), layer, dependency, imported_layer)
+                )
     if layering_violations:
         edges = ", ".join(
-            f"{source.relative_to(ROOT)} -> {dependency.relative_to(ROOT)}"
-            for source, dependency in layering_violations
+            f"{source.relative_to(ROOT)} ({layer}) -> "
+            f"{dependency.relative_to(ROOT)} ({imported_layer})"
+            for source, layer, dependency, imported_layer in sorted(layering_violations)
         )
-        raise ValueError(f"Framework must not import Submission: {edges}")
+        raise ValueError(f"forbidden compiler-resolved import edge(s): {edges}")
+    missing = {"Naive", "2607_13816"} - root_dependency_layers
+    if missing:
+        raise ValueError(
+            "compiler did not resolve both submission aggregators directly from ShorECDLP.lean; "
+            "missing layer(s): " + ", ".join(sorted(missing))
+        )
 
-    sanctioned = {path.resolve() for path in files}
     dependency_path = ROOT / ".lake" / "packages"
     if dependency_path.is_symlink():
         raise ValueError(f"Lake package root must not be a symlink: {dependency_path}")
@@ -154,6 +257,13 @@ def main() -> int:
     failures: list[str] = []
 
     try:
+        for source in files:
+            source_layer(source)
+        check_textual_layering(files)
+    except (OSError, ValueError) as error:
+        failures.append(f"source layering check failed: {error}")
+
+    try:
         tracked = tracked_lean_files()
     except (OSError, subprocess.CalledProcessError) as error:
         failures.append(f"could not enumerate tracked Lean sources: {error}")
@@ -193,7 +303,10 @@ def main() -> int:
             print(f"  {failure}", file=sys.stderr)
         return 1
 
-    print(f"source gate passed: {len(files)} Lean files; all aggregator-reachable")
+    print(
+        f"source gate passed: {len(files)} Lean files; all aggregator-reachable; "
+        "Math/Framework/Naive/2607_13816 import directions enforced"
+    )
     return 0
 
 
