@@ -2,6 +2,9 @@ import ShorECDLP.Submission.Naive.Arithmetic.Contracts
 import ShorECDLP.Submission.Naive.Arithmetic.Controlled_PointAdd
 import ShorECDLP.Submission.Naive.Arithmetic.Adder
 import ShorECDLP.Submission.Naive.Arithmetic.FermatInv
+import ShorECDLP.Submission.Naive.Arithmetic.InPlaceAdder
+import ShorECDLP.Submission.Naive.Arithmetic.InPlaceModular
+import ShorECDLP.Submission.Naive.Arithmetic.LowSpaceModMul
 import ShorECDLP.Submission.Naive.Arithmetic.ModAdd
 import ShorECDLP.Submission.Naive.Arithmetic.ModExp
 import ShorECDLP.Submission.Naive.Arithmetic.ModMul
@@ -32,6 +35,3 @@ import ShorECDLP.Submission.Naive.Submission
 Root-closure aggregator for the existing unitary, binary-double-and-add Bitcoin ECDLP
 submission. Declaration namespaces are intentionally unchanged by the source relocation.
 -/
-import ShorECDLP.Submission.Naive.Arithmetic.InPlaceAdder
-import ShorECDLP.Submission.Naive.Arithmetic.InPlaceModular
-import ShorECDLP.Submission.Naive.Arithmetic.LowSpaceModMul
