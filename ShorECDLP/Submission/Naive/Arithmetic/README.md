@@ -59,6 +59,9 @@ flowchart LR
   Contracts["Contracts.lean"]
   Ripple["RippleAdder.lean"]
   Primitives["Primitives.lean"]
+  InPlaceAdder["InPlaceAdder.lean"]
+  InPlaceModular["InPlaceModular.lean"]
+  LowSpaceModMul["LowSpaceModMul.lean"]
   Predicates["Predicates.lean"]
   ModAdd["ModAdd.lean"]
   ModSub["ModSub.lean"]
@@ -74,17 +77,22 @@ flowchart LR
   Adder --> Ripple
   Contracts --> Primitives
   Ripple --> Primitives
+  Primitives --> InPlaceAdder
   Primitives --> Predicates
   Contracts --> ModAdd
   Ripple --> ModAdd
   Primitives --> ModAdd
   ModAdd --> ModSub
   Primitives --> ModMul
+  InPlaceAdder --> InPlaceModular
+  ModSub --> InPlaceModular
+  ModMul --> InPlaceModular
+  InPlaceModular --> LowSpaceModMul
   Primitives --> ModExp
   Contracts --> FermatInv
   Field --> FermatInv
   ModAdd --> Instance
-  ModMul --> Instance
+  LowSpaceModMul --> Instance
   ModExp --> Instance
   FermatInv --> Instance
 ```
@@ -96,16 +104,18 @@ lower layer's private carry or workspace implementation.
 ```mermaid
 flowchart LR
   Add["modAdd_contract"]
-  Mul["ModMul.Plan.modMul_contract"]
+  LegacyMul["ModMul.Plan.modMul_contract"]
+  LowMul["LowSpaceModMul.modMul_contract"]
   Exp["ModExp.Plan.modExp_contract"]
   Inv["FermatInv.correct"]
   Instance["Secp256k1Instance.secpProgram"]
 
-  Add -->|ModAddContract| Mul
-  Mul -->|ModMulContract| Exp
+  Add -->|ModAddContract| LegacyMul
+  LegacyMul -->|ModMulContract| Exp
+  LowMul -->|ModMulContract| Exp
   Exp -->|ModExpContract at p, exponent p - 2| Inv
   Add -->|fixed 257-bit wiring| Instance
-  Mul -->|fixed 257-bit plan| Instance
+  LowMul -->|fixed 257-bit layout| Instance
   Exp -->|fixed 257-bit schedule| Instance
   Inv -->|same-program specialization| Instance
 ```
@@ -118,13 +128,16 @@ flowchart LR
 | [`Adder.lean`](Adder.lean) | One-bit reversible full-adder cell over `CX` and `CCX`. | `fullAdder`, `fullAdder_sum`, `fullAdder_carry`, `fullAdder_tCount` |
 | [`RippleAdder.lean`](RippleAdder.lean) | Chains full-adder cells into an n-bit ripple-carry adder. | `ripple`, `ripple_correct`, `ripple_tCount`, `ripple_HPFree`, `ripple_wellFormed` |
 | [`Primitives.lean`](Primitives.lean) | Reusable implementation-neutral leaves: constant loading, controlled selection, register copying, support lemmas, and reverse-circuit cancellation. | `loadConst`, `selectPoint`, `copyReg`, `Arithmetic.run_reverse_cancel` |
+| [`InPlaceAdder.lean`](InPlaceAdder.lean) | Cuccaro majority/unmajority addition into an existing target with one reusable carry wire. | `inPlaceAddCarry`, `inPlaceAddCarry_correct`, `inPlaceAddCarry_tCount` |
+| [`InPlaceModular.lean`](InPlaceModular.lean) | Reversible in-place subtraction, comparison, modular doubling, and controlled modular addition using one reusable width-sized mask. | `modularDouble`, `modularDouble_correct`, `controlledModAdd`, `controlledModAdd_correct` |
+| [`LowSpaceModMul.lean`](LowSpaceModMul.lean) | MSB-first Horner modular multiplication using two reusable width-sized work registers and three flag bits. | `LowSpaceModMul.program`, `LowSpaceModMul.program_correct`, `LowSpaceModMul.program_tCount`, `LowSpaceModMul.modMul_contract`, `LowSpaceModMul.layout_allWires_length` |
 | [`Predicates.lean`](Predicates.lean) | Bennett-clean reversible zero and equality flags over `X`, `CX`, and `CCX`. | `zeroFlag`, `zeroFlag_correct`, `equalFlag`, `equalFlag_correct` |
 | [`ModAdd.lean`](ModAdd.lean) | Adds two registers modulo an arbitrary positive modulus using ripple addition, one conditional reduction, and uncomputation. | `modAdd`, `modAdd_program_correct`, `modAdd_tCount`, `modAdd_contract` |
 | [`ModSub.lean`](ModSub.lean) | Subtracts two registers modulo an arbitrary positive modulus using two's-complement ripple subtraction, conditional correction, and uncomputation. | `modSub`, `modSub_program_correct`, `modSub_tCount`, `modSub_contract` |
-| [`ModMul.lean`](ModMul.lean) | Bennett-clean schoolbook modular multiplication built from certified modular-addition calls. | `ModMul.Plan.program`, `ModMul.Plan.program_correct`, `ModMul.Plan.program_tCount`, `ModMul.Plan.modMul_contract` |
+| [`ModMul.lean`](ModMul.lean) | Generic Bennett-clean schoolbook multiplier retained as a compositional reference implementation. | `ModMul.Plan.program`, `ModMul.Plan.program_correct`, `ModMul.Plan.program_tCount`, `ModMul.Plan.modMul_contract` |
 | [`ModExp.lean`](ModExp.lean) | Bennett-clean, LSB-first square-and-multiply built from certified modular-multiplication calls. | `ModExp.Plan.program`, `ModExp.Plan.program_correct`, `ModExp.Plan.program_tCount`, `ModExp.Plan.program_tCount_eq_of_uniform`, `ModExp.Plan.modExp_contract` |
 | [`FermatInv.lean`](FermatInv.lean) | Thin field-specific correctness closure: exponentiation by `p - 2` computes inversion in `Fp`. It defines no second circuit. | `FermatInv.correct` |
-| [`Secp256k1Instance.lean`](Secp256k1Instance.lean) | Concrete block allocation for the width-257 secp256k1 modular adder, multiplier, exponentiator, and Fermat inversion specialization. | `addProgram_correct`, `addProgram_tCount`, `placedMulPlan_program_correct`, `placedMulPlan_program_tCount`, `secpAddProgram_correct`, `secpAddProgram_tCount`, `secpMulProgram_correct`, `secpMulProgram_tCount`, `secpProgram_correct`, `secpProgram_tCount`, `secp_fermat_inverse` |
+| [`Secp256k1Instance.lean`](Secp256k1Instance.lean) | Concrete block allocation for the width-257 secp256k1 modular adder, 1,288-wire low-space multiplier, exponentiator, and Fermat inversion specialization. | `addProgram_correct`, `addProgram_tCount`, `mulProgram_correct`, `mulProgram_tCount`, `secpMulLayout_allWires_length`, `secpMulProgram_qubitCount`, `secpAddProgram_correct`, `secpAddProgram_tCount`, `secpMulProgram_correct`, `secpMulProgram_tCount`, `secpProgram_correct`, `secpProgram_tCount`, `secp_fermat_inverse` |
 
 ## Contract discipline
 
@@ -139,9 +152,11 @@ same `program`:
 - `tCount program = cost`;
 - `program` is H/P-free and physically well-formed.
 
-`ModMul.lean` and `ModExp.lean` use a Bennett compute-copy-uncompute wrapper: build the
+`ModMul.Plan` and `ModExp.Plan` use a Bennett compute-copy-uncompute wrapper: build the
 forward history, copy the result to a disjoint public output, and run the history in
-reverse. This restores all private work without exposing the lower-level implementation.
+reverse. The concrete secp256k1 instance instead supplies `LowSpaceModMul.program` to
+`ModExp`: it updates a clean output by reversible Horner steps and restores one modulus
+register, one mask, and three flag wires after every call.
 
 ## Suggested reading order
 
@@ -149,11 +164,13 @@ reverse. This restores all private work without exposing the lower-level impleme
 2. [`Adder.lean`](Adder.lean) and [`RippleAdder.lean`](RippleAdder.lean) for the bit-level
    arithmetic base.
 3. [`Primitives.lean`](Primitives.lean) for the shared reversible-circuit tools.
-4. [`Predicates.lean`](Predicates.lean) for clean reversible zero/equality flags.
-5. [`ModAdd.lean`](ModAdd.lean), [`ModSub.lean`](ModSub.lean), [`ModMul.lean`](ModMul.lean), and
-   [`ModExp.lean`](ModExp.lean) for the modular construction chain.
-6. [`FermatInv.lean`](FermatInv.lean) for the generic secp256k1 field-inversion closure.
-7. [`Secp256k1Instance.lean`](Secp256k1Instance.lean) for the concrete 257-bit plans, allocation,
+4. [`InPlaceAdder.lean`](InPlaceAdder.lean), [`InPlaceModular.lean`](InPlaceModular.lean), and
+   [`LowSpaceModMul.lean`](LowSpaceModMul.lean) for the active low-space multiplication path.
+5. [`Predicates.lean`](Predicates.lean) for clean reversible zero/equality flags.
+6. [`ModAdd.lean`](ModAdd.lean), [`ModSub.lean`](ModSub.lean), [`ModMul.lean`](ModMul.lean), and
+   [`ModExp.lean`](ModExp.lean) for the modular construction and reference-plan interfaces.
+7. [`FermatInv.lean`](FermatInv.lean) for the generic secp256k1 field-inversion closure.
+8. [`Secp256k1Instance.lean`](Secp256k1Instance.lean) for the concrete 257-bit plans, allocation,
    exact numeric costs, and same-program inversion specialization.
 
 Run the complete repository proof gate from the repository root with:

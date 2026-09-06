@@ -46,7 +46,7 @@ noncomputable def bitcoinECDLPSubmission :
           bitcoinAReg bitcoinBReg bitcoinPointReg
           bitcoinWorkStart bitcoinQFTAncilla
           hpointLength hnodup hQ hsetup
-      gateCount := 841862539761920
+      gateCount := 343001514760448
       gateCount_correct := by
         intro Q d hQ hQnonzero
         exact ecdlpTrial_tCount Q
