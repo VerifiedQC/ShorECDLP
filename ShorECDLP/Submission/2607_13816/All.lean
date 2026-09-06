@@ -26,6 +26,7 @@ import ShorECDLP.Submission.«2607_13816».EEA.StepControl
 import ShorECDLP.Submission.«2607_13816».EEA.EndIteration
 import ShorECDLP.Submission.«2607_13816».EEA.IndexedStep
 import ShorECDLP.Submission.«2607_13816».EEA.Schedule
+import ShorECDLP.Submission.«2607_13816».EEA.ScheduleLayout
 import ShorECDLP.Submission.«2607_13816».EEA.Windows
 
 /-!

@@ -6,20 +6,22 @@ The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
 **Status snapshot.** The verified Naive result and merged paper foundation below are on
-`main@f5d91befb1e00bf3b61d6d99a7b61524ca7ee8ef`. PR #56 → PR #57 → PR #58 → PR #59
+`main@72d2ffa2952bb07677c7d1f2fa8c96543302f6e8`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
 → PR #69 → PR #70 → PR #71 → PR #72 → PR #73 → PR #74 → PR #75 → PR #76 → PR #77
-→ PR #78 → PR #79 → PR #80 → PR #81 → PR #82 → PR #83 landed the source split, adaptive Kraus semantics,
+→ PR #78 → PR #79 → PR #80 → PR #81 → PR #82 → PR #83 → PR #84 landed the source split, adaptive Kraus semantics,
 coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
 bounds/windows, and all twenty-one Phase-5 circuit units ending with the source-ordered indexed
 four-phase microstep. Phase 6 schedule unit 1 serially composes the exact
 1,620 one-based forward steps, the descending explicit reverse stream, the adaptive forward
 program, and the direct automatically routed trace. That trace is noncircular relative to the
 complete schedule, but its route extraction and Block-B endpoint semantics remain circuit-bound.
-Phase 6 schedule-cancellation unit 2 is current in PR #84. It proves that the same forward-route
+Phase 6 schedule-cancellation unit 2 is merged in PR #84. It proves that the same forward-route
 invariant suffices for the pinned reverse to restore the complete basis state: inverse decoder
-routes are derived inside the proof rather than assumed. The concrete schedule-layout/encoding
-witness, maximum live allocation, and aggregate paper resources remain open.
+routes are derived inside the proof rather than assumed. PR #85 is current: it proves that one
+explicit repaired 580-role allocation satisfies every physical component layout at all 1,620
+schedule indices. The reachable-state encoding/invariant, maximum-live allocation and pinned 579
+target, and aggregate paper resources remain open.
 A `✓` means a
 declaration is root-reachable and covered by the repository verifier on the stated baseline or
 exact review head. “Target” is not a proved claim.
@@ -568,12 +570,13 @@ forward, descending explicit-reverse, adaptive-forward, and direct automatically
 proves forward whole-state semantics, structural well-formedness/HP-freedom, and adaptive coherent
 refinement; and fixes the secp256k1 horizon to indices `1, ..., 1620`. The routed trace avoids the
 complete schedule circuit but retains circuit-bound route extraction and Block-B endpoint
-semantics. Schedule-cancellation unit 2 is current in PR #84; it derives the inverse decoder routes
+semantics. Schedule-cancellation unit 2 merged in PR #84 at `72d2ffa`; it derives the inverse decoder routes
 from those forward routes, proves each literal indexed step cancels, lifts cancellation through the
 descending schedule, and instantiates the exact 1,620-step secp256k1 round trip. These theorems
-remain conditional on the existing threaded layout/state invariant; the concrete EEA encoding must
-next inhabit that invariant. No unconditional nonzero-input inversion or aggregate resource claim
-is attached yet.
+remain conditional on the existing threaded layout/state invariant. PR #85 proves the physical
+layout half for every index using the same explicit repaired 580-role allocation. The concrete EEA
+state encoding must still inhabit the readiness, epoch, and routed-state invariant. No
+unconditional nonzero-input inversion, live-allocation, or aggregate-resource claim is attached yet.
 
 The pinned source target is `2n + 6 floor(log2 n) + 19`, or 579 wires at `n = 256` including the
 external point-add control. The presently verified conservative remainder repair needs two more
@@ -880,12 +883,17 @@ other live storage.
   readiness, and input-independent coherent measurement-uncomputation under a threaded schedule
   invariant. That unit intentionally made no reverse-decoder agreement or identity claim; the
   concrete invariant witness, live-wire allocation, and aggregate paper vector remained open.
-- **PR #84, Phase-6 schedule cancellation unit 2 (current):** derives the explicit inverse decoder
+- **PR #84, Phase-6 schedule cancellation unit 2:** merged at `72d2ffa`; derives the explicit inverse decoder
   routes from the already required forward routes, proves all eight literal indexed-step blocks cancel,
   composes that result through the descending reverse schedule, and closes the exact 1,620-step
   secp256k1 round trip. The result uses the same threaded layout/state invariant as forward
   correctness and adds no reverse-correctness premise. A concrete reachable-state encoding/layout
   witness, maximum-live allocation, and aggregate resource vector remain open.
+- **PR #85, Phase-6 schedule layout unit 3 (current):** proves that the same explicit repaired
+  580-role production allocation satisfies every physical `IndexedStepLayout` contract at all
+  1,620 secp256k1 schedule indices. This is a fixed declared-role layout witness, not an exact
+  maximum-live-wire or pinned-579 claim. The reachable-state encoding/readiness/route invariant,
+  unconditional inversion endpoint, live allocation, and aggregate resource vector remain open.
 - **PR #53, checkpointed Fermat inversion:** correct as a Naive fallback but superseded by EEA for
   the paper target. Keep it unmerged unless an interim unitary improvement is explicitly desired;
   otherwise close it after Phase 6 is accepted.
@@ -920,7 +928,7 @@ Runzhou approved the five roadmap choices on 2026-09-02:
    derives them; and
 5. PR #53 remains unmerged as a fallback while the EEA replacement is developed.
 
-Phases 0--5 and Phase 6 schedule unit 1 are merged through PR #83 at `main@f5d91bef`. Phase 6
-schedule-cancellation unit 2 is current in PR #84 and proves conditional explicit-reverse identity
-from the existing forward invariant. The concrete reachable-state encoding/layout witness,
-maximum-live allocation, and aggregate resource boundary remain open.
+Phases 0--5 and Phase 6 schedule units 1--2 are merged through PR #84 at `main@72d2ffa`. PR #85
+closes the fixed 1,620-step physical layout with the explicit repaired 580-role allocation. The
+reachable-state encoding/invariant, maximum-live allocation and pinned-579 recovery, unconditional
+inversion endpoint, and aggregate resource boundary remain open.
