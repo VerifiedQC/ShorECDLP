@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.GidneyAdd
 import ShorECDLP.Submission.«2607_13816».Arithmetic.ConstCarry
 import ShorECDLP.Submission.«2607_13816».Arithmetic.Compare
 import ShorECDLP.Submission.«2607_13816».Arithmetic.CarryAdd

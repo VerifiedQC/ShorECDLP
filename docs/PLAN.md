@@ -611,8 +611,14 @@ by the Gidney constant-arithmetic cleanup. Its two sweeps XOR ordinary addition 
 into arbitrary borrowed data while preserving every other wire. The fixed 256-bit
 `2^32 + 977` correction circuit has a combined correctness/resource certificate:
 511 Toffolis, 47 CNOTs, 3,577 coherent T gates and exactly 514 distinct wires.
-The measurement-assisted constant adder/comparator, modular
-correction, the Horner schedule, and squaring remain open within this phase.
+`Arithmetic/GidneyAdd.lean` completes the controlled measurement-assisted constant adder.
+Its direct branch theorem proves the numeric sum modulo the word power of two, restores
+all borrowed and clean work, and removes every measurement-dependent phase. The same
+256-bit circuit has a readable combined certificate: 764 Toffolis, 1,344 CNOTs, 5,348 T,
+255 measurement/resets and exactly 515 distinct physical wires. Well-formedness proves
+total probability preservation. The zero-constant shortcut and width-one case are included.
+The measurement-assisted constant comparator, modular correction, the Horner schedule,
+and squaring remain open within this phase.
 
 Modules:
 
