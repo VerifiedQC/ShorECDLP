@@ -597,7 +597,14 @@ constructor-derived counts. The fixed 256-bit theorem combines controlled-sum an
 semantics, input/carry restoration, 769 Toffolis, 1,024 CNOTs, 5,383 coherent T gates, and exactly
 515 distinct wires for the same circuit. This is a binary adder, not yet modular multiplication.
 The uniform recurrence matches the source for widths at least two and corrects its one-bit
-special case, whose overflow update ignores the accumulator. Constant arithmetic, modular
+special case, whose overflow update ignores the accumulator.
+
+`Arithmetic/Compare.lean` adds the controlled unsigned carry-probe comparison. Its direct
+whole-state theorem changes only the result flag and restores both operands and the clean
+carry. The readable 256-bit certificate proves 513 Toffolis, 1,024 CNOTs, 516 X gates,
+3,591 coherent T gates and exactly 515 distinct wires for that same circuit. Its stream
+matches the pinned comparator for widths at least two; width one uses the full correct
+carry chain instead of the source's shorter optimization. Constant arithmetic, modular
 correction, the Horner schedule, and squaring remain open within this phase.
 
 Modules:
