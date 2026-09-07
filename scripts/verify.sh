@@ -855,6 +855,17 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_coherent
 #print axioms ShorECDLP.Paper2607_13816.mem_secp256k1ScheduleIndices_iff
 #print axioms ShorECDLP.Paper2607_13816.secp256k1Schedule_indexedFrame
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_value
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_HPFree
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_toffoliCount
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_cnotCount
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_tCount
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.controlledSubCarry_correct_resources
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ControlledAddCarry_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ScheduleLayout_production
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ScheduleLayout_inhabited
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardUnitary_correct
@@ -913,8 +924,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 889 ]]; then
-  printf 'expected 889 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 900 ]]; then
+  printf 'expected 900 #print axioms results\n' >&2
   exit 1
 fi
 

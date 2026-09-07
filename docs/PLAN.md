@@ -6,7 +6,7 @@ The next construction will implement the space-efficient algorithm from
 [arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
 
 **Status snapshot.** The verified Naive result and merged paper foundation below are on
-`main@72d2ffa2952bb07677c7d1f2fa8c96543302f6e8`. PR #56 → PR #57 → PR #58 → PR #59
+`main@11366f2eaecf86ef87097667eb6c1649580fa504`. PR #56 → PR #57 → PR #58 → PR #59
 → PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
 → PR #69 → PR #70 → PR #71 → PR #72 → PR #73 → PR #74 → PR #75 → PR #76 → PR #77
 → PR #78 → PR #79 → PR #80 → PR #81 → PR #82 → PR #83 → PR #84 landed the source split, adaptive Kraus semantics,
@@ -18,7 +18,7 @@ program, and the direct automatically routed trace. That trace is noncircular re
 complete schedule, but its route extraction and Block-B endpoint semantics remain circuit-bound.
 Phase 6 schedule-cancellation unit 2 is merged in PR #84. It proves that the same forward-route
 invariant suffices for the pinned reverse to restore the complete basis state: inverse decoder
-routes are derived inside the proof rather than assumed. PR #85 is current: it proves that one
+routes are derived inside the proof rather than assumed. PR #85 is merged: it proves that one
 explicit repaired 580-role allocation satisfies every physical component layout at all 1,620
 schedule indices. The reachable-state encoding/invariant, maximum-live allocation and pinned 579
 target, and aggregate paper resources remain open.
@@ -589,6 +589,17 @@ input-independent, and the exact secp resource vector is derived.
 
 ### Phase 7 — Appendix-B multiplication and squaring
 
+**Current:** Runzhou prioritized Phases 7–12 on 2026-09-06. The Phase-6 reachable-state
+readiness/routing proof remains open and must remain explicit wherever later phases depend on
+inversion. The first Phase-7 unit is `Arithmetic/CarryAdd.lean`: the pinned quadratic backend's
+controlled carry-output adder and literal inverse, with direct arithmetic/frame correctness and
+constructor-derived counts. The fixed 256-bit theorem combines controlled-sum and overflow
+semantics, input/carry restoration, 769 Toffolis, 1,024 CNOTs, 5,383 coherent T gates, and exactly
+515 distinct wires for the same circuit. This is a binary adder, not yet modular multiplication.
+The uniform recurrence matches the source for widths at least two and corrects its one-bit
+special case, whose overflow update ignores the accumulator. Constant arithmetic, modular
+correction, the Horner schedule, and squaring remain open within this phase.
+
 Modules:
 
 - `Submission/2607_13816/Arithmetic/HornerMul.lean`
@@ -889,7 +900,7 @@ other live storage.
   secp256k1 round trip. The result uses the same threaded layout/state invariant as forward
   correctness and adds no reverse-correctness premise. A concrete reachable-state encoding/layout
   witness, maximum-live allocation, and aggregate resource vector remain open.
-- **PR #85, Phase-6 schedule layout unit 3 (current):** proves that the same explicit repaired
+- **PR #85, Phase-6 schedule layout unit 3:** proves that the same explicit repaired
   580-role production allocation satisfies every physical `IndexedStepLayout` contract at all
   1,620 secp256k1 schedule indices. This is a fixed declared-role layout witness, not an exact
   maximum-live-wire or pinned-579 claim. The reachable-state encoding/readiness/route invariant,
