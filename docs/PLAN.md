@@ -604,7 +604,14 @@ whole-state theorem changes only the result flag and restores both operands and 
 carry. The readable 256-bit certificate proves 513 Toffolis, 1,024 CNOTs, 516 X gates,
 3,591 coherent T gates and exactly 515 distinct wires for that same circuit. Its stream
 matches the pinned comparator for widths at least two; width one uses the full correct
-carry chain instead of the source's shorter optimization. Constant arithmetic, modular
+carry chain instead of the source's shorter optimization.
+
+`Arithmetic/ConstCarry.lean` implements the controlled `_xor_carries_all` gate stream used
+by the Gidney constant-arithmetic cleanup. Its two sweeps XOR ordinary addition carries
+into arbitrary borrowed data while preserving every other wire. The fixed 256-bit
+`2^32 + 977` correction circuit has a combined correctness/resource certificate:
+511 Toffolis, 47 CNOTs, 3,577 coherent T gates and exactly 514 distinct wires.
+The measurement-assisted constant adder/comparator, modular
 correction, the Horner schedule, and squaring remain open within this phase.
 
 Modules:
