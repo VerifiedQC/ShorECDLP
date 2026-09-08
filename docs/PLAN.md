@@ -628,8 +628,8 @@ shares the existing measured-carry facts and metrics between the adder and compa
 the overflow/comparison XOR selects the correction, the corrected word is the canonical
 modular sum, and the final comparison clears the flag. It also proves the odd-modulus
 parity identity used to clear the doubling flag. These are arithmetic lemmas only; the
-doubling circuit and its resource certificate remain open, along with the Horner schedule
-and squaring. The composed modular adder is now proved below.
+composed modular addition and doubling circuits are now proved below. The Horner schedule
+and squaring remain open.
 `Arithmetic/UncontrolledCompare.lean` supplies the uncontrolled constant-comparison
 interface. `Arithmetic/ConstantControl.lean` compiles external-control CNOTs to X gates,
 proves branch amplitudes are preserved, and removes exactly that control from physical
@@ -645,8 +645,15 @@ and restores every wire outside the accumulator, including the borrowed addend. 
 same-circuit certificate proves total probability one, well-formedness, 2,813 Toffolis,
 4,929 CNOTs, 19,691 T gates, 511 measurement/resets and exactly 517 physical wires. The
 source's fifth auxiliary wire is unused and excluded from actual support. Width one uses
-the verified full binary comparator chain. Phase 7 remains open for doubling, multiplication
-and squaring.
+the verified full binary comparator chain. `Arithmetic/Doubling.lean` supplies the literal high-bit extraction, descending swap
+rotation and low-bit clearing prefix, then reuses measured comparison/correction and
+proves parity-based flag cleanup for odd moduli. Every branch implements canonical modular
+doubling and restores all other wires, including arbitrary borrowed data. Its same-circuit
+certificate proves total probability one, well-formedness, 1,531 Toffolis, 3,649 CNOTs,
+10,717 T gates, 511 measurement/resets and exactly 516 physical wires. The aggregate counts
+are derived from the modular adder's same shared comparison/correction circuits, replacing
+the binary-add/comparison endpoints with the doubling prefix/final CNOT. Phase 7 remains
+open for multiplication and squaring.
 
 Modules:
 

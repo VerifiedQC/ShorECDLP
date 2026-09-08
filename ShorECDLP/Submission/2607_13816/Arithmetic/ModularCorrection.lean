@@ -13,7 +13,7 @@ flag cleanup in `append_dbl_modp_quadratic`.
 namespace ShorECDLP.Paper2607_13816
 
 /-- The two source reduction predicates are exclusive on canonical operands. -/
-private theorem modularCorrection_flag (radix p x y : Nat) (control : Bool)
+theorem modularCorrection_flag (radix p x y : Nat) (control : Bool)
     (hpr : p < radix) (hx : x < p) (hy : y < p) :
     Bool.xor (decide (radix ≤ y + if control then x else 0))
       (decide (p ≤ (y + if control then x else 0) % radix)) =

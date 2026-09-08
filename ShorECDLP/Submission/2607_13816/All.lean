@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.Doubling
 import ShorECDLP.Submission.«2607_13816».Arithmetic.ModularAdd
 import ShorECDLP.Submission.«2607_13816».Arithmetic.UncontrolledCompare
 import ShorECDLP.Submission.«2607_13816».Arithmetic.ModularCorrection
