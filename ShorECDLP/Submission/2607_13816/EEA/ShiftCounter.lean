@@ -60,4 +60,3 @@ theorem postShiftUnitary_counter (r : ShiftRegisters) (state : BasisState)
 
 end
 end ShorECDLP.Paper2607_13816
-
