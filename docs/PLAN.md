@@ -1143,3 +1143,18 @@ Together with `InitialEncoding`, this closes the initial packed-state connection
 and its scratch/epoch premises. It does not establish preservation or routing for
 subsequent microsteps; the full reachable-state invariant, EEA wrapper and remaining
 phase deliverables are still open. No circuit definitions or costs changed.
+
+
+### Decoder route bounds and remaining operational invariant
+
+`EEA/RouteBounds.lean` proves that each unary decoder selects a leaf inside its
+constructed source window for arbitrary states. The production scalar windows are
+nonempty at all 1,620 indices, so `IndexedStepRoutesValid` is now unconditional
+throughout the fixed schedule. This bounds selected labels; it does not identify
+them with intended numeric values on arbitrary encodings.
+
+`secp256k1ScheduleInvariant_of_epochTrace` derives scratch preservation and routing
+along the full direct trace from initial scratch readiness plus the borrowed-epoch
+condition at every prefix. Proving that remaining condition for the initialized
+execution, and proving the arithmetic interpretation and terminal result, remain
+open. No circuit definitions or costs changed.
