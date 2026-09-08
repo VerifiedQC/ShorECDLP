@@ -977,16 +977,16 @@ def secp256k1GidneyAdd : Quantum.AdaptiveCircuit :=
 
 set_option maxRecDepth 10000 in
 set_option maxHeartbeats 4000000 in
-private theorem gidneyProduction_cleanup_counts :
+private theorem gidneyProduction_cleanup_counts (q c : Wire) :
     let gates := controlledConstCarryXor (List.range' 4 255) (List.range' 260 255)
-      ((List.range 255).map (Nat.testBit (2 ^ 32 + 977))) 0 1
+      ((List.range 255).map (Nat.testBit (2 ^ 32 + 977))) q c
     eeaToffoliCount gates = 509 ∧ eeaCnotCount gates = 47 ∧ tCount gates = 3563 := by
   have h := controlledConstCarryXor_counts 4 (List.range' 5 254) (List.range' 260 255) true
-    ((List.range' 1 254).map (Nat.testBit (2 ^ 32 + 977))) 0 1 (by simp) (by simp)
+    ((List.range' 1 254).map (Nat.testBit (2 ^ 32 + 977))) q c (by simp) (by simp)
   have hw : constantBitWeight ((List.range' 1 254).map (Nat.testBit (2 ^ 32 + 977))) = 6 := by decide
   dsimp only
   change eeaToffoliCount (controlledConstCarryXor (4 :: List.range' 5 254) _
-    (true :: (List.range' 1 254).map (Nat.testBit (2 ^ 32 + 977))) 0 1) = 509 ∧ _
+    (true :: (List.range' 1 254).map (Nat.testBit (2 ^ 32 + 977))) q c) = 509 ∧ _
   simpa [hw] using And.intro h.2.1 (And.intro h.2.2.1 h.2.2.2)
 
 
@@ -1044,18 +1044,18 @@ private theorem gidneyTail_usesOnly (allowed input dirty : List Wire) (constant 
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
-private theorem gidneyProduction_toffoli : gidneyToffoliCount secp256k1GidneyAdd = 764 := by
+private theorem gidneyProduction_toffoli (q c r t : Wire) : gidneyToffoliCount (controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255) secp256k1ReductionConstantBits q c r t) = 764 := by
   have h := gidneyRoot_gateCount (fun g => match g with | .CCX _ _ _ => 1 | _ => 0) (fun _ => 1) (fun _ => 0)
     (by intro w; rfl) (by intro w; rfl)
     (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell,tCost])
     (by intro q c a k; cases k <;> simp [tCost])
-    4 260 0 1 2 3 (List.range' 5 255) (List.range' 261 254) true
+    4 260 q c r t (List.range' 5 255) (List.range' 261 254) true
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977)))
     (by simp) (by simp) (by simp)
   have hb : gidneyForwardCost (fun _ => 1) (fun _ => 0)
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977))) = 254 := by decide
-  have hc := gidneyProduction_cleanup_counts.1
-  unfold gidneyToffoliCount secp256k1GidneyAdd
+  have hc := (gidneyProduction_cleanup_counts q c).1
+  unfold gidneyToffoliCount
   rw [show List.range' 4 256 = 4 :: List.range' 5 255 from rfl,
     show List.range' 260 255 = 260 :: List.range' 261 254 from rfl,
     show secp256k1ReductionConstantBits = true ::
@@ -1123,18 +1123,18 @@ private theorem gidneyCleanup_usesOnly (input dirty : List Wire) (constant : Lis
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
-private theorem gidneyProduction_cnot : gidneyCnotCount secp256k1GidneyAdd = 1344 := by
+private theorem gidneyProduction_cnot (q c r t : Wire) : gidneyCnotCount (controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255) secp256k1ReductionConstantBits q c r t) = 1344 := by
   have h := gidneyRoot_gateCount (fun g => match g with | .CX _ _ => 1 | _ => 0) (fun k => 5 + 3 * k.toNat) (fun k => 1 + k.toNat)
     (by intro w; rfl) (by intro w; rfl)
     (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell,tCost])
     (by intro q c a k; cases k <;> simp [tCost])
-    4 260 0 1 2 3 (List.range' 5 255) (List.range' 261 254) true
+    4 260 q c r t (List.range' 5 255) (List.range' 261 254) true
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977)))
     (by simp) (by simp) (by simp)
   have hb : gidneyForwardCost (fun k => 5 + 3 * k.toNat) (fun k => 1 + k.toNat)
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977))) = 1289 := by decide
-  have hc := gidneyProduction_cleanup_counts.2.1
-  unfold gidneyCnotCount secp256k1GidneyAdd
+  have hc := (gidneyProduction_cleanup_counts q c).2.1
+  unfold gidneyCnotCount
   rw [show List.range' 4 256 = 4 :: List.range' 5 255 from rfl,
     show List.range' 260 255 = 260 :: List.range' 261 254 from rfl,
     show secp256k1ReductionConstantBits = true ::
@@ -1151,19 +1151,18 @@ private theorem gidneyProduction_cnot : gidneyCnotCount secp256k1GidneyAdd = 134
   rw [hc]
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
-private theorem gidneyProduction_t : secp256k1GidneyAdd.tCount = 5348 := by
+private theorem gidneyProduction_t (q c r t : Wire) : (controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255) secp256k1ReductionConstantBits q c r t).tCount = 5348 := by
   have h := gidneyRoot_gateCount tCost (fun _ => 7) (fun _ => 0)
     (by intro w; rfl) (by intro w; rfl)
     (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell,tCost])
     (by intro q c a k; cases k <;> simp [tCost])
-    4 260 0 1 2 3 (List.range' 5 255) (List.range' 261 254) true
+    4 260 q c r t (List.range' 5 255) (List.range' 261 254) true
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977)))
     (by simp) (by simp) (by simp)
   have hb : gidneyForwardCost (fun _ => 7) (fun _ => 0)
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977))) = 1778 := by decide
-  have hc := gidneyProduction_cleanup_counts.2.2
+  have hc := (gidneyProduction_cleanup_counts q c).2.2
   rw [← gidneyGateCount_tCount]
-  unfold secp256k1GidneyAdd
   rw [show List.range' 4 256 = 4 :: List.range' 5 255 from rfl,
     show List.range' 260 255 = 260 :: List.range' 261 254 from rfl,
     show secp256k1ReductionConstantBits = true ::
@@ -1178,6 +1177,16 @@ private theorem gidneyProduction_t : secp256k1GidneyAdd.tCount = 5348 := by
   rw [hd]
   change 7 + 1778 + tCount _ = 5348
   rw [hc]
+
+/-- The production constant adder's costs are independent of its scalar wire labels. -/
+theorem secp256k1GidneyAdd_counts (q c r t : Wire) :
+    let g := controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255)
+      secp256k1ReductionConstantBits q c r t
+    gidneyToffoliCount g = 764 ∧ gidneyCnotCount g = 1344 ∧ g.tCount = 5348 ∧ g.measurementCount = 255 := by
+  refine ⟨gidneyProduction_toffoli q c r t,gidneyProduction_cnot q c r t,gidneyProduction_t q c r t,?_⟩
+  have hz : secp256k1ReductionConstantBits.all (fun k => !k) = false := by decide
+  simpa [hz] using controlledGidneyAddConst_measurementCount (List.range' 4 256) (List.range' 260 255)
+    secp256k1ReductionConstantBits q c r t (by simp [secp256k1ReductionConstantBits]) (by simp)
 
 theorem controlledGidneyAddConst_wires (a d q c r t : Wire) (input dirty : List Wire)
     (constant : List Bool) (hk : input.length = constant.length) (hd : input.length = dirty.length + 1)
@@ -1306,7 +1315,7 @@ theorem secp256k1GidneyAdd_correct_resources (s : BasisState)
   have hw := controlledGidneyAddConst_wellFormed _ _ _ 0 1 2 3 hk hd gidneyProduction_layout
   have ha := gidneyAddIdealState_correct (List.range' 4 256) secp256k1ReductionConstantBits 0 s hk (List.nodup_range')
   dsimp only
-  refine ⟨?_,ha.2,?_,?_,hw,gidneyProduction_toffoli,gidneyProduction_cnot,gidneyProduction_t,?_,gidneyProduction_qubits⟩
+  refine ⟨?_,ha.2,?_,?_,hw,gidneyProduction_toffoli 0 1 2 3,gidneyProduction_cnot 0 1 2 3,gidneyProduction_t 0 1 2 3,?_,gidneyProduction_qubits⟩
   · simpa [secp256k1ReductionConstant_value] using ha.1
   · intro branch hb
     have h := controlledGidneyAddConst_branch_correct _ _ _ 0 1 2 3 s hk hd gidneyProduction_layout hc hr ht branch hb

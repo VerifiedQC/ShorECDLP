@@ -653,7 +653,13 @@ certificate proves total probability one, well-formedness, 1,531 Toffolis, 3,649
 10,717 T gates, 511 measurement/resets and exactly 516 physical wires. The aggregate counts
 are derived from the modular adder's same shared comparison/correction circuits, replacing
 the binary-add/comparison endpoints with the doubling prefix/final CNOT. Phase 7 remains
-open for multiplication and squaring.
+open for squaring. `Arithmetic/HornerMul.lean` composes the literal MSB-first schedule,
+including the source’s carry/flag exchange in doubling. Its same-circuit certificate proves
+the modular product from a zero output, restoration of all other wires, positive
+input-independent branch amplitudes and total probability one. The fixed multiplier uses
+1,110,533 Toffolis, 2,192,319 CNOTs, 7,773,731 T gates, 261,121 measurement/resets and
+exactly 772 physical wires. Scalar-label-parametric component proofs account for the
+reused register allocation; the fifth source auxiliary wire is unused.
 
 Modules:
 
