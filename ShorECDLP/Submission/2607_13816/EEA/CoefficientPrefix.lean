@@ -4173,6 +4173,91 @@ theorem coefficientPrefixProduction_resources
     hleaves, hinternal]
   omega
 
+private theorem coefficientIdle_update_read (state : BasisState) (target : Wire) :
+    state[target ↦ state target] = state := by
+  funext wire
+  by_cases h : wire = target
+  · subst wire; simp [upd]
+  · simp [upd, h]
+
+private theorem coefficientIdle_ripple_read (target addend carry : Wire) (state : BasisState) :
+    writeRippleCell target addend carry (readRippleCell target addend carry state) state = state := by
+  simp only [writeRippleCell, readRippleCell, coefficientIdle_update_read]
+
+private theorem coefficientIdle_ripple_first_idle (mode : RippleMode) (bits : RippleCellBits)
+    (hc : bits.carry = false) : rippleFirstBits mode false bits = bits := by
+  rcases bits with ⟨target, addend, carry⟩
+  cases carry with
+  | true => contradiction
+  | false => cases mode <;> cases target <;> cases addend <;> decide
+
+private theorem coefficientIdle_ripple_second_idle (mode : RippleMode) (bits : RippleCellBits)
+    (hc : bits.carry = false) : rippleSecondBits mode false bits = bits := by
+  rcases bits with ⟨target, addend, carry⟩
+  cases carry with
+  | true => contradiction
+  | false => cases mode <;> cases target <;> cases addend <;> decide
+
+private theorem coefficientIdle_coefficient_first_idle
+    (registers : CoefficientPrefixRegisters) (k K : Nat) (mode : RippleMode)
+    (target : CoefficientTarget) (label : Nat) (state : BasisState)
+    (ha : state (registers.accumulator k K) = false)
+    (hc : state (registers.carry k K) = false) :
+    coefficientPrefixFirstLeafState registers k K mode target label false state = state := by
+  unfold coefficientPrefixFirstLeafState
+  rw [ha, coefficientIdle_ripple_first_idle _ _ hc, coefficientIdle_ripple_read]
+  simp only [Bool.xor_false, coefficientIdle_update_read]
+
+private theorem coefficientIdle_coefficient_second_idle
+    (registers : CoefficientPrefixRegisters) (k K : Nat) (mode : RippleMode)
+    (target : CoefficientTarget) (label : Nat) (state : BasisState)
+    (ha : state (registers.accumulator k K) = false)
+    (hc : state (registers.carry k K) = false) :
+    coefficientPrefixSecondLeafState registers k K mode target label false state = state := by
+  unfold coefficientPrefixSecondLeafState
+  simp only [Bool.xor_false, coefficientIdle_update_read]
+  rw [ha, coefficientIdle_ripple_second_idle _ _ hc, coefficientIdle_ripple_read]
+
+private theorem coefficientIdle_pulses_fold_idle (labels : List Nat)
+    (f : BasisState → Nat × Bool → BasisState) (state : BasisState)
+    (h : ∀ label, f state (label, false) = state) :
+    (labels.map (fun label => (label, false))).foldl f state = state := by
+  induction labels with
+  | nil => rfl
+  | cons label labels ih => simpa only [List.map_cons, List.foldl_cons, h] using ih
+
+private theorem coefficientIdle_coefficient_idle
+    (registers : CoefficientPrefixRegisters) (k K : Nat) (mode : RippleMode)
+    (target : CoefficientTarget) (signUpdate : Bool) (state : BasisState)
+    (hcontrol : state registers.control = false)
+    (ha : state (registers.accumulator k K) = false)
+    (hc : state (registers.carry k K) = false) :
+    coefficientPrefixState registers k K mode signUpdate target state = state := by
+  have hfirst : coefficientPrefixFirstTraversalState registers k K mode target state = state := by
+    rw [coefficientPrefixFirstTraversalState, hcontrol, UnaryActionTree.visitPulses_false]
+    exact coefficientIdle_pulses_fold_idle _ _ state
+      (fun label => coefficientIdle_coefficient_first_idle registers k K mode target label state ha hc)
+  have hsecond : coefficientPrefixSecondTraversalState registers k K mode target state = state := by
+    rw [coefficientPrefixSecondTraversalState, hcontrol, UnaryActionTree.visitPulses_false]
+    exact coefficientIdle_pulses_fold_idle _ _ state
+      (fun label => coefficientIdle_coefficient_second_idle registers k K mode target label state ha hc)
+  simp only [coefficientPrefixState, hcontrol, Bool.xor_false, coefficientIdle_update_read, hfirst,
+    hc, ite_self, hsecond]
+
+/-- With clean scratch, a disabled coefficient prefix leaves the complete state unchanged,
+including an arbitrary sign bit and both coefficient banks. -/
+theorem coefficientPrefixUnitary_idle
+    (registers : CoefficientPrefixRegisters) {k K : Nat}
+    (mode : RippleMode) (signUpdate : Bool) (target : CoefficientTarget)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K)
+    (hready : CoefficientPrefixReady registers state)
+    (hcontrol : state registers.control = false) :
+    Classical.run (coefficientPrefixUnitary registers k K mode signUpdate target) state = state := by
+  rw [run_coefficientPrefixUnitary_state registers mode signUpdate target state hlayout hready]
+  exact coefficientIdle_coefficient_idle registers k K mode target signUpdate state hcontrol
+    (hready _ (coefficientPrefix_accumulator_mem_scratch registers hlayout))
+    (hready _ (coefficientPrefix_carry_mem_scratch registers hlayout))
+
 end
 
 end ShorECDLP.Paper2607_13816
