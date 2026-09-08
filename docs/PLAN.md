@@ -629,7 +629,14 @@ the overflow/comparison XOR selects the correction, the corrected word is the ca
 modular sum, and the final comparison clears the flag. It also proves the odd-modulus
 parity identity used to clear the doubling flag. These are arithmetic lemmas only; the
 composed measured modular circuits and their resource certificates remain open, along
-with the uncontrolled constant-comparison interface, Horner schedule and squaring.
+with the Horner schedule and squaring.
+`Arithmetic/UncontrolledCompare.lean` supplies the uncontrolled constant-comparison
+interface. `Arithmetic/ConstantControl.lean` compiles external-control CNOTs to X gates,
+proves branch amplitudes are preserved, and removes exactly that control from physical
+support. The compile-time fresh label appears in no emitted gate or measurement.
+The same-circuit secp256k1 theorem proves the numeric flag predicate, complete frame and
+workspace restoration, total probability one, 767 Toffolis, 1,537 CNOTs, 5,369 T gates,
+256 measurement/resets and exactly 516 physical wires. No extra enable qubit is allocated.
 
 Modules:
 

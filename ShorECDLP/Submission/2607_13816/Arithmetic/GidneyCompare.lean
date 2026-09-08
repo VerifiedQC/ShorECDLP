@@ -1076,4 +1076,223 @@ theorem secp256k1GidneyCompare_correct_resources (s : BasisState)
     simpa only [List.length_range',if_neg hsmall] using hh
   · exact Quantum.AdaptiveCircuit.run_bornMass_eq_one _ hw _ (Quantum.normSq_ket s)
 
+private theorem gidneyCompareCell_controlSafe (q c r t a d f : Wire) (k last : Bool)
+    (h : q ∉ [c,r,t,a,d,f]) :
+    ∀ g ∈ gidneyCompareCarryCell q c r t a d f k last, constantControlSafe q g := by
+  cases k <;> cases last <;>
+    simp_all [gidneyCompareCarryCell,constantControlSafe,eq_comm]
+
+private theorem gidneyCompareTail_controlSafe (input dirty : List Wire) (constant : List Bool)
+    (q c r t f : Wire) (callback : List Bool → Circuit) (history : List Bool)
+    (hroles : q ∉ [c,r,t,f] ++ input ++ dirty)
+    (hcallback : ∀ outcomes g, g ∈ callback outcomes → constantControlSafe q g) :
+    constantControlProgramSafe q (gidneyCompareTail q c r t f callback history input dirty constant) := by
+  induction input generalizing dirty constant c r history with
+  | nil =>
+      cases dirty <;> cases constant <;>
+        simp_all [gidneyCompareTail,constantControlProgramSafe,eq_comm]
+      exact ⟨hcallback _,hcallback _⟩
+  | cons a input ih =>
+      cases dirty with
+      | nil => simp [gidneyCompareTail,constantControlProgramSafe]
+      | cons d dirty =>
+        cases constant with
+        | nil => simp [gidneyCompareTail,constantControlProgramSafe]
+        | cons k constant =>
+          have hcell : q ∉ [c,r,t,a,d,f] := by simp_all
+          have ht : q ∉ [r,c,t,f] ++ input ++ dirty := by simp_all
+          have hc : c ≠ q := by simp_all [eq_comm]
+          exact ⟨gidneyCompareCell_controlSafe q c r t a d f k input.isEmpty hcell,
+            hc,ih dirty constant r c _ ht,ih dirty constant r c _ ht⟩
+
+private theorem gidneyZ_controlSafe (q : Wire) (dirty : List Wire) (outcomes : List Bool)
+    (h : q ∉ dirty) : ∀ g ∈ Quantum.registerZCorrection dirty outcomes, constantControlSafe q g := by
+  intro g hg
+  have hn : q ∉ gateWires g := by
+    intro hq
+    exact h (gidneyZ_usesOnly dirty outcomes q (List.mem_flatMap.mpr ⟨g,hg,hq⟩))
+  cases g <;> simp_all [constantControlSafe,gateWires,eq_comm]
+
+/-- The comparison's external control is read only, including its phase cleanup. -/
+theorem controlledGidneyCompareCarry_controlSafe (input dirty : List Wire) (constant : List Bool)
+    (q c r t f : Wire) (h : q ∉ [c,r,t,f] ++ input ++ dirty) :
+    constantControlProgramSafe q (controlledGidneyCompareCarry input dirty constant q c r t f) := by
+  cases input with
+  | nil => simp [controlledGidneyCompareCarry,constantControlProgramSafe]
+  | cons a input =>
+      cases dirty with
+      | nil => simp [controlledGidneyCompareCarry,constantControlProgramSafe]
+      | cons d dirty =>
+        cases constant with
+        | nil => simp [controlledGidneyCompareCarry,constantControlProgramSafe]
+        | cons k constant =>
+          have hcell : q ∉ [c,r,t,a,d,f] := by simp_all
+          have ht : q ∉ [r,c,t,f] ++ input ++ dirty := by simp_all
+          have hd : q ∉ d :: dirty := by simp_all
+          have hx : q ∉ c :: (a :: input) ++ d :: dirty := by simp_all
+          refine ⟨gidneyCompareCell_controlSafe q c r t a d f k input.isEmpty hcell,
+            gidneyCompareTail_controlSafe input dirty constant q r c t f _ _ ht ?_⟩
+          intro outcomes
+          simp only [List.forall_mem_append]
+          exact ⟨⟨gidneyZ_controlSafe q (d :: dirty) outcomes hd,
+            controlledConstCarryXor_controlSafe (a :: input) (d :: dirty) (k :: constant) q c hx⟩,
+            gidneyZ_controlSafe q (d :: dirty) outcomes hd⟩
+
+/-- The threshold shortcuts also admit control specialization. -/
+theorem controlledGidneyCompareGE_controlSafe (input dirty : List Wire) (threshold : Nat)
+    (q c r t f : Wire) (h : q ∉ [c,r,t,f] ++ input ++ dirty) :
+    constantControlProgramSafe q (controlledGidneyCompareGE input dirty threshold q c r t f) := by
+  unfold controlledGidneyCompareGE
+  split
+  · have hf : f ≠ q := by simp_all [eq_comm]
+    simp [constantControlProgramSafe,constantControlSafe,hf]
+  · split
+    · trivial
+    · exact controlledGidneyCompareCarry_controlSafe input dirty _ q c r t f h
+
+private theorem gidneyGateCount_constantControl (cost : Gate → Nat) (q : Wire)
+    (program : Quantum.AdaptiveCircuit) :
+    gidneyGateCount cost (constantControlProgram q program) =
+      gidneyGateCount (cost ∘ constantControlGate q) program := by
+  induction program <;> simp_all [constantControlProgram,gidneyGateCount,List.map_map]
+
+/-- Control specialization preserves every Toffoli. -/
+theorem gidneyToffoliCount_constantControl (q : Wire) (program : Quantum.AdaptiveCircuit) :
+    gidneyToffoliCount (constantControlProgram q program) = gidneyToffoliCount program := by
+  unfold gidneyToffoliCount
+  rw [gidneyGateCount_constantControl]
+  congr 1
+  funext g
+  cases g with
+  | CX c t => by_cases hc : c = q <;> simp [constantControlGate,hc]
+  | _ => rfl
+
+private theorem gidneyCompareForwardCost_uniform (constant : List Bool) (weight : Nat) :
+    gidneyCompareForwardCost (fun _ _ => weight) constant = weight * constant.length := by
+  induction constant <;> simp_all [gidneyCompareForwardCost,Nat.mul_add,Nat.add_comm]
+
+/-- Symbolic Toffoli, T, and measurement counts of the nonempty carry core. -/
+theorem controlledGidneyCompareCarry_metrics (a d q c r t f : Wire) (input dirty : List Wire)
+    (k : Bool) (constant : List Bool) (hk : input.length = constant.length) (hd : input.length = dirty.length) :
+    let program := controlledGidneyCompareCarry (a :: input) (d :: dirty) (k :: constant) q c r t f
+    gidneyToffoliCount program = 3 * input.length + 2 ∧
+      program.tCount = 7 * (3 * input.length + 2) ∧ program.measurementCount = input.length + 1 := by
+  have hcc := gidneyCompareRoot_counts (fun g => match g with | .CCX _ _ _ => 1 | _ => 0) (fun _ _ => 1)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d f k last; cases k <;> cases last <;> simp [gidneyCompareCarryCell])
+    a d q c r t f input dirty k constant hk hd
+  have htt := gidneyCompareRoot_counts tCost (fun _ _ => 7)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d f k last; cases k <;> cases last <;> simp [gidneyCompareCarryCell,tCost])
+    a d q c r t f input dirty k constant hk hd
+  have hclean := controlledConstCarryXor_counts a input (d :: dirty) k constant q c hk (by simp [hd])
+  dsimp only
+  refine ⟨?_,?_,hcc.2⟩
+  · unfold gidneyToffoliCount
+    apply hcc.1.trans
+    rw [gidneyCompareForwardCost_uniform]
+    change 1 * (constant.length + 1) + eeaToffoliCount _ = _
+    rw [hclean.2.1]
+    omega
+  · rw [← gidneyGateCount_tCount]
+    apply htt.1.trans
+    rw [gidneyCompareForwardCost_uniform]
+    change 7 * (constant.length + 1) + tCount _ = _
+    rw [hclean.2.2.2]
+    omega
+
+private theorem gidneyCompareCell_uncontrolled_cnot (q c r t a d f : Wire) (k last : Bool)
+    (h : q ∉ [c,r,t,a,d,f]) :
+    eeaCnotCount ((gidneyCompareCarryCell q c r t a d f k last).map (constantControlGate q)) =
+      6 + last.toNat := by
+  cases k <;> cases last <;>
+    simp_all [gidneyCompareCarryCell,constantControlGate,eeaCnotCount,eq_comm]
+
+private theorem gidneyCompareTail_uncontrolled_cnot (input dirty : List Wire) (constant : List Bool)
+    (q c r t f : Wire) (callback : List Bool → Circuit) (history : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length)
+    (hroles : q ∉ [c,r,t,f] ++ input ++ dirty)
+    (hcallback : ∀ outcomes, eeaCnotCount ((callback outcomes).map (constantControlGate q)) = 0) :
+    gidneyCnotCount (constantControlProgram q
+      (gidneyCompareTail q c r t f callback history input dirty constant)) =
+      6 * input.length + (if input = [] then 0 else 1) := by
+  induction input generalizing dirty constant c r history with
+  | nil =>
+      have he : dirty = [] := List.eq_nil_of_length_eq_zero hd.symm
+      have he' : constant = [] := List.eq_nil_of_length_eq_zero hk.symm
+      subst dirty; subst constant
+      simp only [gidneyCompareTail,constantControlProgram,gidneyCnotCount,gidneyGateCount]
+      change max (eeaCnotCount _ + 0) (eeaCnotCount _ + 0) = _
+      simp [hcallback]
+  | cons a input ih =>
+      cases dirty with
+      | nil => simp at hd
+      | cons d dirty =>
+        cases constant with
+        | nil => simp at hk
+        | cons k constant =>
+          have hcell : q ∉ [c,r,t,a,d,f] := by simp_all
+          have ht : q ∉ [r,c,t,f] ++ input ++ dirty := by simp_all
+          have ihf := ih dirty constant r c (history ++ [false]) (by simpa using hk) (by simpa using hd) ht
+          have iht := ih dirty constant r c (history ++ [true]) (by simpa using hk) (by simpa using hd) ht
+          change eeaCnotCount ((gidneyCompareCarryCell q c r t a d f k input.isEmpty).map (constantControlGate q)) +
+            max (gidneyCnotCount (constantControlProgram q (gidneyCompareTail q r c t f callback (history ++ [false]) input dirty constant)))
+              (gidneyCnotCount (constantControlProgram q (gidneyCompareTail q r c t f callback (history ++ [true]) input dirty constant))) = _
+          rw [gidneyCompareCell_uncontrolled_cnot q c r t a d f k input.isEmpty hcell,ihf,iht,max_self]
+          cases input <;> simp
+          omega
+
+/-- The uncontrolled core has exactly six CNOTs per bit plus its final flag toggle. -/
+theorem controlledGidneyCompareCarry_uncontrolled_cnot (a d q c r t f : Wire)
+    (input dirty : List Wire) (k : Bool) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length)
+    (hroles : q ∉ [c,r,t,f] ++ (a :: input) ++ d :: dirty) :
+    gidneyCnotCount (constantControlProgram q
+      (controlledGidneyCompareCarry (a :: input) (d :: dirty) (k :: constant) q c r t f)) =
+      6 * (input.length + 1) + 1 := by
+  have hcell : q ∉ [c,r,t,a,d,f] := by simp_all
+  have ht : q ∉ [r,c,t,f] ++ input ++ dirty := by simp_all
+  have hzero (outcomes : List Bool) :
+      eeaCnotCount ((Quantum.registerZCorrection (d :: dirty) outcomes).map (constantControlGate q)) = 0 := by
+    simp only [eeaCnotCount,List.map_map]
+    exact gidneyZ_cost _ (fun _ => rfl) (fun _ => rfl) _ _
+  have htail := gidneyCompareTail_uncontrolled_cnot input dirty constant q r c t f
+    (fun outcomes => Quantum.registerZCorrection (d :: dirty) outcomes ++
+      controlledConstCarryXor (a :: input) (d :: dirty) (k :: constant) q c ++
+      Quantum.registerZCorrection (d :: dirty) outcomes) (List.nil : List Bool) hk hd ht
+    (by intro outcomes; simp only [List.map_append,eeaCnotCount_append,hzero,
+          controlledConstCarryXor_uncontrolled_cnot,Nat.add_zero,Nat.zero_add])
+  change eeaCnotCount ((gidneyCompareCarryCell q c r t a d f k input.isEmpty).map (constantControlGate q)) +
+      gidneyCnotCount (constantControlProgram q (gidneyCompareTail q r c t f _ (List.nil : List Bool) input dirty constant)) = _
+  rw [gidneyCompareCell_uncontrolled_cnot q c r t a d f k input.isEmpty hcell,htail]
+  cases input <;> simp
+  omega
+
+/-- The source comparison footprint loses exactly its external control. -/
+theorem controlledGidneyCompareCarry_uncontrolled_qubits (a d q c r t f : Wire)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length)
+    (hroles : q ∉ [c,r,t,f] ++ (a :: input) ++ d :: dirty)
+    (hnd : ([c,r,t,f] ++ (a :: input) ++ d :: dirty).Nodup) :
+    (constantControlProgram q
+      (controlledGidneyCompareCarry (a :: input) (d :: dirty) (true :: constant) q c r t f)).qubitCount =
+      2 * (input.length + 1) + 4 := by
+  have hsafe := controlledGidneyCompareCarry_controlSafe (a :: input) (d :: dirty) (true :: constant) q c r t f hroles
+  have heq : (constantControlProgram q (controlledGidneyCompareCarry (a :: input) (d :: dirty)
+      (true :: constant) q c r t f)).wires.dedup.toFinset =
+      ([c,r,t,f] ++ (a :: input) ++ d :: dirty).toFinset := by
+    ext w
+    simp only [List.mem_toFinset,List.mem_dedup,constantControlProgram_wires q _ hsafe,
+      gidneyCompareRoot_wires a d q c r t f input dirty constant hk hd]
+    change (w ∈ q :: ([c,r,t,f] ++ (a :: input) ++ d :: dirty) ∧ w ≠ q) ↔ _
+    by_cases hw : w = q
+    · subst w
+      simpa only [ne_eq,not_true_eq_false,and_false,false_iff] using hroles
+    · simp [hw]
+  have hc := congrArg Finset.card heq
+  rw [List.toFinset_card_of_nodup (List.nodup_dedup _),List.toFinset_card_of_nodup hnd] at hc
+  simp only [List.length_append,List.length_cons,List.length_nil] at hc
+  unfold Quantum.AdaptiveCircuit.qubitCount
+  omega
+
 end ShorECDLP.Paper2607_13816
