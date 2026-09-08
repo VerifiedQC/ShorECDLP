@@ -24,7 +24,8 @@ def controlledModularAdd (input acc : List Wire) (correction : List Bool) (p : N
       ((controlledGidneyAddConst acc (input.take (acc.length - 1)) correction f c r t).seq
         (.unitary (controlledCompareLT acc input q c f) .done)))
 
-private theorem modularAdd_layout (input acc : List Wire) (q c r t f : Wire)
+/-- Shared stage layouts for modular addition and subtraction. -/
+theorem modularAdd_layout (input acc : List Wire) (q c r t f : Wire)
     (h : ([q,c,r,t,f] ++ input ++ acc).Nodup) :
     (q :: c :: f :: input ++ acc).Nodup ∧
     ([c,r,t,f] ++ acc ++ input).Nodup ∧
@@ -247,6 +248,32 @@ theorem modularAddIdealState_correct (input acc : List Wire) (correction : List 
   unfold modularAddIdealState
   rw [modularAdd_word_upd _ _ f _ (modularAdd_geometry input acc q c r t f hnd).2.1]
   exact (modularAdd_corrected input acc correction p q c r t f s hlen hk hnd hc hf hp hx hy hconstant).1
+
+/-- The first two source subtraction stages undo the final comparison and
+constant correction of modular addition, restoring its flagged low word. -/
+theorem modularAddIdealState_uncorrect (input acc : List Wire)
+    (correction modulus : List Bool) (p : Nat) (q c r t f : Wire) (s : BasisState)
+    (hlen : input.length = acc.length) (hk : acc.length = correction.length)
+    (hm : acc.length = modulus.length) (hnd : ([q,c,r,t,f] ++ input ++ acc).Nodup)
+    (hc : s c = false) (hf : s f = false) (hp : p < 2 ^ acc.length)
+    (hx : boolWordToNat (wireValues input s) < p)
+    (hy : boolWordToNat (wireValues acc s) < p)
+    (hconstant : boolWordToNat correction = 2 ^ acc.length - p)
+    (hmodulus : boolWordToNat modulus = p) :
+    gidneyAddIdealState acc modulus f
+      (run (controlledCompareLT acc input q c f)
+        (modularAddIdealState input acc correction p q c f s)) =
+      let low := run (controlledAddCarry input acc q c f) s
+      upd low f (Bool.xor (low f) (decide (p ≤ boolWordToNat (wireValues acc low)))) := by
+  have hl := modularAdd_layout input acc q c r t f hnd
+  have hg := modularAdd_geometry input acc q c r t f hnd
+  have hframe := modularAdd_intermediate_frame input acc correction p q c r t f s hlen hk hnd
+  have hlast := (modularAdd_corrected input acc correction p q c r t f s
+    hlen hk hnd hc hf hp hx hy hconstant).2
+  rw [← hlast,controlledCompareLT_involutive acc input q c f _ hlen.symm hl.2.2.2
+    ((hframe.2.2 c (hg.1 c (by simp))).trans hc)]
+  exact gidneyAddIdealState_complement acc correction modulus f _ hk hm hg.2.2 hg.2.1
+    (by rw [hconstant,hmodulus]; omega)
 
 /-- Each branch implements controlled modular addition with a positive,
 input-independent amplitude and complete restoration outside the accumulator. -/

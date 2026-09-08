@@ -898,6 +898,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledModularAdd_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.modularAddIdealState_correct
 #print axioms ShorECDLP.Paper2607_13816.controlledModularAdd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledCompareLT_involutive
+#print axioms ShorECDLP.Paper2607_13816.controlledSubCarry_HPFree
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ModulusAdd_counts
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddIdealState_complement
+#print axioms ShorECDLP.Paper2607_13816.modularAddIdealState_uncorrect
+#print axioms ShorECDLP.Paper2607_13816.controlledModularSub_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledModularSub_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.modularSubIdealState_after_add
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_after_add_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularAdd_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_wellFormed
@@ -999,8 +1009,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 975 ]]; then
-  printf 'expected 975 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 985 ]]; then
+  printf 'expected 985 #print axioms results\n' >&2
   exit 1
 fi
 
