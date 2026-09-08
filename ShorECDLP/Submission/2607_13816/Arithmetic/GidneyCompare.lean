@@ -845,7 +845,7 @@ private theorem gidneyCompareCell_covers (q c r t a d f w : Wire) (last : Bool) 
       w ∈ [q,c,r,t,a,d] ∨ (last = true ∧ w = f) := by
   cases last <;> simp [gidneyCompareCarryCell,circuitWires,gateWires] <;> tauto
 
-private theorem gidneyCompareRoot_wires (a d q c r t f : Wire) (input dirty : List Wire)
+theorem controlledGidneyCompareCarry_wires (a d q c r t f : Wire) (input dirty : List Wire)
     (constant : List Bool) (hk : input.length = constant.length) (hd : input.length = dirty.length)
     (w : Wire) :
     w ∈ (controlledGidneyCompareCarry (a :: input) (d :: dirty) (true :: constant) q c r t f).wires ↔
@@ -905,7 +905,7 @@ theorem controlledGidneyCompareCarry_qubitCount (a d q c r t f : Wire) (input di
       2 * (input.length + 1) + 5 := by
   have heq : (controlledGidneyCompareCarry (a :: input) (d :: dirty) (true :: constant) q c r t f).wires.dedup.toFinset =
       ([q,c,r,t,f] ++ (a :: input) ++ d :: dirty).toFinset := by
-    ext w; simpa [or_assoc,or_left_comm,or_comm] using gidneyCompareRoot_wires a d q c r t f input dirty constant hk hd w
+    ext w; simpa [or_assoc,or_left_comm,or_comm] using controlledGidneyCompareCarry_wires a d q c r t f input dirty constant hk hd w
   have hc := congrArg Finset.card heq
   rw [List.toFinset_card_of_nodup (List.nodup_dedup _),List.toFinset_card_of_nodup hnd] at hc
   simp only [List.length_append,List.length_cons,List.length_nil] at hc
@@ -1283,7 +1283,7 @@ theorem controlledGidneyCompareCarry_uncontrolled_qubits (a d q c r t f : Wire)
       ([c,r,t,f] ++ (a :: input) ++ d :: dirty).toFinset := by
     ext w
     simp only [List.mem_toFinset,List.mem_dedup,constantControlProgram_wires q _ hsafe,
-      gidneyCompareRoot_wires a d q c r t f input dirty constant hk hd]
+      controlledGidneyCompareCarry_wires a d q c r t f input dirty constant hk hd]
     change (w ∈ q :: ([c,r,t,f] ++ (a :: input) ++ d :: dirty) ∧ w ≠ q) ↔ _
     by_cases hw : w = q
     · subst w

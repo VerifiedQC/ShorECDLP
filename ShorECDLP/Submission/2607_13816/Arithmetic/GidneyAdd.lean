@@ -1179,7 +1179,7 @@ private theorem gidneyProduction_t : secp256k1GidneyAdd.tCount = 5348 := by
   change 7 + 1778 + tCount _ = 5348
   rw [hc]
 
-private theorem gidneyRoot_wires (a d q c r t : Wire) (input dirty : List Wire)
+theorem controlledGidneyAddConst_wires (a d q c r t : Wire) (input dirty : List Wire)
     (constant : List Bool) (hk : input.length = constant.length) (hd : input.length = dirty.length + 1)
     (w : Wire) :
     w ∈ (controlledGidneyAddConst (a :: input) (d :: dirty) (true :: constant) q c r t).wires ↔
@@ -1229,7 +1229,7 @@ theorem controlledGidneyAddConst_qubitCount (a d q c r t : Wire) (input dirty : 
       2 * (input.length + 1) + 3 := by
   have heq : (controlledGidneyAddConst (a :: input) (d :: dirty) (true :: constant) q c r t).wires.dedup.toFinset =
       ([q,c,r,t] ++ (a :: input) ++ d :: dirty).toFinset := by
-    ext w; simpa [or_assoc,or_left_comm,or_comm] using gidneyRoot_wires a d q c r t input dirty constant hk hd w
+    ext w; simpa [or_assoc,or_left_comm,or_comm] using controlledGidneyAddConst_wires a d q c r t input dirty constant hk hd w
   have hc := congrArg Finset.card heq
   rw [List.toFinset_card_of_nodup (List.nodup_dedup _),List.toFinset_card_of_nodup hnd] at hc
   simp only [List.length_append,List.length_cons,List.length_nil] at hc
