@@ -711,6 +711,13 @@ coefficient. The inverse's same-circuit certificate gives 1,110,533 Toffolis,
 inverse multiplier prerequisite, not the Figure-15 in-place composition or EEA
 readiness boundary.
 
+`Arithmetic/ConstMinus.lean` implements the EEA wrapper's controlled complement,
+measured increment and measured modulus addition. It proves canonical `p - x`,
+complete frame preservation, and cancellation for arbitrary pairs of measurement
+outcomes. The same-circuit certificate gives 1,528 Toffolis, 5,305 CNOTs, 10,696
+T gates, 510 resets and 515 wires. This is the concrete preprocessing/postprocessing
+primitive; full wrapper encoding, reachable-state readiness and Figure 15 remain open.
+
 **Gate:** all measured wires are reusable and `Γ(x)` plus arithmetic work are cleared on every
 branch.
 

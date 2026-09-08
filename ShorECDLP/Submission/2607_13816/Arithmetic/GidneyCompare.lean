@@ -599,7 +599,7 @@ theorem controlledGidneyCompareCarry_wellFormed (input dirty : List Wire) (const
         simpa only [CircuitWellFormed,List.forall_mem_append] using And.intro (And.intro hz hw) hz
 
 
-private theorem gidneyCompareBits_value (n k : Nat) (hk : k < 2 ^ n) :
+theorem gidneyCompareBits_value (n k : Nat) (hk : k < 2 ^ n) :
     boolWordToNat ((List.range n).map (Nat.testBit k)) = k := by
   induction n generalizing k with
   | zero =>

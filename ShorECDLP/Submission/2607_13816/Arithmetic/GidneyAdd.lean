@@ -1090,6 +1090,50 @@ theorem secp256k1ModulusAdd_counts (q c r t : Wire) :
   · rw [hb]; exact ht
   · simpa [hb] using hm
 
+set_option maxRecDepth 100000 in
+/-- Exact costs of the wrapper’s controlled increment stage. -/
+theorem secp256k1Increment_counts (q c r t : Wire) :
+    let ac := controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255)
+      ((List.range 256).map (Nat.testBit 1)) q c r t
+    gidneyToffoliCount ac = 764 ∧ gidneyCnotCount ac = 1284 ∧
+      ac.tCount = 5348 ∧ ac.measurementCount = 255 := by
+  have hb : ((List.range 256).map (Nat.testBit 1)) = true ::
+      (List.range' 1 255).map (Nat.testBit 1) := by decide
+  have htf := controlledGidneyAddConst_toffoli_exact 4 260 q c r t
+    (List.range' 5 255) (List.range' 261 254)
+    ((List.range' 1 255).map (Nat.testBit 1)) (by simp) (by simp)
+  have ht := controlledGidneyAddConst_tCount_exact 4 260 q c r t
+    (List.range' 5 255) (List.range' 261 254)
+    ((List.range' 1 255).map (Nat.testBit 1)) (by simp) (by simp)
+  have hm := controlledGidneyAddConst_measurementCount (List.range' 4 256) (List.range' 260 255)
+    ((List.range 256).map (Nat.testBit 1)) q c r t (by simp) (by simp)
+  dsimp only
+  refine ⟨?_,?_,?_,?_⟩
+  · rw [hb]; exact htf
+  · have hroot := gidneyRoot_gateCount (fun g => match g with | .CX _ _ => 1 | _ => 0)
+      (fun k => 5 + 3 * k.toNat) (fun k => 1 + k.toNat)
+      (by intro w; rfl) (by intro w; rfl)
+      (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell])
+      (by intro q c a k; cases k <;> simp)
+      4 260 q c r t (List.range' 5 255) (List.range' 261 254) true
+      ((List.range' 1 255).map (Nat.testBit 1))
+      (by simp) (by simp) (by simp)
+    have hforward : gidneyForwardCost (fun k => 5 + 3 * k.toNat) (fun k => 1 + k.toNat)
+      ((List.range' 1 255).map (Nat.testBit 1)) = 1271 := by decide
+    have hcleanup := (controlledConstCarryXor_counts 4 (List.range' 5 254) (List.range' 260 255) true
+      ((List.range' 1 254).map (Nat.testBit 1)) q c (by simp) (by simp)).2.2.1
+    have hweight : constantBitWeight
+      ((List.range' 1 254).map (Nat.testBit 1)) = 0 := by decide
+    rw [hb]
+    apply hroot.trans
+    rw [hforward]
+    change 8 + 1271 + eeaCnotCount (controlledConstCarryXor (4 :: List.range' 5 254)
+      (List.range' 260 255) (true :: (List.range' 1 254).map (Nat.testBit 1)) q c) = 1284
+    rw [hcleanup,hweight]
+    rfl
+  · rw [hb]; exact ht
+  · simpa [hb] using hm
+
 /-- Production controlled constant adder, with 256 data bits, 255 arbitrary borrowed
 bits, and three initially clean carry/ancilla bits. -/
 def secp256k1GidneyAdd : Quantum.AdaptiveCircuit :=
