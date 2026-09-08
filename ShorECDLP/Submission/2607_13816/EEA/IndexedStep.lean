@@ -10964,6 +10964,71 @@ theorem indexedStepUnitary_terminal_padding
     (by rw [hp]; exact hpr) (by rw [hp]; exact hs)
   exact ⟨hfull.1.trans hp, hfull.2⟩
 
+
+/-- A terminal routed step has the explicit padding transition under an input-side modular
+bound on its extended counter. No condition on an intermediate circuit state is required. -/
+theorem indexedStepUnitary_terminal_counter_correct
+    (registers : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
+      boundary4 ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ boundary5 ∧
+      boundary5 ≤ (endIterationWindowsAt n T).K5Decode n)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state)
+    (hencoded : IndexedStepEpochEncoded registers state)
+    (hroutes : T % 4 = 0 → indexedStepEndRoutes registers n T state = (boundary4, boundary5))
+    (hphase1 : state registers.phase1 = false)
+    (hphase2 : state registers.phase2 = false)
+    (hrp : wireAnd registers.lengthRPrime state = true)
+    (hbound : (1 + (boolWordToNat (wireValues registers.lengthS state) +
+        2^registers.lengthS.length * (state registers.shiftEpoch).toNat)) %
+          2^(registers.lengthS.length + 1) ≠ 2^registers.lengthS.length - 1) :
+    run (indexedStepUnitary registers n T) state =
+      (terminalPaddingForwardState registers.terminalPadding
+        state[registers.terminal ↦ true])[registers.terminal ↦ false] ∧
+    IndexedStepReady registers (run (indexedStepUnitary registers n T) state) ∧
+    IndexedStepEpochEncoded registers (run (indexedStepUnitary registers n T) state) := by
+  have hta := hlayout.sourceScratch_mem_aux
+    (show registers.terminal ∈ registers.sourceScratch by rw [← hlayout.scratch_view]; simp)
+  have htS : registers.terminal ∉ registers.lengthS := by
+    intro hm
+    exact hlayout.aux_not_payload hta (by simp [indexedStepPayload, hm]) rfl
+  have he : registers.shiftEpoch ≠ registers.terminal := by
+    have h := hlayout.terminalEpoch
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false, not_or] at h
+    exact Ne.symm h.1.1
+  have hvalues : wireValues registers.lengthS state[registers.terminal ↦ true] =
+      wireValues registers.lengthS state := by
+    apply List.map_congr_left
+    intro wire hw
+    exact upd_other _ _ _ (by intro h; subst wire; exact htS hw)
+  have hmarked : (1 + (boolWordToNat
+      (wireValues registers.terminalPadding.lengthS state[registers.terminal ↦ true]) +
+      2^registers.terminalPadding.lengthS.length *
+        (state[registers.terminal ↦ true] registers.terminalPadding.shiftEpoch).toNat)) %
+      2^(registers.terminalPadding.lengthS.length + 1) ≠
+        2^registers.terminalPadding.lengthS.length - 1 := by
+    change (1 + (boolWordToNat (wireValues registers.lengthS state[registers.terminal ↦ true]) +
+      2^registers.lengthS.length * (state[registers.terminal ↦ true] registers.shiftEpoch).toNat)) %
+      2^(registers.lengthS.length + 1) ≠ 2^registers.lengthS.length - 1
+    rw [hvalues, upd_other _ _ _ he]
+    exact hbound
+  have hs := terminalPaddingForwardState_counter_nonzero registers.terminalPadding
+    state[registers.terminal ↦ true] hlayout.terminalPadding (by simp [IndexedStepRegisters.terminalPadding]) hmarked
+  apply indexedStepUnitary_terminal_padding registers n T boundary4 boundary5 hboundary4 hboundary5
+    state hlayout hready hencoded hroutes hphase1 hphase2 hrp
+  dsimp only
+  rw [upd_other _ _ _ he]
+  rw [show wireAnd registers.lengthS
+      ((terminalPaddingForwardState registers.terminalPadding state[registers.terminal ↦ true])
+        [registers.terminal ↦ false]) =
+      wireAnd registers.lengthS
+        (terminalPaddingForwardState registers.terminalPadding state[registers.terminal ↦ true]) by
+    apply wireAnd_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro h; subst wire; exact htS hw)]
+  exact hs
+
 end
 
 end ShorECDLP.Paper2607_13816

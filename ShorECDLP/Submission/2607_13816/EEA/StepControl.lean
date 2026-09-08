@@ -2338,4 +2338,170 @@ theorem terminalPadding_secp256k1_resources :
       terminalPaddingInverse_tCount
         terminalPaddingSecp256k1Registers hlayout
 
+private theorem counter_matches_zero (wires : List Wire) (bit : Nat) (state : BasisState) :
+    registerMatchesFrom wires 0 bit state = decide (boolWordToNat (wireValues wires state) = 0) := by
+  induction wires generalizing bit with
+  | nil => rfl
+  | cons wire wires ih =>
+    simp only [registerMatchesFrom, Nat.zero_testBit, ih, wireValues, List.map_cons,
+      boolWordToNat_cons]
+    rcases Bool.eq_false_or_eq_true (state wire) with h | h <;> simp [h]
+private theorem terminal_counter_views (registers : TerminalPaddingRegisters)
+    (state : BasisState) (hlayout : TerminalPaddingLayout registers)
+    (ht : state registers.terminal = true) :
+    wireValues registers.lengthS (terminalPaddingForwardState registers state) =
+      incrementBits true (wireValues registers.lengthS state) ∧
+    (terminalPaddingForwardState registers state) registers.shiftEpoch =
+      Bool.xor (state registers.shiftEpoch)
+        (decide (boolWordToNat (incrementBits true (wireValues registers.lengthS state)) = 0)) := by
+  have hnd := (List.nodup_cons.mp hlayout.nodup).2
+  have heWork : registers.shiftEpoch ∉ registers.work2 := by
+    intro hm
+    exact (List.nodup_cons.mp hnd).1 (by simp [TerminalPaddingRegisters.usedWires, hm])
+  have heS := terminalPadding_shiftEpoch_not_lengthS registers hlayout
+  have htWork := (List.nodup_cons.mp (terminalPadding_rotationNodup registers hlayout)).1
+  have htS : registers.terminal ∉ registers.lengthS := by
+    intro hm
+    exact (List.nodup_cons.mp (terminalPadding_incrementNodup registers hlayout)).1
+      (by simp [hm])
+  have hndS : registers.lengthS.Nodup :=
+    (List.nodup_append.mp (List.nodup_cons.mp (terminalPadding_incrementNodup registers hlayout)).2).1
+  have hcross : ∀ wire ∈ registers.lengthS, wire ∉ registers.work2 := by
+    have hrest := (List.nodup_cons.mp hnd).2
+    have hc : (registers.work2 ++ (registers.lengthS ++ registers.scratch)).Nodup := by
+      simpa [TerminalPaddingRegisters.usedWires, List.append_assoc] using hrest
+    intro wire hs hw
+    exact (List.nodup_append.mp hc).2.2 wire hw wire (by simp [hs]) rfl
+  let rotated := writeReg registers.work2
+    (boolWordToNat (rotateLeftOne (wireValues registers.work2 state))) state
+  have hrt : rotated registers.terminal = true := by
+    exact (stepControl_writeReg_preservesOutside _ _ state htWork).trans ht
+  have hre : rotated registers.shiftEpoch = state registers.shiftEpoch :=
+    stepControl_writeReg_preservesOutside _ _ state heWork
+  have hrs : wireValues registers.lengthS rotated = wireValues registers.lengthS state := by
+    apply List.map_congr_left
+    intro wire hw
+    exact stepControl_writeReg_preservesOutside _ _ state (hcross wire hw)
+  let bits := incrementBits true (wireValues registers.lengthS state)
+  let advanced := writeReg registers.lengthS (boolWordToNat bits) rotated
+  have hat : advanced registers.terminal = true :=
+    (stepControl_writeReg_preservesOutside _ _ rotated htS).trans hrt
+  have hae : advanced registers.shiftEpoch = state registers.shiftEpoch :=
+    (stepControl_writeReg_preservesOutside _ _ rotated heS).trans hre
+  have has : wireValues registers.lengthS advanced = bits :=
+    stepControl_wireValues_writeReg_boolWord _ _ _ hndS (by simp [bits, wireValues])
+  have ha : terminalPaddingForwardState registers state =
+      advanced[registers.shiftEpoch ↦ Bool.xor (state registers.shiftEpoch)
+        (decide (boolWordToNat bits = 0))] := by
+    simp only [terminalPaddingForwardState, ht, if_true]
+    change (let a := writeReg registers.lengthS (boolWordToNat
+      (incrementBits (rotated registers.terminal) (wireValues registers.lengthS rotated))) rotated
+      a[registers.shiftEpoch ↦ Bool.xor (a registers.shiftEpoch)
+        (a registers.terminal && registerMatches registers.lengthS 0 a)]) = _
+    simp only [hrt, hrs]
+    change advanced[registers.shiftEpoch ↦ Bool.xor (advanced registers.shiftEpoch)
+      (advanced registers.terminal && registerMatches registers.lengthS 0 advanced)] = _
+    rw [hae, hat]
+    simp only [Bool.true_and, registerMatches, counter_matches_zero, has]
+  rw [ha]
+  constructor
+  · change wireValues registers.lengthS _ = bits
+    rw [show wireValues registers.lengthS
+      (advanced[registers.shiftEpoch ↦ Bool.xor (state registers.shiftEpoch)
+        (decide (boolWordToNat bits = 0))]) = wireValues registers.lengthS advanced by
+      apply List.map_congr_left
+      intro wire hw
+      exact upd_other _ _ _ (by intro he; subst wire; exact heS hw)]
+    exact has
+  · simp only [upd_same, bits]
+
+/-- The terminal-padding counter increments modulo its low-word width and toggles the
+extra epoch bit exactly on wrap. This describes the actual complete padding state. -/
+theorem terminalPaddingForwardState_counter (registers : TerminalPaddingRegisters)
+    (state : BasisState) (hlayout : TerminalPaddingLayout registers)
+    (ht : state registers.terminal = true) :
+    boolWordToNat (wireValues registers.lengthS (terminalPaddingForwardState registers state)) =
+      (1 + boolWordToNat (wireValues registers.lengthS state)) % 2^registers.lengthS.length ∧
+    (terminalPaddingForwardState registers state) registers.shiftEpoch =
+      Bool.xor (state registers.shiftEpoch)
+        (decide ((1 + boolWordToNat (wireValues registers.lengthS state)) % 2^registers.lengthS.length = 0)) := by
+  have h := terminal_counter_views registers state hlayout ht
+  constructor
+  · rw [h.1, boolWordToNat_incrementBits]
+    simp [wireValues]
+  · simpa [boolWordToNat_incrementBits, wireValues] using h.2
+
+private theorem counter_advance (low modulus : Nat) (epoch : Bool)
+    (hmod : 0 < modulus) (hlow : low < modulus) :
+    (1 + low) % modulus + modulus *
+      (Bool.xor epoch (decide ((1 + low) % modulus = 0))).toNat =
+      (1 + (low + modulus * epoch.toNat)) % (2 * modulus) := by
+  by_cases h : 1 + low < modulus
+  · rw [Nat.mod_eq_of_lt h]
+    have hn : 1 + low ≠ 0 := by omega
+    simp only [hn, decide_false, Bool.xor_false]
+    cases epoch <;> simp only [Bool.toNat_false, Bool.toNat_true, Nat.mul_zero,
+      Nat.mul_one, Nat.add_zero]
+    · rw [Nat.mod_eq_of_lt (by omega)]
+    · rw [Nat.mod_eq_of_lt (by omega)]; omega
+  · have he : 1 + low = modulus := by omega
+    rw [he, Nat.mod_self]
+    simp only [Nat.zero_add, decide_true]
+    cases epoch <;> simp only [Bool.false_xor, Bool.xor_self, Bool.toNat_true,
+      Bool.toNat_false, Nat.mul_one, Nat.mul_zero, Nat.add_zero]
+    · rw [he, Nat.mod_eq_of_lt (by omega)]
+    · rw [show 1 + (low + modulus) = 2 * modulus by omega, Nat.mod_self]
+private theorem counter_all_ones (wires : List Wire) (state : BasisState) :
+    wireAnd wires state = decide (boolWordToNat (wireValues wires state) = 2^wires.length - 1) := by
+  induction wires with
+  | nil => rfl
+  | cons wire wires ih =>
+    have hbound := boolWordToNat_lt_pow_two (wireValues wires state)
+    have hpos := Nat.two_pow_pos wires.length
+    simp only [wireAnd, ih, wireValues, List.map_cons, boolWordToNat_cons,
+      List.length_cons, Nat.pow_succ]
+    simp only [wireValues, List.length_map] at hbound
+    rcases Bool.eq_false_or_eq_true (state wire) with h | h <;> simp only [h, Bool.false_and, Bool.true_and, Bool.toNat_false,
+      Bool.toNat_true, Nat.zero_add]
+    all_goals
+      apply Bool.eq_iff_iff.mpr
+      simp only [Bool.false_eq_true, decide_eq_true_eq]
+    all_goals constructor <;> intro hh <;> try omega
+    all_goals contradiction
+private theorem counter_zero_decode (low modulus : Nat) (epoch : Bool)
+    (hmod : 0 < modulus) :
+    (decide (low = modulus - 1) && !epoch) =
+      decide (low + modulus * epoch.toNat = modulus - 1) := by
+  cases epoch
+  · simp
+  · simp only [Bool.not_true, Bool.and_false, Bool.toNat_true, Nat.mul_one]
+    exact (decide_eq_false (by omega)).symm
+
+private theorem terminal_counter_extended (registers : TerminalPaddingRegisters)
+    (state : BasisState) (hlayout : TerminalPaddingLayout registers)
+    (ht : state registers.terminal = true) :
+    boolWordToNat (wireValues registers.lengthS (terminalPaddingForwardState registers state)) +
+        2^registers.lengthS.length * ((terminalPaddingForwardState registers state) registers.shiftEpoch).toNat =
+      (1 + (boolWordToNat (wireValues registers.lengthS state) +
+        2^registers.lengthS.length * (state registers.shiftEpoch).toNat)) %
+          2^(registers.lengthS.length + 1) := by
+  have h := terminalPaddingForwardState_counter registers state hlayout ht
+  rw [h.1, h.2, Nat.pow_succ, Nat.mul_comm (2^registers.lengthS.length) 2]
+  exact counter_advance _ _ _ (Nat.two_pow_pos _) (by
+    simpa [wireValues] using boolWordToNat_lt_pow_two (wireValues registers.lengthS state))
+
+/-- An input-side modular counter bound excludes the end-of-iteration zero-shift sentinel
+after terminal padding. The low word stores truth minus one, with one extra epoch bit. -/
+theorem terminalPaddingForwardState_counter_nonzero (registers : TerminalPaddingRegisters)
+    (state : BasisState) (hlayout : TerminalPaddingLayout registers)
+    (ht : state registers.terminal = true)
+    (hbound : (1 + (boolWordToNat (wireValues registers.lengthS state) +
+        2^registers.lengthS.length * (state registers.shiftEpoch).toNat)) %
+          2^(registers.lengthS.length + 1) ≠ 2^registers.lengthS.length - 1) :
+    (wireAnd registers.lengthS (terminalPaddingForwardState registers state) &&
+      !(terminalPaddingForwardState registers state) registers.shiftEpoch) = false := by
+  rw [counter_all_ones, counter_zero_decode _ _ _ (Nat.two_pow_pos _),
+    terminal_counter_extended registers state hlayout ht]
+  exact decide_eq_false hbound
+
 end ShorECDLP.Paper2607_13816
