@@ -60,3 +60,4 @@ import ShorECDLP.Submission.«2607_13816».EEA.Windows
 Root-closure sentinel for the independent space-efficient submission. Declarations live
 under the namespace `ShorECDLP.Paper2607_13816`.
 -/
+import ShorECDLP.Submission.«2607_13816».EEA.ShiftCounter
