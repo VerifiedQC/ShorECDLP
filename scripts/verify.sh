@@ -952,6 +952,12 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.workRegistersRestore_after_prepare
 #print axioms ShorECDLP.Paper2607_13816.workRegistersRestore_resources
 #print axioms ShorECDLP.Paper2607_13816.workRegistersPrepare_correct_resources
+#print axioms ShorECDLP.Paper2607_13816.workRegistersPrepare_input_word
+#print axioms ShorECDLP.Paper2607_13816.workRegistersPrepare_known_scratch
+#print axioms ShorECDLP.Paper2607_13816.eeaLengthSetup_correct
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocessIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_counts
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularHalve_counts
 #print axioms ShorECDLP.Paper2607_13816.modularDoubleIdealState_uncorrect
@@ -1070,8 +1076,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1046 ]]; then
-  printf 'expected 1046 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1052 ]]; then
+  printf 'expected 1052 #print axioms results\n' >&2
   exit 1
 fi
 

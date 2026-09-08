@@ -1079,5 +1079,24 @@ by the explicit source reverse. Preparation has 641 gates (390 CX and 251 X), ze
 well-formedness, H/P freedom, 390 CX and zero Toffoli/T cost. The forward and reverse Work2
 streams preserve the source permutation builder's exact 130-swap order.
 
-This completes the initial work-bank arrangement only. Composition with centering and length
-initialization, full EEA encoding and the reachable-state invariant remain open.
+This completes the initial work-bank arrangement. Its preprocessing composition follows below;
+full EEA encoding and the reachable-state invariant remain open.
+
+
+### EEA preprocessing composition
+
+`eeaPreprocess` now composes bank preparation, adaptive input centering and all four source
+length-word initializations in the existing 580-role allocation. The constant modulus bits
+provide the known scratch for the explicitly lowered length-initializer MCXs.
+
+`eeaPreprocess_branch_correct` proves that every actual measurement branch maps the complete
+initial basis state to `eeaPreprocessIdealState`, with positive history-length amplitude.
+`eeaPreprocessIdealState_correct` derives the positive centered divisor `min(x,p-x)`, retained
+sign bit, coefficient headers, preserved modulus, both zero-length sentinels, divisor-length
+encoding, clean remaining control/scratch roles and complete external frame. The concrete
+prefix is well formed. Initialization assumes only the source's clean non-input roles and
+`0 < x < p`; it does not assume that the desired output encoding already holds.
+
+This closes the forward Algorithm-1 preprocessing prefix. Its aggregate resource theorem,
+connection to the pure EEA state, reachable-state schedule invariant and terminal/reverse
+wrapper remain open; this is not the full inverse or Figure-15 multiplication circuit.
