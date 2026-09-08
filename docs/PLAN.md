@@ -680,6 +680,9 @@ Naive arithmetic is not imported.
 
 **Gate:** exact 256-bit vectors and symbolic bounds are proved for multiplication and squaring.
 
+Phase 7 completed and merged through PR #97 on 2026-09-08, after local verification,
+independent review and hosted CI.
+
 ### Phase 8 — in-place division and multiplication
 
 Module: `Submission/2607_13816/Arithmetic/InPlace.lean`.
@@ -717,6 +720,15 @@ complete frame preservation, and cancellation for arbitrary pairs of measurement
 outcomes. The same-circuit certificate gives 1,528 Toffolis, 5,305 CNOTs, 10,696
 T gates, 510 resets and 515 wires. This is the concrete preprocessing/postprocessing
 primitive; full wrapper encoding, reachable-state readiness and Figure 15 remain open.
+
+`EEA/Centering.lean` composes the actual comparison and constant-minus preprocessing
+pair and its literal reverse. It produces `min(x,p-x)`, retains the sign in `Iter`,
+and proves that the positive centered divisor fits in 255 bits. Every independent
+forward/reverse measurement-branch pair restores the full initial state. Both
+concrete directions have 2,295 Toffolis, 6,842 CNOTs, 16,065 T gates, 766 resets
+and 516 wires. The general comparison support/count theorem now includes even
+thresholds. This closes input centering; the rest of the wrapper and Figure 15
+remain open.
 
 **Gate:** all measured wires are reusable and `Γ(x)` plus arithmetic work are cleared on every
 branch.

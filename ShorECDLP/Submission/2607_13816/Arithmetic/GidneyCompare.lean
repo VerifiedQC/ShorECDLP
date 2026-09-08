@@ -840,30 +840,32 @@ private theorem gidneyCompareTail_covers (input dirty : List Wire) (constant : L
           apply ih dirty constant r c _ (by simpa using hk) (by simpa using hd) hi w
           simp only [List.mem_append,List.mem_cons,List.not_mem_nil] at hw h ⊢; tauto
 
-private theorem gidneyCompareCell_covers (q c r t a d f w : Wire) (last : Bool) :
-    w ∈ circuitWires (gidneyCompareCarryCell q c r t a d f true last) ↔
-      w ∈ [q,c,r,t,a,d] ∨ (last = true ∧ w = f) := by
-  cases last <;> simp [gidneyCompareCarryCell,circuitWires,gateWires] <;> tauto
+private theorem gidneyCompareCell_covers_of_ne_control (q c r t a d f w : Wire)
+    (k last : Bool) (hq : w ≠ q) :
+    w ∈ [q,c,r,t,a,d] ∨ (last = true ∧ w = f) →
+      w ∈ circuitWires (gidneyCompareCarryCell q c r t a d f k last) := by
+  cases k <;> cases last <;>
+    simp [gidneyCompareCarryCell,circuitWires,gateWires,hq] <;> tauto
 
-theorem controlledGidneyCompareCarry_wires (a d q c r t f : Wire) (input dirty : List Wire)
-    (constant : List Bool) (hk : input.length = constant.length) (hd : input.length = dirty.length)
-    (w : Wire) :
-    w ∈ (controlledGidneyCompareCarry (a :: input) (d :: dirty) (true :: constant) q c r t f).wires ↔
+theorem controlledGidneyCompareCarry_wires_of_ne_control (a d q c r t f : Wire) (input dirty : List Wire)
+    (k : Bool) (constant : List Bool) (hk : input.length = constant.length) (hd : input.length = dirty.length)
+    (w : Wire) (hq : w ≠ q) :
+    w ∈ (controlledGidneyCompareCarry (a :: input) (d :: dirty) (k :: constant) q c r t f).wires ↔
       w ∈ [q,c,r,t,f] ++ (a :: input) ++ d :: dirty := by
   let allowed := [q,c,r,t,f] ++ (a :: input) ++ d :: dirty
   let callback := fun outcomes => Quantum.registerZCorrection (d :: dirty) outcomes ++
-    controlledConstCarryXor (a :: input) (d :: dirty) (true :: constant) q c ++
+    controlledConstCarryXor (a :: input) (d :: dirty) (k :: constant) q c ++
     Quantum.registerZCorrection (d :: dirty) outcomes
   have hcallback : ∀ outcomes x, x ∈ circuitWires (callback outcomes) → x ∈ allowed := by
     intro outcomes x hx
     have hz := gidneyZ_usesOnly (d :: dirty) outcomes x
-    have hc : x ∈ circuitWires (controlledConstCarryXor (a :: input) (d :: dirty) (true :: constant) q c) →
+    have hc : x ∈ circuitWires (controlledConstCarryXor (a :: input) (d :: dirty) (k :: constant) q c) →
         x ∈ q :: c :: (a :: input) ++ d :: dirty := by
       intro h; obtain ⟨g,hg,hw⟩ := List.mem_flatMap.mp h
       exact controlledConstCarryXor_usesOnly _ _ _ q c g hg x hw
     simp only [callback,circuitWires,List.flatMap_append,List.mem_append] at hx
     change (x ∈ circuitWires (Quantum.registerZCorrection (d :: dirty) outcomes) ∨
-      x ∈ circuitWires (controlledConstCarryXor (a :: input) (d :: dirty) (true :: constant) q c)) ∨
+      x ∈ circuitWires (controlledConstCarryXor (a :: input) (d :: dirty) (k :: constant) q c)) ∨
       x ∈ circuitWires (Quantum.registerZCorrection (d :: dirty) outcomes) at hx
     have : x ∈ (d :: dirty) ∨ x ∈ q :: c :: (a :: input) ++ d :: dirty := by tauto
     simp only [allowed,List.mem_append,List.mem_cons,List.not_mem_nil] at this ⊢; tauto
@@ -872,18 +874,18 @@ theorem controlledGidneyCompareCarry_wires (a d q c r t f : Wire) (input dirty :
   have ht := gidneyCompareTail_usesOnly allowed input dirty constant q r c t f callback (List.nil : List Bool) hroles hcallback w
   simp only [controlledGidneyCompareCarry,Quantum.AdaptiveCircuit.wires]
   rw [List.mem_append]
-  change (w ∈ circuitWires (gidneyCompareCarryCell q c r t a d f true input.isEmpty) ∨
+  change (w ∈ circuitWires (gidneyCompareCarryCell q c r t a d f k input.isEmpty) ∨
     w ∈ (gidneyCompareTail q r c t f callback (List.nil : List Bool) input dirty constant).wires) ↔ w ∈ allowed
   constructor
   · intro h
     rcases h with h | h
-    · have hh := gidneyCompareCell_wires q c r t a d f w true input.isEmpty h
+    · have hh := gidneyCompareCell_wires q c r t a d f w k input.isEmpty h
       simp only [allowed,List.mem_append,List.mem_cons,List.not_mem_nil] at hh ⊢; tauto
     · exact ht h
   · intro h
     by_cases hcell : w ∈ [q,c,r,t,a,d] ∨ (w = f ∧ input = [])
     · apply Or.inl
-      apply (gidneyCompareCell_covers q c r t a d f w input.isEmpty).2
+      apply gidneyCompareCell_covers_of_ne_control q c r t a d f w k input.isEmpty hq
       rcases hcell with hm | ⟨hf,he⟩
       · exact Or.inl hm
       · exact Or.inr ⟨by rw [he]; rfl,hf⟩
@@ -896,6 +898,21 @@ theorem controlledGidneyCompareCarry_wires (a d q c r t f : Wire) (input dirty :
         tauto
       apply gidneyCompareTail_covers input dirty constant q r c t f callback _ hk hd hi w
       simp only [allowed,List.mem_append,List.mem_cons,List.not_mem_nil] at h hcell ⊢; tauto
+
+theorem controlledGidneyCompareCarry_wires (a d q c r t f : Wire) (input dirty : List Wire)
+    (constant : List Bool) (hk : input.length = constant.length) (hd : input.length = dirty.length)
+    (w : Wire) :
+    w ∈ (controlledGidneyCompareCarry (a :: input) (d :: dirty) (true :: constant) q c r t f).wires ↔
+      w ∈ [q,c,r,t,f] ++ (a :: input) ++ d :: dirty := by
+  by_cases hq : w = q
+  · subst w
+    constructor
+    · intro _; simp
+    · intro _
+      simp only [controlledGidneyCompareCarry,Quantum.AdaptiveCircuit.wires,List.mem_append]
+      apply Or.inl
+      simp [gidneyCompareCarryCell,circuitWires,gateWires]
+  · exact controlledGidneyCompareCarry_wires_of_ne_control a d q c r t f input dirty true constant hk hd w hq
 
 /-- Exact wire count for the low-bit-one comparison core used by the production threshold. -/
 theorem controlledGidneyCompareCarry_qubitCount (a d q c r t f : Wire) (input dirty : List Wire)
