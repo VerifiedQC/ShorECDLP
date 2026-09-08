@@ -11029,6 +11029,104 @@ theorem indexedStepUnitary_terminal_counter_correct
     exact upd_other _ _ _ (by intro h; subst wire; exact htS hw)]
   exact hs
 
+
+private theorem active_shift_prefix (registers : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state) (hencoded : IndexedStepEpochEncoded registers state) :
+    blockGForwardState registers (run (indexedStepShiftPrefix registers n T) state) =
+      indexedStepBeforeEndState registers n T state ∧
+    IndexedStepReady registers (run (indexedStepShiftPrefix registers n T) state) := by
+  let afterC := run (indexedStepRemainderPrefix registers n T) state
+  have hc := (indexedStepRemainderPrefix_correct registers n T state hlayout hready hencoded).2.1
+  have hd := blockDForward_correct registers n T _ afterC hlayout rfl hc
+  have hdReady := hd.2
+  rw [hd.1] at hdReady
+  have he := blockEForward_correct registers n T _ _ hlayout rfl hdReady
+  have heReady := he.2
+  rw [he.1] at heReady
+  have hf := blockFForward_correct registers n T _ hlayout heReady
+  constructor
+  · simp only [indexedStepShiftPrefix, Classical.run_append]
+    rw [hd.1, he.1, hf.1]
+    dsimp only [afterC]
+    rw [terminal_remainder_state registers n T state hlayout hready hencoded]
+    rfl
+  · simp only [indexedStepShiftPrefix, Classical.run_append]
+    rw [hd.1, he.1]
+    exact hf.2
+
+private theorem active_phase_frame (registers : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    {wire : Wire} (hw : wire ∈ indexedStepAfterSign registers) :
+    blockGForwardState registers state wire = state wire := by
+  have h1 : wire ≠ registers.phase1 := Ne.symm (hlayout.phase1_ne_after (by
+    simp only [indexedStepAfterSign, indexedStepAfterPhase1, List.mem_append,
+      List.mem_cons, List.not_mem_nil, or_false] at *
+    tauto))
+  have h2 : wire ≠ registers.phase2 := Ne.symm (hlayout.phase2_ne_after (by
+    simp only [indexedStepAfterSign, indexedStepAfterPhase2, List.mem_append,
+      List.mem_cons, List.not_mem_nil, or_false] at *
+    tauto))
+  have hs : wire ≠ registers.sign := Ne.symm (hlayout.sign_ne_after hw)
+  rw [blockGForwardState, phaseUpdateEpochState_spec _ _ _ hlayout.phaseUpdate]
+  simp only [IndexedStepRegisters.phaseUpdate, upd_other _ _ _ hs,
+    upd_other _ _ _ h2, upd_other _ _ _ h1]
+
+/-- After A--F, a nonterminal remainder length and a nonzero shift counter disable H.
+The actual remaining transition is the source phase update, and the borrowed-epoch
+encoding is restored. These prefix-state conditions still need active arithmetic refinement. -/
+theorem indexedStepUnitary_active_tail_correct
+    (registers : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
+      boundary4 ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ boundary5 ∧
+      boundary5 ≤ (endIterationWindowsAt n T).K5Decode n)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state) (hencoded : IndexedStepEpochEncoded registers state)
+    (hroutes : T % 4 = 0 → indexedStepEndRoutes registers n T state = (boundary4, boundary5))
+    (hrp : wireAnd registers.lengthRPrime (run (indexedStepShiftPrefix registers n T) state) = false)
+    (hepoch : run (indexedStepShiftPrefix registers n T) state registers.shiftEpoch = false)
+    (hs : wireAnd registers.lengthS (run (indexedStepShiftPrefix registers n T) state) = false) :
+    run (indexedStepUnitary registers n T) state =
+      phaseUpdateEpochState registers.phaseUpdate registers.shiftEpoch
+        (run (indexedStepShiftPrefix registers n T) state) ∧
+    IndexedStepReady registers (run (indexedStepUnitary registers n T) state) ∧
+    IndexedStepEpochEncoded registers (run (indexedStepUnitary registers n T) state) := by
+  let afterF := run (indexedStepShiftPrefix registers n T) state
+  let afterG := blockGForwardState registers afterF
+  have hprefix := active_shift_prefix registers n T state hlayout hready hencoded
+  have hg := blockGForward_correct registers n T afterF hlayout hprefix.2
+  have hgReady := hg.2
+  rw [hg.1] at hgReady
+  have hrpG : wireAnd registers.lengthRPrime afterG = false := by
+    rw [← hrp]
+    apply wireAnd_congr
+    intro wire hw
+    exact active_phase_frame registers n T afterF hlayout (by simp [indexedStepAfterSign, hw])
+  have heG : afterG registers.shiftEpoch = false := by
+    exact (active_phase_frame registers n T afterF hlayout (by
+      simp [indexedStepAfterSign, hlayout.shiftEpoch_mem_aux])).trans hepoch
+  have hsG : wireAnd registers.lengthS afterG = false := by
+    rw [← hs]
+    apply wireAnd_congr
+    intro wire hw
+    exact active_phase_frame registers n T afterF hlayout (by simp [indexedStepAfterSign, hw])
+  have hh := terminal_blockH_idle registers n T boundary4 boundary5 afterG hlayout hgReady
+    (by simp only [hsG, Bool.false_and])
+  have hfull := indexedStepUnitary_correct registers n T boundary4 boundary5 hboundary4 hboundary5
+    state hlayout hready hencoded hroutes
+  have hout : run (indexedStepUnitary registers n T) state = afterG := by
+    rw [hfull.1, indexedStepForwardState, ← hprefix.1]
+    exact hh
+  refine ⟨hout, hfull.2, ?_⟩
+  rw [hout]
+  have hmatch : registerMatches (terminalConditionWires registers)
+      (terminalConditionValue registers) afterG = false := by
+    rw [terminalConditionWires, terminalConditionValue, terminal_detection, hrpG]
+    simp only [Bool.and_false]
+  simp only [IndexedStepEpochEncoded, hmatch, Bool.false_eq_true, if_false]
+  exact heG
+
 end
 
 end ShorECDLP.Paper2607_13816
