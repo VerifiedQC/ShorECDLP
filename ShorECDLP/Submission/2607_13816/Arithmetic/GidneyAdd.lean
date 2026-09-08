@@ -1005,6 +1005,91 @@ theorem controlledGidneyAddConst_toffoli_exact (a d q c r t : Wire)
   rw [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
   omega
 
+private theorem gidneyForward_tCost (constant : List Bool) :
+    gidneyForwardCost (fun _ => 7) (fun _ => 0) constant = 7 * (constant.length - 1) := by
+  induction constant with
+  | nil => rfl
+  | cons k ks ih =>
+    cases ks with
+    | nil => rfl
+    | cons l ls => simp [gidneyForwardCost] at ih ⊢; omega
+
+/-- Exact T count of the odd-constant circuit at every width at least two. -/
+theorem controlledGidneyAddConst_tCount_exact (a d q c r t : Wire)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1) :
+    (controlledGidneyAddConst (a :: input) (d :: dirty) (true :: constant) q c r t).tCount =
+      7 * (3 * (input.length + 1) - 4) := by
+  have hroot := gidneyRoot_gateCount tCost (fun _ => 7) (fun _ => 0)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell,tCost])
+    (by intro q c a k; cases k <;> simp [tCost]) a d q c r t input dirty true constant hk hd (by simp)
+  have hki : (input.take dirty.length).length = (constant.take dirty.length).length := by simp [hk]
+  have hdi : (a :: input.take dirty.length).length = (d :: dirty).length := by
+    simp [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
+  have hcleanup := (controlledConstCarryXor_counts a (input.take dirty.length) (d :: dirty) true
+    (constant.take dirty.length) q c hki hdi).2.2.2
+  rw [← gidneyGateCount_tCount]
+  apply hroot.trans
+  simp only [List.length_cons,List.take_succ_cons]
+  change 7 + gidneyForwardCost (fun _ => 7) (fun _ => 0) constant +
+    tCount (controlledConstCarryXor (a :: input.take dirty.length) (d :: dirty)
+      (true :: constant.take dirty.length) q c) = _
+  rw [gidneyForward_tCost,hcleanup]
+  simp only [List.length_take]
+  rw [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
+  omega
+
+/-- Little-endian modulus word used by the source inverse correction. -/
+def secp256k1ModulusBits : List Bool :=
+  (List.range 256).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977))
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
+/-- The modulus correction has the same Toffoli/T count as the reduction constant,
+but its denser bit pattern gives a different, explicitly counted CNOT budget. -/
+theorem secp256k1ModulusAdd_counts (q c r t : Wire) :
+    let ac := controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255)
+      secp256k1ModulusBits q c r t
+    gidneyToffoliCount ac = 764 ∧ gidneyCnotCount ac = 3765 ∧
+      ac.tCount = 5348 ∧ ac.measurementCount = 255 := by
+  have hb : secp256k1ModulusBits = true ::
+      (List.range' 1 255).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977)) := by decide
+  have htf := controlledGidneyAddConst_toffoli_exact 4 260 q c r t
+    (List.range' 5 255) (List.range' 261 254)
+    ((List.range' 1 255).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977))) (by simp) (by simp)
+  have ht := controlledGidneyAddConst_tCount_exact 4 260 q c r t
+    (List.range' 5 255) (List.range' 261 254)
+    ((List.range' 1 255).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977))) (by simp) (by simp)
+  have hm := controlledGidneyAddConst_measurementCount (List.range' 4 256) (List.range' 260 255)
+    secp256k1ModulusBits q c r t (by simp [secp256k1ModulusBits]) (by simp)
+  dsimp only
+  refine ⟨?_,?_,?_,?_⟩
+  · rw [hb]; exact htf
+  · have hroot := gidneyRoot_gateCount (fun g => match g with | .CX _ _ => 1 | _ => 0)
+      (fun k => 5 + 3 * k.toNat) (fun k => 1 + k.toNat)
+      (by intro w; rfl) (by intro w; rfl)
+      (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell])
+      (by intro q c a k; cases k <;> simp)
+      4 260 q c r t (List.range' 5 255) (List.range' 261 254) true
+      ((List.range' 1 255).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977)))
+      (by simp) (by simp) (by simp)
+    have hforward : gidneyForwardCost (fun k => 5 + 3 * k.toNat) (fun k => 1 + k.toNat)
+      ((List.range' 1 255).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977))) = 2016 := by decide
+    have hcleanup := (controlledConstCarryXor_counts 4 (List.range' 5 254) (List.range' 260 255) true
+      ((List.range' 1 254).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977))) q c (by simp) (by simp)).2.2.1
+    have hweight : constantBitWeight
+      ((List.range' 1 254).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977))) = 248 := by decide
+    rw [hb]
+    apply hroot.trans
+    rw [hforward]
+    change 8 + 2016 + eeaCnotCount (controlledConstCarryXor (4 :: List.range' 5 254)
+      (List.range' 260 255) (true :: (List.range' 1 254).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977))) q c) = 3765
+    rw [hcleanup,hweight]
+    rfl
+  · rw [hb]; exact ht
+  · simpa [hb] using hm
+
 /-- Production controlled constant adder, with 256 data bits, 255 arbitrary borrowed
 bits, and three initially clean carry/ancilla bits. -/
 def secp256k1GidneyAdd : Quantum.AdaptiveCircuit :=
@@ -1311,6 +1396,33 @@ theorem gidneyAddIdealState_correct (input : List Wire) (constant : List Bool) (
     have hm := congrArg (fun n => n % 2 ^ input.length) hv
     simpa [hconst,wireValues,Nat.add_mod,Nat.mod_eq_of_lt (by simpa [wireValues] using hlow)] using hm
   · exact fun w hw => gidneyWriteBits_frame input _ s w hw
+
+
+/-- Complementary controlled constants cancel on the complete state. This is the
+arithmetic inverse used by the measured modular subtraction circuit. -/
+theorem gidneyAddIdealState_complement (input : List Wire) (forward inverse : List Bool)
+    (q : Wire) (s : BasisState) (hf : input.length = forward.length)
+    (hi : input.length = inverse.length) (hnd : input.Nodup) (hq : q ∉ input)
+    (hsum : boolWordToNat forward + boolWordToNat inverse = 2 ^ input.length) :
+    gidneyAddIdealState input inverse q (gidneyAddIdealState input forward q s) = s := by
+  have hfirst := gidneyAddIdealState_correct input forward q s hf hnd
+  have hsecond := gidneyAddIdealState_correct input inverse q
+    (gidneyAddIdealState input forward q s) hi hnd
+  have hvalue : boolWordToNat (wireValues input
+      (gidneyAddIdealState input inverse q (gidneyAddIdealState input forward q s))) =
+      boolWordToNat (wireValues input s) := by
+    rw [hsecond.1,hfirst.1,hfirst.2 q hq]
+    have hsmall : boolWordToNat (wireValues input s) < 2 ^ input.length := by
+      simpa [wireValues] using boolWordToNat_lt_pow_two (wireValues input s)
+    cases hs : s q <;> simp only [hs,Bool.false_eq_true,↓reduceIte]
+    · simp [Nat.mod_eq_of_lt hsmall]
+    · rw [Nat.mod_add_mod,Nat.add_assoc,hsum,Nat.add_mod_right,Nat.mod_eq_of_lt hsmall]
+  have hwords := boolWordToNat_injective_of_length
+    (by simp [wireValues]) hvalue
+  funext w
+  by_cases hw : w ∈ input
+  · exact List.map_inj_left.mp hwords w hw
+  · exact (hsecond.2 w hw).trans (hfirst.2 w hw)
 
 
 set_option maxRecDepth 100000 in

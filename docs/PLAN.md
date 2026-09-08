@@ -689,6 +689,14 @@ Implement Figure 15: forward EEA; compute `y/x`; X-measure/reset old `Y`; revers
 Prove each branch equals `2^(-n/2)` times the intended map, independent of `x,y`, and prove the
 analogous in-place multiply.
 
+The first inverse-arithmetic prerequisite is implemented in `Arithmetic/ModularSub.lean`.
+The actual source subtraction stages undo modular addition on canonical inputs in every
+measurement branch, restoring the complete pre-addition state. Its same-circuit 256-bit
+certificate records 2,813 Toffolis, 7,350 CNOTs, 19,691 T gates, 511 resets and 517 wires.
+The correction adds the modulus rather than `2^256 - p`, so its CNOT count differs from
+forward addition. Halving, inverse Horner multiplication and the Figure-15 composition
+remain open; the Phase-6 reachable EEA readiness invariant is still an explicit boundary.
+
 **Gate:** all measured wires are reusable and `Γ(x)` plus arithmetic work are cleared on every
 branch.
 

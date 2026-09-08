@@ -898,6 +898,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledModularAdd_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.modularAddIdealState_correct
 #print axioms ShorECDLP.Paper2607_13816.controlledModularAdd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledCompareLT_involutive
+#print axioms ShorECDLP.Paper2607_13816.controlledSubCarry_HPFree
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ModulusAdd_counts
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddIdealState_complement
+#print axioms ShorECDLP.Paper2607_13816.modularAddIdealState_uncorrect
+#print axioms ShorECDLP.Paper2607_13816.controlledModularSub_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledModularSub_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.modularSubIdealState_after_add
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_after_add_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularAdd_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_wellFormed

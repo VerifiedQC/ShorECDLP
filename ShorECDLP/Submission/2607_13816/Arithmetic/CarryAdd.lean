@@ -487,6 +487,20 @@ private theorem adjoint_qubitCount (circuit : Circuit) :
   have hcard := congrArg Finset.card heq
   simpa [List.toFinset_card_of_nodup (List.nodup_dedup _)] using hcard
 
+/-- Reversing the binary carry adder introduces no phase or Hadamard gates. -/
+theorem controlledSubCarry_HPFree (bs as : List Wire) (q c f : Wire) :
+    HPFree (controlledSubCarry bs as q c f) := by
+  have h := controlledAddCarry_HPFree bs as q c f
+  change HPFree (controlledAddCarry bs as q c f).adjoint
+  generalize controlledAddCarry bs as q c f = circuit at *
+  induction circuit with
+  | nil => simp
+  | cons g circuit ih =>
+    have hp := (hpFree_cons g circuit).mp h
+    rw [circuit_adjoint_cons,hpFree_append]
+    refine ⟨ih hp.2,?_⟩
+    cases g <;> simp_all [Gate.adjoint]
+
 /-- Same-circuit inverse certificate: the literal reverse undoes the forward execution,
 with the same exact gate and distinct-wire counts. -/
 theorem controlledSubCarry_correct_resources (bs as : List Wire) (q c f : Wire)

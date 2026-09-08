@@ -377,6 +377,33 @@ theorem controlledCompareLT_correct (left right : List Wire) (control carry flag
       (by intro h; exact hq (by simp [h]))]
     rw [compareCompute_probe _ _ _ s hlen hlayout hc]
 
+/-- Repeating the comparator restores the full state, including an arbitrary flag. -/
+theorem controlledCompareLT_involutive (left right : List Wire) (q c f : Wire)
+    (s : BasisState) (hlen : left.length = right.length)
+    (hnd : (q :: c :: f :: left ++ right).Nodup) (hc : s c = false) :
+    run (controlledCompareLT left right q c f)
+      (run (controlledCompareLT left right q c f) s) = s := by
+  have hq := (List.nodup_cons.mp hnd).1
+  have hcf := (List.nodup_cons.mp (List.nodup_cons.mp hnd).2).1
+  have hf := (List.nodup_cons.mp (List.nodup_cons.mp (List.nodup_cons.mp hnd).2).2).1
+  have hqf : q ≠ f := by intro h; exact hq (by simp [h])
+  have hcf' : c ≠ f := by intro h; exact hcf (by simp [h])
+  have hword (ws : List Wire) (hw : ∀ w ∈ ws, w ≠ f) (b : Bool) :
+      wireValues ws (upd s f b) = wireValues ws s := by
+    apply List.map_congr_left
+    intro w hm
+    simp [upd,hw w hm]
+  have hl : ∀ w ∈ left, w ≠ f := by
+    intro w hw he; subst w; exact hf (List.mem_append_left _ hw)
+  have hr : ∀ w ∈ right, w ≠ f := by
+    intro w hw he; subst w; exact hf (List.mem_append_right _ hw)
+  rw [controlledCompareLT_correct left right q c f s hlen hnd hc]
+  rw [controlledCompareLT_correct left right q c f _ hlen hnd (by simp [upd,hcf',hc])]
+  rw [hword left hl,hword right hr]
+  funext w
+  by_cases hw : w = f <;>
+    simp [upd,hw,hqf,Bool.xor_assoc]
+
 private theorem majorityPass_HPFree (bs as : List Wire) (c : Wire) :
     HPFree (majorityPass bs as c) := by
   induction bs generalizing as c with
