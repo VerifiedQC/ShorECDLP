@@ -27,6 +27,31 @@ def gidneyCompareGE (input dirty : List Wire) (threshold : Nat) (carry spare anc
   let q := gidneyCompareVirtualControl input dirty carry spare ancilla flag
   constantControlProgram q (controlledGidneyCompareGE input dirty threshold q carry spare ancilla flag)
 
+
+/-- Every nontrivial unsigned GE threshold uses `3n - 1` Toffolis, with no
+allocated external control. This count is independent of the threshold bits. -/
+theorem gidneyCompareGE_toffoli_exact (a : Wire) (input dirty : List Wire) (p : Nat)
+    (c r t f : Wire) (hd : (a :: input).length = dirty.length)
+    (hp0 : 0 < p) (hp : p < 2 ^ (a :: input).length) :
+    gidneyToffoliCount (gidneyCompareGE (a :: input) dirty p c r t f) =
+      3 * (a :: input).length - 1 := by
+  cases dirty with
+  | nil => simp at hd
+  | cons d ds =>
+    let q := gidneyCompareVirtualControl (a :: input) (d :: ds) c r t f
+    change gidneyToffoliCount (constantControlProgram q
+      (controlledGidneyCompareGE (a :: input) (d :: ds) p q c r t f)) = _
+    rw [gidneyToffoliCount_constantControl,controlledGidneyCompareGE,
+      if_neg (by omega : p ≠ 0),if_neg (by omega : ¬ 2 ^ (a :: input).length ≤ p)]
+    generalize he : (List.range (a :: input).length).map (Nat.testBit (2 ^ (a :: input).length - p)) = bits
+    have hl : bits.length = (a :: input).length := by rw [← he,List.length_map,List.length_range]
+    cases bits with
+    | nil => simp at hl
+    | cons k ks =>
+      have hm := controlledGidneyCompareCarry_metrics a d q c r t f input ds k ks
+        (by simpa using hl.symm) (by simpa using hd)
+      exact hm.1.trans (by simp only [List.length_cons]; omega)
+
 /-- Every branch toggles only the result flag; all borrowed and clean workspace
 is restored and the amplitude is positive and independent of the input word. -/
 theorem gidneyCompareGE_branch_correct (input dirty : List Wire) (threshold : Nat)
