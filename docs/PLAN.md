@@ -652,8 +652,7 @@ doubling and restores all other wires, including arbitrary borrowed data. Its sa
 certificate proves total probability one, well-formedness, 1,531 Toffolis, 3,649 CNOTs,
 10,717 T gates, 511 measurement/resets and exactly 516 physical wires. The aggregate counts
 are derived from the modular adder's same shared comparison/correction circuits, replacing
-the binary-add/comparison endpoints with the doubling prefix/final CNOT. Phase 7 remains
-open for squaring. `Arithmetic/HornerMul.lean` composes the literal MSB-first schedule,
+the binary-add/comparison endpoints with the doubling prefix/final CNOT. The fixed squaring circuit is now proved as described below. `Arithmetic/HornerMul.lean` composes the literal MSB-first schedule,
 including the source’s carry/flag exchange in doubling. Its same-circuit certificate proves
 the modular product from a zero output, restoration of all other wires, positive
 input-independent branch amplitudes and total probability one. The fixed multiplier uses
@@ -666,9 +665,14 @@ Modules:
 - `Submission/2607_13816/Arithmetic/HornerMul.lean`
 - `Submission/2607_13816/Arithmetic/Square.lean`
 
-Implement the MSB-first Horner schedule with `n` controlled modular additions and `n - 1`
-doublings. Prove arithmetic, cleanup, and locality, then derive the `17 n² + O(n)` leading Toffoli
-term from lower-level formulas. Naive arithmetic is not imported.
+`Arithmetic/Square.lean` copies each selected input bit to a clean control, performs the
+modular addition, and un-copies it after the borrowed input is restored. Its same-circuit
+certificate proves the modular square, complete frame restoration and normalized branches,
+with 1,110,533 Toffolis, 2,192,831 CNOTs, 7,773,731 T gates, 261,121 measurement/resets
+and exactly 517 wires. Both circuits use `n` additions and `n - 1` doublings; their costs
+are derived symbolically over the loop length from the fixed 256-bit component counts.
+The generic-width `17 n² + O(n)` Toffoli derivation remains the Phase 7 boundary.
+Naive arithmetic is not imported.
 
 **Gate:** exact 256-bit vectors and symbolic bounds are proved for multiplication and squaring.
 
