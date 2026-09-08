@@ -1280,7 +1280,13 @@ theorem gidneyAddIdealState_correct (input : List Wire) (constant : List Bool) (
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
 private theorem gidneyProduction_layout :
-    ([0,1,2,3] ++ List.range' 4 256 ++ List.range' 260 255).Nodup := by decide
+    ([0,1,2,3] ++ List.range' 4 256 ++ List.range' 260 255).Nodup := by
+  simp only [List.nodup_append]
+  refine ⟨⟨by decide,List.nodup_range',?_⟩,List.nodup_range',?_⟩
+  all_goals
+    intro a ha b hb he
+    simp at ha hb
+    omega
 
 set_option maxRecDepth 100000 in
 private theorem gidneyProduction_qubits : secp256k1GidneyAdd.qubitCount = 515 := by
