@@ -1113,3 +1113,18 @@ adder counts to the wrapper's reordered data and borrowed registers without chan
 The 580 figure is the proved capacity bound, not an exact used-wire or live-allocation claim.
 The emitted prefix uses 550 distinct wires; proving the full wrapper, reachable EEA invariant
 and eventual live-space/resource bounds remains separate work.
+
+
+### Initial EEA numeric encoding and readiness
+
+`EEA/InitialEncoding.lean` connects the concrete preprocessing prefix to the numeric
+`paperInitial` divisor, iteration-parity bit and divisor-length metadata. Its generic
+first-set-bit theorem identifies the big-endian scan with `Nat.size`, including zero;
+the length initializer retains the all-ones sentinel on zero and stores size minus one
+otherwise. The production prefix also establishes `IndexedStepReady` and
+`IndexedStepEpochEncoded` for the first step, using the proved clean auxiliary bank
+and all-ones quotient-length word.
+
+This is an initial-state bridge. Complete packed-field encoding, preservation and
+routing for all 1,620 reachable steps, the full EEA wrapper and aggregate resources
+remain open. Circuit definitions and their resource certificates are unchanged.
