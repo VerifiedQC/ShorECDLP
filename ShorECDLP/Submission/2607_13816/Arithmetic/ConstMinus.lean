@@ -214,7 +214,7 @@ private theorem constMinusProduction_layout :
     omega
 
 set_option maxRecDepth 10000 in
-private theorem constMinusProduction_counts :
+theorem secp256k1ConstMinus_counts :
     gidneyToffoliCount secp256k1ConstMinus = 1528 ∧
     gidneyCnotCount secp256k1ConstMinus = 5305 ∧
     secp256k1ConstMinus.tCount = 10696 ∧
@@ -250,7 +250,7 @@ private theorem constMinusProduction_counts :
   decide
 
 set_option maxRecDepth 10000 in
-private theorem constMinusProduction_wires (w : Wire) :
+theorem secp256k1ConstMinus_wires (w : Wire) :
     w ∈ secp256k1ConstMinus.wires ↔ w ∈ List.range' 0 515 := by
   have hinc := controlledGidneyAddConst_wires 4 260 0 1 2 3
     (List.range' 5 255) (List.range' 261 254) ((List.range' 1 255).map (Nat.testBit 1))
@@ -282,7 +282,7 @@ private theorem constMinusProduction_wires (w : Wire) :
 private theorem constMinusProduction_qubits : secp256k1ConstMinus.qubitCount = 515 := by
   have heq : secp256k1ConstMinus.wires.dedup.toFinset = (List.range' 0 515).toFinset := by
     ext w
-    simpa only [List.mem_toFinset,List.mem_dedup] using constMinusProduction_wires w
+    simpa only [List.mem_toFinset,List.mem_dedup] using secp256k1ConstMinus_wires w
   have hc := congrArg Finset.card heq
   simpa only [List.toFinset_card_of_nodup (List.nodup_dedup _),
     List.toFinset_card_of_nodup (List.nodup_range'),List.length_range'] using hc
@@ -320,8 +320,8 @@ theorem secp256k1ConstMinus_correct_resources (s : BasisState)
     (2 ^ 256 - 2 ^ 32 - 977) s (by simp) (by simp [secp256k1ModulusBits]) hg.1
     (hg.2 0 (by simp)) (by decide) hm hx
   refine ⟨hi.1,hi.2,?_,fun ψ => AdaptiveCircuit.run_preservesBornMass _ hw ψ,hw,
-    constMinusProduction_counts.1,constMinusProduction_counts.2.1,
-    constMinusProduction_counts.2.2.1,constMinusProduction_counts.2.2.2,
+    secp256k1ConstMinus_counts.1,secp256k1ConstMinus_counts.2.1,
+    secp256k1ConstMinus_counts.2.2.1,secp256k1ConstMinus_counts.2.2.2,
     constMinusProduction_qubits⟩
   intro b hb
   exact controlledConstMinus_branch_correct (List.range' 4 256) (List.range' 260 255)

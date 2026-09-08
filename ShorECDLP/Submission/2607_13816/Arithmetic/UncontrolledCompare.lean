@@ -52,6 +52,56 @@ theorem gidneyCompareGE_toffoli_exact (a : Wire) (input dirty : List Wire) (p : 
         (by simpa using hl.symm) (by simpa using hd)
       exact hm.1.trans (by simp only [List.length_cons]; omega)
 
+/-- Counts and complete physical support of every nontrivial constant threshold,
+including even thresholds used by EEA input centering. -/
+theorem gidneyCompareGE_metrics (a : Wire) (input dirty : List Wire) (p : Nat)
+    (c r t f : Wire) (hd : (a :: input).length = dirty.length)
+    (hp0 : 0 < p) (hp : p < 2 ^ (a :: input).length) :
+    let ac := gidneyCompareGE (a :: input) dirty p c r t f
+    gidneyToffoliCount ac = 3 * (a :: input).length - 1 ∧
+    gidneyCnotCount ac = 6 * (a :: input).length + 1 ∧
+    ac.tCount = 7 * (3 * (a :: input).length - 1) ∧
+    ac.measurementCount = (a :: input).length ∧
+    (∀ w, w ∈ ac.wires ↔ w ∈ [c,r,t,f] ++ (a :: input) ++ dirty) := by
+  cases dirty with
+  | nil => simp at hd
+  | cons d ds =>
+    let q := gidneyCompareVirtualControl (a :: input) (d :: ds) c r t f
+    have hq : q ∉ [c,r,t,f] ++ (a :: input) ++ d :: ds :=
+      gidneyCompareVirtualControl_fresh _ _ _ _ _ _
+    dsimp only
+    unfold gidneyCompareGE
+    dsimp only
+    unfold controlledGidneyCompareGE
+    rw [if_neg (by omega : p ≠ 0),if_neg (by omega : ¬ 2 ^ (a :: input).length ≤ p)]
+    generalize he : (List.range (a :: input).length).map (Nat.testBit (2 ^ (a :: input).length - p)) = bits
+    have hl : bits.length = (a :: input).length := by rw [← he,List.length_map,List.length_range]
+    cases bits with
+    | nil => simp at hl
+    | cons k ks =>
+      have hk : input.length = ks.length := by simpa using hl.symm
+      have hds : input.length = ds.length := by simpa using hd
+      have h := controlledGidneyCompareCarry_metrics a d q c r t f input ds k ks hk hds
+      have hcx := controlledGidneyCompareCarry_uncontrolled_cnot a d q c r t f input ds k ks hk hds hq
+      dsimp only at h
+      refine ⟨?_,hcx,?_,?_,?_⟩
+      · rw [gidneyToffoliCount_constantControl,h.1]
+        simp only [List.length_cons]; omega
+      · rw [constantControlProgram_tCount,h.2.1]
+        congr 1
+      · rw [constantControlProgram_measurements,h.2.2]
+        rfl
+      · intro w
+        have hsafe := controlledGidneyCompareCarry_controlSafe (a :: input) (d :: ds) (k :: ks) q c r t f hq
+        rw [constantControlProgram_wires q _ hsafe]
+        by_cases hw : w = q
+        · subst w
+          simpa only [ne_eq,not_true_eq_false,and_false,false_iff] using hq
+        · rw [controlledGidneyCompareCarry_wires_of_ne_control a d q c r t f input ds k ks hk hds w hw]
+          rw [show [q,c,r,t,f] ++ (a :: input) ++ d :: ds =
+            q :: ([c,r,t,f] ++ (a :: input) ++ d :: ds) from rfl,List.mem_cons]
+          exact ⟨fun h => h.1.resolve_left hw,fun h => ⟨Or.inr h,hw⟩⟩
+
 /-- Every branch toggles only the result flag; all borrowed and clean workspace
 is restored and the amplitude is positive and independent of the input word. -/
 theorem gidneyCompareGE_branch_correct (input dirty : List Wire) (threshold : Nat)
@@ -142,7 +192,13 @@ private theorem uncontrolledProduction_core : secp256k1UncontrolledGidneyCompare
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
 private theorem uncontrolledProduction_layout :
-    ([0,1,2,3] ++ List.range' 4 256 ++ List.range' 260 256).Nodup := by decide
+    ([0,1,2,3] ++ List.range' 4 256 ++ List.range' 260 256).Nodup := by
+  simp only [List.nodup_append]
+  refine ⟨⟨by decide,List.nodup_range',?_⟩,List.nodup_range',?_⟩
+  all_goals
+    intro a ha b hb he
+    simp at ha hb
+    omega
 
 private theorem uncontrolledProduction_fresh :
     uncontrolledProductionQ ∉ [0,1,2,3] ++ List.range' 4 256 ++ List.range' 260 256 :=

@@ -909,6 +909,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledConstMinus_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.controlledConstMinus_twice
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ConstMinus_correct_resources
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_wires_of_ne_control
+#print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_metrics
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ConstMinus_counts
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ConstMinus_wires
+#print axioms ShorECDLP.Paper2607_13816.eeaCenterIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.eeaCenter_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.eeaUncenter_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.eeaUncenterIdealState_after_center
+#print axioms ShorECDLP.Paper2607_13816.eeaCenter_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.eeaUncenter_after_center
+#print axioms ShorECDLP.Paper2607_13816.eeaCenterIdealState_half_width
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEACenter_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_counts
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularHalve_counts
 #print axioms ShorECDLP.Paper2607_13816.modularDoubleIdealState_uncorrect
@@ -1027,8 +1039,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1003 ]]; then
-  printf 'expected 1003 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1015 ]]; then
+  printf 'expected 1015 #print axioms results\n' >&2
   exit 1
 fi
 
