@@ -3695,4 +3695,25 @@ theorem postShiftUnitary_idle (registers : ShiftRegisters) (state : BasisState)
     hboth, hupdate, decrementWordState, shiftIdle_decrement_false]
 
 
+/-- When phase one is set, the pre-shift is disabled and restores the entire state. -/
+theorem preShiftUnitary_idle (registers : ShiftRegisters) (state : BasisState)
+    (hlayout : ShiftLayout registers) (hready : ShiftReady registers state)
+    (hphase : state registers.phase1 = true) :
+    run (preShiftUnitary registers) state = state := by
+  have hboth : state registers.both = false :=
+    hready registers.both (by simp [ShiftRegisters.scratch])
+  have hzero : state registers.phase1IsZero = false :=
+    hready registers.phase1IsZero (by simp [ShiftRegisters.scratch])
+  have hupdateB : state[registers.both ↦ false] = state := by
+    rw [← hboth]
+    exact shiftIdle_update_read state registers.both
+  have hupdateZ : state[registers.phase1IsZero ↦ false] = state := by
+    rw [← hzero]
+    exact shiftIdle_update_read state registers.phase1IsZero
+  rw [run_preShiftUnitary registers state hlayout hready]
+  simp only [preShiftState, hphase, Bool.not_true, Bool.xor_false, hzero, hupdateZ,
+    shiftPayloadState, rotateLeftWordState, Bool.false_eq_true, ↓reduceIte,
+    shiftIdle_write_read, incrementWordState, shiftIdle_increment_false, Bool.false_and,
+    hboth, hupdateB, decrementWordState, shiftIdle_decrement_false]
+
 end ShorECDLP.Paper2607_13816
