@@ -210,7 +210,8 @@ def modularDouble (acc dirty : List Wire) (correction : List Bool) (p : Nat) (c 
         ((controlledGidneyAddConst (a :: rest) (dirty.take rest.length) correction f c r t).seq
           (.unitary [.CX a f] .done)))
 
-private theorem doubling_layout (acc dirty : List Wire) (c r t f : Wire)
+/-- Shared layouts for measured doubling and halving. -/
+theorem doubling_layout (acc dirty : List Wire) (c r t f : Wire)
     (hnd : ([c,r,t,f] ++ acc ++ dirty).Nodup) :
     (f :: acc).Nodup ∧ ([f,c,r,t] ++ acc ++ dirty).Nodup := by
   have hp : ([f,c,r,t] ++ acc ++ dirty).Perm ([c,r,t,f] ++ acc ++ dirty) := by
@@ -298,6 +299,30 @@ private theorem doubling_corrected (a f : Wire) (rest : List Wire) (correction :
   refine ⟨hvalue,?_⟩
   change upd mid f (Bool.xor (mid f) (mid a)) = upd mid f (s f)
   rw [hmidflag,hbit,hvalue,modularDoubling_cleanup p x hodd hx,hf,Bool.xor_self]
+
+/-- Undoing the parity CNOT and adding the modulus restores the flagged shift
+state. This is the first half of the source halving circuit. -/
+theorem modularDoubleIdealState_uncorrect (a f : Wire) (rest : List Wire)
+    (correction modulus : List Bool) (p : Nat) (s : BasisState)
+    (hnd : (f :: a :: rest).Nodup) (hf : s f = false)
+    (hk : (a :: rest).length = correction.length) (hm : (a :: rest).length = modulus.length)
+    (hp : p < 2 ^ (a :: rest).length)
+    (hx : boolWordToNat (wireValues (a :: rest) s) < p) (hodd : p % 2 = 1)
+    (hconstant : boolWordToNat correction = 2 ^ (a :: rest).length - p)
+    (hmodulus : boolWordToNat modulus = p) :
+    gidneyAddIdealState (a :: rest) modulus f
+      (run [.CX a f] (modularDoubleIdealState (a :: rest) correction p f s)) =
+      let low := run (doublingShift (a :: rest) f) s
+      upd low f (Bool.xor (low f) (decide (p ≤ boolWordToNat (wireValues (a :: rest) low)))) := by
+  have hn := (List.nodup_cons.mp hnd).1
+  have hfa : f ≠ a := by intro he; exact hn (by simp [he])
+  have hlast := (doubling_corrected a f rest correction p s hnd hf hk hp hx hodd hconstant).2
+  have hinv (z : BasisState) : run ([.CX a f] : Circuit) (run [.CX a f] z) = z := by
+    funext w
+    by_cases hw : w = f <;> simp [run,applyGate,upd,hw,Ne.symm hfa,Bool.xor_assoc]
+  rw [← hlast,hinv]
+  exact gidneyAddIdealState_complement (a :: rest) correction modulus f _ hk hm
+    (List.nodup_cons.mp hnd).2 hn (by rw [hconstant,hmodulus]; omega)
 
 /-- The ideal state is numeric modular doubling and preserves every other wire. -/
 theorem modularDoubleIdealState_correct (a f : Wire) (rest : List Wire) (correction : List Bool)
