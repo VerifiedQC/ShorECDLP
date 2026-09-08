@@ -3647,4 +3647,52 @@ example (control w₀ w₁ w₂ w₃ w₄ w₅ : Wire) :
   simp [controlledRotateRightTwo, rightTwoCycles, evenPositions,
     oddPositions, controlledCycle, List.append_assoc]
 
+
+private theorem shiftIdle_write_read (wires : List Wire) (state : BasisState) :
+    writeWireValues wires (wireValues wires state) state = state := by
+  induction wires with
+  | nil => rfl
+  | cons wire wires ih =>
+    simp only [wireValues, List.map_cons, writeWireValues] at ih ⊢
+    rw [ih]
+    funext w
+    by_cases hw : w = wire
+    · subst w; simp [upd]
+    · simp [upd, hw]
+
+private theorem shiftIdle_increment_false (bits : List Bool) : incrementBits false bits = bits := by
+  induction bits with
+  | nil => rfl
+  | cons bit bits ih => simp [incrementBits, ih]
+
+private theorem shiftIdle_decrement_false (bits : List Bool) : decrementBits false bits = bits := by
+  induction bits with
+  | nil => rfl
+  | cons bit bits ih => simp [decrementBits, ih]
+
+
+private theorem shiftIdle_update_read (state : BasisState) (wire : Wire) :
+    state[wire ↦ state wire] = state := by
+  funext w
+  by_cases hw : w = wire
+  · subst w; simp [upd]
+  · simp [upd, hw]
+
+/-- A disabled post-shift leaves the complete state unchanged, including clean borrowed scratch. -/
+theorem postShiftUnitary_idle (registers : ShiftRegisters) (state : BasisState)
+    (hlayout : ShiftLayout registers) (hready : ShiftReady registers state)
+    (hphase : state registers.phase1 = false) :
+    run (postShiftUnitary registers) state = state := by
+  have hboth : state registers.both = false :=
+    hready registers.both (by simp [ShiftRegisters.scratch])
+  have hupdate : state[registers.both ↦ false] = state := by
+    rw [← hboth]
+    exact shiftIdle_update_read state registers.both
+  rw [run_postShiftUnitary registers state hlayout hready]
+  simp only [postShiftState, hphase, shiftPayloadState, rotateLeftWordState,
+    Bool.false_eq_true, ↓reduceIte, shiftIdle_write_read, incrementWordState,
+    shiftIdle_increment_false, Bool.false_and, Bool.xor_false,
+    hboth, hupdate, decrementWordState, shiftIdle_decrement_false]
+
+
 end ShorECDLP.Paper2607_13816
