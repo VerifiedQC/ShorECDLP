@@ -976,6 +976,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedStepRoutesValid_of_windows
 #print axioms ShorECDLP.Paper2607_13816.secp256k1IndexedStepRoutesValid
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ScheduleInvariant_of_epochTrace
+#print axioms ShorECDLP.Paper2607_13816.indexedStepRemainderPrefix_correct
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_counts
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularHalve_counts
 #print axioms ShorECDLP.Paper2607_13816.modularDoubleIdealState_uncorrect
@@ -1094,8 +1095,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1070 ]]; then
-  printf 'expected 1070 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1071 ]]; then
+  printf 'expected 1071 #print axioms results\n' >&2
   exit 1
 fi
 

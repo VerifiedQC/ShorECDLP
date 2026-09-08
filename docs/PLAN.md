@@ -1158,3 +1158,16 @@ along the full direct trace from initial scratch readiness plus the borrowed-epo
 condition at every prefix. Proving that remaining condition for the initialized
 execution, and proving the arithmetic interpretation and terminal result, remain
 open. No circuit definitions or costs changed.
+
+
+### Borrowed-epoch restoration through the remainder prefix
+
+`indexedStepRemainderPrefix_correct` proves that the actual A–C circuit is a literal
+prefix of `indexedStepUnitary` and preserves both scratch readiness and epoch
+encoding. A spills the borrowed epoch, B uses and restores the clean auxiliary
+bank, and C restores the epoch/quotient pair. The C proof works for arbitrary
+borrowed-clean states and obtains the terminal condition by frame preservation.
+
+This closes the remainder-prefix preservation step. It does not cover D–H or prove
+the epoch premise at all schedule prefixes; later phase/length consistency and full
+arithmetic refinement remain open. Existing circuit definitions and costs are unchanged.
