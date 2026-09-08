@@ -402,6 +402,24 @@ theorem lengthInitializeScan_counts (targets : List Wire) (flag : Wire)
       simp [lengthInitializeScan, eeaToffoliCount_append, eeaCnotCount_append, tCount_append,
         h.1, h.2.1, h.2.2, ht.1, ht.2.1, ht.2.2]
 
+/-- Exact initializer costs depend on predicate widths and target bits, not labels. -/
+theorem lengthInitialize_counts (input targets : List Wire) (flag : Wire)
+    (scratches : List Wire) (known : Nat) (henough : input.length - 2 ≤ scratches.length) :
+    let cases := lengthInitializeCases input targets.length
+    eeaToffoliCount (lengthInitialize input targets flag scratches known) =
+        (cases.map (fun row => 2 * mcxVChainToffoliCost row.1.length)).sum ∧
+    eeaCnotCount (lengthInitialize input targets flag scratches known) =
+        (cases.map (fun row => 2 * mcxVChainCnotCost row.1.length + lowBitCount targets.length row.2.2)).sum ∧
+    ShorECDLP.tCount (lengthInitialize input targets flag scratches known) =
+        (cases.map (fun row => 14 * mcxVChainToffoliCost row.1.length)).sum := by
+  apply lengthInitializeScan_counts
+  intro row hr
+  simp only [lengthInitializeCases, List.mem_append, List.mem_map, List.mem_singleton] at hr
+  rcases hr with ⟨first, _, rfl⟩ | rfl
+  · simp only [List.length_take]
+    omega
+  · exact henough
+
 theorem lengthInitializeScan_HPFree (targets : List Wire) (flag : Wire)
     (scratches : List Wire) (known : Nat) (cases : List (List Wire × Nat × Nat)) :
     HPFree (lengthInitializeScan targets flag scratches known cases) := by

@@ -378,5 +378,27 @@ theorem eeaPreprocess_wellFormed : eeaPreprocess.WellFormed := by
     560 561 562 2 (by simp) (by simp) (by simp) preprocessCenter_layout).1
   exact ⟨workRegistersPrepare_resources.1, hc.seq ⟨hl, trivial⟩⟩
 
+/-- Length setup reuses only the existing 580-role allocation. -/
+theorem eeaLengthSetup_usesOnly : PaperCircuitUsesOnly (List.range 580) eeaLengthSetup := by
+  have hq : PaperCircuitUsesOnly (List.range 580) (xorConstant (List.range' 531 9) 511) :=
+    (xorConstant_usesOnly (List.range' 531 9) 511).mono (by
+    intro w hw; simp at hw ⊢; omega)
+  have hs : PaperCircuitUsesOnly (List.range 580) (xorConstant (List.range' 540 9) 511) :=
+    (xorConstant_usesOnly (List.range' 540 9) 511).mono (by
+    intro w hw; simp at hw ⊢; omega)
+  have hl : PaperCircuitUsesOnly (List.range 580)
+      (lengthInitialize (List.range' 266 256) (List.range' 549 9) 558
+        ((List.range' 7 256).reverse.take 254) (2 ^ 256 - 2 ^ 32 - 977)) :=
+    (lengthInitialize_usesOnly _ _ _ _ _ preprocessLength_layout).mono (by
+      intro w hw
+      simp only [List.mem_append, List.mem_cons] at hw
+      rcases hw with (hw | hw) | hw | hw
+      · simp at hw ⊢; omega
+      · simp at hw ⊢; omega
+      · subst w; decide
+      · have h := (preprocessScratch_bounds w hw).2
+        exact List.mem_range.mpr (Nat.lt_trans h (by decide)))
+  simpa only [eeaLengthSetup] using (hq.append hs).append hl
+
 end
 end ShorECDLP.Paper2607_13816

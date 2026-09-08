@@ -1005,6 +1005,42 @@ theorem controlledGidneyAddConst_toffoli_exact (a d q c r t : Wire)
   rw [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
   omega
 
+private theorem gidneyRoot_cnot (a d q c r t : Wire) (input dirty : List Wire)
+    (constant : List Bool) (hk : input.length = constant.length)
+    (hd : input.length = dirty.length + 1) :
+    gidneyCnotCount (controlledGidneyAddConst (a :: input) (d :: dirty) (true :: constant) q c r t) =
+      8 + gidneyForwardCost (fun k => 5 + 3 * k.toNat) (fun k => 1 + k.toNat) constant +
+        (7 * constantBitWeight (constant.take dirty.length) + 5) := by
+  have hroot := gidneyRoot_gateCount (fun g => match g with | .CX _ _ => 1 | _ => 0)
+    (fun k => 5 + 3 * k.toNat) (fun k => 1 + k.toNat)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell])
+    (by intro q c a k; cases k <;> simp) a d q c r t input dirty true constant hk hd (by simp)
+  have hki : (input.take dirty.length).length = (constant.take dirty.length).length := by simp [hk]
+  have hdi : (a :: input.take dirty.length).length = (d :: dirty).length := by
+    simp [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
+  have hcleanup := (controlledConstCarryXor_counts a (input.take dirty.length) (d :: dirty) true
+    (constant.take dirty.length) q c hki hdi).2.2.1
+  apply hroot.trans
+  simp only [List.length_cons, List.take_succ_cons]
+  change 8 + gidneyForwardCost _ _ constant +
+    eeaCnotCount (controlledConstCarryXor (a :: input.take dirty.length) (d :: dirty)
+      (true :: constant.take dirty.length) q c) = _
+  rw [hcleanup]
+  rfl
+
+/-- Reusing the same odd constant and register widths preserves the exact CX
+count, independently of physical labels and the ordering of the borrowed wires. -/
+theorem controlledGidneyAddConst_cnot_congr (a d q c r t a' d' q' c' r' t' : Wire)
+    (input dirty input' dirty' : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1)
+    (hk' : input'.length = constant.length) (hd' : input'.length = dirty'.length + 1) :
+    gidneyCnotCount (controlledGidneyAddConst (a :: input) (d :: dirty) (true :: constant) q c r t) =
+      gidneyCnotCount (controlledGidneyAddConst (a' :: input') (d' :: dirty') (true :: constant) q' c' r' t') := by
+  rw [gidneyRoot_cnot a d q c r t input dirty constant hk hd,
+    gidneyRoot_cnot a' d' q' c' r' t' input' dirty' constant hk' hd',
+    show dirty.length = dirty'.length by omega]
+
 private theorem gidneyForward_tCost (constant : List Bool) :
     gidneyForwardCost (fun _ => 7) (fun _ => 0) constant = 7 * (constant.length - 1) := by
   induction constant with
