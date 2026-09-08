@@ -1009,8 +1009,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 975 ]]; then
-  printf 'expected 975 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 985 ]]; then
+  printf 'expected 985 #print axioms results\n' >&2
   exit 1
 fi
 
