@@ -10655,6 +10655,248 @@ theorem indexedStepUnitary_terminal_correct
   rw [heq]
   exact hprefix.2
 
+private theorem terminal_rControl_idle (conditions : List Wire) (value : Nat)
+    (control : Wire) (lengthRP : List Wire) (zeroWire : Wire) (scratch : List Wire)
+    (state : BasisState) (hlayout : RControlNonterminalLayout conditions control lengthRP zeroWire scratch)
+    (hrp : wireAnd lengthRP state = true) :
+    rControlState conditions value control lengthRP zeroWire state = state := by
+  have hn : (conditions ++ [zeroWire]).Nodup :=
+    (List.nodup_append.mp hlayout.conditionLayout.2).1
+  have hzeroWire : zeroWire ∉ conditions := by
+    intro hm
+    exact (List.nodup_append.mp hn).2.2 zeroWire hm zeroWire (by simp) rfl
+  rw [rControlState, rControlNonterminalPredicate_eq _ _ _ _ _ hzeroWire]
+  simp only [hrp, Bool.not_true, Bool.and_false, Bool.xor_false, endIdle_update_read]
+
+private theorem terminal_restoreControl_idle (registers : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hrp : wireAnd registers.lengthRPrime state = true) :
+    remainderRestoreControlState registers state = state := by
+  have hts : registers.terminal ∈ registers.sourceScratch := by rw [← hlayout.scratch_view]; simp
+  have hta := hlayout.sourceScratch_mem_aux hts
+  have hmarked : wireAnd registers.lengthRPrime
+      (andXorWireState registers.phase2 registers.sign registers.terminal state) = true := by
+    rw [← hrp]
+    apply wireAnd_congr
+    intro wire hw
+    exact andXorWireState_preserves _ _ _ _ (Ne.symm
+      (hlayout.aux_not_payload hta (by simp [indexedStepPayload, hw])))
+  have hp := hlayout.remainderRestoreCCX
+  simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false, not_or] at hp
+  rw [remainderRestoreControlState,
+    terminal_rControl_idle _ 0 _ _ _ _ _ hlayout.remainderRestore hmarked]
+  exact endIdle_and_twice _ _ _ state hp.1.2 hp.2.1
+
+private theorem terminal_blockB_idle (registers : IndexedStepRegisters) (n T : Nat)
+    (window : ActiveWindow) (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hwindow : window = (certifiedActiveWindows n T).remainder)
+    (hready : IndexedStepBorrowedReady registers state)
+    (hrp : wireAnd registers.lengthRPrime state = true) :
+    blockBForwardState registers n window state = state := by
+  have hc : state registers.control = false := hready _ hlayout.control_mem_aux
+  have hlocal : IntervalReady (registers.remainder window) state := by
+    intro wire hw
+    exact hready wire (hlayout.remainder_scratch_sub_aux window wire hw)
+  have hinterval : IntervalLayout (registers.remainder window) window.start window.stop .work1 := by
+    subst window
+    exact hlayout.remainder
+  have hi (mode : RippleMode) (signUpdate : Bool) :
+      intervalAddSubState (registers.remainder window) n window.start window.stop mode signUpdate .work1 state = state := by
+    rw [← run_intervalAddSubUnitary_state (registers.remainder window) n window.start window.stop
+      mode signUpdate .work1 state hinterval hlocal]
+    exact intervalAddSubUnitary_idle (registers.remainder window) n window.start window.stop
+      mode signUpdate .work1 state hinterval hlocal hc
+  have hsub := terminal_rControl_idle _ 0 _ _ _ _ state hlayout.remainderSub hrp
+  have hphase := terminal_rControl_idle _ 2 _ _ _ _ state hlayout.remainderPhase2 hrp
+  have hrestore := terminal_restoreControl_idle registers n T state hlayout hrp
+  have hx := terminal_xor_idle registers.control registers.sign state hc
+  simp only [blockBForwardState, blockB1ForwardState, hsub, hi, blockB2State, hphase, hx,
+    blockB3ForwardState, hrestore]
+
+private theorem terminal_padding_condition_frame (registers : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    {wire : Wire} (hw : wire ∈ terminalConditionWires registers) :
+    terminalPaddingForwardState registers.terminalPadding state wire = state wire := by
+  simp only [terminalConditionWires, List.mem_cons] at hw
+  rcases hw with rfl | hw
+  · exact terminalPaddingForwardState_preserves _ _ hlayout.phase1_not_work2
+      hlayout.phase1_not_lengthS hlayout.phase1_ne_shiftEpoch
+  · exact terminalPaddingForwardState_preserves _ _ (hlayout.lengthRPrime_not_work2 hw)
+      (hlayout.lengthRPrime_not_lengthS hw) (hlayout.lengthRPrime_ne_shiftEpoch hw)
+
+private theorem terminal_blockA_padding (registers : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state) (hphase : state registers.phase1 = false)
+    (hmatch : registerMatches (terminalConditionWires registers)
+      (terminalConditionValue registers) state = true) :
+    blockAForwardState registers state =
+      matchXorState (terminalConditionWires registers) (terminalConditionValue registers)
+        registers.terminal (terminalEpochSpillState registers.terminal registers.shiftEpoch
+          registers.quotientLow (terminalPaddingForwardState registers.terminalPadding
+            (matchXorState (terminalConditionWires registers) (terminalConditionValue registers)
+              registers.terminal state))) := by
+  let marked := matchXorState (terminalConditionWires registers)
+    (terminalConditionValue registers) registers.terminal state
+  let padded := terminalPaddingForwardState registers.terminalPadding marked
+  let disabled := xorWireState registers.terminal registers.phase1 padded
+  have ht : state registers.terminal = false := hready _
+    (hlayout.sourceScratch_mem_sharedScratch (by rw [← hlayout.scratch_view]; simp))
+  have htp : registers.terminal ≠ registers.phase1 := by
+    intro he
+    exact hlayout.terminal_not_condition (by simp [terminalConditionWires, he])
+  have hmt : marked registers.terminal = true := by simp [marked, matchXorState, ht, hmatch]
+  have hpt : padded registers.terminal = true := by
+    exact (terminalPaddingForwardState_terminal registers n T marked hlayout).trans hmt
+  have hpp : padded registers.phase1 = false := by
+    dsimp only [padded]
+    rw [terminal_padding_condition_frame registers n T marked hlayout
+      (by simp [terminalConditionWires])]
+    simp [marked, matchXorState, upd, Ne.symm htp, hphase]
+  have hblock : Clean registers.blockScratch state :=
+    clean_mono hready (fun _ hw ↦ hlayout.blockScratch_mem_sharedScratch hw)
+  have hmarkedBlock : Clean registers.blockScratch marked := by
+    simpa [marked, matchXorState] using clean_upd_not_mem hblock hlayout.terminal_not_blockScratch
+  have hpReady := clean_mono hmarkedBlock hlayout.terminalPadding_scratch_sub_block
+  have hpRun : run (terminalPaddingForward registers.terminalPadding) marked = padded :=
+    run_terminalPaddingForward _ _ hlayout.terminalPadding hpReady
+  have hpLocal : Clean registers.terminalPadding.scratch padded := by
+    rw [← hpRun]
+    exact terminalPaddingForward_clean _ _ hlayout.terminalPadding hpReady
+  have hpBlock : Clean registers.blockScratch padded := by
+    rw [← hpRun]
+    exact clean_after_local_circuit hmarkedBlock (by simpa only [hpRun] using hpLocal)
+      (terminalPaddingForward_usesOnly _) hlayout.terminalPadding_support_intersection
+  have hdBlock : Clean registers.blockScratch disabled := by
+    simpa [disabled, xorWireState] using clean_upd_not_mem hpBlock hlayout.phase1_not_blockScratch
+  have hdReady := clean_mono hdBlock hlayout.preShift_scratch_sub_block
+  have hdPhase : disabled registers.preShift.phase1 = true := by
+    change disabled registers.phase1 = true
+    simp [disabled, xorWireState, hpp, hpt]
+  have hi : preShiftState registers.preShift disabled = disabled := by
+    rw [← run_preShiftUnitary _ _ hlayout.preShift hdReady]
+    exact preShiftUnitary_idle _ _ hlayout.preShift hdReady hdPhase
+  have hcancel : xorWireState registers.terminal registers.phase1 disabled = padded := by
+    funext wire
+    by_cases hw : wire = registers.phase1
+    · subst wire
+      simp [disabled, xorWireState, upd, htp]
+    · simp [disabled, xorWireState, upd, hw]
+  change matchXorState _ _ _ (terminalEpochSpillState _ _ _
+    (xorWireState _ _ (preShiftState registers.preShift disabled))) = _
+  rw [hi, hcancel]
+
+private theorem terminal_epoch_cancel (registers : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T) :
+    terminalEpochRestoreState registers.terminal registers.shiftEpoch registers.quotientLow
+      (terminalEpochSpillState registers.terminal registers.shiftEpoch registers.quotientLow state) = state := by
+  rw [← run_terminalEpochRestoreState _ _ _ _ hlayout.terminalEpoch,
+    ← run_terminalEpochSpillState _ _ _ _ hlayout.terminalEpoch]
+  exact run_terminalEpochRestore_after_spill _ _ _ _ hlayout.terminalEpoch
+
+private theorem terminal_matches_ones (wires : List Wire) (value bit : Nat) (state : BasisState)
+    (hbits : ∀ i, bit ≤ i → i < bit + wires.length → value.testBit i = true) :
+    registerMatchesFrom wires value bit state = wireAnd wires state := by
+  induction wires generalizing bit with
+  | nil => rfl
+  | cons wire wires ih =>
+    have hb := hbits bit (by omega) (by simp)
+    simp only [registerMatchesFrom, wireAnd, hb, Bool.decide_eq_true]
+    rw [ih (bit + 1) (by intro i hi hj; apply hbits i <;> simp_all <;> omega)]
+private theorem terminal_detection (phase : Wire) (wires : List Wire) (state : BasisState) :
+    registerMatches (phase :: wires) (2 ^ (wires.length + 1) - 2) state =
+      (!state phase && wireAnd wires state) := by
+  have hpow : 1 < 2 ^ (wires.length + 1) := by
+    rw [Nat.pow_succ]; have := Nat.two_pow_pos wires.length; omega
+  have hb (i : Nat) : (2 ^ (wires.length + 1) - 2).testBit i =
+      (decide (i < wires.length + 1) && !Nat.testBit 1 i) :=
+    Nat.testBit_two_pow_sub_succ hpow i
+  simp only [registerMatches, registerMatchesFrom]
+  rw [terminal_matches_ones wires _ 1 state (by
+    intro i hi hj
+    rw [hb]
+    have hbit : Nat.testBit 1 i = false := by
+      change Nat.testBit (2^0) i = false
+      simp only [Nat.testBit_two_pow, show (0 = i) = False by simp [show 0 ≠ i by omega], decide_false]
+    simp [show i < wires.length + 1 by omega, hbit])]
+  rw [hb 0]
+  cases state phase <;> simp
+
+/-- On a terminal-marked input, the actual A--C circuit reduces to the terminal padding
+state with its marker cleaned. Phase1=false and the all-ones remainder-length sentinel
+compute the terminal predicate; their preservation on reachable traces is separate. -/
+theorem indexedStepRemainderPrefix_terminal_padding
+    (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
+    (hlayout : IndexedStepLayout registers n T) (hready : IndexedStepReady registers state)
+    (hencoded : IndexedStepEpochEncoded registers state)
+    (hphase : state registers.phase1 = false)
+    (hrp : wireAnd registers.lengthRPrime state = true) :
+    run (indexedStepRemainderPrefix registers n T) state =
+      (terminalPaddingForwardState registers.terminalPadding
+        state[registers.terminal ↦ true])[registers.terminal ↦ false] := by
+  have hmatch : registerMatches (registers.phase1 :: registers.lengthRPrime)
+      (2 ^ (registers.lengthRPrime.length + 1) - 2) state = true := by
+    rw [terminal_detection, hphase, hrp]
+    rfl
+  let marked := matchXorState (terminalConditionWires registers)
+    (terminalConditionValue registers) registers.terminal state
+  let padded := terminalPaddingForwardState registers.terminalPadding marked
+  let spilled := terminalEpochSpillState registers.terminal registers.shiftEpoch
+    registers.quotientLow padded
+  have ha := terminal_blockA_padding registers n T state hlayout hready hphase hmatch
+  have hframe (wire : Wire) (hw : wire ∈ terminalConditionWires registers) :
+      padded wire = state wire := by
+    dsimp only [padded]
+    rw [terminal_padding_condition_frame registers n T marked hlayout hw]
+    have hn : wire ≠ registers.terminal := by
+      intro he; subst wire; exact hlayout.terminal_not_condition hw
+    simp [marked, matchXorState, upd, hn]
+  have htq : registers.terminal ≠ registers.quotientLow := by
+    have h := hlayout.terminalEpoch
+    simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false, not_or] at h
+    exact h.1.2
+  have hspilled (wire : Wire) (hw : wire ∈ terminalConditionWires registers) :
+      spilled wire = state wire := by
+    have he : wire ≠ registers.shiftEpoch := by
+      intro he; subst wire; exact hlayout.shiftEpoch_not_condition hw
+    have hq : wire ≠ registers.quotientLow := by
+      intro he; subst wire; exact hlayout.quotientLow_not_condition hw
+    exact (terminalEpochSpillState_preserves _ _ _ _ he hq htq).trans (hframe wire hw)
+  have har : wireAnd registers.lengthRPrime (blockAForwardState registers state) = true := by
+    rw [← hrp]
+    apply wireAnd_congr
+    intro wire hw
+    have hcond : wire ∈ terminalConditionWires registers := by simp [terminalConditionWires, hw]
+    have hn : wire ≠ registers.terminal := by
+      intro he; subst wire; exact hlayout.terminal_not_condition hcond
+    rw [ha]
+    change matchXorState _ _ _ spilled wire = state wire
+    simpa [matchXorState, upd, hn] using hspilled wire hcond
+  have hborrow := blockAForward_borrowedReady registers n T state hlayout hready hencoded
+  rw [(blockAForward_correct registers n T state hlayout hready).1] at hborrow
+  rw [terminal_remainder_state registers n T state hlayout hready hencoded,
+    terminal_blockB_idle registers n T _ _ hlayout rfl hborrow har, ha]
+  change matchXorState _ _ _ (terminalEpochRestoreState _ _ _
+    (matchXorState _ _ _ (matchXorState _ _ _ spilled))) = _
+  rw [terminal_match_twice _ _ _ spilled hlayout.terminal_not_condition]
+  change matchXorState _ _ _ (terminalEpochRestoreState _ _ _
+    (terminalEpochSpillState _ _ _ padded)) = _
+  rw [terminal_epoch_cancel registers n T padded hlayout]
+  have ht : state registers.terminal = false := hready _
+    (hlayout.sourceScratch_mem_sharedScratch (by rw [← hlayout.scratch_view]; simp))
+  have hm : marked = state[registers.terminal ↦ true] := by
+    simp only [marked, matchXorState, terminalConditionWires, terminalConditionValue, ht, hmatch,
+      Bool.false_xor]
+  have hp : registerMatches (terminalConditionWires registers)
+      (terminalConditionValue registers) padded = true :=
+    (registerMatches_congr _ _ _ _ hframe).trans hmatch
+  have hpt : padded registers.terminal = true := by
+    dsimp only [padded]
+    rw [terminalPaddingForwardState_terminal registers n T marked hlayout]
+    simp [hm]
+  simp only [matchXorState, hp, hpt, Bool.xor_self]
+  rw [show padded = terminalPaddingForwardState registers.terminalPadding
+    state[registers.terminal ↦ true] by rw [← hm]]
+
 end
 
 end ShorECDLP.Paper2607_13816
