@@ -10897,6 +10897,73 @@ theorem indexedStepRemainderPrefix_terminal_padding
   rw [show padded = terminalPaddingForwardState registers.terminalPadding
     state[registers.terminal ↦ true] by rw [← hm]]
 
+private theorem terminal_padding_clean_frame (registers : IndexedStepRegisters)
+    (state : BasisState)
+    {wire : Wire} (ht : wire ≠ registers.terminal)
+    (hw : wire ∉ registers.work2) (hs : wire ∉ registers.lengthS)
+    (he : wire ≠ registers.shiftEpoch) :
+    (terminalPaddingForwardState registers.terminalPadding
+      state[registers.terminal ↦ true])[registers.terminal ↦ false] wire = state wire := by
+  rw [upd_other _ _ _ ht, terminalPaddingForwardState_preserves _ _ hw hs he,
+    upd_other _ _ _ ht]
+
+/-- A routed terminal step performs only terminal padding, with clean scratch and preserved
+entry encoding. The nonzero extended-counter premise is on the explicit padding result;
+reachable traces must still establish that bound. -/
+theorem indexedStepUnitary_terminal_padding
+    (registers : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
+      boundary4 ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ boundary5 ∧
+      boundary5 ≤ (endIterationWindowsAt n T).K5Decode n)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state)
+    (hencoded : IndexedStepEpochEncoded registers state)
+    (hroutes : T % 4 = 0 → indexedStepEndRoutes registers n T state = (boundary4, boundary5))
+    (hphase1 : state registers.phase1 = false)
+    (hphase2 : state registers.phase2 = false)
+    (hrp : wireAnd registers.lengthRPrime state = true)
+    (hs : let padded := (terminalPaddingForwardState registers.terminalPadding
+        state[registers.terminal ↦ true])[registers.terminal ↦ false]
+      (wireAnd registers.lengthS padded && !padded registers.shiftEpoch) = false) :
+    run (indexedStepUnitary registers n T) state =
+      (terminalPaddingForwardState registers.terminalPadding
+        state[registers.terminal ↦ true])[registers.terminal ↦ false] ∧
+    IndexedStepReady registers
+      (run (indexedStepUnitary registers n T) state) ∧
+    IndexedStepEpochEncoded registers
+      (run (indexedStepUnitary registers n T) state) := by
+  let padded := (terminalPaddingForwardState registers.terminalPadding
+    state[registers.terminal ↦ true])[registers.terminal ↦ false]
+  have hp := indexedStepRemainderPrefix_terminal_padding registers n T state hlayout hready
+    hencoded hphase1 hrp
+  have hf (wire : Wire) (hw : wire ∈ terminalConditionWires registers) :
+      padded wire = state wire := by
+    have ht : wire ≠ registers.terminal := by
+      intro he; subst wire; exact hlayout.terminal_not_condition hw
+    dsimp only [padded]
+    rw [upd_other _ _ _ ht, terminal_padding_condition_frame registers n T _ hlayout hw,
+      upd_other _ _ _ ht]
+  have hp1 : padded registers.phase1 = false :=
+    (hf _ (by simp [terminalConditionWires])).trans hphase1
+  have hp2 : padded registers.phase2 = false := by
+    apply Eq.trans ?_ hphase2
+    apply terminal_padding_clean_frame registers state
+    · exact hlayout.phase2_ne_after (by simp [indexedStepAfterPhase2,
+        hlayout.sourceScratch_mem_aux (show registers.terminal ∈ registers.sourceScratch by
+          rw [← hlayout.scratch_view]; simp)])
+    · intro hm; exact hlayout.phase2_ne_after (by simp [indexedStepAfterPhase2, hm]) rfl
+    · intro hm; exact hlayout.phase2_ne_after (by simp [indexedStepAfterPhase2, hm]) rfl
+    · exact hlayout.phase2_ne_after (by simp [indexedStepAfterPhase2, hlayout.shiftEpoch_mem_aux])
+  have hpr : wireAnd registers.lengthRPrime padded = true := by
+    rw [← hrp]
+    exact wireAnd_congr _ _ _ (fun wire hw ↦ hf wire (by simp [terminalConditionWires, hw]))
+  have hfull := indexedStepUnitary_terminal_correct registers n T boundary4 boundary5
+    hboundary4 hboundary5 state hlayout hready hencoded hroutes
+    (by rw [hp]; exact hp1) (by rw [hp]; exact hp2)
+    (by rw [hp]; exact hpr) (by rw [hp]; exact hs)
+  exact ⟨hfull.1.trans hp, hfull.2⟩
+
 end
 
 end ShorECDLP.Paper2607_13816

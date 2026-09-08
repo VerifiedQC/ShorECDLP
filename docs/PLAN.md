@@ -1171,3 +1171,20 @@ borrowed-clean states and obtains the terminal condition by frame preservation.
 This closes the remainder-prefix preservation step. It does not cover D–H or prove
 the epoch premise at all schedule prefixes; later phase/length consistency and full
 arithmetic refinement remain open. Existing circuit definitions and costs are unchanged.
+
+### Terminal EEA padding branch
+
+`indexedStepRemainderPrefix_terminal_padding` derives terminal detection from
+phase1=false and the all-ones remainder-length sentinel. The actual A–C circuit
+then equals `terminalPaddingForwardState` with the terminal marker set for the
+padding operation and cleared afterward. Disabled pre-shift and remainder
+traversals are identity; epoch spill/restore and the intervening marker toggles
+cancel on the complete state.
+
+`indexedStepUnitary_terminal_padding` extends this result to the actual routed
+A–H circuit and preserves scratch readiness and epoch encoding. It requires
+phase 00 at entry, the remainder sentinel, and a nonzero extended shift counter
+after the explicitly stated padding transition. The counter condition and the
+phase/remainder premises still need proofs along reachable traces. Active-phase
+arithmetic refinement and unconditional inversion remain open; this does not
+close Phase 6 or change circuit definitions and costs.
