@@ -54,10 +54,11 @@ import ShorECDLP.Submission.«2607_13816».EEA.Schedule
 import ShorECDLP.Submission.«2607_13816».EEA.ScheduleLayout
 import ShorECDLP.Submission.«2607_13816».EEA.Windows
 
+import ShorECDLP.Submission.«2607_13816».EEA.ShiftCounter
+
 /-!
 # arXiv:2607.13816v2 submission
 
 Root-closure sentinel for the independent space-efficient submission. Declarations live
 under the namespace `ShorECDLP.Paper2607_13816`.
 -/
-import ShorECDLP.Submission.«2607_13816».EEA.ShiftCounter
