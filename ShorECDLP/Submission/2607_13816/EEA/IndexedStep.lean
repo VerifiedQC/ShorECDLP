@@ -4986,6 +4986,37 @@ private theorem run_quotientSwapUnitary_indexedState
   rw [hcorrect.1, hroute]
   rfl
 
+private theorem blockCForward_epochEncoded
+    (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
+    (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepBorrowedReady registers state) :
+    IndexedStepEpochEncoded registers (blockCForwardState registers state) := by
+  have hdist := hlayout.terminalEpoch
+  simp only [List.nodup_cons, List.mem_cons, List.not_mem_nil, or_false, not_or] at hdist
+  have ht : state registers.terminal = false := hready _
+    (hlayout.sourceScratch_mem_aux (by rw [← hlayout.scratch_view]; simp))
+  have he : state registers.shiftEpoch = false := hready _ hlayout.shiftEpoch_mem_aux
+  have hcondition : registerMatches (terminalConditionWires registers)
+      (terminalConditionValue registers) (blockCForwardState registers state) =
+      registerMatches (terminalConditionWires registers) (terminalConditionValue registers) state := by
+    apply registerMatches_congr
+    intro wire hw
+    have hnt : wire ≠ registers.terminal := by
+      intro h; subst wire; exact hlayout.terminal_not_condition hw
+    have hne : wire ≠ registers.shiftEpoch := by
+      intro h; subst wire; exact hlayout.shiftEpoch_not_condition hw
+    have hnq : wire ≠ registers.quotientLow := by
+      intro h; subst wire; exact hlayout.quotientLow_not_condition hw
+    simp only [blockCForwardState, matchXorState_preserves _ _ _ _ hnt,
+      terminalEpochRestoreState_preserves _ _ _ _ hne hnq]
+  unfold IndexedStepEpochEncoded
+  rw [hcondition]
+  cases hm : registerMatches (terminalConditionWires registers)
+      (terminalConditionValue registers) state <;>
+    simp [blockCForwardState, matchXorState, terminalEpochRestoreState, controlledSwapState,
+      swapWireState, xorWireState, upd, ht, he, hm, hdist.1.1, hdist.1.2,
+      hdist.2.1, Ne.symm hdist.1.1, Ne.symm hdist.1.2]
+
 private theorem indexedQuotientWorkAt_mem_any
     (registers : QuotientSwapRegisters) {k K : Nat}
     (hlayout : QuotientSwapLayout registers k K) (label : Nat) :
@@ -9474,6 +9505,47 @@ def indexedStepBeforeEndState
           (blockCForwardState registers
             (blockBForwardState registers n windows.remainder
               (blockAForwardState registers state))))))
+
+/-- The actual A--C prefix: pre-shift/padding, remainder arithmetic and epoch restoration. -/
+def indexedStepRemainderPrefix (registers : IndexedStepRegisters) (n T : Nat) : Circuit :=
+  blockAForward registers ++
+    blockBForward registers n (certifiedActiveWindows n T).remainder ++
+    blockCForward registers
+
+/-- The complete remainder prefix preserves both operational encoding premises.
+The later quotient/coefficient, phase and iteration-end blocks are not included. -/
+theorem indexedStepRemainderPrefix_correct
+    (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
+    (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state)
+    (hencoded : IndexedStepEpochEncoded registers state) :
+    (indexedStepRemainderPrefix registers n T).IsPrefix (indexedStepUnitary registers n T) ∧
+    IndexedStepReady registers (run (indexedStepRemainderPrefix registers n T) state) ∧
+    IndexedStepEpochEncoded registers (run (indexedStepRemainderPrefix registers n T) state) := by
+  constructor
+  · refine ⟨blockDForward registers (certifiedActiveWindows n T).quotientSwap ++
+      blockEForward registers n (certifiedActiveWindows n T).coefficient ++
+      blockFForward registers ++ blockGForward registers ++ blockHForward registers n T, ?_⟩
+    simp only [indexedStepRemainderPrefix, indexedStepUnitary, List.append_assoc]
+  ·
+    let afterA := blockAForwardState registers state
+    let afterB := blockBForwardState registers n (certifiedActiveWindows n T).remainder afterA
+    have hA := blockAForward_correct registers n T state hlayout hready
+    have hABorrowed : IndexedStepBorrowedReady registers afterA := by
+      have h := blockAForward_borrowedReady registers n T state hlayout hready hencoded
+      rw [hA.1] at h
+      exact h
+    have hB := blockBForward_correct registers n T (certifiedActiveWindows n T).remainder
+      afterA hlayout rfl hABorrowed
+    have hBBorrowed : IndexedStepBorrowedReady registers afterB := by
+      have h := hB.2
+      rw [hB.1] at h
+      exact h
+    have hC := blockCForward_correct registers n T afterB hlayout hBBorrowed
+    have hCE := blockCForward_epochEncoded registers n T afterB hlayout hBBorrowed
+    simp only [indexedStepRemainderPrefix, Classical.run_append]
+    rw [hA.1, hB.1]
+    exact ⟨hC.2, by rw [hC.1]; exact hCE⟩
 
 /-- Direct blockwise recurrence of one literal indexed Algorithm-3 microstep.  It is noncircular
 relative to the complete indexed circuit, while inheriting Block B's circuit-bound endpoint
