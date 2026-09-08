@@ -39,13 +39,13 @@ private theorem horner_base_layout (controls input acc : List Wire) (c r t f : W
   apply List.Nodup.sublist hs
   all_goals simpa only [List.append_assoc] using hnd
 
-private theorem horner_tail_layout (q : Wire) (qs input acc : List Wire) (c r t f : Wire)
+theorem horner_tail_layout (q : Wire) (qs input acc : List Wire) (c r t f : Wire)
     (hnd : ([c,r,t,f] ++ (q :: qs) ++ input ++ acc).Nodup) :
     ([c,r,t,f] ++ qs ++ input ++ acc).Nodup := by
   have hs := ((List.Sublist.cons q (List.Sublist.refl qs)).append_right input).append_right acc
   exact List.Nodup.sublist (hs.append_left [c,r,t,f]) (by simpa only [List.append_assoc] using hnd)
 
-private theorem horner_add_layout (q : Wire) (qs input acc : List Wire) (c r t f : Wire)
+theorem horner_add_layout (q : Wire) (qs input acc : List Wire) (c r t f : Wire)
     (hnd : ([c,r,t,f] ++ (q :: qs) ++ input ++ acc).Nodup) :
     ([q,c,r,t,f] ++ input ++ acc).Nodup := by
   have hp : ([q,c,r,t,f] ++ qs ++ input ++ acc).Perm
@@ -88,7 +88,7 @@ theorem hornerMul_wellFormed (controls input : List Wire) (a : Wire) (rest : Lis
           (modularDouble_wellFormed a rest input correction p f r t c hk hlen.symm
             (horner_double_layout (q :: qs) input (a :: rest) c r t f hnd)) ha
 
-private theorem horner_geometry (controls input acc : List Wire) (c r t f : Wire)
+theorem horner_geometry (controls input acc : List Wire) (c r t f : Wire)
     (hnd : ([c,r,t,f] ++ controls ++ input ++ acc).Nodup) :
     ∀ w ∈ [c,r,t,f] ++ controls ++ input, w ∉ acc := by
   intro w hw ha

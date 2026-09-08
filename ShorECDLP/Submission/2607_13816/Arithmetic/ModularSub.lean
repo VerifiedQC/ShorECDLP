@@ -170,29 +170,35 @@ private theorem subProduction_decompose : secp256k1ModularSub =
           (.unitary (controlledSubCarry (List.range' 260 256) (List.range' 4 256) 516 1 0) .done))) := rfl
 
 set_option maxRecDepth 100000 in
-private theorem subProduction_counts :
-    gidneyToffoliCount secp256k1ModularSub = 2813 ∧
-    gidneyCnotCount secp256k1ModularSub = 7350 ∧
-    secp256k1ModularSub.tCount = 19691 ∧ secp256k1ModularSub.measurementCount = 511 := by
-  have hl := controlledCompareLT_counts 4 (List.range' 5 255) (List.range' 260 256) 516 1 0 (by simp)
-  have ha := secp256k1ModulusAdd_counts 0 1 2 3
-  have hg := secp256k1ModularCompare_counts 1 2 3 0
-  have hs := controlledSubCarry_correct_resources (List.range' 260 256) (List.range' 4 256) 516 1 0
-    (fun _ => false) (by simp) (modularAdd_layout _ _ 516 1 2 3 0 subProduction_layout).1
-  rw [subProduction_decompose]
+/-- Production inverse-addition costs for arbitrary scalar labels. -/
+theorem secp256k1ModularSub_counts (q c r t f : Wire) :
+    let ac := controlledModularSub (List.range' 260 256) (List.range' 4 256) secp256k1ModulusBits
+      (2 ^ 256 - (2 ^ 32 + 977)) q c r t f
+    gidneyToffoliCount ac = 2813 ∧ gidneyCnotCount ac = 7350 ∧
+      ac.tCount = 19691 ∧ ac.measurementCount = 511 := by
+  have hl := controlledCompareLT_counts 4 (List.range' 5 255) (List.range' 260 256) q c f (by simp)
+  have ha := secp256k1ModulusAdd_counts f c r t
+  have hg := secp256k1ModularCompare_counts c r t f
+  have hst := controlledAddCarry_toffoliCount (List.range' 260 256) (List.range' 4 256) q c f (by simp)
+  have hsc := controlledAddCarry_cnotCount (List.range' 260 256) (List.range' 4 256) q c f (by simp)
+  have hstt := controlledAddCarry_tCount (List.range' 260 256) (List.range' 4 256) q c f (by simp)
   have h := doublingFour_counts
-    (controlledCompareLT (List.range' 4 256) (List.range' 260 256) 516 1 0)
-    (controlledSubCarry (List.range' 260 256) (List.range' 4 256) 516 1 0)
-    (controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255) secp256k1ModulusBits 0 1 2 3)
-    (gidneyCompareGE (List.range' 4 256) (List.range' 260 256) (2 ^ 256 - (2 ^ 32 + 977)) 1 2 3 0)
-  change eeaToffoliCount (controlledCompareLT (List.range' 4 256) _ 516 1 0) = 513 ∧
-    eeaCnotCount (controlledCompareLT (List.range' 4 256) _ 516 1 0) = 1024 ∧
-    eeaXCount (controlledCompareLT (List.range' 4 256) _ 516 1 0) = 516 ∧
-    tCount (controlledCompareLT (List.range' 4 256) _ 516 1 0) = 3591 at hl
-  dsimp only at ha hg
+    (controlledCompareLT (List.range' 4 256) (List.range' 260 256) q c f)
+    (controlledSubCarry (List.range' 260 256) (List.range' 4 256) q c f)
+    (controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255) secp256k1ModulusBits f c r t)
+    (gidneyCompareGE (List.range' 4 256) (List.range' 260 256) (2 ^ 256 - (2 ^ 32 + 977)) c r t f)
+  change eeaToffoliCount (controlledCompareLT (List.range' 4 256) _ q c f) = 513 ∧
+    eeaCnotCount (controlledCompareLT (List.range' 4 256) _ q c f) = 1024 ∧
+    eeaXCount (controlledCompareLT (List.range' 4 256) _ q c f) = 516 ∧
+    tCount (controlledCompareLT (List.range' 4 256) _ q c f) = 3591 at hl
+  dsimp only at ha hg ⊢
+  unfold controlledModularSub
+  rw [show (List.range' 4 256).length - 1 = 255 from rfl,
+    show (List.range' 260 256).take 255 = List.range' 260 255 from rfl]
   rcases h with ⟨htf,hcx,ht,hm⟩
   rw [htf,hcx,ht,hm,hl.1,hl.2.1,hl.2.2.2,ha.1,ha.2.1,ha.2.2.1,ha.2.2.2,
-    hg.1,hg.2.1,hg.2.2.1,hg.2.2.2,hs.2.2.1,hs.2.2.2.1,hs.2.2.2.2.1]
+    hg.1,hg.2.1,hg.2.2.1,hg.2.2.2,controlledSubCarry,
+    eeaToffoliCount_adjoint,eeaCnotCount_adjoint,tCount_adjoint,hst,hsc,hstt]
   decide
 
 set_option maxRecDepth 100000 in
@@ -270,8 +276,8 @@ theorem secp256k1ModularSub_after_add_correct_resources (s : BasisState)
     hlen hk hm subProduction_layout hc hf hp hx hy hv hmod
   dsimp only
   refine ⟨?_,Quantum.AdaptiveCircuit.run_bornMass_eq_one _ hw _ (Quantum.normSq_ket _),hw,
-    subProduction_counts.1,subProduction_counts.2.1,subProduction_counts.2.2.1,
-    subProduction_counts.2.2.2,subProduction_qubits⟩
+    (secp256k1ModularSub_counts 516 1 2 3 0).1,(secp256k1ModularSub_counts 516 1 2 3 0).2.1,(secp256k1ModularSub_counts 516 1 2 3 0).2.2.1,
+    (secp256k1ModularSub_counts 516 1 2 3 0).2.2.2,subProduction_qubits⟩
   intro branch hb
   have h := controlledModularSub_branch_correct _ _ _ _ 516 1 2 3 0 _ hlen hne hm subProduction_layout
     ((ha.2 1 (by simp)).trans hc) ((ha.2 2 (by simp)).trans hr) ((ha.2 3 (by simp)).trans ht) branch hb

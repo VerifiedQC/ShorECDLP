@@ -182,25 +182,35 @@ private theorem halveProduction_decompose : secp256k1ModularHalve =
           (2 ^ 256 - (2 ^ 32 + 977)) 1 2 3 0).seq
           (.unitary (doublingShift (List.range' 4 256) 0).adjoint .done))) := rfl
 
-private theorem halveProduction_counts :
-    gidneyToffoliCount secp256k1ModularHalve = 1531 ∧
-    gidneyCnotCount secp256k1ModularHalve = 6070 ∧
-    secp256k1ModularHalve.tCount = 10717 ∧ secp256k1ModularHalve.measurementCount = 511 := by
-  have ha := secp256k1ModulusAdd_counts 0 1 2 3
-  have hg := secp256k1ModularCompare_counts 1 2 3 0
-  have hs := doublingShift_counts 4 0 (List.range' 5 255)
-  change eeaToffoliCount (doublingShift (List.range' 4 256) 0) = 0 ∧
-    eeaCnotCount (doublingShift (List.range' 4 256) 0) = 767 ∧
-    tCount (doublingShift (List.range' 4 256) 0) = 0 at hs
-  rw [halveProduction_decompose]
-  have h := doublingFour_counts ([.CX 4 0] : Circuit) (doublingShift (List.range' 4 256) 0).adjoint
-    (controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255) secp256k1ModulusBits 0 1 2 3)
-    (gidneyCompareGE (List.range' 4 256) (List.range' 260 256) (2 ^ 256 - (2 ^ 32 + 977)) 1 2 3 0)
+/-- Production halving costs for arbitrary scalar labels. -/
+theorem secp256k1ModularHalve_counts (c r t f : Wire) :
+    let ac := modularHalve (List.range' 4 256) (List.range' 260 256) secp256k1ModulusBits
+      (2 ^ 256 - (2 ^ 32 + 977)) c r t f
+    gidneyToffoliCount ac = 1531 ∧
+    gidneyCnotCount ac = 6070 ∧
+    ac.tCount = 10717 ∧ ac.measurementCount = 511 := by
+  have ha := secp256k1ModulusAdd_counts f c r t
+  have hg := secp256k1ModularCompare_counts c r t f
+  have hs := doublingShift_counts 4 f (List.range' 5 255)
+  change eeaToffoliCount (doublingShift (List.range' 4 256) f) = 0 ∧
+    eeaCnotCount (doublingShift (List.range' 4 256) f) = 767 ∧
+    tCount (doublingShift (List.range' 4 256) f) = 0 at hs
+  dsimp only
+  have heq : modularHalve (List.range' 4 256) (List.range' 260 256) secp256k1ModulusBits
+      (2 ^ 256 - (2 ^ 32 + 977)) c r t f =
+      .unitary [.CX 4 f]
+        ((controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255) secp256k1ModulusBits f c r t).seq
+          ((gidneyCompareGE (List.range' 4 256) (List.range' 260 256) (2 ^ 256 - (2 ^ 32 + 977)) c r t f).seq
+            (.unitary (doublingShift (List.range' 4 256) f).adjoint .done))) := rfl
+  rw [heq]
+  have h := doublingFour_counts ([.CX 4 f] : Circuit) (doublingShift (List.range' 4 256) f).adjoint
+    (controlledGidneyAddConst (List.range' 4 256) (List.range' 260 255) secp256k1ModulusBits f c r t)
+    (gidneyCompareGE (List.range' 4 256) (List.range' 260 256) (2 ^ 256 - (2 ^ 32 + 977)) c r t f)
   dsimp only at ha hg
   rcases h with ⟨htf,hcx,ht,hm⟩
   rw [htf,hcx,ht,hm,eeaToffoliCount_adjoint,eeaCnotCount_adjoint,tCount_adjoint,
     ha.1,ha.2.1,ha.2.2.1,ha.2.2.2,hg.1,hg.2.1,hg.2.2.1,hg.2.2.2,hs.1,hs.2.1,hs.2.2]
-  decide
+  simp [eeaToffoliCount,eeaCnotCount,tCount,tCost]
 
 private theorem halveProduction_wires (w : Wire) :
     w ∈ secp256k1ModularHalve.wires ↔ w ∈ List.range' 0 516 := by
@@ -270,8 +280,8 @@ theorem secp256k1ModularHalve_after_double_correct_resources (s : BasisState)
     hl hf hk hm hp hx hodd hv hmod
   dsimp only
   refine ⟨?_,Quantum.AdaptiveCircuit.run_bornMass_eq_one _ hw _ (Quantum.normSq_ket _),hw,
-    halveProduction_counts.1,halveProduction_counts.2.1,halveProduction_counts.2.2.1,
-    halveProduction_counts.2.2.2,halveProduction_qubits⟩
+    (secp256k1ModularHalve_counts 1 2 3 0).1,(secp256k1ModularHalve_counts 1 2 3 0).2.1,(secp256k1ModularHalve_counts 1 2 3 0).2.2.1,
+    (secp256k1ModularHalve_counts 1 2 3 0).2.2.2,halveProduction_qubits⟩
   intro branch hb
   have h := modularHalve_branch_correct 4 (List.range' 5 255) (List.range' 260 256) _ _ 1 2 3 0 _
     hm hd halveProduction_layout ((ha.2 1 (by simp)).trans hc)

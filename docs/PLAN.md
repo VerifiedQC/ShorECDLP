@@ -694,14 +694,22 @@ The actual source subtraction stages undo modular addition on canonical inputs i
 measurement branch, restoring the complete pre-addition state. Its same-circuit 256-bit
 certificate records 2,813 Toffolis, 7,350 CNOTs, 19,691 T gates, 511 resets and 517 wires.
 The correction adds the modulus rather than `2^256 - p`, so its CNOT count differs from
-forward addition. Inverse Horner multiplication and the Figure-15 composition
-remain open; the Phase-6 reachable EEA readiness invariant is still an explicit boundary.
+forward addition. The Figure-15 composition
+remains open; the Phase-6 reachable EEA readiness invariant is still an explicit boundary.
 
 `Arithmetic/Halving.lean` proves the next source inverse stage: measured halving
 restores the complete state after modular doubling of a canonical residue modulo
 an odd modulus. Its same-circuit 256-bit certificate gives 1,531 Toffolis, 6,070
 CNOTs, 10,717 T gates, 511 resets and 516 wires. The measured stages are proved
 directly; only the final unitary shift is adjointed.
+
+`Arithmetic/HornerInverse.lean` composes the source subtraction/halving schedule
+from the low multiplier bit upward. Every actual forward/inverse branch pair
+restores the complete zero-output input state with a positive, input-independent
+coefficient. The inverse's same-circuit certificate gives 1,110,533 Toffolis,
+3,429,450 CNOTs, 7,773,731 T gates, 261,121 resets and 772 wires. This closes the
+inverse multiplier prerequisite, not the Figure-15 in-place composition or EEA
+readiness boundary.
 
 **Gate:** all measured wires are reusable and `Γ(x)` plus arithmetic work are cleared on every
 branch.
