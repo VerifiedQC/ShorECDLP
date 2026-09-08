@@ -412,7 +412,7 @@ private theorem doublingRotate_counts (acc : List Wire) :
       simp [doublingSwap,eeaToffoliCount,eeaCnotCount,tCount,tCost]
       omega
 
-private theorem doublingShift_counts (a f : Wire) (rest : List Wire) :
+theorem doublingShift_counts (a f : Wire) (rest : List Wire) :
     eeaToffoliCount (doublingShift (a :: rest) f) = 0 ∧
     eeaCnotCount (doublingShift (a :: rest) f) = 3 * rest.length + 2 ∧
     tCount (doublingShift (a :: rest) f) = 0 := by
@@ -421,7 +421,7 @@ private theorem doublingShift_counts (a f : Wire) (rest : List Wire) :
     (doublingRotate_counts (a :: rest)).2.2]
   simp [eeaToffoliCount,eeaCnotCount,tCount,tCost]; omega
 
-private theorem doublingShift_usesOnly (a f : Wire) (rest : List Wire) :
+theorem doublingShift_usesOnly (a f : Wire) (rest : List Wire) :
     PaperCircuitUsesOnly (f :: a :: rest) (doublingShift (a :: rest) f) := by
   have hlast : (a :: rest).getLastD a ∈ a :: rest := by
     simpa only [List.getLastD_cons] using (List.getLastD_mem_cons (l := rest) (a := a))
@@ -546,7 +546,7 @@ private theorem doublingProduction_modadd : secp256k1ModularAdd =
     show (List.range' 260 256).take 255 = List.range' 260 255 from rfl]
   rfl
 
-private theorem doublingFour_counts (g h : Circuit) (a b : Quantum.AdaptiveCircuit) :
+theorem doublingFour_counts (g h : Circuit) (a b : Quantum.AdaptiveCircuit) :
     gidneyToffoliCount (.unitary g (a.seq (b.seq (.unitary h .done)))) =
       eeaToffoliCount g + (gidneyToffoliCount a + (gidneyToffoliCount b + eeaToffoliCount h)) ∧
     gidneyCnotCount (.unitary g (a.seq (b.seq (.unitary h .done)))) =

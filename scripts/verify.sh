@@ -872,6 +872,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_uncontrolled_qubits
 #print axioms ShorECDLP.Paper2607_13816.doublingShift_correct
 #print axioms ShorECDLP.Paper2607_13816.modularDoubleIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.hornerMul_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.hornerMulIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.hornerMul_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.secp256k1HornerMul_correct_resources
+#print axioms ShorECDLP.Paper2607_13816.secp256k1GidneyAdd_counts
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ModularCompare_counts
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ModularCompare_wires
 #print axioms ShorECDLP.Paper2607_13816.modularDouble_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.modularDouble_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularDouble_correct_resources
@@ -979,8 +986,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 955 ]]; then
-  printf 'expected 955 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 962 ]]; then
+  printf 'expected 962 #print axioms results\n' >&2
   exit 1
 fi
 

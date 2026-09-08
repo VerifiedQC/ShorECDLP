@@ -299,7 +299,7 @@ theorem controlledModularAdd_branch_correct (input acc : List Wire) (correction 
     rw [hadd.2,map_smul,map_smul,Quantum.run_ket_agrees_classical _ _ (controlledCompareLT_HPFree acc input q c f),hlast]
     simp only [smul_smul,Quantum.registerXResetMagnitude,← pow_add]
 
-private theorem modularGateCount_seq (cost : Gate → Nat) (a b : Quantum.AdaptiveCircuit) :
+theorem modularGateCount_seq (cost : Gate → Nat) (a b : Quantum.AdaptiveCircuit) :
     gidneyGateCount cost (a.seq b) = gidneyGateCount cost a + gidneyGateCount cost b := by
   induction a with
   | done => simp [Quantum.AdaptiveCircuit.seq,gidneyGateCount]
@@ -307,7 +307,7 @@ private theorem modularGateCount_seq (cost : Gate → Nat) (a b : Quantum.Adapti
   | xMeasureReset w l r ihl ihr =>
       simp [Quantum.AdaptiveCircuit.seq,gidneyGateCount,ihl,ihr,max_add_add_right]
 
-private theorem modularMeasurements_seq (a b : Quantum.AdaptiveCircuit) :
+theorem modularMeasurements_seq (a b : Quantum.AdaptiveCircuit) :
     (a.seq b).measurementCount = a.measurementCount + b.measurementCount := by
   induction a with
   | done => simp [Quantum.AdaptiveCircuit.seq,Quantum.AdaptiveCircuit.measurementCount]
@@ -316,7 +316,7 @@ private theorem modularMeasurements_seq (a b : Quantum.AdaptiveCircuit) :
       simp [Quantum.AdaptiveCircuit.seq,Quantum.AdaptiveCircuit.measurementCount,ihl,ihr,
         max_add_add_right,Nat.add_assoc]
 
-private theorem modularWires_seq (a b : Quantum.AdaptiveCircuit) (w : Wire) :
+theorem modularWires_seq (a b : Quantum.AdaptiveCircuit) (w : Wire) :
     w ∈ (a.seq b).wires ↔ w ∈ a.wires ∨ w ∈ b.wires := by
   induction a with
   | done => simp [Quantum.AdaptiveCircuit.seq,Quantum.AdaptiveCircuit.wires]
@@ -330,18 +330,18 @@ def secp256k1ModularAdd : Quantum.AdaptiveCircuit :=
   controlledModularAdd (List.range' 260 256) (List.range' 4 256)
     secp256k1ReductionConstantBits (2 ^ 256 - (2 ^ 32 + 977)) 516 1 2 3 0
 
-private def modularProductionCompare : Quantum.AdaptiveCircuit :=
+private def modularProductionCompare (c r t f : Wire) : Quantum.AdaptiveCircuit :=
   gidneyCompareGE (List.range' 4 256) (List.range' 260 256)
-    (2 ^ 256 - (2 ^ 32 + 977)) 1 2 3 0
+    (2 ^ 256 - (2 ^ 32 + 977)) c r t f
 
-private def modularProductionQ : Wire :=
-  ([1,2,3,0] ++ List.range' 4 256 ++ List.range' 260 256).sum + 1
+private def modularProductionQ (c r t f : Wire) : Wire :=
+  ([c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256).sum + 1
 
 set_option maxRecDepth 10000 in
-private theorem modularProduction_core : modularProductionCompare =
-    constantControlProgram modularProductionQ
+private theorem modularProduction_core (c r t f : Wire) : (modularProductionCompare c r t f) =
+    constantControlProgram (modularProductionQ c r t f)
       (controlledGidneyCompareCarry (List.range' 4 256) (List.range' 260 256)
-        secp256k1ReductionConstantBits modularProductionQ 1 2 3 0) := by
+        secp256k1ReductionConstantBits (modularProductionQ c r t f) c r t f) := by
   unfold modularProductionCompare gidneyCompareGE
   dsimp only
   unfold controlledGidneyCompareGE
@@ -350,22 +350,22 @@ private theorem modularProduction_core : modularProductionCompare =
   rw [if_neg (by decide),Nat.sub_sub_self (by decide : 2 ^ 32 + 977 ≤ 2 ^ 256)]
   rfl
 
-private theorem modularProduction_fresh :
-    modularProductionQ ∉ [1,2,3,0] ++ List.range' 4 256 ++ List.range' 260 256 :=
+private theorem modularProduction_fresh (c r t f : Wire) :
+    (modularProductionQ c r t f) ∉ [c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256 :=
   by
     intro h
-    have hh : modularProductionQ ≤ ([1,2,3,0] ++ List.range' 4 256 ++ List.range' 260 256).sum := List.le_sum_of_mem h
-    exact (Nat.not_succ_le_self (([1,2,3,0] ++ List.range' 4 256 ++ List.range' 260 256).sum)) hh
+    have hh : (modularProductionQ c r t f) ≤ ([c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256).sum := List.le_sum_of_mem h
+    exact (Nat.not_succ_le_self (([c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256).sum)) hh
 
 set_option maxRecDepth 100000 in
-private theorem modularProduction_metrics :
-    gidneyToffoliCount modularProductionCompare = 767 ∧
-    modularProductionCompare.tCount = 5369 ∧
-    modularProductionCompare.measurementCount = 256 := by
-  have h := controlledGidneyCompareCarry_metrics 4 260 modularProductionQ 1 2 3 0
+private theorem modularProduction_metrics (c r t f : Wire) :
+    gidneyToffoliCount (modularProductionCompare c r t f) = 767 ∧
+    (modularProductionCompare c r t f).tCount = 5369 ∧
+    (modularProductionCompare c r t f).measurementCount = 256 := by
+  have h := controlledGidneyCompareCarry_metrics 4 260 (modularProductionQ c r t f) c r t f
     (List.range' 5 255) (List.range' 261 255) true
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977))) (by simp) (by simp)
-  rw [modularProduction_core,gidneyToffoliCount_constantControl,
+  rw [(modularProduction_core c r t f),gidneyToffoliCount_constantControl,
     constantControlProgram_tCount,constantControlProgram_measurements,
     show List.range' 4 256 = 4 :: List.range' 5 255 from rfl,
     show List.range' 260 256 = 260 :: List.range' 261 255 from rfl,
@@ -374,20 +374,28 @@ private theorem modularProduction_metrics :
   simpa only [List.length_range'] using h
 
 set_option maxRecDepth 100000 in
-private theorem modularProduction_cnot : gidneyCnotCount modularProductionCompare = 1537 := by
-  rw [modularProduction_core,
+private theorem modularProduction_cnot (c r t f : Wire) : gidneyCnotCount (modularProductionCompare c r t f) = 1537 := by
+  rw [(modularProduction_core c r t f),
     show List.range' 4 256 = 4 :: List.range' 5 255 from rfl,
     show List.range' 260 256 = 260 :: List.range' 261 255 from rfl,
     show secp256k1ReductionConstantBits = true ::
       (List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977)) from rfl]
-  exact controlledGidneyCompareCarry_uncontrolled_cnot 4 260 modularProductionQ 1 2 3 0
+  exact controlledGidneyCompareCarry_uncontrolled_cnot 4 260 (modularProductionQ c r t f) c r t f
     (List.range' 5 255) (List.range' 261 255) true
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977)))
-    (by simp) (by simp) modularProduction_fresh
+    (by simp) (by simp) (modularProduction_fresh c r t f)
+
+/-- Uncontrolled production comparison costs for arbitrary scalar wire labels. -/
+theorem secp256k1ModularCompare_counts (c r t f : Wire) :
+    let g := gidneyCompareGE (List.range' 4 256) (List.range' 260 256)
+      (2 ^ 256 - (2 ^ 32 + 977)) c r t f
+    gidneyToffoliCount g = 767 ∧ gidneyCnotCount g = 1537 ∧ g.tCount = 5369 ∧ g.measurementCount = 256 :=
+  ⟨(modularProduction_metrics c r t f).1,modularProduction_cnot c r t f,
+    (modularProduction_metrics c r t f).2.1,(modularProduction_metrics c r t f).2.2⟩
 
 private theorem modularProduction_decompose : secp256k1ModularAdd =
     .unitary (controlledAddCarry (List.range' 260 256) (List.range' 4 256) 516 1 0)
-      (modularProductionCompare.seq (secp256k1GidneyAdd.seq
+      ((modularProductionCompare 1 2 3 0).seq (secp256k1GidneyAdd.seq
         (.unitary (controlledCompareLT (List.range' 4 256) (List.range' 260 256) 516 1 0) .done))) := by
   unfold secp256k1ModularAdd controlledModularAdd
   rw [show (List.range' 4 256).length - 1 = 255 from rfl,
@@ -421,33 +429,35 @@ private theorem modularProduction_counts :
   rw [modularProduction_decompose]
   constructor
   · rw [modularToffoli_unitary,hseqCCX,hseqCCX,modularToffoli_unitary,
-      haddT,modularProduction_metrics.1,ha.2.2.2.2.2.1,hb.1]
+      haddT,(modularProduction_metrics 1 2 3 0).1,ha.2.2.2.2.2.1,hb.1]
     rfl
   constructor
   · rw [modularCnot_unitary,hseqCX,hseqCX,modularCnot_unitary,
-      haddC,modularProduction_cnot,ha.2.2.2.2.2.2.1,hb.2.1]
+      haddC,(modularProduction_cnot 1 2 3 0),ha.2.2.2.2.2.2.1,hb.2.1]
     rfl
   constructor
   · rw [Quantum.AdaptiveCircuit.tCount,hseqT,hseqT,Quantum.AdaptiveCircuit.tCount,
-      haddCost,modularProduction_metrics.2.1,ha.2.2.2.2.2.2.2.1,hb.2.2.2]
+      haddCost,(modularProduction_metrics 1 2 3 0).2.1,ha.2.2.2.2.2.2.2.1,hb.2.2.2]
     rfl
   · rw [Quantum.AdaptiveCircuit.measurementCount,modularMeasurements_seq,modularMeasurements_seq,
-      Quantum.AdaptiveCircuit.measurementCount,modularProduction_metrics.2.2,ha.2.2.2.2.2.2.2.2.1]
+      Quantum.AdaptiveCircuit.measurementCount,(modularProduction_metrics 1 2 3 0).2.2,ha.2.2.2.2.2.2.2.2.1]
     rfl
 
 set_option maxRecDepth 100000 in
-private theorem modularProduction_compare_wires (w : Wire) :
-    w ∈ modularProductionCompare.wires ↔ w ∈ [1,2,3,0] ++ List.range' 4 256 ++ List.range' 260 256 := by
-  rw [modularProduction_core,constantControlProgram_wires _ _
-    (controlledGidneyCompareCarry_controlSafe _ _ _ _ _ _ _ _ modularProduction_fresh),
+theorem secp256k1ModularCompare_wires (c r t f w : Wire) :
+    w ∈ (gidneyCompareGE (List.range' 4 256) (List.range' 260 256)
+      (2 ^ 256 - (2 ^ 32 + 977)) c r t f).wires ↔ w ∈ [c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256 := by
+  change w ∈ (modularProductionCompare c r t f).wires ↔ _
+  rw [(modularProduction_core c r t f),constantControlProgram_wires _ _
+    (controlledGidneyCompareCarry_controlSafe _ _ _ _ _ _ _ _ (modularProduction_fresh c r t f)),
     show List.range' 4 256 = 4 :: List.range' 5 255 from rfl,
     show List.range' 260 256 = 260 :: List.range' 261 255 from rfl,
     show secp256k1ReductionConstantBits = true ::
       (List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977)) from rfl,
     controlledGidneyCompareCarry_wires _ _ _ _ _ _ _ _ _ _ (by simp) (by simp)]
-  have hf := modularProduction_fresh
-  change (w ∈ modularProductionQ :: ([1,2,3,0] ++ List.range' 4 256 ++ List.range' 260 256) ∧ w ≠ modularProductionQ) ↔ w ∈ [1,2,3,0] ++ List.range' 4 256 ++ List.range' 260 256
-  by_cases hw : w = modularProductionQ
+  have hf := (modularProduction_fresh c r t f)
+  change (w ∈ (modularProductionQ c r t f) :: ([c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256) ∧ w ≠ (modularProductionQ c r t f)) ↔ w ∈ [c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256
+  by_cases hw : w = (modularProductionQ c r t f)
   · subst w; simpa only [ne_eq,not_true_eq_false,and_false,false_iff] using hf
   · simp only [List.mem_cons]
     constructor
@@ -469,7 +479,7 @@ private theorem modularProduction_wires (w : Wire) :
     w ∈ secp256k1ModularAdd.wires ↔ w ∈ List.range' 0 517 := by
   rw [modularProduction_decompose]
   simp only [Quantum.AdaptiveCircuit.wires,List.mem_append,modularWires_seq,
-    modularProduction_compare_wires,modularProduction_add_wires,List.not_mem_nil,or_false]
+    modularProductionCompare,secp256k1ModularCompare_wires 1 2 3 0,modularProduction_add_wires,List.not_mem_nil,or_false]
   have hfirst := controlledAddCarry_usesOnly (List.range' 260 256) (List.range' 4 256) 516 1 0
   have hlast := controlledCompareLT_wires 4 (List.range' 5 255) (List.range' 260 256) 516 1 0 w (by simp)
   change (w ∈ circuitWires _ ∨ _ ∨ _ ∨ w ∈ circuitWires
