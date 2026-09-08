@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.Square
 import ShorECDLP.Submission.«2607_13816».Arithmetic.HornerMul
 import ShorECDLP.Submission.«2607_13816».Arithmetic.Doubling
 import ShorECDLP.Submission.«2607_13816».Arithmetic.ModularAdd

@@ -56,7 +56,7 @@ private theorem horner_add_layout (q : Wire) (qs input acc : List Wire) (c r t f
   have hs := (List.sublist_append_right qs (input ++ acc)).append_left [q,c,r,t,f]
   exact List.Nodup.sublist hs (by simpa only [List.append_assoc] using hn)
 
-private theorem horner_double_layout (controls input acc : List Wire) (c r t f : Wire)
+theorem horner_double_layout (controls input acc : List Wire) (c r t f : Wire)
     (hnd : ([c,r,t,f] ++ controls ++ input ++ acc).Nodup) :
     ([f,r,t,c] ++ acc ++ input).Nodup := by
   have hn := horner_base_layout controls input acc c r t f hnd
@@ -94,13 +94,13 @@ private theorem horner_geometry (controls input acc : List Wire) (c r t f : Wire
   intro w hw ha
   exact (List.nodup_append.mp hnd).2.2 w hw w ha rfl
 
-private theorem horner_frame_word (acc ws : List Wire) (before after : BasisState)
+theorem horner_frame_word (acc ws : List Wire) (before after : BasisState)
     (hf : ∀ w, w ∉ acc → after w = before w) (hw : ∀ w ∈ ws, w ∉ acc) :
     wireValues ws after = wireValues ws before := by
   apply List.map_congr_left
   exact fun w h => hf w (hw w h)
 
-private theorem horner_numeric_step (p x y : Nat) (b : Bool) :
+theorem horner_numeric_step (p x y : Nat) (b : Bool) :
     (((2 * (y*x % p)) % p) + if b then y else 0) % p = (y * (b.toNat + 2*x)) % p := by
   cases b <;> simp only [Bool.toNat, Bool.cond_false, Bool.cond_true, Bool.false_eq_true,
     ↓reduceIte, Nat.zero_add, Nat.add_zero, Nat.mod_mod, Nat.mul_mod_mod, Nat.mul_add,
@@ -176,7 +176,7 @@ theorem hornerMulIdealState_correct (controls input : List Wire) (a : Wire) (res
       rw [ha.1,hrinput,hrq,hrvalue]
       exact horner_numeric_step p (boolWordToNat (wireValues qs s)) (boolWordToNat (wireValues input s)) (s q)
 
-private theorem horner_seq_branch (g h : Quantum.AdaptiveCircuit) (s mid out : BasisState)
+theorem horner_seq_branch (g h : Quantum.AdaptiveCircuit) (s mid out : BasisState)
     (hg : ∀ b ∈ g.run, b.kraus (Quantum.ket s) =
       Quantum.registerXResetMagnitude b.history.length • Quantum.ket mid)
     (hh : ∀ b ∈ h.run, b.kraus (Quantum.ket mid) =
@@ -270,7 +270,7 @@ private theorem hornerAdd_decompose (q c r t f : Wire) : controlledModularAdd (L
     show (List.range' 260 256).take 255 = List.range' 260 255 from rfl]
 
 set_option maxRecDepth 100000 in
-private theorem hornerAdd_counts (q c r t f : Wire) :
+theorem hornerAdd_counts (q c r t f : Wire) :
     let g := controlledModularAdd (List.range' 260 256) (List.range' 4 256)
       secp256k1ReductionConstantBits (2 ^ 256 - (2 ^ 32 + 977)) q c r t f
     gidneyToffoliCount g = 2813 ∧ gidneyCnotCount g = 4929 ∧ g.tCount = 19691 ∧ g.measurementCount = 511 := by
@@ -308,7 +308,7 @@ private theorem hornerDouble_decompose (c r t f : Wire) : modularDouble (List.ra
   rw [show (List.range' 260 256).take (List.range' 5 255).length = List.range' 260 255 from rfl]
 
 set_option maxRecDepth 100000 in
-private theorem hornerDouble_counts (c r t f : Wire) :
+theorem hornerDouble_counts (c r t f : Wire) :
     let g := modularDouble (List.range' 4 256) (List.range' 260 256)
       secp256k1ReductionConstantBits (2 ^ 256 - (2 ^ 32 + 977)) c r t f
     gidneyToffoliCount g = 1531 ∧ gidneyCnotCount g = 3649 ∧ g.tCount = 10717 ∧ g.measurementCount = 511 := by
@@ -368,7 +368,7 @@ private theorem hornerConstantAdd_wires (q c r t w : Wire) :
     ((List.range' 1 255).map (Nat.testBit (2 ^ 32 + 977))) (by simp) (by simp) w
 
 set_option maxRecDepth 100000 in
-private theorem hornerAdd_wires (q c r t f w : Wire) :
+theorem hornerAdd_wires (q c r t f w : Wire) :
     w ∈ (controlledModularAdd (List.range' 260 256) (List.range' 4 256)
       secp256k1ReductionConstantBits (2 ^ 256 - (2 ^ 32 + 977)) q c r t f).wires ↔
       w ∈ [q,c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256 := by
@@ -392,7 +392,7 @@ private theorem hornerAdd_wires (q c r t f w : Wire) :
   · simp only [hmem,false_or]; omega
 
 set_option maxRecDepth 100000 in
-private theorem hornerDouble_wires (c r t f w : Wire) :
+theorem hornerDouble_wires (c r t f w : Wire) :
     w ∈ (modularDouble (List.range' 4 256) (List.range' 260 256)
       secp256k1ReductionConstantBits (2 ^ 256 - (2 ^ 32 + 977)) c r t f).wires ↔
       w ∈ [c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256 := by
