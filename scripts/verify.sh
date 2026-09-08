@@ -921,6 +921,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.eeaUncenter_after_center
 #print axioms ShorECDLP.Paper2607_13816.eeaCenterIdealState_half_width
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEACenter_correct_resources
+#print axioms ShorECDLP.Paper2607_13816.xorConstant_clears_known
+#print axioms ShorECDLP.Paper2607_13816.run_knownScratchMCX
+#print axioms ShorECDLP.Paper2607_13816.knownScratchMCX_counts
+#print axioms ShorECDLP.Paper2607_13816.run_knownScratchControl
+#print axioms ShorECDLP.Paper2607_13816.knownScratchControl_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.knownScratchControl_HPFree
+#print axioms ShorECDLP.Paper2607_13816.knownScratchControl_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.run_lengthInitializeCase
+#print axioms ShorECDLP.Paper2607_13816.lengthInitialize_prefix_match
+#print axioms ShorECDLP.Paper2607_13816.lengthInitializeWord_correct
+#print axioms ShorECDLP.Paper2607_13816.lengthInitialize_correct
+#print axioms ShorECDLP.Paper2607_13816.lengthInitialize_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.lengthInitialize_HPFree
+#print axioms ShorECDLP.Paper2607_13816.lengthInitializeScan_counts
+#print axioms ShorECDLP.Paper2607_13816.secp256k1LengthInitialize_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_counts
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularHalve_counts
 #print axioms ShorECDLP.Paper2607_13816.modularDoubleIdealState_uncorrect
@@ -1039,8 +1054,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1015 ]]; then
-  printf 'expected 1015 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1030 ]]; then
+  printf 'expected 1030 #print axioms results\n' >&2
   exit 1
 fi
 
