@@ -83,6 +83,17 @@ jobs:
           test "$(leantar --version)" = "leantar ${LEANTAR_VERSION}"
           lake exe cache get
 
+      - name: Build heavy proof modules sequentially
+        # These independent cold-build branches can exceed runner memory together.
+        # Keep the final complete proof gate unchanged and warning-fatal.
+        run: |
+          set -euo pipefail
+          lake --wfail build 'ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrefixInverse'
+          lake --wfail build 'ShorECDLP.Submission.«2607_13816».EEA.EndIteration'
+          lake --wfail build 'ShorECDLP.Submission.«2607_13816».EEA.IndexedStep'
+          lake --wfail build 'ShorECDLP.Submission.«2607_13816».Arithmetic.GidneyCompare'
+          lake --wfail build 'ShorECDLP.Submission.«2607_13816».Arithmetic.GidneyAdd'
+
       - name: Run proof gate
         env:
           CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
