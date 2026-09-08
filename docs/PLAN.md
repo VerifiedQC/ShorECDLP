@@ -1210,3 +1210,10 @@ when that output has a non-sentinel remainder length, non-sentinel shift length
 and a clear borrowed epoch. It also proves clean scratch and epoch encoding
 after the step. The length conditions remain explicit; deriving them from
 reachable active arithmetic states, including boundary transitions, is open.
+
+The actual pre/post-shift circuits now have direct counter-word and numeric
+transition theorems: an enabled shift increments when phase two is false and
+decrements when phase two is true, modulo the physical counter width. Pre-shift
+is enabled when phase one is false; post-shift is enabled when it is true.
+The proofs include wraparound and disabled inputs. Connecting these per-block
+transitions to the reachable active arithmetic encoding remains open.

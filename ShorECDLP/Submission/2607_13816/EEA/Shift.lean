@@ -3716,4 +3716,143 @@ theorem preShiftUnitary_idle (registers : ShiftRegisters) (state : BasisState)
     shiftIdle_write_read, incrementWordState, shiftIdle_increment_false, Bool.false_and,
     hboth, hupdateB, decrementWordState, shiftIdle_decrement_false]
 
+private theorem shiftCounter_cancel (carry : Bool) (bits : List Bool) :
+    decrementBits carry (incrementBits carry bits) = bits := by
+  induction bits generalizing carry with
+  | nil => rfl
+  | cons bit bits ih => cases bit <;> cases carry <;> simp [incrementBits, decrementBits, ih]
+
+private theorem shiftCounter_payload (a b : Bool) (work counter : List Wire)
+    (both : Wire) (state : BasisState)
+    (hnd : counter.Nodup) (hdis : List.Disjoint counter work)
+    (hbw : both ∉ work) (hbc : both ∉ counter) (hclear : state both = false) :
+    wireValues counter (shiftPayloadState a b work counter both state) =
+      if a then (if b then decrementBits true (wireValues counter state)
+        else incrementBits true (wireValues counter state)) else wireValues counter state := by
+  let left := rotateLeftWordState a work state
+  let increased := incrementWordState a counter left
+  let marked := increased[both ↦ Bool.xor (increased both) (a && b)]
+  let right := if marked both then rotateRightTwoState work marked else marked
+  let dec := decrementWordState (right both) counter right
+  let dec2 := decrementWordState (dec both) counter dec
+  have hiB : increased both = false :=
+    (incrementWordState_preservesOutside a counter left hbc).trans
+      ((rotateLeftWordState_preservesOutside a work state hbw).trans hclear)
+  have hmB : marked both = (a && b) := by simp [marked, hiB]
+  have hrB : right both = (a && b) := by
+    dsimp only [right]
+    split
+    · exact (rotateRightTwoState_preservesOutside work marked hbw).trans hmB
+    · exact hmB
+  have hdB : dec both = (a && b) :=
+    (decrementWordState_preservesOutside (right both) counter right hbc).trans hrB
+  have hl : wireValues counter left = wireValues counter state := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact rotateLeftWordState_preservesOutside a work state (fun h => hdis hw h)
+  have hi : wireValues counter increased = incrementBits a (wireValues counter state) := by
+    dsimp only [increased, incrementWordState]
+    rw [wireValues_writeWireValues _ _ _ hnd (by simp [incrementBits_length, wireValues]), hl]
+  have hm : wireValues counter marked = wireValues counter increased := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro h; subst wire; exact hbc hw)
+  have hr : wireValues counter right = wireValues counter marked := by
+    dsimp only [right]
+    split
+    · apply shift_wireValues_congr
+      intro wire hw
+      exact rotateRightTwoState_preservesOutside work marked (fun h => hdis hw h)
+    · rfl
+  have hd : wireValues counter dec = decrementBits (a && b)
+      (incrementBits a (wireValues counter state)) := by
+    dsimp only [dec, decrementWordState]
+    rw [wireValues_writeWireValues _ _ _ hnd (by simp [decrementBits_length, wireValues]),
+      hrB, hr, hm, hi]
+  have hd2 : wireValues counter dec2 = decrementBits (a && b)
+      (decrementBits (a && b) (incrementBits a (wireValues counter state))) := by
+    dsimp only [dec2, decrementWordState]
+    rw [wireValues_writeWireValues _ _ _ hnd (by simp [decrementBits_length, wireValues]), hdB, hd]
+  have hout : wireValues counter (shiftPayloadState a b work counter both state) =
+      wireValues counter dec2 := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro h; subst wire; exact hbc hw)
+  rw [hout, hd2]
+  cases a <;> cases b <;>
+    simp [shiftIdle_decrement_false, shiftIdle_increment_false, shiftCounter_cancel]
+
+private theorem shiftCounter_layout (r : ShiftRegisters) (h : ShiftLayout r) :
+    r.lengthS.Nodup ∧ List.Disjoint r.lengthS r.work := by
+  have hp := h.physical
+  simp only [ShiftRegisters.allWires, List.append_assoc, List.cons_append, List.nil_append] at hp
+  have ht := (List.nodup_cons.mp (List.nodup_cons.mp
+    (List.nodup_cons.mp (List.nodup_cons.mp hp).2).2).2).2
+  have hw := List.nodup_append.mp ht
+  have hc := List.nodup_append.mp hw.2.1
+  refine ⟨hc.1, List.disjoint_left.mpr ?_⟩
+  intro wire hcounter hwork
+  exact hw.2.2 wire hwork wire (List.mem_append_left _ hcounter) rfl
+
+/-- The actual post-shift increments in phase two = false and decrements in phase
+ two = true, with both operations disabled when phase one is false. -/
+theorem postShiftUnitary_counter_bits (r : ShiftRegisters) (state : BasisState)
+    (hlayout : ShiftLayout r) (hready : ShiftReady r state) :
+    wireValues r.lengthS (run (postShiftUnitary r) state) =
+      if state r.phase1 then
+        (if state r.phase2 then decrementBits true (wireValues r.lengthS state)
+         else incrementBits true (wireValues r.lengthS state))
+      else wireValues r.lengthS state := by
+  rw [run_postShiftUnitary r state hlayout hready]
+  exact shiftCounter_payload _ _ _ _ _ _ (shiftCounter_layout r hlayout).1
+    (shiftCounter_layout r hlayout).2
+    (hlayout.scratchWorkDisjoint _ (by simp [ShiftRegisters.scratch]))
+    (hlayout.scratchLengthDisjoint _ (by simp [ShiftRegisters.scratch]))
+    (hready _ (by simp [ShiftRegisters.scratch]))
+
+/-- The actual pre-shift has the same counter direction, enabled when phase one is false. -/
+theorem preShiftUnitary_counter_bits (r : ShiftRegisters) (state : BasisState)
+    (hlayout : ShiftLayout r) (hready : ShiftReady r state) :
+    wireValues r.lengthS (run (preShiftUnitary r) state) =
+      if !state r.phase1 then
+        (if state r.phase2 then decrementBits true (wireValues r.lengthS state)
+         else incrementBits true (wireValues r.lengthS state))
+      else wireValues r.lengthS state := by
+  have hzero : state r.phase1IsZero = false := hready _ (by simp [ShiftRegisters.scratch])
+  have hzlen := hlayout.scratchLengthDisjoint r.phase1IsZero (by simp [ShiftRegisters.scratch])
+  have hpair : [r.phase1IsZero, r.phase2, r.both].Nodup := by
+    apply List.Sublist.nodup ?_ hlayout.physical
+    simp [ShiftRegisters.allWires]
+  have h2 : r.phase2 ≠ r.phase1IsZero := by
+    intro he
+    exact (List.nodup_cons.mp hpair).1 (by simp [he])
+  have hb : r.both ≠ r.phase1IsZero := by
+    intro he
+    exact (List.nodup_cons.mp hpair).1 (by simp [he])
+  let marked := state[r.phase1IsZero ↦ !state r.phase1]
+  have hm : wireValues r.lengthS marked = wireValues r.lengthS state := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro he; subst wire; exact hzlen hw)
+  have hpayload := shiftCounter_payload (marked r.phase1IsZero) (marked r.phase2)
+    r.work r.lengthS r.both marked (shiftCounter_layout r hlayout).1
+    (shiftCounter_layout r hlayout).2
+    (hlayout.scratchWorkDisjoint _ (by simp [ShiftRegisters.scratch]))
+    (hlayout.scratchLengthDisjoint _ (by simp [ShiftRegisters.scratch]))
+    (by dsimp only [marked]; rw [upd_other _ _ _ hb]; exact hready _ (by simp [ShiftRegisters.scratch]))
+  rw [run_preShiftUnitary r state hlayout hready]
+  unfold preShiftState
+  simp only [hzero, Bool.false_xor]
+  have hout : ∀ (s : BasisState) (bit : Bool),
+      wireValues r.lengthS s[r.phase1IsZero ↦ bit] = wireValues r.lengthS s := by
+    intro s bit
+    apply shift_wireValues_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro he; subst wire; exact hzlen hw)
+  rw [hout]
+  change wireValues r.lengthS (shiftPayloadState (marked r.phase1IsZero)
+    (marked r.phase2) r.work r.lengthS r.both marked) = _
+  rw [hpayload, hm]
+  simp only [marked, upd_same, upd_other _ _ _ h2]
+
 end ShorECDLP.Paper2607_13816
