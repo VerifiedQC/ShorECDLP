@@ -10410,6 +10410,251 @@ theorem indexedStepShiftPrefix_terminal_correct
   · rw [heq]
     exact hprefix.2
 
+private theorem endIdle_lengths (registers : EndIterationRegisters) (n : Nat)
+    (windows : EndIterationWindows) (b4 b5 : Nat) (state : BasisState)
+    (hc : state registers.control = false) :
+    endIterationLengthWords registers n windows b4 b5 state =
+      (wireValues registers.lengthT state, wireValues registers.lengthRP state) := by
+  have hu (bits : List Bool) :
+      endIterationUpperRangeBits false b4 (zeroMapLabels windows.k4 windows.K4) bits =
+        (zeroMapLabels windows.k4 windows.K4).map (fun _ => false) := by
+    simp [endIterationUpperRangeBits]
+  have hl (bits : List Bool) :
+      endIterationLowerRangeBits false b5 (zeroMapLabels windows.k5 (windows.K5Decode n)) bits =
+        (zeroMapLabels windows.k5 (windows.K5Decode n)).map (fun _ => false) := by
+    simp [endIterationLowerRangeBits]
+  simp only [endIterationLengthWords, hc, hu, hl]
+  rw [highestPositionWordAction_involutive _ _ _ _ _ _ (by simp),
+    rightLengthWordAction_involutive _ _ _ _ _ _ _ (by simp)]
+private theorem endIdle_state (registers : IndexedStepRegisters) (n T b4 b5 : Nat)
+    (state : BasisState) (hc : state registers.control = false) :
+    endIterationForwardState registers n T b4 b5 state = state := by
+  have hl := endIdle_lengths (registers.endIteration n T) n (endIterationWindowsAt n T)
+    b4 b5 state hc
+  rw [endIterationForwardState, endIterationForwardBits]
+  rw [hl]
+  simp only [endIterationSwappedWorkWords, IndexedStepRegisters.endIteration, hc, Bool.false_eq_true,
+    ↓reduceIte, endIterationMutableWires]
+  simpa only [wireValues, List.map_append] using
+    terminal_write_read (registers.work1 ++ registers.work2 ++ registers.lengthT ++ registers.lengthRPrime) state
+private theorem endIdle_toggle_twice (wire : Wire) (state : BasisState) :
+    (state[wire ↦ !state wire])[wire ↦ !(state[wire ↦ !state wire]) wire] = state := by
+  funext w
+  by_cases h : w = wire
+  · subst w; simp [upd]
+  · simp [upd, h]
+
+private theorem endIdle_and_twice (first second target : Wire) (state : BasisState)
+    (hf : first ≠ target) (hs : second ≠ target) :
+    andXorWireState first second target (andXorWireState first second target state) = state := by
+  funext w
+  by_cases h : w = target
+  · subst w; simp [andXorWireState, upd, hf, hs]
+  · simp [andXorWireState, upd, h]
+
+private theorem endIdle_andList_twice (wires : List Wire) (target : Wire) (state : BasisState)
+    (hne : target ∉ wires) :
+    andListXorState wires target (andListXorState wires target state) = state := by
+  have hm : wireAnd wires (andListXorState wires target state) = wireAnd wires state := by
+    apply wireAnd_congr
+    intro wire hw
+    have h : wire ≠ target := by intro he; subst wire; exact hne hw
+    simp [andListXorState, upd, h]
+  funext w
+  by_cases h : w = target
+  · subst w
+    rw [andListXorState]
+    simp only [upd]
+    rw [hm]
+    simp [andListXorState, upd]
+  · simp [andListXorState, upd, h]
+private theorem endIdle_block (registers : IndexedStepRegisters) (n T b4 b5 : Nat)
+    (state : BasisState)
+    (hq : registers.sourceScratch.getD 0 0 ∉ registers.lengthQ)
+    (hs : registers.sourceScratch.getD 1 0 ∉ registers.lengthS ++ [registers.shiftEpoch])
+    (hqc : registers.sourceScratch.getD 0 0 ≠ registers.control)
+    (hsc : registers.sourceScratch.getD 1 0 ≠ registers.control)
+    (hc : (blockHEndInputState registers state) registers.control = false) :
+    blockHForwardState registers n T b4 b5 state = state := by
+  by_cases hT : T % 4 = 0
+  · simp only [blockHForwardState, hT, ↓reduceIte]
+    rw [endIdle_state registers n T b4 b5 _ hc]
+    rw [terminal_xor_idle registers.control registers.iter _ hc]
+    simp only [blockHEndInputState, blockHZeroSState, blockHBeforeSState, blockHZeroQState]
+    rw [endIdle_and_twice _ _ _ _ hqc hsc]
+    rw [endIdle_toggle_twice]
+    rw [endIdle_andList_twice _ _ _ hs]
+    rw [endIdle_toggle_twice]
+    exact endIdle_andList_twice _ _ state hq
+  · simp only [blockHForwardState, hT, ↓reduceIte]
+
+private theorem endIdle_update_read (state : BasisState) (wire : Wire) :
+    state[wire ↦ state wire] = state := by
+  funext w
+  by_cases h : w = wire
+  · subst w; simp [upd]
+  · simp [upd, h]
+private theorem endIdle_wireAnd_append (wires : List Wire) (wire : Wire) (state : BasisState) :
+    wireAnd (wires ++ [wire]) state = (wireAnd wires state && state wire) := by
+  induction wires with
+  | nil => simp [wireAnd]
+  | cons w ws ih => simp only [List.cons_append, wireAnd, ih, Bool.and_assoc]
+private theorem endIdle_wireAnd_update (wires : List Wire) (target : Wire)
+    (bit : Bool) (state : BasisState) (hn : target ∉ wires) :
+    wireAnd wires state[target ↦ bit] = wireAnd wires state := by
+  apply wireAnd_congr
+  intro wire hw
+  have h : wire ≠ target := by intro he; subst wire; exact hn hw
+  simp [upd, h]
+private theorem endIdle_input_control (registers : IndexedStepRegisters) (state : BasisState)
+    (hc : state registers.control = false)
+    (hscratch : state (registers.sourceScratch.getD 1 0) = false)
+    (hcq : registers.control ≠ registers.sourceScratch.getD 0 0)
+    (hsq : registers.sourceScratch.getD 1 0 ≠ registers.sourceScratch.getD 0 0)
+    (heq : registers.shiftEpoch ≠ registers.sourceScratch.getD 0 0)
+    (hqS : registers.sourceScratch.getD 0 0 ∉ registers.lengthS)
+    (heS : registers.shiftEpoch ∉ registers.lengthS)
+    (hz : (wireAnd registers.lengthS state && !state registers.shiftEpoch) = false) :
+    (blockHEndInputState registers state) registers.control = false := by
+  have hpred : wireAnd (registers.lengthS ++ [registers.shiftEpoch])
+      (blockHBeforeSState registers state) = false := by
+    rw [endIdle_wireAnd_append]
+    simp only [blockHBeforeSState, blockHZeroQState, andListXorState]
+    rw [endIdle_wireAnd_update _ _ _ _ heS, endIdle_wireAnd_update _ _ _ _ hqS]
+    simpa only [upd, heq, ↓reduceIte] using hz
+  have hzeroS : blockHZeroSState registers state = blockHBeforeSState registers state := by
+    rw [blockHZeroSState, andListXorState]
+    rw [hpred]
+    simp only [Bool.xor_false, endIdle_update_read]
+  have hsQ : (blockHZeroQState registers state) (registers.sourceScratch.getD 1 0) = false := by
+    simp only [blockHZeroQState, andListXorState, upd, hsq, ↓reduceIte, hscratch]
+  rw [blockHEndInputState, hzeroS, blockHBeforeSState, endIdle_toggle_twice]
+  simp only [andXorWireState, hsQ, Bool.and_false, Bool.xor_false, endIdle_update_read]
+  simp only [blockHZeroQState, andListXorState, upd, hcq, ↓reduceIte, hc]
+private theorem phaseIdle (registers : PhaseUpdateRegisters) (epoch : Wire)
+    (state : BasisState) (hlayout : PhaseUpdateEpochLayout registers epoch)
+    (hrp : wireAnd registers.lengthRPrime state = true)
+    (hs : (wireAnd registers.lengthS state && !state epoch) = false) :
+    phaseUpdateEpochState registers epoch state = state := by
+  rw [phaseUpdateEpochState_spec registers epoch state hlayout]
+  simp only [hrp, hs, Bool.not_true, Bool.and_false, Bool.false_and,
+    Bool.xor_false, endIdle_update_read]
+private theorem terminal_blockH_idle (registers : IndexedStepRegisters) (n T b4 b5 : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state)
+    (hz : (wireAnd registers.lengthS state && !state registers.shiftEpoch) = false) :
+    blockHForwardState registers n T b4 b5 state = state := by
+  have hqmem : registers.sourceScratch.getD 0 0 ∈ registers.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [hlayout.sourceScratch_length]; decide)
+  have hsmem : registers.sourceScratch.getD 1 0 ∈ registers.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [hlayout.sourceScratch_length]; decide)
+  have hqaux := hlayout.sourceScratch_mem_aux hqmem
+  have hsaux := hlayout.sourceScratch_mem_aux hsmem
+  have hcq : registers.control ≠ registers.sourceScratch.getD 0 0 := by
+    intro he
+    exact hlayout.control_not_sourceScratch (he ▸ hqmem)
+  have hcs : registers.control ≠ registers.sourceScratch.getD 1 0 := by
+    intro he
+    exact hlayout.control_not_sourceScratch (he ▸ hsmem)
+  have heq : registers.shiftEpoch ≠ registers.sourceScratch.getD 0 0 := by
+    intro he
+    exact hlayout.shiftEpoch_not_sourceScratch (he ▸ hqmem)
+  have hes : registers.shiftEpoch ≠ registers.sourceScratch.getD 1 0 := by
+    intro he
+    exact hlayout.shiftEpoch_not_sourceScratch (he ▸ hsmem)
+  have hnodup : (registers.sourceScratch.getD 0 0 :: registers.sourceScratch.getD 1 0 ::
+      registers.sourceScratch.drop 2).Nodup := by
+    rw [hlayout.sourceScratch_view2]
+    exact hlayout.sourceScratch_nodup
+  have hsq : registers.sourceScratch.getD 1 0 ≠ registers.sourceScratch.getD 0 0 := by
+    intro he
+    exact (List.nodup_cons.mp hnodup).1 (by simp only [List.mem_cons]; exact Or.inl he.symm)
+  have hqQ : registers.sourceScratch.getD 0 0 ∉ registers.lengthQ := by
+    intro hm
+    exact (hlayout.aux_not_payload hqaux (by simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]; tauto)) rfl
+  have hqS : registers.sourceScratch.getD 0 0 ∉ registers.lengthS := by
+    intro hm
+    exact (hlayout.aux_not_payload hqaux (by simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]; tauto)) rfl
+  have hsS : registers.sourceScratch.getD 1 0 ∉ registers.lengthS ++ [registers.shiftEpoch] := by
+    simp only [List.mem_append, List.mem_singleton, not_or]
+    refine ⟨?_, Ne.symm hes⟩
+    intro hm
+    exact (hlayout.aux_not_payload hsaux (by simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]; tauto)) rfl
+  have hc := endIdle_input_control registers state
+    (hready registers.control (by simp [IndexedStepRegisters.sharedScratch]))
+    (hready _ (hlayout.sourceScratch_mem_sharedScratch hsmem))
+    hcq hsq heq hqS hlayout.shiftEpoch_not_lengthS hz
+  exact endIdle_block registers n T b4 b5 state hqQ hsS (Ne.symm hcq) (Ne.symm hcs) hc
+
+private theorem terminal_remainder_state
+    (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
+    (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state)
+    (hencoded : IndexedStepEpochEncoded registers state) :
+    run (indexedStepRemainderPrefix registers n T) state =
+      blockCForwardState registers (blockBForwardState registers n
+        (certifiedActiveWindows n T).remainder (blockAForwardState registers state)) := by
+  have hA := blockAForward_correct registers n T state hlayout hready
+  have hborrow := blockAForward_borrowedReady registers n T state hlayout hready hencoded
+  rw [hA.1] at hborrow
+  have hB := blockBForward_correct registers n T (certifiedActiveWindows n T).remainder
+    (blockAForwardState registers state) hlayout rfl hborrow
+  have hborrowB := hB.2
+  rw [hB.1] at hborrowB
+  have hC := blockCForward_correct registers n T _ hlayout hborrowB
+  simp only [indexedStepRemainderPrefix, Classical.run_append]
+  rw [hA.1, hB.1, hC.1]
+
+/-- On a routed step whose A--C output has phase 00, terminal remainder length and nonzero
+extended shift counter, every remaining block D--H is inactive on the complete state. The phase
+and counter conditions are premises here; their preservation along reachable traces is separate. -/
+theorem indexedStepUnitary_terminal_correct
+    (registers : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
+      boundary4 ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ boundary5 ∧
+      boundary5 ≤ (endIterationWindowsAt n T).K5Decode n)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state)
+    (hencoded : IndexedStepEpochEncoded registers state)
+    (hroutes : T % 4 = 0 → indexedStepEndRoutes registers n T state = (boundary4, boundary5))
+    (hphase1 : run (indexedStepRemainderPrefix registers n T) state registers.phase1 = false)
+    (hphase2 : run (indexedStepRemainderPrefix registers n T) state registers.phase2 = false)
+    (hrp : wireAnd registers.lengthRPrime (run (indexedStepRemainderPrefix registers n T) state) = true)
+    (hs : (wireAnd registers.lengthS (run (indexedStepRemainderPrefix registers n T) state) &&
+      !(run (indexedStepRemainderPrefix registers n T) state registers.shiftEpoch)) = false) :
+    run (indexedStepUnitary registers n T) state = run (indexedStepRemainderPrefix registers n T) state ∧
+      IndexedStepReady registers (run (indexedStepUnitary registers n T) state) ∧
+      IndexedStepEpochEncoded registers (run (indexedStepUnitary registers n T) state) := by
+  have hprefix := indexedStepRemainderPrefix_correct registers n T state hlayout hready hencoded
+  let afterC := run (indexedStepRemainderPrefix registers n T) state
+  have hcontrol : afterC registers.control = false :=
+    hprefix.2.1 registers.control (by simp [IndexedStepRegisters.sharedScratch])
+  have hD := terminal_blockD_idle registers (certifiedActiveWindows n T).quotientSwap
+    afterC hcontrol hphase1 hphase2
+  have hE := terminal_blockE_idle registers n T (certifiedActiveWindows n T).coefficient
+    afterC hlayout rfl hprefix.2.1 hphase1
+  have hlocal : ShiftReady registers.postShift afterC := by
+    intro wire hw
+    exact hprefix.2.1 wire (hlayout.sourceScratch_mem_sharedScratch
+      (hlayout.postShift_scratch_sub_source wire hw))
+  have hF : blockFForwardState registers afterC = afterC := by
+    rw [blockFForwardState, ← run_postShiftUnitary registers.postShift afterC hlayout.postShift hlocal]
+    exact postShiftUnitary_idle registers.postShift afterC hlayout.postShift hlocal hphase1
+  have hG : blockGForwardState registers afterC = afterC :=
+    phaseIdle registers.phaseUpdate registers.shiftEpoch afterC hlayout.phaseUpdate hrp hs
+  have hbefore : indexedStepBeforeEndState registers n T state = afterC := by
+    rw [indexedStepBeforeEndState, ← terminal_remainder_state registers n T state hlayout hready hencoded]
+    dsimp only [afterC] at hD hE hF hG
+    rw [hD, hE, hF, hG]
+  have heq : run (indexedStepUnitary registers n T) state = afterC := by
+    rw [(indexedStepUnitary_correct registers n T boundary4 boundary5 hboundary4 hboundary5
+      state hlayout hready hencoded hroutes).1, indexedStepForwardState, hbefore]
+    exact terminal_blockH_idle registers n T boundary4 boundary5 afterC hlayout hprefix.2.1 hs
+  refine ⟨heq, ?_⟩
+  rw [heq]
+  exact hprefix.2
+
 end
 
 end ShorECDLP.Paper2607_13816
