@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.ConstantControl
 import ShorECDLP.Submission.«2607_13816».Arithmetic.CarryAdd
 
 /-!
@@ -690,5 +691,132 @@ theorem secp256k1ReductionCarryXor_correct_resources (s : BasisState) (hc : s 1 
   · rw [he]; simpa only [secp256k1ReductionConstant_tailWeight,Bool.toNat_true] using hn.2.2.1
   · rw [he]; simpa only [List.length_range'] using hn.2.2.2
   · rw [he]; simpa only [List.length_range'] using hq
+
+private theorem carryConstCCX_controlSafe (q a b d : Wire) (ka kb : Bool)
+    (ha : a ≠ q) (hb : b ≠ q) (hd : d ≠ q) :
+    ∀ g ∈ carryConstCCX q a b d ka kb, constantControlSafe q g := by
+  cases ka <;> cases kb <;>
+    simp [carryConstCCX,constantControlSafe,ha,hb,hd]
+
+private theorem carryXorBackward_controlSafe (q previous : Wire) (input dirty : List Wire)
+    (constant : List Bool) (h : q ∉ previous :: input ++ dirty) :
+    ∀ g ∈ carryXorBackward q previous input dirty constant, constantControlSafe q g := by
+  induction input generalizing previous dirty constant with
+  | nil => simp [carryXorBackward]
+  | cons a input ih =>
+      cases dirty with
+      | nil => simp [carryXorBackward]
+      | cons d dirty =>
+        cases constant with
+        | nil => simp [carryXorBackward]
+        | cons k constant =>
+          have hp : previous ≠ q := by simp_all [eq_comm]
+          have ha : a ≠ q := by simp_all [eq_comm]
+          have hd : d ≠ q := by simp_all [eq_comm]
+          have hh : q ∉ d :: input ++ dirty := by simp_all
+          simp only [carryXorBackward,List.forall_mem_append]
+          exact ⟨ih d dirty constant hh,carryConstCCX_controlSafe q a previous d k false ha hp hd⟩
+
+private theorem carryXorForward_controlSafe (q previous : Wire) (input dirty : List Wire)
+    (constant : List Bool) (h : q ∉ previous :: input ++ dirty) :
+    ∀ g ∈ carryXorForward q previous input dirty constant, constantControlSafe q g := by
+  induction input generalizing previous dirty constant with
+  | nil => simp [carryXorForward]
+  | cons a input ih =>
+      cases dirty with
+      | nil => simp [carryXorForward]
+      | cons d dirty =>
+        cases constant with
+        | nil => simp [carryXorForward]
+        | cons k constant =>
+          have hp : previous ≠ q := by simp_all [eq_comm]
+          have ha : a ≠ q := by simp_all [eq_comm]
+          have hd : d ≠ q := by simp_all [eq_comm]
+          have hh : q ∉ d :: input ++ dirty := by simp_all
+          simp only [carryXorForward,List.forall_mem_append]
+          exact ⟨carryConstCCX_controlSafe q a previous d k k ha hp hd,ih d dirty constant hh⟩
+
+private theorem carryXorConstants_controlSafe (q : Wire) (dirty : List Wire)
+    (constant : List Bool) (h : q ∉ dirty) :
+    ∀ g ∈ carryXorConstants q dirty constant, constantControlSafe q g := by
+  induction dirty generalizing constant with
+  | nil => simp [carryXorConstants]
+  | cons d dirty ih =>
+      cases constant with
+      | nil => simp [carryXorConstants]
+      | cons k constant =>
+          have hd : d ≠ q := by simp_all [eq_comm]
+          have hh : q ∉ dirty := by simp_all
+          intro g hg
+          cases k with
+          | false => exact ih constant hh g (by simpa [carryXorConstants] using hg)
+          | true =>
+              simp only [carryXorConstants,↓reduceIte,List.singleton_append,List.mem_cons] at hg
+              rcases hg with rfl | hg
+              · exact hd
+              · exact ih constant hh g hg
+
+/-- The source carry eraser uses its external control only in CNOTs. -/
+theorem controlledConstCarryXor_controlSafe (input dirty : List Wire) (constant : List Bool)
+    (q c : Wire) (h : q ∉ c :: input ++ dirty) :
+    ∀ g ∈ controlledConstCarryXor input dirty constant q c, constantControlSafe q g := by
+  cases input with
+  | nil => simp [controlledConstCarryXor]
+  | cons a input =>
+      cases dirty with
+      | nil => simp [controlledConstCarryXor]
+      | cons d dirty =>
+        cases constant with
+        | nil => simp [controlledConstCarryXor]
+        | cons k constant =>
+          have hc : c ≠ q := by simp_all [eq_comm]
+          have ha : a ≠ q := by simp_all [eq_comm]
+          have hd : d ≠ q := by simp_all [eq_comm]
+          have hh : q ∉ d :: input ++ dirty := by simp_all
+          have hk : q ∉ d :: dirty := by simp_all
+          simp only [controlledConstCarryXor,List.forall_mem_append]
+          exact ⟨⟨⟨carryXorBackward_controlSafe q d input dirty constant hh,
+            carryXorConstants_controlSafe q (d :: dirty) (k :: constant) hk⟩,
+            carryConstCCX_controlSafe q c a d k k hc ha hd⟩,
+            carryXorForward_controlSafe q d input dirty constant hh⟩
+
+private theorem carryConstCCX_uncontrolled_cnot (q a b d : Wire) (ka kb : Bool) :
+    eeaCnotCount ((carryConstCCX q a b d ka kb).map (constantControlGate q)) = 0 := by
+  cases ka <;> cases kb <;> simp [carryConstCCX,constantControlGate,eeaCnotCount]
+
+/-- Uncontrolled carry erasure consists entirely of X and Toffoli gates. -/
+theorem controlledConstCarryXor_uncontrolled_cnot (input dirty : List Wire) (constant : List Bool)
+    (q c : Wire) :
+    eeaCnotCount ((controlledConstCarryXor input dirty constant q c).map (constantControlGate q)) = 0 := by
+  have happ (a b : Circuit) : eeaCnotCount (a ++ b) = eeaCnotCount a + eeaCnotCount b := by
+    simp [eeaCnotCount,List.map_append,List.sum_append]
+  have hnil : eeaCnotCount [] = 0 := rfl
+  have hx (w : Wire) (rest : Circuit) : eeaCnotCount (.X w :: rest) = eeaCnotCount rest := by
+    simp [eeaCnotCount]
+  have hb (previous : Wire) (as ds : List Wire) (ks : List Bool) :
+      eeaCnotCount ((carryXorBackward q previous as ds ks).map (constantControlGate q)) = 0 := by
+    induction as generalizing previous ds ks with
+    | nil => simp [carryXorBackward,hnil]
+    | cons a as ih =>
+        cases ds <;> cases ks <;>
+          simp [carryXorBackward,List.map_append,happ,hnil,carryConstCCX_uncontrolled_cnot,ih]
+  have hf (previous : Wire) (as ds : List Wire) (ks : List Bool) :
+      eeaCnotCount ((carryXorForward q previous as ds ks).map (constantControlGate q)) = 0 := by
+    induction as generalizing previous ds ks with
+    | nil => simp [carryXorForward,hnil]
+    | cons a as ih =>
+        cases ds <;> cases ks <;>
+          simp [carryXorForward,List.map_append,happ,hnil,carryConstCCX_uncontrolled_cnot,ih]
+  have hk (ds : List Wire) (ks : List Bool) :
+      eeaCnotCount ((carryXorConstants q ds ks).map (constantControlGate q)) = 0 := by
+    induction ds generalizing ks with
+    | nil => simp [carryXorConstants,hnil]
+    | cons d ds ih =>
+        cases ks with
+        | nil => simp [carryXorConstants,hnil]
+        | cons k ks => cases k <;>
+            simp [carryXorConstants,constantControlGate,List.map_append,happ,hnil,hx,ih]
+  cases input <;> cases dirty <;> cases constant <;>
+    simp [controlledConstCarryXor,List.map_append,happ,hnil,hb,hf,hk,carryConstCCX_uncontrolled_cnot]
 
 end ShorECDLP.Paper2607_13816

@@ -855,6 +855,24 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_coherent
 #print axioms ShorECDLP.Paper2607_13816.mem_secp256k1ScheduleIndices_iff
 #print axioms ShorECDLP.Paper2607_13816.secp256k1Schedule_indexedFrame
+#print axioms ShorECDLP.Paper2607_13816.constantControlProgram_branch
+#print axioms ShorECDLP.Paper2607_13816.constantControlGate_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.constantControlProgram_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.constantControlGate_wires
+#print axioms ShorECDLP.Paper2607_13816.constantControlProgram_wires
+#print axioms ShorECDLP.Paper2607_13816.constantControlProgram_measurements
+#print axioms ShorECDLP.Paper2607_13816.constantControlProgram_tCount
+#print axioms ShorECDLP.Paper2607_13816.controlledConstCarryXor_controlSafe
+#print axioms ShorECDLP.Paper2607_13816.controlledConstCarryXor_uncontrolled_cnot
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_controlSafe
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE_controlSafe
+#print axioms ShorECDLP.Paper2607_13816.gidneyToffoliCount_constantControl
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_metrics
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_uncontrolled_cnot
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_uncontrolled_qubits
+#print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1UncontrolledGidneyCompare_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.modularCorrection_correct
 #print axioms ShorECDLP.Paper2607_13816.modularDoubling_cleanup
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_branch_correct
@@ -952,8 +970,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 928 ]]; then
-  printf 'expected 928 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 946 ]]; then
+  printf 'expected 946 #print axioms results\n' >&2
   exit 1
 fi
 
