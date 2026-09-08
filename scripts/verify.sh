@@ -870,6 +870,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_metrics
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_uncontrolled_cnot
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_uncontrolled_qubits
+#print axioms ShorECDLP.Paper2607_13816.controlledModularAdd_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.modularAddIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledModularAdd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ModularAdd_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.secp256k1UncontrolledGidneyCompare_correct_resources

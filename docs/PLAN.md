@@ -628,8 +628,8 @@ shares the existing measured-carry facts and metrics between the adder and compa
 the overflow/comparison XOR selects the correction, the corrected word is the canonical
 modular sum, and the final comparison clears the flag. It also proves the odd-modulus
 parity identity used to clear the doubling flag. These are arithmetic lemmas only; the
-composed measured modular circuits and their resource certificates remain open, along
-with the Horner schedule and squaring.
+doubling circuit and its resource certificate remain open, along with the Horner schedule
+and squaring. The composed modular adder is now proved below.
 `Arithmetic/UncontrolledCompare.lean` supplies the uncontrolled constant-comparison
 interface. `Arithmetic/ConstantControl.lean` compiles external-control CNOTs to X gates,
 proves branch amplitudes are preserved, and removes exactly that control from physical
@@ -637,6 +637,16 @@ support. The compile-time fresh label appears in no emitted gate or measurement.
 The same-circuit secp256k1 theorem proves the numeric flag predicate, complete frame and
 workspace restoration, total probability one, 767 Toffolis, 1,537 CNOTs, 5,369 T gates,
 256 measurement/resets and exactly 516 physical wires. No extra enable qubit is allocated.
+`Arithmetic/ModularAdd.lean` composes the four actual source stages: controlled binary
+addition with overflow, uncontrolled modulus comparison, conditional constant correction,
+and the final comparison that erases the reduction flag. For canonical operands, every
+branch implements controlled modular addition with positive input-independent amplitude
+and restores every wire outside the accumulator, including the borrowed addend. Its
+same-circuit certificate proves total probability one, well-formedness, 2,813 Toffolis,
+4,929 CNOTs, 19,691 T gates, 511 measurement/resets and exactly 517 physical wires. The
+source's fifth auxiliary wire is unused and excluded from actual support. Width one uses
+the verified full binary comparator chain. Phase 7 remains open for doubling, multiplication
+and squaring.
 
 Modules:
 

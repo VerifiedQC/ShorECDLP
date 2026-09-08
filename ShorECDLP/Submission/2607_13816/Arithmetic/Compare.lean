@@ -452,7 +452,7 @@ private theorem majorityPass_mem_wires (b : Wire) (bs as : List Wire) (c w : Wir
       rw [ih b' as b htail]
       simp [cuccaroMaj,circuitWires,gateWires,or_assoc,or_comm,or_left_comm]
 
-private theorem compare_mem_wires (b : Wire) (bs right : List Wire) (q c f w : Wire)
+theorem controlledCompareLT_wires (b : Wire) (bs right : List Wire) (q c f w : Wire)
     (hlen : (b :: bs).length = right.length) :
     w ∈ circuitWires (controlledCompareLT (b :: bs) right q c f) ↔
       w ∈ q :: c :: f :: (b :: bs) ++ right := by
@@ -485,7 +485,7 @@ theorem controlledCompareLT_qubitCount (b : Wire) (bs right : List Wire) (q c f 
   have heq : (circuitWires (controlledCompareLT (b :: bs) right q c f)).dedup.toFinset =
       (q :: c :: f :: (b :: bs) ++ right).toFinset := by
     ext w
-    simpa using compare_mem_wires b bs right q c f w hlen
+    simpa using controlledCompareLT_wires b bs right q c f w hlen
   have hc := congrArg Finset.card heq
   rw [List.toFinset_card_of_nodup (List.nodup_dedup _),List.toFinset_card_of_nodup hnd] at hc
   simpa [qubitCount,← hlen,Nat.two_mul,Nat.add_assoc,Nat.add_comm,Nat.add_left_comm] using hc
