@@ -1203,3 +1203,10 @@ phase 00, the remainder sentinel and the existing `terminalShiftLow` /
 the counter bound follows from those formulas, rather than being assumed at each
 intermediate state. The active prefix must still establish the initial terminal
 boundary, and its own arithmetic/epoch invariant remains open.
+
+The active-tail composition theorem `indexedStepUnitary_active_tail_correct`
+reduces the actual complete step to the phase update on the A–F prefix output
+when that output has a non-sentinel remainder length, non-sentinel shift length
+and a clear borrowed epoch. It also proves clean scratch and epoch encoding
+after the step. The length conditions remain explicit; deriving them from
+reachable active arithmetic states, including boundary transitions, is open.
