@@ -969,6 +969,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.lengthInitialize_size_correct
 #print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_initial_divisor
 #print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_initial_ready
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_initial_workBanks
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_initial_metadata
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_counts
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularHalve_counts
 #print axioms ShorECDLP.Paper2607_13816.modularDoubleIdealState_uncorrect
@@ -1087,8 +1089,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1063 ]]; then
-  printf 'expected 1063 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1065 ]]; then
+  printf 'expected 1065 #print axioms results\n' >&2
   exit 1
 fi
 
