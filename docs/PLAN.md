@@ -624,7 +624,12 @@ is restored, both correction phases cancel, and total probability is preserved. 
 same-circuit secp256k1-modulus certificate proves 767 Toffolis, 1,598 CNOTs, 5,369 T,
 256 measurement/resets and exactly 517 physical wires. `Arithmetic/GidneyCarry.lean`
 shares the existing measured-carry facts and metrics between the adder and comparator.
-Modular correction, the Horner schedule and squaring remain open within this phase.
+`Arithmetic/ModularCorrection.lean` proves the arithmetic bridge for modular addition:
+the overflow/comparison XOR selects the correction, the corrected word is the canonical
+modular sum, and the final comparison clears the flag. It also proves the odd-modulus
+parity identity used to clear the doubling flag. These are arithmetic lemmas only; the
+composed measured modular circuits and their resource certificates remain open, along
+with the uncontrolled constant-comparison interface, Horner schedule and squaring.
 
 Modules:
 
