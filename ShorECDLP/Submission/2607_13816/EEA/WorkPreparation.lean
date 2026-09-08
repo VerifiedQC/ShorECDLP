@@ -437,7 +437,7 @@ private theorem workRegistersPrepare_length : workRegistersPrepare.length = 641 
   unfold work2Prepare
   omega
 
-private theorem workRegistersPrepare_usesOnly :
+theorem workRegistersPrepare_usesOnly :
     PaperCircuitUsesOnly (List.range' 4 518) workRegistersPrepare := by
   have hp : PaperCircuitUsesOnly (List.range' 4 518) (work2Prepare 263) := by
     unfold work2Prepare

@@ -1097,6 +1097,19 @@ encoding, clean remaining control/scratch roles and complete external frame. The
 prefix is well formed. Initialization assumes only the source's clean non-input roles and
 `0 < x < p`; it does not assume that the desired output encoding already holds.
 
-This closes the forward Algorithm-1 preprocessing prefix. Its aggregate resource theorem,
-connection to the pure EEA state, reachable-state schedule invariant and terminal/reverse
-wrapper remain open; this is not the full inverse or Figure-15 multiplication circuit.
+This closes the forward Algorithm-1 preprocessing prefix. The connection to the pure EEA
+state, reachable-state schedule invariant and terminal/reverse wrapper remain open; this is not the full inverse or Figure-15 multiplication circuit.
+
+
+### EEA preprocessing resources
+
+`eeaPreprocess_correct_resources` combines the actual measurement-branch contract with exact
+aggregate counts: 133,363 Toffolis, 8,267 CNOTs, 933,541 T gates and 766 measurements. The
+physical-support proof keeps the whole prefix within the existing 580-role allocation.
+These totals are composed from the actual primitive circuits, including the known-scratch
+MCX lowering for length initialization. A generic CX-count invariance lemma transfers existing
+adder counts to the wrapper's reordered data and borrowed registers without changing circuits.
+
+The 580 figure is the proved capacity bound, not an exact used-wire or live-allocation claim.
+The emitted prefix uses 550 distinct wires; proving the full wrapper, reachable EEA invariant
+and eventual live-space/resource bounds remains separate work.
