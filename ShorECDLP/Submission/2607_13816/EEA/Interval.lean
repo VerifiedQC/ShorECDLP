@@ -4560,6 +4560,200 @@ theorem intervalProduction_sourceResourceRegression :
       intervalMeasurementFormula registers 1 257 = 1598 := by
   exact ⟨rfl, rfl⟩
 
+private theorem intervalIdle_update (state : BasisState) (wire : Wire) (h : state wire = false) :
+    state[wire ↦ false] = state := by
+  funext w
+  by_cases hw : w = wire
+  · subst w; simp [upd, h]
+  · simp [upd, hw]
+private theorem intervalIdle_cx (state : BasisState) (control target : Wire)
+    (h : state control = false) : Classical.applyGate (.CX control target) state = state := by
+  funext w
+  by_cases hw : w = target
+  · subst w; simp [Classical.applyGate, upd, h]
+  · simp [Classical.applyGate, upd, hw]
+private theorem intervalIdle_tree (tree : DualUnaryActionTree) (order : UnaryOrder)
+    (leaf : Nat → Wire → Wire → BasisState → BasisState) (state : BasisState)
+    (hleaf : ∀ label a b, state a = false → state b = false → leaf label a b state = state)
+    (a b : Wire) (pathsA pathsB : List Wire)
+    (ha : state a = false) (hb : state b = false)
+    (hpathsA : Clean pathsA state) (hpathsB : Clean pathsB state) :
+    tree.runLeafState order leaf a b pathsA pathsB state = state := by
+  induction tree generalizing a b pathsA pathsB with
+  | leaf label => exact hleaf label a b ha hb
+  | node ia ib zero one ihz iho =>
+    cases pathsA with
+    | nil => rfl
+    | cons pa ra =>
+      cases pathsB with
+      | nil => rfl
+      | cons pb rb =>
+        have hpa := hpathsA pa (by simp)
+        have hpb := hpathsB pb (by simp)
+        have hra : Clean ra state := fun w hw => hpathsA w (by simp [hw])
+        have hrb : Clean rb state := fun w hw => hpathsB w (by simp [hw])
+        have hz := ihz pa pb ra rb hpa hpb hra hrb
+        have ho := iho pa pb ra rb hpa hpb hra hrb
+        cases order <;>
+          simp only [DualUnaryActionTree.runLeafState, ha, hb, Bool.false_and,
+            intervalIdle_update state pa hpa, intervalIdle_update state pb hpb,
+            intervalIdle_cx state a pa ha, intervalIdle_cx state b pb hb, hz, ho]private theorem intervalIdle_update_read (state : BasisState) (target : Wire) :
+    state[target ↦ state target] = state := by
+  funext wire
+  by_cases h : wire = target
+  · subst wire; simp [upd]
+  · simp [upd, h]
+
+private theorem intervalIdle_ripple_read (target addend carry : Wire) (state : BasisState) :
+    writeRippleCell target addend carry (readRippleCell target addend carry state) state = state := by
+  simp only [writeRippleCell, readRippleCell, intervalIdle_update_read]
+
+private theorem intervalIdle_ripple_first_idle (mode : RippleMode) (bits : RippleCellBits)
+    (hc : bits.carry = false) : rippleFirstBits mode false bits = bits := by
+  rcases bits with ⟨target, addend, carry⟩
+  cases carry with
+  | true => contradiction
+  | false => cases mode <;> cases target <;> cases addend <;> decide
+
+private theorem intervalIdle_ripple_second_idle (mode : RippleMode) (bits : RippleCellBits)
+    (hc : bits.carry = false) : rippleSecondBits mode false bits = bits := by
+  rcases bits with ⟨target, addend, carry⟩
+  cases carry with
+  | true => contradiction
+  | false => cases mode <;> cases target <;> cases addend <;> decide
+
+
+private theorem intervalIdle_endpoint (top : Bool) (label : Nat) (e c a : Wire)
+    (state : BasisState) (hc : state c = false) : endpointLeafToggleState top label e c a state = state := by
+  simp only [endpointLeafToggleState, hc, Bool.false_and, Bool.xor_false, intervalIdle_update_read]
+private theorem intervalIdle_first (mode : RippleMode) (top : Bool)
+    (rt lt a t b c scratch : Wire) (label : Nat) (rc lc : Wire) (state : BasisState)
+    (hrc : state rc = false) (hlc : state lc = false) (ha : state a = false)
+    (hc : state c = false) (hsc : state scratch = false) :
+    intervalFirstLeafTotalState mode top rt lt a t b c scratch label rc lc state = state := by
+  simp only [intervalFirstLeafTotalState, hsc, ↓reduceIte, intervalFirstLeafState,
+    intervalIdle_endpoint top label rt rc a state hrc, ha]
+  rw [intervalIdle_ripple_first_idle _ _ hc, intervalIdle_ripple_read]
+  exact intervalIdle_endpoint top label lt lc a state hlc
+private theorem intervalIdle_second (mode : RippleMode) (top : Bool)
+    (rt lt a t b c scratch : Wire) (label : Nat) (rc lc : Wire) (state : BasisState)
+    (hrc : state rc = false) (hlc : state lc = false) (ha : state a = false)
+    (hc : state c = false) (hsc : state scratch = false) :
+    intervalSecondLeafTotalState mode top rt lt a t b c scratch label rc lc state = state := by
+  simp only [intervalSecondLeafTotalState, hsc, ↓reduceIte, intervalSecondLeafState,
+    intervalIdle_endpoint top label lt lc a state hlc, ha]
+  rw [intervalIdle_ripple_second_idle _ _ hc, intervalIdle_ripple_read]
+  exact intervalIdle_endpoint top label rt rc a state hrc
+private theorem intervalIdle_topFirst (mode : RippleMode) (value : Nat)
+    (r l : List Wire) (a t b c rc lc : Wire) (state : BasisState)
+    (hrc : state rc = false) (hlc : state lc = false) (ha : state a = false)
+    (hc : state c = false) :
+    topSpecialFirstLeafState mode value r l a t b c rc lc state = state := by
+  simp only [topSpecialFirstLeafState, hrc, Bool.false_and, Bool.xor_false, intervalIdle_update_read]
+  rw [ha, intervalIdle_ripple_first_idle _ _ hc, intervalIdle_ripple_read]
+  simp only [hlc, Bool.false_and, Bool.xor_false, intervalIdle_update_read]
+private theorem intervalIdle_topSecond (mode : RippleMode) (value : Nat)
+    (r l : List Wire) (a t b c rc lc : Wire) (state : BasisState)
+    (hrc : state rc = false) (hlc : state lc = false) (ha : state a = false)
+    (hc : state c = false) :
+    topSpecialSecondLeafState mode value r l a t b c rc lc state = state := by
+  simp only [topSpecialSecondLeafState, hlc, Bool.false_and, Bool.xor_false, intervalIdle_update_read]
+  rw [ha, intervalIdle_ripple_second_idle _ _ hc, intervalIdle_ripple_read]
+  simp only [hrc, Bool.false_and, Bool.xor_false, intervalIdle_update_read]
+
+/-- With clean shared scratch, a disabled interval leaves the complete state unchanged for
+both arithmetic modes and targets, including its unconditional endpoint transformations. -/
+theorem intervalAddSubUnitary_idle
+    (registers : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (hlayout : IntervalLayout registers k K target)
+    (hready : IntervalReady registers state)
+    (hcontrol : state registers.control = false) :
+    run (intervalAddSubUnitary registers n k K mode signUpdate target) state = state := by
+  let prepared := run (prepareIntervalEndpoints registers.lengthT registers.lengthQ registers.lengthS
+    registers.endpointScratch (registers.carry k K) n k) state
+  have hprepared : Clean registers.scratch prepared :=
+    intervalPrepare_cleanScratch registers n k K target state hlayout hready
+  have hendpoint := intervalReady_endpointClean registers k K target state hlayout hready
+  have hprepare := prepareIntervalEndpoints_correct registers.lengthT registers.lengthQ
+    registers.lengthS registers.endpointScratch (registers.carry k K) n k state
+    hlayout.lengthT_eq_lengthQ
+    (intervalLengthQ_le_endpointScratch registers k K target hlayout)
+    (intervalLengthS_le_endpointScratch registers k K target hlayout)
+    (intervalLengthS_positive registers k K target hlayout) hlayout.endpoints hendpoint
+  have hphysical := hlayout.physical
+  rw [IntervalRegisters.allWires] at hphysical
+  have hcontrolNotTail : registers.control ∉ intervalNonSignTail registers := by
+    intro htail
+    exact (List.nodup_append.mp hphysical).2.2 registers.control (by simp)
+      registers.control htail rfl
+  have hcontrolNotQ : registers.control ∉ registers.lengthQ := by
+    intro hm
+    exact hcontrolNotTail (by simp [intervalNonSignTail, hm])
+  have hcontrolNotS : registers.control ∉ registers.lengthS := by
+    intro hm
+    exact hcontrolNotTail (by simp [intervalNonSignTail, hm])
+  have hcp : prepared registers.control = false := by
+    dsimp only [prepared]
+    rw [hprepare.2.2.2.2 registers.control hcontrolNotQ hcontrolNotS]
+    exact hcontrol
+  have ha := hprepared _ (intervalAccumulator_mem_scratch registers k K target hlayout)
+  have hc := hprepared _ (intervalCarry_mem_scratch registers k K target hlayout)
+  have hsc := hprepared _ (intervalCellScratch_mem_scratch registers k K target hlayout)
+  have htopClean : Clean (registers.cellScratch k K :: registers.equalityScratch k K) prepared := by
+    intro wire hw
+    exact hprepared wire (intervalTopScratch_mem_scratch registers k K target hlayout wire hw)
+  have hpaths := intervalPaths_clean_of_topScratch registers k K prepared htopClean
+  have htopFirst : intervalTopFirstState registers k K mode target prepared = prepared := by
+    unfold intervalTopFirstState
+    split
+    · exact intervalIdle_topFirst _ _ _ _ _ _ _ _ _ _ prepared hcp hcp ha hc
+    · rfl
+  have htopSecond : intervalTopSecondState registers k K mode target prepared = prepared := by
+    unfold intervalTopSecondState
+    split
+    · exact intervalIdle_topSecond _ _ _ _ _ _ _ _ _ _ prepared hcp hcp ha hc
+    · rfl
+  have hfirst : intervalFirstTraversalState mode (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+      (registers.carry k K) (registers.cellScratch k K) (registers.targetAt target)
+      (registers.addendAt target) (intervalTree registers k K) registers.control registers.control
+      (registers.rightPaths k K) (registers.leftPaths k K) prepared = prepared := by
+    unfold intervalFirstTraversalState
+    apply intervalIdle_tree
+    · intro label a b hca hcb
+      exact intervalIdle_first _ _ _ _ _ _ _ _ _ label a b prepared hca hcb ha hc hsc
+    · exact hcp
+    · exact hcp
+    · exact hpaths.1
+    · exact hpaths.2
+  have hsecond : intervalSecondTraversalState mode (intervalHasTopSpecial k K)
+      (registers.rightTop k K) (registers.leftTop k K) (registers.accumulator k K)
+      (registers.carry k K) (registers.cellScratch k K) (registers.targetAt target)
+      (registers.addendAt target) (intervalTree registers k K) registers.control registers.control
+      (registers.rightPaths k K) (registers.leftPaths k K) prepared = prepared := by
+    unfold intervalSecondTraversalState
+    apply intervalIdle_tree
+    · intro label a b hca hcb
+      exact intervalIdle_second _ _ _ _ _ _ _ _ _ label a b prepared hca hcb ha hc hsc
+    · exact hcp
+    · exact hcp
+    · exact hpaths.1
+    · exact hpaths.2
+  have hsign : intervalSignUpdateState registers k K signUpdate prepared = prepared := by
+    unfold intervalSignUpdateState
+    split
+    · simp only [hc, Bool.xor_false, intervalIdle_update_read]
+    · rfl
+  rw [run_intervalAddSubUnitary_state registers n k K mode signUpdate target state hlayout hready]
+  dsimp only [prepared] at htopFirst htopSecond hfirst hsecond hsign
+  simp only [intervalAddSubState, htopFirst, hfirst, hsign, hsecond, htopSecond]
+  exact run_restoreIntervalEndpoints_after_prepare registers.lengthT registers.lengthQ
+    registers.lengthS registers.endpointScratch (registers.carry k K) n k state
+    hlayout.lengthT_eq_lengthQ (intervalLengthQ_le_endpointScratch registers k K target hlayout)
+    (intervalLengthS_le_endpointScratch registers k K target hlayout)
+    (intervalLengthS_positive registers k K target hlayout) hlayout.endpoints hendpoint
+
 end
 
 end ShorECDLP.Paper2607_13816
