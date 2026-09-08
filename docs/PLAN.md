@@ -617,8 +617,14 @@ all borrowed and clean work, and removes every measurement-dependent phase. The 
 256-bit circuit has a readable combined certificate: 764 Toffolis, 1,344 CNOTs, 5,348 T,
 255 measurement/resets and exactly 515 distinct physical wires. Well-formedness proves
 total probability preservation. The zero-constant shortcut and width-one case are included.
-The measurement-assisted constant comparator, modular correction, the Horner schedule,
-and squaring remain open within this phase.
+`Arithmetic/GidneyCompare.lean` completes the controlled measurement-assisted constant
+comparator, including zero and out-of-range threshold shortcuts. Every branch toggles
+only the arbitrary result flag by the controlled numeric predicate; borrowed/clean work
+is restored, both correction phases cancel, and total probability is preserved. The
+same-circuit secp256k1-modulus certificate proves 767 Toffolis, 1,598 CNOTs, 5,369 T,
+256 measurement/resets and exactly 517 physical wires. `Arithmetic/GidneyCarry.lean`
+shares the existing measured-carry facts and metrics between the adder and comparator.
+Modular correction, the Horner schedule and squaring remain open within this phase.
 
 Modules:
 

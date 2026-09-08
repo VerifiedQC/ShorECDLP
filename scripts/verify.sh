@@ -855,6 +855,12 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_coherent
 #print axioms ShorECDLP.Paper2607_13816.mem_secp256k1ScheduleIndices_iff
 #print axioms ShorECDLP.Paper2607_13816.secp256k1Schedule_indexedFrame
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1GidneyCompare_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_preservesBornMass
@@ -944,8 +950,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 920 ]]; then
-  printf 'expected 920 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 926 ]]; then
+  printf 'expected 926 #print axioms results\n' >&2
   exit 1
 fi
 
