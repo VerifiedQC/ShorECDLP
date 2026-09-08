@@ -1128,3 +1128,18 @@ and all-ones quotient-length word.
 This is an initial-state bridge. Complete packed-field encoding, preservation and
 routing for all 1,620 reachable steps, the full EEA wrapper and aggregate resources
 remain open. Circuit definitions and their resource certificates are unchanged.
+
+
+### Complete initial packed work banks and metadata
+
+`EEA/InitialPacked.lean` proves that both entire work-bank bit strings equal the
+canonical `paperInitial` field concatenations, using the width from `packedView`.
+The proof includes the Work1 separator and guard bit, the empty quotient, and all
+leading zeros beside the Work2 zero coefficient. A second theorem connects both
+phase bits, sign, iteration parity and all four length/shift words to the same
+logical initial state. Zero length and shift retain the all-ones sentinel.
+
+Together with `InitialEncoding`, this closes the initial packed-state connection
+and its scratch/epoch premises. It does not establish preservation or routing for
+subsequent microsteps; the full reachable-state invariant, EEA wrapper and remaining
+phase deliverables are still open. No circuit definitions or costs changed.
