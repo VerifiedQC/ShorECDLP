@@ -2836,7 +2836,7 @@ private theorem IndexedStepLayout.blockScratch_outside_terminalEpoch
     subst wire
     exact hlayout.quotientLow_not_blockScratch hwire
 
-private theorem terminalPaddingForwardState_preserves
+theorem terminalPaddingForwardState_preserves
     (registers : TerminalPaddingRegisters) (state : BasisState)
     {wire : Wire} (hwork : wire ∉ registers.work2)
     (hlength : wire ∉ registers.lengthS)

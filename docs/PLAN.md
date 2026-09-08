@@ -1194,3 +1194,12 @@ modulo its width, and the epoch bit toggles exactly on low-word wrap.
 `indexedStepUnitary_terminal_counter_correct` replaces the condition on the
 padding result with an input-side modular bound on that extended counter. Proving
 that bound and the phase/remainder encoding along reachable traces remains open.
+
+`secp256k1TerminalScheduleInvariant` now proves the operational schedule invariant
+for any production terminal suffix within the logical 596-step padding bound.
+It starts from `Secp256k1TerminalState`, which records scratch/epoch readiness,
+phase 00, the remainder sentinel and the existing `terminalShiftLow` /
+`terminalShiftEpoch` formulas. Each actual routed step preserves this encoding;
+the counter bound follows from those formulas, rather than being assumed at each
+intermediate state. The active prefix must still establish the initial terminal
+boundary, and its own arithmetic/epoch invariant remains open.
