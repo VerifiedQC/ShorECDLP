@@ -931,7 +931,13 @@ private theorem gidneyCompareProduction_core : secp256k1GidneyCompare =
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
 private theorem gidneyCompareProduction_layout :
-    ([0,1,2,3,4] ++ List.range' 5 256 ++ List.range' 261 256).Nodup := by decide
+    ([0,1,2,3,4] ++ List.range' 5 256 ++ List.range' 261 256).Nodup := by
+  simp only [List.nodup_append]
+  refine ⟨⟨by decide,List.nodup_range',?_⟩,List.nodup_range',?_⟩
+  all_goals
+    intro a ha b hb he
+    simp at ha hb
+    omega
 
 set_option maxRecDepth 100000 in
 private theorem gidneyCompareProduction_cleanup_counts :
