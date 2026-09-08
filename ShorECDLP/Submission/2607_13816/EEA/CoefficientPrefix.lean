@@ -3365,16 +3365,15 @@ private theorem coefficientPrefixSign_agreesOutsideSign
     simp [coefficientPrefixSignCircuit, Classical.run,
       Classical.applyGate, upd, hne]
 
-/-- The complete coherent prepared-boundary block restores the shared decoder, carry,
-accumulator, and clean-v-chain scratch bank. -/
-theorem coefficientPrefixUnitary_clean
+/-- Only the work banks and optional sign can change across the complete coefficient block;
+the decoder, length and scratch registers are restored. -/
+theorem coefficientPrefixUnitary_frame
     (registers : CoefficientPrefixRegisters) {k K : Nat}
     (mode : RippleMode) (signUpdate : Bool) (target : CoefficientTarget)
-    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K)
-    (hready : CoefficientPrefixReady registers state) :
-    CoefficientPrefixReady registers
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K) :
+    AgreesOutside (registers.sign :: registers.work1 ++ registers.work2)
       (Classical.run
-        (coefficientPrefixUnitary registers k K mode signUpdate target) state) := by
+        (coefficientPrefixUnitary registers k K mode signUpdate target) state) state := by
   let seed : Circuit := [.CX registers.control (registers.accumulator k K)]
   let firstCircuit := unaryActionUnitary .inc
     (coefficientPrefixFirstLeaf registers k K mode target)
@@ -3414,15 +3413,17 @@ theorem coefficientPrefixUnitary_clean
   rw [hshape]
   intro wire hwire
   have hwireSign : wire ≠ registers.sign := by
-    intro equality
-    apply (coefficientPrefix_fixed_not_mem_scratch registers hlayout).2
-    rw [← equality]
-    exact hwire
+    intro he; exact hwire (List.mem_cons.mpr (Or.inl he))
   have hwireTargets : wire ∉ targets := by
-    intro htarget
-    simp only [targets, List.mem_map] at htarget
-    obtain ⟨label, hlabel, rfl⟩ := htarget
-    exact coefficientPrefix_targetAt_not_scratch registers target hlayout hwire
+    intro hm
+    obtain ⟨label, hl, he⟩ := List.mem_map.mp hm
+    apply hwire
+    apply List.mem_cons.mpr
+    apply Or.inr
+    rw [← he]
+    cases target with
+    | work1 => exact List.mem_append_left _ (coefficientPrefix_work1At_mem_any registers hlayout label)
+    | work2 => exact List.mem_append_right _ (coefficientPrefix_work2At_mem_any registers hlayout label)
   have hbodyWire := hbodyValue wire hwireSign hwireTargets
   by_cases haccumulator : wire = registers.accumulator k K
   · subst wire
@@ -3455,14 +3456,32 @@ theorem coefficientPrefixUnitary_clean
     simp only [seed, Classical.run, List.foldl, Classical.applyGate]
     rw [hbodyAcc, hbodyControl]
     have hcontrolAcc := coefficientPrefix_control_ne_accumulator registers hlayout
-    have hstateAcc := hready (registers.accumulator k K)
-      (coefficientPrefix_accumulator_mem_scratch registers hlayout)
     simp [seeded, seed, Classical.run, Classical.applyGate, upd,
-      hcontrolAcc, hstateAcc]
+      hcontrolAcc]
   · simp only [seed, Classical.run, List.foldl, Classical.applyGate]
     rw [upd_other _ _ _ haccumulator, hbodyWire]
-    simpa [seeded, seed, Classical.run, Classical.applyGate, upd,
-      haccumulator] using hready wire hwire
+    simp [seeded, seed, Classical.run, Classical.applyGate, upd, haccumulator]
+
+/-- The complete coefficient block restores its shared scratch. -/
+theorem coefficientPrefixUnitary_clean
+    (registers : CoefficientPrefixRegisters) {k K : Nat}
+    (mode : RippleMode) (signUpdate : Bool) (target : CoefficientTarget)
+    (state : BasisState) (hlayout : CoefficientPrefixLayout registers k K)
+    (hready : CoefficientPrefixReady registers state) :
+    CoefficientPrefixReady registers
+      (Classical.run (coefficientPrefixUnitary registers k K mode signUpdate target) state) := by
+  have hf := coefficientPrefixUnitary_frame registers mode signUpdate target state hlayout
+  intro wire hw
+  rw [hf wire (by
+    intro hm
+    rcases List.mem_cons.mp hm with he | he
+    · exact (coefficientPrefix_fixed_not_mem_scratch registers hlayout).2 (he ▸ hw)
+    · rcases List.mem_append.mp he with he | he
+      · exact (coefficientPrefix_physical_parts registers hlayout).2.2.2.2.2.2.1
+          wire he wire (by simp [hw]) rfl
+      · exact (coefficientPrefix_physical_parts registers hlayout).2.2.2.2.2.2.2.1
+          wire he wire (by simp [hw]) rfl)]
+  exact hready wire hw
 
 /-- The enclosing indexed step may compute the coefficient selector once, run the complete
 prepared-boundary block, and erase the same selector afterwards. -/
