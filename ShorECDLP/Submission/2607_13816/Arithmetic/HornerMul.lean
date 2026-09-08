@@ -444,7 +444,15 @@ def secp256k1HornerMul : Quantum.AdaptiveCircuit :=
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 4000000 in
 private theorem hornerProduction_layout :
-    ([1,2,3,0] ++ List.range' 516 256 ++ List.range' 260 256 ++ (4 :: List.range' 5 255)).Nodup := by decide
+    ([1,2,3,0] ++ List.range' 516 256 ++ List.range' 260 256 ++ (4 :: List.range' 5 255)).Nodup := by
+  change ([1,2,3,0] ++ List.range' 516 256 ++ List.range' 260 256 ++ List.range' 4 256 : List Nat).Nodup
+  simp only [List.nodup_append]
+  refine ⟨⟨⟨by decide,List.nodup_range',?_⟩,List.nodup_range',?_⟩,List.nodup_range',?_⟩
+  all_goals
+    intro a ha b hb he
+    simp at ha hb
+    omega
+
 
 set_option maxRecDepth 100000 in
 private theorem hornerProduction_qubits : secp256k1HornerMul.qubitCount = 772 := by
