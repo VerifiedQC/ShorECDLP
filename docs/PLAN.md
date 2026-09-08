@@ -1188,3 +1188,9 @@ after the explicitly stated padding transition. The counter condition and the
 phase/remainder premises still need proofs along reachable traces. Active-phase
 arithmetic refinement and unconditional inversion remain open; this does not
 close Phase 6 or change circuit definitions and costs.
+
+The padding counter now has a numeric interpretation: its low word increments
+modulo its width, and the epoch bit toggles exactly on low-word wrap.
+`indexedStepUnitary_terminal_counter_correct` replaces the condition on the
+padding result with an input-side modular bound on that extended counter. Proving
+that bound and the phase/remainder encoding along reachable traces remains open.
