@@ -840,11 +840,6 @@ private theorem gidneyCompareTail_covers (input dirty : List Wire) (constant : L
           apply ih dirty constant r c _ (by simpa using hk) (by simpa using hd) hi w
           simp only [List.mem_append,List.mem_cons,List.not_mem_nil] at hw h ⊢; tauto
 
-private theorem gidneyCompareCell_covers (q c r t a d f w : Wire) (last : Bool) :
-    w ∈ circuitWires (gidneyCompareCarryCell q c r t a d f true last) ↔
-      w ∈ [q,c,r,t,a,d] ∨ (last = true ∧ w = f) := by
-  cases last <;> simp [gidneyCompareCarryCell,circuitWires,gateWires] <;> tauto
-
 private theorem gidneyCompareCell_covers_of_ne_control (q c r t a d f w : Wire)
     (k last : Bool) (hq : w ≠ q) :
     w ∈ [q,c,r,t,a,d] ∨ (last = true ∧ w = f) →
