@@ -1053,3 +1053,18 @@ Phases 0--5 and Phase 6 schedule units 1--2 are merged through PR #84 at `main@7
 closes the fixed 1,620-step physical layout with the explicit repaired 580-role allocation. The
 reachable-state encoding/invariant, maximum-live allocation and pinned-579 recovery, unconditional
 inversion endpoint, and aggregate resource boundary remain open.
+
+### EEA encoded-length initialization
+
+The concrete `lengthInitialize` circuit implements the source first-one scan and all-zero
+sentinel. `lengthInitialize_correct` proves XOR of bit-length-minus-one into an arbitrary
+target word with a complete frame; the clean flag and known modulus workspace are restored
+after each case. Abstract source MCX calls are explicitly lowered using the existing clean
+v-chain after clearing known workspace bits, then restoring their constant. This changes
+the MCX implementation, not its logical action, and allocates no additional large register.
+
+`secp256k1LengthInitialize_correct_resources` ties that same circuit to 131,068 CCX, 1,035 CX,
+917,476 T and a 520-wire capacity bound, including 254 reused known workspace bits. The input
+is big-endian; the target and known scratch constants are little-endian. These are costs of
+this explicit lowering, not resource claims about Qiskit's abstract MCX implementation.
+Full wrapper preparation/encoding, the reachable EEA invariant and Figure 15 remain open.
