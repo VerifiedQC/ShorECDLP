@@ -1068,3 +1068,16 @@ the MCX implementation, not its logical action, and allocates no additional larg
 is big-endian; the target and known scratch constants are little-endian. These are costs of
 this explicit lowering, not resource claims about Qiskit's abstract MCX implementation.
 Full wrapper preparation/encoding, the reachable EEA invariant and Figure 15 remain open.
+
+### EEA work-bank preparation
+
+`workRegistersPrepare` composes the pinned Work2 permutation with the source-order Work1
+constant toggle in the schedule's existing allocation. The same-program certificate proves
+Work1=(t=1,r=p), Work2=(s=0,r′=x), their bit orders, a complete frame and full-state cancellation
+by the explicit source reverse. Preparation has 641 gates (390 CX and 251 X), zero T and a
+518-wire capacity bound for the two existing work banks. Both directions have proved physical
+well-formedness, H/P freedom, 390 CX and zero Toffoli/T cost. The forward and reverse Work2
+streams preserve the source permutation builder's exact 130-swap order.
+
+This completes the initial work-bank arrangement only. Composition with centering and length
+initialization, full EEA encoding and the reachable-state invariant remain open.

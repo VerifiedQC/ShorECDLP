@@ -936,6 +936,22 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.lengthInitialize_HPFree
 #print axioms ShorECDLP.Paper2607_13816.lengthInitializeScan_counts
 #print axioms ShorECDLP.Paper2607_13816.secp256k1LengthInitialize_correct_resources
+#print axioms ShorECDLP.Paper2607_13816.work2Prepare_correct
+#print axioms ShorECDLP.Paper2607_13816.work2Restore_correct
+#print axioms ShorECDLP.Paper2607_13816.work2Prepare_resources
+#print axioms ShorECDLP.Paper2607_13816.work2Restore_resources
+#print axioms ShorECDLP.Paper2607_13816.work2Restore_after_prepare
+#print axioms ShorECDLP.Paper2607_13816.work2Prepare_clean_header
+#print axioms ShorECDLP.Paper2607_13816.work2Prepare_input_bit
+#print axioms ShorECDLP.Paper2607_13816.work1Load_twice
+#print axioms ShorECDLP.Paper2607_13816.work1Load_word
+#print axioms ShorECDLP.Paper2607_13816.work1Load_header
+#print axioms ShorECDLP.Paper2607_13816.work1Load_resources
+#print axioms ShorECDLP.Paper2607_13816.workRegistersPrepare_correct
+#print axioms ShorECDLP.Paper2607_13816.workRegistersPrepare_resources
+#print axioms ShorECDLP.Paper2607_13816.workRegistersRestore_after_prepare
+#print axioms ShorECDLP.Paper2607_13816.workRegistersRestore_resources
+#print axioms ShorECDLP.Paper2607_13816.workRegistersPrepare_correct_resources
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_counts
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularHalve_counts
 #print axioms ShorECDLP.Paper2607_13816.modularDoubleIdealState_uncorrect
@@ -1054,8 +1070,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1030 ]]; then
-  printf 'expected 1030 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1046 ]]; then
+  printf 'expected 1046 #print axioms results\n' >&2
   exit 1
 fi
 
