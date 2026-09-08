@@ -969,6 +969,42 @@ private theorem gidneyRoot_gateCount (cost : Gate → Nat) (cell top : Bool → 
     | cons w ws ih => simpa [gidneyFlipWord,hX] using ih
   simp [gidneyAddCleanup,List.map_append,List.sum_append,hflip,Nat.add_assoc]
 
+
+private theorem gidneyForward_toffoli (constant : List Bool) :
+    gidneyForwardCost (fun _ => 1) (fun _ => 0) constant = constant.length - 1 := by
+  induction constant with
+  | nil => rfl
+  | cons k ks ih =>
+    cases ks with
+    | nil => rfl
+    | cons l ls => simp [gidneyForwardCost] at ih ⊢; omega
+
+/-- An odd, nonzero constant uses exactly `3n - 4` Toffolis at every width
+`n ≥ 2`, independent of its other bits and all wire labels. -/
+theorem controlledGidneyAddConst_toffoli_exact (a d q c r t : Wire)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1) :
+    gidneyToffoliCount (controlledGidneyAddConst (a :: input) (d :: dirty) (true :: constant) q c r t) =
+      3 * (input.length + 1) - 4 := by
+  have hroot := gidneyRoot_gateCount (fun g => match g with | .CCX _ _ _ => 1 | _ => 0)
+    (fun _ => 1) (fun _ => 0) (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell])
+    (by intro q c a k; cases k <;> simp) a d q c r t input dirty true constant hk hd (by simp)
+  have hki : (input.take dirty.length).length = (constant.take dirty.length).length := by simp [hk]
+  have hdi : (a :: input.take dirty.length).length = (d :: dirty).length := by
+    simp [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
+  have hcleanup := (controlledConstCarryXor_counts a (input.take dirty.length) (d :: dirty) true
+    (constant.take dirty.length) q c hki hdi).2.1
+  apply hroot.trans
+  simp only [List.length_cons,List.take_succ_cons]
+  change 1 + gidneyForwardCost (fun _ => 1) (fun _ => 0) constant +
+    eeaToffoliCount (controlledConstCarryXor (a :: input.take dirty.length) (d :: dirty)
+      (true :: constant.take dirty.length) q c) = _
+  rw [gidneyForward_toffoli,hcleanup]
+  simp only [List.length_take]
+  rw [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
+  omega
+
 /-- Production controlled constant adder, with 256 data bits, 255 arbitrary borrowed
 bits, and three initially clean carry/ancilla bits. -/
 def secp256k1GidneyAdd : Quantum.AdaptiveCircuit :=

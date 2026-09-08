@@ -595,7 +595,7 @@ inversion. The first Phase-7 unit is `Arithmetic/CarryAdd.lean`: the pinned quad
 controlled carry-output adder and literal inverse, with direct arithmetic/frame correctness and
 constructor-derived counts. The fixed 256-bit theorem combines controlled-sum and overflow
 semantics, input/carry restoration, 769 Toffolis, 1,024 CNOTs, 5,383 coherent T gates, and exactly
-515 distinct wires for the same circuit. This is a binary adder, not yet modular multiplication.
+515 distinct wires for the same circuit. This component certificate covers the binary adder.
 The uniform recurrence matches the source for widths at least two and corrects its one-bit
 special case, whose overflow update ignores the accumulator.
 
@@ -671,7 +671,11 @@ certificate proves the modular square, complete frame restoration and normalized
 with 1,110,533 Toffolis, 2,192,831 CNOTs, 7,773,731 T gates, 261,121 measurement/resets
 and exactly 517 wires. Both circuits use `n` additions and `n - 1` doublings; their costs
 are derived symbolically over the loop length from the fixed 256-bit component counts.
-The generic-width `17 n² + O(n)` Toffoli derivation remains the Phase 7 boundary.
+`Arithmetic/ResourceGrowth.lean` additionally proves the exact count `17 n² - 14 n + 5`
+for both actual circuits at every width `n ≥ 2`, with a nontrivial threshold and an odd
+correction. It derives `3n - 4` for the constant adder, `3n - 1` for uncontrolled comparison,
+`11n - 3` for modular addition and `6n - 5` for doubling, then counts the actual loop.
+The same production terms retain their previously proved correctness and resource certificates.
 Naive arithmetic is not imported.
 
 **Gate:** exact 256-bit vectors and symbolic bounds are proved for multiplication and squaring.
