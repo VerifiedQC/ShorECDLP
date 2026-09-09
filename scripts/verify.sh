@@ -396,6 +396,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_canonical_endpoint
 #print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_endpoint_context
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_canonical_endpoint
+#print axioms ShorECDLP.Paper2607_13816.blockHForward
+#print axioms ShorECDLP.Paper2607_13816.blockHForward_canonical_endpoint
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_swapPhase
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_swap_tail
 #print axioms ShorECDLP.Paper2607_13816.indexedStepSwapPrefix_idle
@@ -1310,8 +1312,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1286 ]]; then
-  printf 'expected 1286 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1288 ]]; then
+  printf 'expected 1288 #print axioms results\n' >&2
   exit 1
 fi
 

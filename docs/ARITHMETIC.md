@@ -2316,3 +2316,12 @@ premise. The initial nonzero right remainder, metadata capacity and window/mask
 coverage remain explicit; zero output remainder is included. Lifting this
 complete inner endpoint to the scheduled H wrapper and deriving reachable
 geometry remain separate obligations.
+
+`blockHForward_canonical_endpoint` lifts the complete inner endpoint result to
+the actual scheduled H circuit. Zero-Q/zero-S control preparation preserves
+canonical payload inputs, and the parity/control cleanup preserves the returned
+coefficient and remainder bit lengths. Both decoder routes remain derived
+internally. The existing H circuit is now public for subsequent packed-state
+composition. Canonical bank views, positive old right remainder, metadata
+capacity and active-window/mask coverage remain assumptions; this is not yet
+a reachable-state proof of those conditions.

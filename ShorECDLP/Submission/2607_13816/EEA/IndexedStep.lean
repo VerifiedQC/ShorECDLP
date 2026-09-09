@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.EndIterationArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrefixInverse
 import ShorECDLP.Submission.«2607_13816».EEA.EndIteration
@@ -480,7 +481,8 @@ def blockGForward (registers : IndexedStepRegisters) : Circuit :=
 private def blockGInverse (registers : IndexedStepRegisters) : Circuit :=
   phaseUpdateEpochInverseUnitary registers.phaseUpdate registers.shiftEpoch
 
-private def blockHForward
+/-- The scheduled H circuit exchanges endpoint banks and refreshes length metadata. -/
+def blockHForward
     (registers : IndexedStepRegisters) (n T : Nat) : Circuit :=
   if T % 4 = 0 then
     circuit! {
@@ -13566,5 +13568,118 @@ theorem blockHForward_endpoint_banks (r : IndexedStepRegisters) (n T : Nat)
         (h.aux_not_endIterationMutable h.control_mem_aux)).trans hc
     simp [xorWireState, upd, hic, hcc]
   · rw [hstate.1, active_H_epoch r n T b4 b5 s h, hepoch]
+
+/-- The scheduled actual H endpoint derives canonical metadata from physical packed banks, including internal decoder routing. -/
+theorem blockHForward_canonical_endpoint
+    (r : IndexedStepRegisters) (n T : Nat)
+    (t tPrime remainder rPrime R RPrime : Nat) (tail1 tail2 pre1 pre2 : List Bool)
+    (hrPrimePositive : 0 < rPrime) (hcapacity : n+3 < 2^r.lengthT.length)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ (n+3-rPrime.size) ∧ (n+3-rPrime.size) ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ (tPrime.size+2) ∧
+      (tPrime.size+2) ≤ (endIterationWindowsAt n T).K5Decode n)
+    (s : BasisState)
+    (h : IndexedStepLayout r n T)
+    (hr : IndexedStepReady r s)
+    (hstep : T % 4 = 0) (hQ : wireAnd r.lengthQ s = true)
+    (hS : wireAnd r.lengthS s = true) (hepoch : s r.shiftEpoch = false)
+    (hw1u : wireValues r.work1 s = constantBits (n+3-rPrime.size) t ++ tail1)
+    (hw2u : wireValues r.work2 s = constantBits (n+3-rPrime.size) tPrime ++ tail2)
+    (hw1l : wireValues r.work1 s = pre1 ++ (constantBits R remainder).reverse)
+    (hw2l : wireValues r.work2 s = pre2 ++ (constantBits RPrime rPrime).reverse)
+    (ht : t < 2^(n+3-rPrime.size)) (htp : tPrime < 2^(n+3-rPrime.size))
+    (hrem : remainder < 2^R) (hrp : rPrime < 2^RPrime)
+    (htWindow : (endIterationWindowsAt n T).k4 ≤ t.size ∧ t.size ≤ (endIterationWindowsAt n T).K4)
+    (htpWindow : (endIterationWindowsAt n T).k4 ≤ tPrime.size ∧ tPrime.size ≤ (endIterationWindowsAt n T).K4)
+    (hp1_length : pre1.length < (tPrime.size+2)) (hp2_length : pre2.length < (tPrime.size+2))
+    (hrWindow : remainder ≠ 0 → (endIterationWindowsAt n T).k5 ≤ n+4-remainder.size ∧
+      n+4-remainder.size ≤ (endIterationWindowsAt n T).K5Decode n ∧ (tPrime.size+2) ≤ n+4-remainder.size)
+    (hrpWindow : rPrime ≠ 0 → (endIterationWindowsAt n T).k5 ≤ n+4-rPrime.size ∧
+      n+4-rPrime.size ≤ (endIterationWindowsAt n T).K5Decode n ∧ (tPrime.size+2) ≤ n+4-rPrime.size)
+    (hT : wireValues r.lengthT s = constantBits r.lengthT.length
+      (truthMinusOneValue r.lengthT.length t.size))
+    (hRP : wireValues r.lengthRPrime s = constantBits r.lengthRPrime.length
+      (truthMinusOneValue r.lengthRPrime.length rPrime.size)) :
+    (wireValues r.lengthT (run (blockHForward r n T) s),
+      wireValues r.lengthRPrime (run (blockHForward r n T) s)) =
+      (constantBits r.lengthT.length (truthMinusOneValue r.lengthT.length tPrime.size),
+       constantBits r.lengthRPrime.length (truthMinusOneValue r.lengthRPrime.length remainder.size)) := by
+  let e := r.endIteration n T
+  let w := endIterationWindowsAt n T
+  let swapped := run (controlledWorkSwap e.control e.work1 e.work2) (blockHEndInputState r s)
+  let upper := run (constMinus e.lengthRP e.constants e.carry (n+2)) swapped
+  let lower := run (addConstant e.lengthT e.constants e.carry 3)
+    (run (lenUpdateLtUnary n w.k4 w.K4 (e.upperTree w) e.control
+      (e.rangeAccumulator w.k4 w.K4) (e.temporary w.k4 w.K4) e.carry
+      (e.path w.k4 w.K4) e.work1At e.work2At e.lengthT e.lengthRP e.constants) swapped)
+  let b4 := (e.upperTree w).routeLabel upper
+  let b5 := (e.lowerTree n w).routeLabel lower
+  have he := h.endIteration hstep
+  have hb4 : w.k4 ≤ b4 ∧ b4 ≤ w.K4 := by
+    apply (mem_zeroMapLabels he.k4_le_K4).mp
+    rw [← e.upperTree_visitLabels w he.k4_le_K4, UnaryActionTree.visitLabels_inc]
+    exact UnaryActionTree.routeLabel_mem_labels _ _
+  have hb5 : w.k5 ≤ b5 ∧ b5 ≤ w.K5Decode n := by
+    apply (mem_zeroMapLabels he.k5_le_decode).mp
+    rw [← e.lowerTree_visitLabels n w he.k5_le_decode, UnaryActionTree.visitLabels_inc]
+    exact UnaryActionTree.routeLabel_mem_labels _ _
+  let enabled := blockHEndInputState r s
+  let changed := endIterationForwardState r n T b4 b5 enabled
+  have hc : enabled r.control = true := endpoint_input_enabled r n T s h hr hQ hS hepoch
+  have hp (wire : Wire) (hw : wire ∈ indexedStepPayload r) : enabled wire = s wire :=
+    endpoint_input_payload r n T s h hw
+  have hp1 : wireValues r.work1 enabled = wireValues r.work1 s := by
+    apply List.map_congr_left
+    intro wire hw
+    exact hp wire (by simp only [indexedStepPayload, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false, hw, or_true, true_or])
+  have hp2 : wireValues r.work2 enabled = wireValues r.work2 s := by
+    apply List.map_congr_left
+    intro wire hw
+    exact hp wire (by simp only [indexedStepPayload, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false, hw, or_true, true_or])
+  have her : EndIterationReady e enabled := by
+    have hh := blockHPrefix_run r n T s h hr
+    rw [hh.1] at hh
+    exact hh.2
+  have hrun := run_endIterationForwardState r n T b4 b5 hb4 hb5 enabled h hstep rfl rfl her
+  have hpT : wireValues r.lengthT enabled = wireValues r.lengthT s := by
+    apply List.map_congr_left
+    intro wire hw
+    exact hp wire (by simp only [indexedStepPayload, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false, hw, or_true, true_or])
+  have hpRP : wireValues r.lengthRPrime enabled = wireValues r.lengthRPrime s := by
+    apply List.map_congr_left
+    intro wire hw
+    exact hp wire (by simp only [indexedStepPayload, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false, hw, or_true])
+  have hm := swapWorkAndLengthUnaryShared_canonical_endpoint e n w
+    t tPrime remainder rPrime R RPrime tail1 tail2 pre1 pre2 hrPrimePositive hcapacity
+    hboundary4 hboundary5 enabled he her hc
+    (hp1.trans hw1u) (hp2.trans hw2u) (hp1.trans hw1l) (hp2.trans hw2l)
+    ht htp hrem hrp htWindow htpWindow hp1_length hp2_length hrWindow hrpWindow
+    (hpT.trans hT) (hpRP.trans hRP)
+  rw [hrun.1] at hm
+  have hi := endpoint_iter_not_mutable r n T h
+  have hstate := blockHForward_correct r n T b4 b5 hb4 hb5 s h (fun _ => rfl) (fun _ => rfl) hr
+  have hword (ws : List Wire) (hws : ∀ wire ∈ ws, wire ∈ r.lengthT ++ r.lengthRPrime) :
+      wireValues ws (run (blockHForward r n T) s) = wireValues ws changed := by
+    rw [hstate.1]
+    apply List.map_congr_left
+    intro wire hw
+    have hwmeta := hws wire hw
+    have hwmut : wire ∈ endIterationMutableWires r := by
+      simp only [List.mem_append] at hwmeta
+      simp only [endIterationMutableWires, List.mem_append]
+      rcases hwmeta with hwmeta | hwmeta
+      · exact Or.inl (Or.inr hwmeta)
+      · exact Or.inr hwmeta
+    have hne : wire ≠ r.iter := by intro heq; subst wire; exact hi hwmut
+    rw [endpoint_H_payload r n T b4 b5 s h hstep (wire := wire) (by
+      simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]
+      rcases List.mem_append.mp hwmeta with hwmeta | hwmeta <;> simp only [hwmeta, or_true, true_or])]
+    exact xorWireState_preserves _ _ _ hne
+  rw [hword r.lengthT (fun _ hw => List.mem_append_left _ hw),
+    hword r.lengthRPrime (fun _ hw => List.mem_append_right _ hw)]
+  exact hm
 
 end ShorECDLP.Paper2607_13816
