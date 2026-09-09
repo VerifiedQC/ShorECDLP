@@ -17,7 +17,8 @@ private theorem truthMinusOne_zero_iff (width value : Nat) (hv : value < 2^width
   · rw [show value+2^width-1 = value-1+2^width by omega,Nat.add_mod_right,
       Nat.mod_eq_of_lt (by omega : value-1 < 2^width)]
     omega
-private theorem wireAnd_encoded_zero (wires : List Wire) (s : BasisState) (value : Nat)
+/-- A bounded logical length is zero exactly when its encoding is all ones. -/
+theorem wireAnd_encoded_zero (wires : List Wire) (s : BasisState) (value : Nat)
     (hvalue : boolWordToNat (wireValues wires s) = truthMinusOneValue wires.length value)
     (hfit : value < 2^wires.length) : wireAnd wires s = decide (value=0) := by
   rw [wireAnd_eq_numeric_allOnes,hvalue]

@@ -2035,3 +2035,11 @@ A–C remainder prefix: `indexedStepRemainderPrefix_coefficient_idle`. It requir
 physical layout, clean auxiliary wires, phase1=true and phase2=false, with no
 logical packing, capacity or endpoint-routing assumptions. The whole coefficient
 microstep still needs the final H-stage composition.
+
+`indexedStepUnitary_coefficientPhase` now composes A–H for the coefficient
+microstep. The advanced positive shift disables H; both decoder-route bounds
+are derived from the trees' label ranges, rather than assumed for an inactive
+aggregate. The complete indexed circuit has the D/E/F physical result with the
+last-quotient-bit phase/sign transition and readiness. Initial packing, capacity,
+selected-window and strict coefficient bounds remain explicit. Other phase
+refinements and a reachable whole-loop invariant remain open.
