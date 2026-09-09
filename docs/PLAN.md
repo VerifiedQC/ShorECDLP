@@ -1336,3 +1336,12 @@ trailing positions. Both zero words encode length zero through the all-ones
 sentinel. The old consistency premise is now arithmetic rather than a first/last
 list-index expression. Connecting these masked ranges to the evolving packed EEA
 values remains open.
+
+`endIterationUpperRangeBits_slice` and `endIterationLowerRangeBits_slice` identify
+both masks with contiguous work-register slices and their zero padding. For a
+positive, in-bounds label window containing the split boundary, the upper mask
+keeps labels up to that boundary and the lower keeps labels from it onward.
+Their numeric corollaries erase the padding in the respective little-/big-endian
+orientations. These exact slice identities connect the preceding binary-length
+formulas to work-register positions; reachable packed-value consistency still
+requires the arithmetic invariant.
