@@ -1588,3 +1588,14 @@ proof to derive full-circuit modular slice arithmetic with
 lengths as truth-minus-one, including wrapped zero encodings. Explicit endpoint
 bounds and order remain required; establishing the encoding and these bounds
 for reachable packed EEA states is the next obligation.
+
+### Complete interval word and sign result
+
+`run_intervalAddSubBody_slices` and `run_intervalAddSubUnitary_slices` now specify
+the entire target word as its original prefix, the arithmetic result on the
+selected slice, and its original suffix. They also restore the addend and give
+the optional sign XOR from the selected operation's outgoing carry/borrow.
+Both control values are covered; the full interval starts with ready scratch.
+The numeric body theorem now derives from this common word decomposition.
+Prepared endpoint bounds/order and reachable packed-field interpretation remain
+explicit proof boundaries.

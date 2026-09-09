@@ -130,4 +130,69 @@ theorem run_intervalAddSubUnitary_value (r : IntervalRegisters) (n k K : Nat) (m
   rw [hshape, hout]
   rw [ht, had, hcarry] at hb
   simpa only [Bool.toNat_false, Nat.add_zero, Nat.sub_zero] using hb
+
+
+/-- Full interval word semantics: only the selected target slice is replaced;
+the addend is restored and the optional sign records the slice's carry/borrow. -/
+theorem run_intervalAddSubUnitary_slices (r : IntervalRegisters) (n k K : Nat) (mode : RippleMode)
+    (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (h : IntervalLayout r k K target) (hready : IntervalReady r state)
+    (hvalues : let p := run (prepareIntervalEndpoints r.lengthT r.lengthQ r.lengthS
+        r.endpointScratch (r.carry k K) n k) state
+      boolWordToNat (wireValues r.lengthS p) ≤ intervalTopRelative k K ∧
+        boolWordToNat (wireValues r.lengthQ p) ≤ boolWordToNat (wireValues r.lengthS p)) :
+    let p := run (prepareIntervalEndpoints r.lengthT r.lengthQ r.lengthS r.endpointScratch (r.carry k K) n k) state
+    let L := boolWordToNat (wireValues r.lengthQ p)
+    let R := boolWordToNat (wireValues r.lengthS p)
+    let ts := (List.range (intervalLaneCount k K)).map (r.targetAt target)
+    let ads := (List.range (intervalLaneCount k K)).map (r.addendAt target)
+    let before := wireValues ts state
+    let addend := wireValues ads state
+    let result := uniformRippleExpectedWords mode (state r.control)
+      ((before.drop L).take (R-L+1)) ((addend.drop L).take (R-L+1)) false
+    let final := run (intervalAddSubUnitary r n k K mode signUpdate target) state
+    (wireValues ts final, wireValues ads final) =
+      (before.take L ++ result.1 ++ before.drop (R+1), addend) ∧
+    final r.sign = (if signUpdate then state r.sign ^^ result.2 else state r.sign) := by
+  let p := run (prepareIntervalEndpoints r.lengthT r.lengthQ r.lengthS r.endpointScratch (r.carry k K) n k) state
+  let b := run (intervalAddSubBodyUnitary r k K mode signUpdate target) p
+  let ts := (List.range (intervalLaneCount k K)).map (r.targetAt target)
+  let ads := (List.range (intervalLaneCount k K)).map (r.addendAt target)
+  have hts : ∀ w ∈ ts, w ∈ r.control :: r.sign :: (r.work1 ++ r.work2) := by
+    intro w hw
+    obtain ⟨j,hj,rfl⟩ := List.mem_map.mp hw
+    exact target_mem r k K target h j (List.mem_range.mp hj)
+  have hads : ∀ w ∈ ads, w ∈ r.control :: r.sign :: (r.work1 ++ r.work2) := by
+    intro w hw
+    obtain ⟨j,hj,rfl⟩ := List.mem_map.mp hw
+    exact addend_mem r k K target h j (List.mem_range.mp hj)
+  have ht := endpoint_words r n k K target h state false ts hts
+  have had := endpoint_words r n k K target h state false ads hads
+  have houtT := endpoint_words r n k K target h b true ts hts
+  have houtA := endpoint_words r n k K target h b true ads hads
+  simp only [Bool.false_eq_true,reduceIte] at ht had houtT houtA
+  have hpControl : p r.control = state r.control :=
+    (prepareIntervalEndpoints_usesOnly r.lengthT r.lengthQ r.lengthS r.endpointScratch (r.carry k K) n k).preservesOutside state
+      (endpoint_outside r k K target h _ (by simp))
+  have hpSign : p r.sign = state r.sign :=
+    (prepareIntervalEndpoints_usesOnly r.lengthT r.lengthQ r.lengthS r.endpointScratch (r.carry k K) n k).preservesOutside state
+      (endpoint_outside r k K target h _ (by simp))
+  have houtSign := (restoreIntervalEndpoints_usesOnly r.lengthT r.lengthQ r.lengthS r.endpointScratch (r.carry k K) n k).preservesOutside b
+    (endpoint_outside r k K target h r.sign (by simp))
+  have hc : Clean r.scratch p := intervalPrepare_cleanScratch r n k K target state h hready
+  have hb := run_intervalAddSubBody_slices r k K mode signUpdate target p h
+    (fun w hw => hc w (intervalTopScratch_mem_scratch r k K target h w hw))
+    (hc _ (intervalAccumulator_mem_scratch r k K target h)) hvalues.1 hvalues.2
+  have hcarry := hc _ (intervalCarry_mem_scratch r k K target h)
+  have hshape : run (intervalAddSubUnitary r n k K mode signUpdate target) state =
+      run (restoreIntervalEndpoints r.lengthT r.lengthQ r.lengthS r.endpointScratch (r.carry k K) n k) b := by
+    simp only [intervalAddSubUnitary, intervalAddSubBodyUnitary, p, b, Classical.run_append]
+  dsimp only at hb ⊢
+  rw [ht,had,hcarry,hpControl,hpSign] at hb
+  rw [hshape,houtT,houtA,houtSign]
+  constructor
+  · apply Prod.ext
+    · exact congrArg (fun x : List Bool × List Bool × Bool => x.1) hb.1
+    · exact congrArg (fun x : List Bool × List Bool × Bool => x.2.1) hb.1
+  · exact hb.2
 end ShorECDLP.Paper2607_13816
