@@ -21,15 +21,15 @@ private def rippleWordSecond (mode : RippleMode) (control : Bool) :
     (cell.target :: rest.1, cell.addend :: rest.2.1, rest.2.2)
   | ts, ads, carry => (ts, ads, carry)
 
-private def rippleExpected (mode : RippleMode) (control : Bool) :
+def uniformRippleExpectedWords (mode : RippleMode) (control : Bool) :
     List Bool → List Bool → Bool → List Bool × Bool
   | t :: ts, a :: ads, carry =>
-    let rest := rippleExpected mode control ts ads carry
+    let rest := uniformRippleExpectedWords mode control ts ads carry
     ((if control then t ^^ a ^^ rest.2 else t) :: rest.1,
       (rippleFirstBits mode control ⟨t, a, rest.2⟩).carry)
   | ts, _, carry => (ts, carry)
 
-private theorem rippleCell_round (mode : RippleMode) (control t a carry : Bool) :
+theorem rippleCell_round (mode : RippleMode) (control t a carry : Bool) :
     rippleSecondBits mode control (rippleFirstBits mode control ⟨t,a,carry⟩) =
       ⟨if control then t ^^ a ^^ carry else t, a, carry⟩ := by
   cases mode <;> cases control <;> cases t <;> cases a <;> cases carry <;> decide
@@ -38,8 +38,8 @@ private theorem rippleWords_fusion (mode : RippleMode) (control : Bool)
     (ts ads : List Bool) (carry : Bool) (hlen : ts.length = ads.length) :
     let first := rippleWordFirst mode control ts ads carry
     let second := rippleWordSecond mode control first.1 first.2.1 first.2.2
-    second = ((rippleExpected mode control ts ads carry).1, ads, carry) ∧
-      first.2.2 = (rippleExpected mode control ts ads carry).2 := by
+    second = ((uniformRippleExpectedWords mode control ts ads carry).1, ads, carry) ∧
+      first.2.2 = (uniformRippleExpectedWords mode control ts ads carry).2 := by
   induction ts generalizing ads carry with
   | nil =>
     have ha : ads = [] := List.eq_nil_of_length_eq_zero hlen.symm
@@ -52,7 +52,7 @@ private theorem rippleWords_fusion (mode : RippleMode) (control : Bool)
       have ht : ts.length = ads.length := by simpa using hlen
       have hr := ih ads carry ht
       dsimp only at hr ⊢
-      simp only [rippleWordFirst, rippleWordSecond, rippleExpected]
+      simp only [rippleWordFirst, rippleWordSecond, uniformRippleExpectedWords]
       have hc := rippleCell_round mode control t a (rippleWordFirst mode control ts ads carry).2.2
       cases hf : rippleFirstBits mode control ⟨t,a,(rippleWordFirst mode control ts ads carry).2.2⟩
       rw [hf] at hc
@@ -86,100 +86,100 @@ private theorem rippleCell_sub_value (t a c : Bool) :
       t.toNat+2*(rippleFirstBits .sub true ⟨t,a,c⟩).carry.toNat := by
   cases t <;> cases a <;> cases c <;> decide
 
-private theorem rippleExpected_length (mode : RippleMode) (control : Bool)
+theorem uniformRippleExpectedWords_length (mode : RippleMode) (control : Bool)
     (ts ads : List Bool) (carry : Bool) :
-    (rippleExpected mode control ts ads carry).1.length = ts.length := by
+    (uniformRippleExpectedWords mode control ts ads carry).1.length = ts.length := by
   induction ts generalizing ads carry with
   | nil => rfl
   | cons t ts ih =>
     cases ads with
     | nil => rfl
-    | cons a ads => simp only [rippleExpected, List.length_cons, ih]
+    | cons a ads => simp only [uniformRippleExpectedWords, List.length_cons, ih]
 
-private theorem rippleExpected_add_value (ts ads : List Bool) (carry : Bool)
+private theorem uniformRippleExpectedWords_add_value (ts ads : List Bool) (carry : Bool)
     (hlen : ts.length = ads.length) :
-    boolWordToNat (rippleExpected .add true ts ads carry).1.reverse +
-      2^ts.length * (rippleExpected .add true ts ads carry).2.toNat =
+    boolWordToNat (uniformRippleExpectedWords .add true ts ads carry).1.reverse +
+      2^ts.length * (uniformRippleExpectedWords .add true ts ads carry).2.toNat =
       boolWordToNat ts.reverse + boolWordToNat ads.reverse + carry.toNat := by
   induction ts generalizing ads carry with
   | nil =>
     have ha : ads = [] := List.eq_nil_of_length_eq_zero hlen.symm
     subst ads
-    simp [rippleExpected]
+    simp [uniformRippleExpectedWords]
   | cons t ts ih =>
     cases ads with
     | nil => simp at hlen
     | cons a ads =>
       have ht : ts.length = ads.length := by simpa using hlen
       have hv := ih ads carry ht
-      have hc := rippleCell_add_value t a (rippleExpected .add true ts ads carry).2
-      simp only [rippleExpected, ↓reduceIte, rippleValue_cons, List.length_cons,
-        rippleExpected_length, Nat.pow_succ, ← ht]
+      have hc := rippleCell_add_value t a (uniformRippleExpectedWords .add true ts ads carry).2
+      simp only [uniformRippleExpectedWords, ↓reduceIte, rippleValue_cons, List.length_cons,
+        uniformRippleExpectedWords_length, Nat.pow_succ, ← ht]
       have hs := congrArg (fun x : Nat => 2^ts.length * x) hc
       nlinarith [hs]
 
-private theorem rippleExpected_sub_value (ts ads : List Bool) (carry : Bool)
+private theorem uniformRippleExpectedWords_sub_value (ts ads : List Bool) (carry : Bool)
     (hlen : ts.length = ads.length) :
-    boolWordToNat (rippleExpected .sub true ts ads carry).1.reverse +
+    boolWordToNat (uniformRippleExpectedWords .sub true ts ads carry).1.reverse +
       boolWordToNat ads.reverse + carry.toNat = boolWordToNat ts.reverse +
-        2^ts.length * (rippleExpected .sub true ts ads carry).2.toNat := by
+        2^ts.length * (uniformRippleExpectedWords .sub true ts ads carry).2.toNat := by
   induction ts generalizing ads carry with
   | nil =>
     have ha : ads = [] := List.eq_nil_of_length_eq_zero hlen.symm
     subst ads
-    simp [rippleExpected]
+    simp [uniformRippleExpectedWords]
   | cons t ts ih =>
     cases ads with
     | nil => simp at hlen
     | cons a ads =>
       have ht : ts.length = ads.length := by simpa using hlen
       have hv := ih ads carry ht
-      have hc := rippleCell_sub_value t a (rippleExpected .sub true ts ads carry).2
-      simp only [rippleExpected, ↓reduceIte, rippleValue_cons, List.length_cons,
-        rippleExpected_length, Nat.pow_succ, ← ht]
+      have hc := rippleCell_sub_value t a (uniformRippleExpectedWords .sub true ts ads carry).2
+      simp only [uniformRippleExpectedWords, ↓reduceIte, rippleValue_cons, List.length_cons,
+        uniformRippleExpectedWords_length, Nat.pow_succ, ← ht]
       have hs := congrArg (fun x : Nat => 2^ts.length * x) hc
       nlinarith [hs]
 
-private theorem rippleExpected_add_mod (ts ads : List Bool) (carry : Bool)
+theorem uniformRippleExpectedWords_add_mod (ts ads : List Bool) (carry : Bool)
     (hlen : ts.length = ads.length) :
-    boolWordToNat (rippleExpected .add true ts ads carry).1.reverse =
+    boolWordToNat (uniformRippleExpectedWords .add true ts ads carry).1.reverse =
       (boolWordToNat ts.reverse + boolWordToNat ads.reverse + carry.toNat) % 2^ts.length := by
-  have h := rippleExpected_add_value ts ads carry hlen
-  have hb := boolWordToNat_lt_pow_two (rippleExpected .add true ts ads carry).1.reverse
-  simp only [List.length_reverse, rippleExpected_length] at hb
+  have h := uniformRippleExpectedWords_add_value ts ads carry hlen
+  have hb := boolWordToNat_lt_pow_two (uniformRippleExpectedWords .add true ts ads carry).1.reverse
+  simp only [List.length_reverse, uniformRippleExpectedWords_length] at hb
   rw [← h, Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hb]
 
-private theorem rippleExpected_sub_mod (ts ads : List Bool) (carry : Bool)
+theorem uniformRippleExpectedWords_sub_mod (ts ads : List Bool) (carry : Bool)
     (hlen : ts.length = ads.length) :
-    boolWordToNat (rippleExpected .sub true ts ads carry).1.reverse =
+    boolWordToNat (uniformRippleExpectedWords .sub true ts ads carry).1.reverse =
       (boolWordToNat ts.reverse + 2^ts.length - boolWordToNat ads.reverse - carry.toNat) %
         2^ts.length := by
-  have h := rippleExpected_sub_value ts ads carry hlen
-  have hb := boolWordToNat_lt_pow_two (rippleExpected .sub true ts ads carry).1.reverse
-  simp only [List.length_reverse, rippleExpected_length] at hb
-  cases hc : (rippleExpected .sub true ts ads carry).2 with
+  have h := uniformRippleExpectedWords_sub_value ts ads carry hlen
+  have hb := boolWordToNat_lt_pow_two (uniformRippleExpectedWords .sub true ts ads carry).1.reverse
+  simp only [List.length_reverse, uniformRippleExpectedWords_length] at hb
+  cases hc : (uniformRippleExpectedWords .sub true ts ads carry).2 with
   | false =>
     rw [hc] at h
     simp only [Bool.toNat_false, Nat.mul_zero, Nat.add_zero] at h
     rw [show boolWordToNat ts.reverse + 2^ts.length - boolWordToNat ads.reverse - carry.toNat =
-        boolWordToNat (rippleExpected .sub true ts ads carry).1.reverse + 2^ts.length by omega,
+        boolWordToNat (uniformRippleExpectedWords .sub true ts ads carry).1.reverse + 2^ts.length by omega,
       Nat.add_mod_right, Nat.mod_eq_of_lt hb]
   | true =>
     rw [hc] at h
     simp only [Bool.toNat_true, Nat.mul_one] at h
     rw [show boolWordToNat ts.reverse + 2^ts.length - boolWordToNat ads.reverse - carry.toNat =
-        boolWordToNat (rippleExpected .sub true ts ads carry).1.reverse by omega,
+        boolWordToNat (uniformRippleExpectedWords .sub true ts ads carry).1.reverse by omega,
       Nat.mod_eq_of_lt hb]
 
-private theorem rippleExpected_disabled (mode : RippleMode) (ts ads : List Bool) (carry : Bool) :
-    rippleExpected mode false ts ads carry = (ts, carry) := by
+theorem uniformRippleExpectedWords_disabled (mode : RippleMode) (ts ads : List Bool) (carry : Bool) :
+    uniformRippleExpectedWords mode false ts ads carry = (ts, carry) := by
   induction ts generalizing ads carry with
   | nil => rfl
   | cons t ts ih =>
     cases ads with
     | nil => rfl
     | cons a ads =>
-      simp only [rippleExpected, ih, Bool.false_eq_true, ↓reduceIte]
+      simp only [uniformRippleExpectedWords, ih, Bool.false_eq_true, ↓reduceIte]
       cases mode <;> cases t <;> cases a <;> cases carry <;> rfl
 
 private theorem rippleWrite_outside (t a c : Wire) (bits : RippleCellBits) (state : BasisState)
@@ -359,7 +359,7 @@ private theorem rippleCombined_words (mode : RippleMode) (control : Wire)
     (wireValues ts (controlledWindowRippleState mode control ts ads carry state),
       wireValues ads (controlledWindowRippleState mode control ts ads carry state),
       controlledWindowRippleState mode control ts ads carry state carry) =
-      ((rippleExpected mode (state control) (wireValues ts state) (wireValues ads state) (state carry)).1,
+      ((uniformRippleExpectedWords mode (state control) (wireValues ts state) (wireValues ads state) (state carry)).1,
         wireValues ads state, state carry) := by
   let middle := rippleFirstState mode control ts ads carry state
   have hf := rippleFirst_words mode control ts ads carry state hnd hlen
@@ -423,17 +423,17 @@ theorem controlledWindowRipple_arithmetic
   · change boolWordToNat (wireValues targets after).reverse = _
     rw [ht]
     cases he : state control with
-    | false => simp only [rippleExpected_disabled, Bool.false_eq_true, ↓reduceIte]
+    | false => simp only [uniformRippleExpectedWords_disabled, Bool.false_eq_true, ↓reduceIte]
     | true =>
       simp only [↓reduceIte]
       cases mode with
       | add =>
         simpa only [wireValues, List.length_map] using
-          rippleExpected_add_mod (wireValues targets state) (wireValues addends state) (state carry)
+          uniformRippleExpectedWords_add_mod (wireValues targets state) (wireValues addends state) (state carry)
             (by simpa only [wireValues, List.length_map] using hlen)
       | sub =>
         simpa only [wireValues, List.length_map] using
-          rippleExpected_sub_mod (wireValues targets state) (wireValues addends state) (state carry)
+          uniformRippleExpectedWords_sub_mod (wireValues targets state) (wireValues addends state) (state carry)
             (by simpa only [wireValues, List.length_map] using hlen)
   · intro wire hw
     change after wire = state wire
