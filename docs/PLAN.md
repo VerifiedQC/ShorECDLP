@@ -1726,3 +1726,12 @@ and bounded low bits. `blockBForward_packedContract` combines the canonical
 output work1 word, sign, complete external frame, and clean auxiliary bank for
 the same actual source circuit. Initial encoding, packing fit, endpoint and
 active-phase assumptions remain explicit; whole-microstep reachability is open.
+
+### Logical quotient/sign selector boundary
+
+`run_quotientSwapUnitary_logical` derives the selector label `T+Q+1` from
+truth-minus-one length words, including zero logical lengths. The actual
+selector swaps sign with this label and restores its temporary preparation.
+`run_indexedQuotientSwap_logical` cancels the one-based window offset to locate
+full-bank work1 index `T+Q`. Integrating Block D's counter updates and deriving
+reachable selector bounds remain outstanding.
