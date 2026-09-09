@@ -193,4 +193,118 @@ theorem blockEForward_coefficientOrdinary (r : IndexedStepRegisters) (n index : 
   rw [hu,hs] at hf
   exact hf
 
+
+private theorem coefficient_zero_extend (small big value : Nat) (hle : small ≤ big)
+    (hfit : value < 2^small) :
+    constantBits big value = constantBits small value ++ List.replicate (big-small) false := by
+  have hz (k : Nat) : boolWordToNat (List.replicate k false) = 0 := by
+    induction k with
+    | zero => rfl
+    | succ k ih => simp [List.replicate_succ,ih]
+  have ha (bits : List Bool) (k : Nat) :
+      boolWordToNat (bits ++ List.replicate k false) = boolWordToNat bits := by
+    induction bits with
+    | nil => simp [hz]
+    | cons b bs ih => simp [ih]
+  apply boolWordToNat_injective_of_length
+  · simp only [constantBits_length,List.length_append,List.length_replicate]; omega
+  · rw [ha,boolWordToNat_constantBits,boolWordToNat_constantBits,
+      Nat.mod_eq_of_lt hfit,Nat.mod_eq_of_lt (hfit.trans_le (Nat.pow_le_pow_right (by decide) hle))]
+
+private theorem coefficient_widen_packing (bank T R t rem : Nat)
+    (hspan : T+1+R ≤ bank) (ht : t < 2^T) (hr : rem < 2^R) :
+    constantBits T t ++ [false] ++ (constantBits (bank-(T+1)) rem).reverse =
+      constantBits (bank-R-1) t ++ [false] ++ (constantBits R rem).reverse := by
+  rw [coefficient_zero_extend R (bank-(T+1)) rem (by omega) hr,
+    List.reverse_append,List.reverse_replicate,
+    coefficient_zero_extend T (bank-R-1) t (by omega) ht]
+  have he : bank-(T+1)-R = bank-R-1-T := by omega
+  rw [he]
+  simp only [List.append_assoc]
+  congr 1
+  rw [← List.append_assoc,← List.append_assoc]
+  congr 1
+  change List.replicate 1 false ++ _ = _ ++ List.replicate 1 false
+  rw [← List.replicate_add,← List.replicate_add,Nat.add_comm]
+
+/-- In the swap phase, leading zeros from the bounded remainder extend the
+coefficient field. The actual subtract/add pair restores both banks and toggles
+only the comparison sign, even when its selected width exceeds the stored T. -/
+theorem blockEForward_swapComparison (r : IndexedStepRegisters) (n index : Nat)
+    (window : ActiveWindow) (s : BasisState) (v : EEAState)
+    (h : IndexedStepLayout r n index)
+    (hw : window = (certifiedActiveWindows n index).coefficient)
+    (hr : IndexedStepReady r s) (hp1 : s r.phase1 = true) (hp2 : s r.phase2 = true)
+    (htmeta : boolWordToNat (wireValues r.lengthT s) = truthMinusOneValue r.lengthT.length v.lT)
+    (hrmeta : boolWordToNat (wireValues r.lengthRPrime s) = truthMinusOneValue r.lengthT.length v.lRPrime)
+    (hsmeta : boolWordToNat (wireValues r.tBoundary.lengthSLow s) = truthMinusOneValue r.lengthT.length v.shift)
+    (hthi : v.lT+1 < 2^r.lengthT.length)
+    (hspan : v.lT+1+v.lRPrime ≤ n+3)
+    (hshift : 0 < v.shift) (hlo : v.lRPrime+v.shift ≤ n+3)
+    (hhi : n+3-v.lRPrime-v.shift < 2^r.lengthT.length)
+    (hv : n+3-v.lRPrime-v.shift ∈ quotientSwapLabels window.start window.stop)
+    (ht : v.t < 2^v.lT) (htB : v.t < 2^(n+3-v.lRPrime-v.shift))
+    (htp : v.tPrime < 2^(n+3-v.lRPrime)) (hrem : v.r < 2^v.lRPrime)
+    (hwork1 : wireValues r.work1 s = constantBits v.lT v.t ++ [false] ++
+      (constantBits (n+3-(v.lT+1)) v.r).reverse)
+    (hwork2 : wireValues r.work2 s =
+      (constantBits (n+3-v.lRPrime) v.tPrime ++
+        (constantBits v.lRPrime v.rPrime).reverse).rotate v.shift) :
+    let final := run (blockEForward r n window) s
+    wireValues r.work1 final = wireValues r.work1 s ∧
+      wireValues r.work2 final = wireValues r.work2 s ∧
+      final r.sign = (s r.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime)) ∧
+      IndexedStepReady r final ∧
+      AgreesOutside (r.sign :: (r.coefficient window).work1 ++
+        (r.coefficient window).work2) final s := by
+  let B := n+3-v.lRPrime-v.shift
+  let wide := { v with lT := n+3-v.lRPrime-1, lQ := 0 }
+  have hstart : window.start = 1 := by rw [hw]; rfl
+  have hB : 1 ≤ B := by
+    have hh := hv
+    simp only [quotientSwapLabels,List.mem_range',hstart] at hh
+    dsimp [B]; omega
+  have hp := prepareLatestPaperTBoundaryWords_arithmetic (s r.phase2) (wireValues r.lengthT s)
+    (wireValues r.lengthRPrime s) (wireValues r.tBoundary.lengthSLow s)
+    v.lT v.lRPrime v.shift n
+    (by simpa only [wireValues,List.length_map] using h.tBoundary.lengthRP_length.symm)
+    (by simp only [wireValues,List.length_map,TBoundaryRegisters.lengthSLow,List.length_take,
+        Nat.min_eq_left h.tBoundary.lengthS_capacity]; rfl)
+    (by simpa only [wireValues,List.length_map] using h.tBoundary.positive)
+    (by simpa only [wireValues,List.length_map] using htmeta)
+    (by simpa only [wireValues,List.length_map] using hrmeta)
+    (by simpa only [wireValues,List.length_map] using hsmeta)
+    (by simpa only [wireValues,List.length_map] using hthi) hlo
+    (by simpa only [wireValues,List.length_map] using hhi)
+  have hb := congrArg Prod.fst hp
+  simp only [hp2,ite_true] at hb
+  have hwide : wireValues r.work1 s = constantBits wide.lT wide.t ++ [false] ++
+      (constantBits wide.lQ wide.q).reverse ++
+      (constantBits (n+3-(wide.lT+wide.lQ+1)) wide.r).reverse := by
+    rw [hwork1,coefficient_widen_packing (n+3) v.lT v.lRPrime v.t v.r hspan ht hrem]
+    have he : n+3-(n+3-v.lRPrime-1+0+1) = v.lRPrime := by omega
+    simp only [wide,he,constantBits,List.replicate_zero,xorConstantBits,List.reverse_nil,List.append_nil]
+  have hf := blockEForward_canonicalCoefficient r n index B window s wide h hw hr (by simpa only [hp2,B] using hb) hv
+    (ht.trans_le (Nat.pow_le_pow_right (by decide) (by dsimp [wide]; omega))) htp
+    (by dsimp [wide,B]; rw [hstart]; omega)
+    (by dsimp [wide,B]; rw [hstart]; omega) hwide hwork2
+  have hy : v.tPrime/2^v.shift < 2^B := (Nat.div_lt_iff_lt_mul (Nat.pow_pos (by decide))).2
+    (by rw [← Nat.pow_add]; have he : B+v.shift=n+3-v.lRPrime := by dsimp [B]; omega
+        rw [he]; exact htp)
+  change v.t < 2^B at htB
+  have hc := coefficient_sub_add (2^B) v.t (v.tPrime/2^v.shift) htB hy
+  dsimp only [wide] at hf
+  simp only [hstart,Nat.sub_self,Nat.add_zero,Nat.pow_zero,Nat.div_one,
+    Nat.sub_add_cancel hB,Nat.mod_eq_of_lt htB,Nat.mod_eq_of_lt hy,
+    hp1,hp2,Bool.not_true,Bool.false_and,Bool.not_false,Bool.and_self,ite_true] at hf
+  have hre := coefficient_recompose v.tPrime v.shift B
+  rw [Nat.mod_eq_of_lt hy] at hre
+  rw [hc.1,hre] at hf
+  simp only [hc.2,Bool.true_and] at hf
+  have hs : ((s r.sign ^^ true) ^^ decide (v.tPrime/2^v.shift<v.t)) =
+      (s r.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime)) := by
+    simp only [Nat.div_lt_iff_lt_mul (show 0<2^v.shift from Nat.pow_pos (by decide))]
+    by_cases hh : v.tPrime < v.t*2^v.shift <;> cases s r.sign <;> simp_all
+  exact ⟨hf.2.2.1,hf.1.trans hwork2.symm,(by simpa only [Bool.true_and] using hf.2.2.2.1.trans hs),hf.2.2.2.2⟩
+
 end ShorECDLP.Paper2607_13816
