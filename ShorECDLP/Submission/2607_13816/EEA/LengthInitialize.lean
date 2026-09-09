@@ -125,7 +125,7 @@ theorem lengthInitializeCase_counts (controls : List Wire) (pattern : Nat)
     controlledXorConstant_cnotCount, controlledXorConstant_tCount]
   omega
 
-private theorem matchesFrom_iff (controls : List Wire) (value bit : Nat) (state : BasisState) :
+theorem registerMatchesFrom_iff (controls : List Wire) (value bit : Nat) (state : BasisState) :
     registerMatchesFrom controls value bit state = true ↔
       ∀ i (hi : i < controls.length), state controls[i] = value.testBit (bit + i) := by
   induction controls generalizing bit with
@@ -152,7 +152,7 @@ theorem lengthInitialize_prefix_match (input : List Wire) (first : Nat)
   apply Bool.eq_iff_iff.mpr
   rw [decide_eq_true_eq, List.findIdx_eq hfirst]
   change registerMatchesFrom (input.take (first+1)) (2^first) 0 state = true ↔ _
-  rw [matchesFrom_iff]
+  rw [registerMatchesFrom_iff]
   simp only [Nat.zero_add, Nat.testBit_two_pow]
   constructor
   · intro h
@@ -173,7 +173,7 @@ theorem lengthInitialize_zero_match (input : List Wire) (state : BasisState) :
   apply Bool.eq_iff_iff.mpr
   rw [decide_eq_true_eq, List.findIdx_eq_length]
   change registerMatchesFrom input 0 0 state = true ↔ _
-  rw [matchesFrom_iff]
+  rw [registerMatchesFrom_iff]
   simp only [Nat.zero_add, Nat.zero_testBit]
   constructor
   · intro h wire hw
