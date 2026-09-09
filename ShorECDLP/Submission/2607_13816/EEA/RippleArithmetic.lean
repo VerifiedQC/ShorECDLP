@@ -445,4 +445,26 @@ theorem controlledWindowRipple_arithmetic
     · exact (rippleSecond_outside mode control targets addends carry _ wire hw had he).trans
         (rippleFirst_outside mode control targets addends carry state wire hw had he)
 
+/-- The subtraction carry is exactly unsigned borrow, including an incoming borrow. -/
+theorem uniformRippleExpectedWords_sub_borrow (ts ads : List Bool) (carry : Bool)
+    (hlen : ts.length = ads.length) :
+    (uniformRippleExpectedWords .sub true ts ads carry).2 =
+      decide (boolWordToNat ts.reverse < boolWordToNat ads.reverse + carry.toNat) := by
+  have h := uniformRippleExpectedWords_sub_value ts ads carry hlen
+  have hb := boolWordToNat_lt_pow_two (uniformRippleExpectedWords .sub true ts ads carry).1.reverse
+  simp only [List.length_reverse, uniformRippleExpectedWords_length] at hb
+  cases hc : (uniformRippleExpectedWords .sub true ts ads carry).2 with
+  | false =>
+    rw [hc] at h
+    simp only [Bool.toNat_false,Nat.mul_zero,Nat.add_zero] at h
+    symm
+    apply decide_eq_false
+    omega
+  | true =>
+    rw [hc] at h
+    simp only [Bool.toNat_true,Nat.mul_one] at h
+    symm
+    apply decide_eq_true
+    omega
+
 end ShorECDLP.Paper2607_13816

@@ -154,4 +154,53 @@ theorem run_blockBForward_intervals (r : IndexedStepRegisters) (n index : Nat)
     rw [h3.1,h2.1,h1.1]
   · simpa only [blockBForward,Classical.run_append] using h3.2.2
 
+/-- Actual B1 records unsigned borrow of the aligned work-bank field in sign. -/
+theorem blockB1Forward_logicalBorrow (r : IndexedStepRegisters) (n index ellT ellQ shift : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state)
+    (hphase : state r.phase1 = false) (hrp : wireAnd r.lengthRPrime state = false)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length ellT)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length ellQ)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : (certifiedActiveWindows n index).remainder.start ≤ ellT+ellQ+2)
+    (hleftHigh : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start < 2^r.lengthQ.length)
+    (hrightLow : shift+(certifiedActiveWindows n index).remainder.start ≤ n+3)
+    (hrightHigh : n+3-shift-(certifiedActiveWindows n index).remainder.start < 2^r.lengthS.length)
+    (horder : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start ≤
+      n+3-shift-(certifiedActiveWindows n index).remainder.start) :
+    let w := (certifiedActiveWindows n index).remainder
+    let width := n+3-shift-(ellT+ellQ+2)+1
+    let value := fun ws s => boolWordToNat ((((wireValues ws s).drop (ellT+ellQ+1)).take width).reverse)
+    run (blockB1Forward r n w) state r.sign =
+      (state r.sign ^^ decide (value r.work1 state < value r.work2 state)) ∧
+    Clean r.aux (run (blockB1Forward r n w) state) := by
+  let w := (certifiedActiveWindows n index).remainder
+  let enabled := state[r.control ↦ rControlNonterminalPredicate [r.phase1] 0 r.lengthRPrime r.terminal state]
+  let changed := run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .sub true .work1) enabled
+  have hf := run_blockB1Forward_interval r n index state h hc
+  have hp := subtraction_enabled r n index h state hphase hrp
+  have he : enabled r.control = true := by simp [enabled,hp]
+  have hdata (ws : List Wire) (hm : ∀ wire ∈ ws, wire ∈ dataWires r) :
+      wireValues ws enabled = wireValues ws state := data_words_update r n index h ws hm state _
+  have hT := hdata r.lengthT (by intro wire hw; simp [dataWires,hw])
+  have hQ := hdata r.lengthQ (by intro wire hw; simp [dataWires,hw])
+  have hS := hdata r.lengthS (by intro wire hw; simp [dataWires,hw])
+  have hW1 := hdata r.work1 (by intro wire hw; simp [dataWires,hw])
+  have hW2 := hdata r.work2 (by intro wire hw; simp [dataWires,hw])
+  have hcs : r.control ≠ r.sign := by
+    simpa only [List.mem_cons,List.not_mem_nil,or_false] using (List.nodup_cons.mp h.controlSign).1
+  have hSign : enabled r.sign = state r.sign := by simp [enabled,upd,hcs.symm]
+  have hout : changed[r.control ↦ false] r.sign = changed r.sign := by simp [upd,hcs.symm]
+  have hstart : 1 ≤ w.start := by simp only [w,certifiedActiveWindows,certifiedRemainderWindow]; omega
+  have hrange : n+3-shift-w.start ≤ intervalTopRelative w.start w.stop := by
+    simp only [intervalTopRelative,intervalLaneCount,w,certifiedActiveWindows,certifiedRemainderWindow]
+    omega
+  have hb := run_remainderInterval_logicalBorrow r w n ellT ellQ shift .work1 enabled h.remainder
+    hstart hf.2.1 he (by simpa only [hT] using ht) (by simpa only [hQ] using hq) (by simpa only [hS] using hs)
+    hleftLow hleftHigh hrightLow hrightHigh hrange horder
+  dsimp only at hb ⊢
+  rw [hW1,hW2,hSign] at hb
+  constructor
+  · rw [hf.1,hout]
+    exact hb
+  · exact hf.2.2
 end ShorECDLP.Paper2607_13816

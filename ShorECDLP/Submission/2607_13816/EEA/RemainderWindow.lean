@@ -87,4 +87,36 @@ theorem run_remainderInterval_logicalValues (r : IndexedStepRegisters) (w : Acti
     window_addend_words r w target state h] at hb
   simp only [hnest] at hb
   simpa only [hstart,hwidth] using hb
+/-- The remainder interval sign is the unsigned borrow of its full-bank field. -/
+theorem run_remainderInterval_logicalBorrow (r : IndexedStepRegisters) (w : ActiveWindow)
+    (n T Q shift : Nat) (target : IntervalTarget)
+    (state : BasisState) (h : IntervalLayout (r.remainder w) w.start w.stop target)
+    (hw : 1 ≤ w.start) (hready : IntervalReady (r.remainder w) state) (he : state r.control = true)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length T)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length Q)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : w.start ≤ T+Q+2) (hleftHigh : T+Q+2-w.start < 2^r.lengthQ.length)
+    (hrightLow : shift+w.start ≤ n+3) (hrightHigh : n+3-shift-w.start < 2^r.lengthS.length)
+    (hrange : n+3-shift-w.start ≤ intervalTopRelative w.start w.stop)
+    (horder : T+Q+2-w.start ≤ n+3-shift-w.start) :
+    let width := n+3-shift-(T+Q+2)+1
+    let ts := match target with | .work1 => r.work1 | .work2 => r.work2
+    let ads := match target with | .work1 => r.work2 | .work2 => r.work1
+    let value := fun ws s => boolWordToNat ((((wireValues ws s).drop (T+Q+1)).take width).reverse)
+    run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .sub true target) state r.sign =
+      (state r.sign ^^ decide (value ts state < value ads state)) := by
+  have hb := run_intervalAddSubUnitary_logicalBorrow (r.remainder w) n w.start w.stop T Q shift
+    target state h hready he ht hq hs hleftLow hleftHigh hrightLow hrightHigh hrange horder
+  have hwidth : n+3-shift-w.start-(T+Q+2-w.start)+1 = n+3-shift-(T+Q+2)+1 := by omega
+  have hstart : w.start-1+(T+Q+2-w.start) = T+Q+1 := by omega
+  have hfit : T+Q+2-w.start+(n+3-shift-w.start-(T+Q+2-w.start)+1) ≤ w.stop-w.start+1 := by
+    simp only [intervalTopRelative,intervalLaneCount] at hrange
+    omega
+  have hnest (xs : List Bool) := nested_slice xs (w.start-1) (w.stop-w.start+1)
+    (T+Q+2-w.start) (n+3-shift-w.start-(T+Q+2-w.start)+1) hfit
+  dsimp only at hb ⊢
+  rw [window_target_words r w target state h,
+    window_addend_words r w target state h] at hb
+  simp only [hnest] at hb
+  simpa only [hstart,hwidth] using hb
 end ShorECDLP.Paper2607_13816
