@@ -1981,3 +1981,15 @@ exposes its complete frame outside quotient metadata, sign and the two work
 banks. That frame supplies phase and counter preservation for the post-shift
 handoff. Full shift encoding and increment capacity remain explicit initial
 premises, in addition to the D/E bounds; reachable-state induction remains open.
+
+### Coefficient accumulation invariant on the actual stage sequence
+
+`blockDEFForward_coefficientInvariant` replaces the independent selected-fit
+and no-overflow premises by `tPrime < 2^shift*t`. Together with the existing
+addend bound, this derives the arithmetic preconditions and preserves the same
+strict inequality at `shift+1`. It also preserves
+`tPrime + 2^shift*t*q` as the quotient is consumed. This identifies the weighted
+remaining contribution of the physical unweighted quotient prefix, while the
+actual D/E/F circuit supplies the canonical coefficient and shift outputs.
+Initial packing, routing/span bounds, phase and shift encodings remain explicit;
+this is a coefficient-stage invariant, not yet a whole-loop invariant.
