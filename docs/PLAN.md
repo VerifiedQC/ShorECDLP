@@ -1860,3 +1860,13 @@ with the prepared state, retaining its boundary words and phase flags. The clean
 across the scan. The prepared input-word boundary must still lie inside the
 certified coefficient window. The following sign flip, addition and boundary
 restoration remain the next composition boundary.
+
+### Block E addition and boundary restoration
+
+`blockEFinishForward` names the remaining source suffix. Its word contract derives
+the low-prefix addition controlled by phase 1, high-bit and addend preservation,
+and the sign flip followed by the arithmetic carry XOR. The final control is false
+and block scratch is clean after the actual boundary restore. Both half-contracts
+now frame the actual local coefficient windows, preserving unused work bits. The prepared boundary
+must lie in the certified coefficient window. Composing the two arithmetic halves
+and discharging their logical window conditions remains the next boundary.
