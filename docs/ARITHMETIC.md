@@ -2274,3 +2274,12 @@ The proof derives the relation between bit length and first/last set position
 by induction on Boolean words. Old metadata consistency and decoder routing
 remain explicit; connecting these scanned numeric words to the canonical packed
 coefficient and remainder fields remains the next boundary.
+
+`upperLengthOfBits_packed_coefficient` now identifies an upper scan of a
+canonical low coefficient field with its actual numeric bit length, independent
+of the masked tail. The lower scan theorems identify the highest set position
+of a canonical big-endian remainder behind an arbitrary masked prefix; a zero
+remainder yields the sentinel without a highest-bit premise. Window coverage,
+mask bounds and field capacity remain explicit. These results connect scan
+words to canonical fields; deriving their geometry and old metadata consistency
+throughout reachable endpoints remains open.

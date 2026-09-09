@@ -308,4 +308,191 @@ theorem swapWorkAndLengthUnaryShared_numeric_lengths
   exact endIterationLengthWords_numeric r n windows boundary4 boundary5 state
     hlayout.k4_positive hlayout.k4_le_K4 hlayout.k5_le_decode henabled hT hRP
 
+private theorem length_constant_succ (width value : Nat) :
+    constantBits (width+1) value = value.testBit 0 :: constantBits width (value/2) := by
+  unfold constantBits
+  simp only [List.replicate_succ, xorConstantBits]
+  cases hbit : value.testBit 0 <;> simp
+private theorem length_constant_getD (width value i : Nat) (hi : i < width) :
+    (constantBits width value).getD i false = value.testBit i := by
+  induction width generalizing value i with
+  | zero => omega
+  | succ width ih =>
+    rw [length_constant_succ]
+    cases i with
+    | zero => rfl
+    | succ i =>
+      change (constantBits width (value/2)).getD i false = value.testBit (i+1)
+      rw [ih _ _ (by omega), Nat.testBit_div_two]
+
+private theorem length_size_div_pow_two (value offset : Nat) :
+    (value / 2^offset).size = value.size-offset := by
+  by_cases ho : value.size ≤ offset
+  · rw [Nat.div_eq_of_lt (Nat.size_le.mp ho), Nat.size_zero, Nat.sub_eq_zero_of_le ho]
+  · have ho : offset < value.size := by omega
+    have hp : 0 < 2^offset := Nat.two_pow_pos _
+    have hu : (value/2^offset).size ≤ value.size-offset := by
+      apply Nat.size_le.mpr
+      apply (Nat.div_lt_iff_lt_mul hp).mpr
+      rw [← pow_add, Nat.sub_add_cancel (by omega : offset ≤ value.size)]
+      exact Nat.lt_size_self _
+    have hl : value.size-offset-1 < (value/2^offset).size := by
+      apply Nat.lt_size.mpr
+      apply (Nat.le_div_iff_mul_le hp).mpr
+      rw [← pow_add]
+      apply Nat.lt_size.mp
+      omega
+    omega
+
+private theorem upper_range_packed (k K B value : Nat) (tail : List Bool)
+    (hk : 0 < k) (hkK : k ≤ K) (hfit : value < 2^B) :
+    endIterationUpperRangeBits true B (zeroMapLabels k K) (constantBits B value ++ tail) =
+      constantBits (K-k+1) (value / 2^(k-1)) := by
+  simp only [endIterationUpperRangeBits, zeroMapLabels_eq_range']
+  apply List.ext_getElem
+  · simp only [List.length_map, List.length_range', constantBits_length]; omega
+  · intro i hi hj
+    have hib : i < K-k+1 := by simpa only [constantBits_length] using hj
+    rw [← List.getD_eq_getElem _ false hj, length_constant_getD _ _ _ hib]
+    simp only [List.getElem_map, List.getElem_range', Nat.one_mul]
+    rw [Nat.testBit_div_two_pow]
+    have he : i+(k-1) = k+i-1 := by omega
+    rw [he]
+    by_cases hb : k+i ≤ B
+    · simp only [decide_eq_true hb, Bool.true_and]
+      rw [List.getD_append _ _ _ _ (by simp only [constantBits_length]; omega),
+        length_constant_getD _ _ _ (by omega)]
+    · have hpow : 2^B ≤ 2^(k+i-1) := Nat.pow_le_pow_right (by decide) (by omega)
+      rw [Nat.testBit_lt_two_pow (hfit.trans_le hpow)]
+      simp only [decide_eq_false hb, Bool.true_and, Bool.false_and]
+
+/-- A canonical low coefficient field is recovered by an upper scan whose
+window starts no later than its highest bit. The masked tail is arbitrary. -/
+theorem upperLengthOfBits_packed_coefficient (width k K B value : Nat) (tail : List Bool)
+    (hk : 0 < k) (hstart : k ≤ value.size) (hstop : value.size ≤ K)
+    (hfit : value < 2^B) :
+    upperLengthOfBits width K
+      (endIterationUpperRangeBits true B (zeroMapLabels k K) (constantBits B value ++ tail)) =
+      truthMinusOneValue width value.size := by
+  have hkK := hstart.trans hstop
+  rw [upper_range_packed k K B value tail hk hkK hfit,
+    upperLengthOfBits_numeric width k K _ hk hkK (constantBits_length _ _),
+    boolWordToNat_constantBits]
+  have hsize := length_size_div_pow_two value (k-1)
+  have hcap : value / 2^(k-1) < 2^(K-k+1) := by
+    apply Nat.size_le.mp
+    omega
+  rw [Nat.mod_eq_of_lt hcap]
+  have hn : value / 2^(k-1) ≠ 0 := by
+    intro hz; rw [hz, Nat.size_zero] at hsize; omega
+  rw [if_neg hn, hsize]
+  congr 1
+  omega
+
+private theorem length_high_bit (value : Nat) (hpos : 0 < value) :
+    value.testBit (value.size-1) = true := by
+  have hs : 0 < value.size := Nat.size_pos.mpr hpos
+  have hp : 0 < 2^(value.size-1) := Nat.two_pow_pos _
+  have hlo : 1 ≤ value/2^(value.size-1) := by
+    apply (Nat.le_div_iff_mul_le hp).mpr
+    simp only [one_mul]
+    exact Nat.lt_size.mp (by omega)
+  have hhi : value/2^(value.size-1) < 2 := by
+    apply (Nat.div_lt_iff_lt_mul hp).mpr
+    rw [mul_comm, ← pow_succ, Nat.sub_add_cancel hs]
+    exact Nat.lt_size_self _
+  have hdiv : value/2^(value.size-1) = 1 := by omega
+  rw [Nat.testBit_eq_decide_div_mod_eq, hdiv]
+  decide
+
+private theorem lower_range_packed_bit (k K B R value i : Nat) (pre : List Bool)
+    (hk : 0 < k) (hK : K ≤ pre.length+R) (hB : pre.length < B)
+    (hi : i < K-k+1) (hkK : k ≤ K) :
+    (endIterationLowerRangeBits true B (zeroMapLabels k K)
+      (pre ++ (constantBits R value).reverse)).getD i false =
+        (decide (B ≤ k+i) && value.testBit (pre.length+R-(k+i))) := by
+  have hlen : (endIterationLowerRangeBits true B (zeroMapLabels k K)
+      (pre ++ (constantBits R value).reverse)).length = K-k+1 := by
+    simp only [endIterationLowerRangeBits, List.length_map, zeroMapLabels_eq_range', List.length_range']
+    omega
+  rw [List.getD_eq_getElem _ false (by omega : i < (endIterationLowerRangeBits true B (zeroMapLabels k K) (pre ++ (constantBits R value).reverse)).length)]
+  simp only [endIterationLowerRangeBits, zeroMapLabels_eq_range', List.getElem_map,
+    List.getElem_range', Nat.one_mul, Bool.true_and]
+  by_cases hb : B ≤ k+i
+  · simp only [decide_eq_true hb, Bool.true_and]
+    rw [List.getD_append_right _ _ _ _ (by omega),
+      List.getD_reverse _ (by simp only [constantBits_length]; omega)]
+    simp only [constantBits_length]
+    rw [length_constant_getD _ _ _ (by omega)]
+    congr 1
+    omega
+  · simp only [decide_eq_false hb, Bool.false_and]
+
+/-- A lower scan of a packed big-endian remainder recovers its highest set
+position, even when the arbitrary prefix extends below the masked boundary. -/
+theorem lowerLengthOfBits_packed_remainder (n width k K B R value : Nat) (pre : List Bool)
+    (hk : 0 < k) (hbank : pre.length+R = n+3) (hK : K ≤ n+3)
+    (hB : pre.length < B) (hfit : value < 2^R) (hpos : 0 < value)
+    (hstart : k ≤ n+4-value.size) (hstop : n+4-value.size ≤ K)
+    (hmask : B ≤ n+4-value.size) :
+    lowerLengthOfBits n width k
+      (endIterationLowerRangeBits true B (zeroMapLabels k K)
+        (pre ++ (constantBits R value).reverse)) =
+      rightLengthValue n width (n+4-value.size) := by
+  let bits := endIterationLowerRangeBits true B (zeroMapLabels k K)
+    (pre ++ (constantBits R value).reverse)
+  have hkK := hstart.trans hstop
+  have hsize : value.size ≤ R := Nat.size_le.mpr hfit
+  have hpositive : 0 < value.size := Nat.size_pos.mpr hpos
+  have hlen : bits.length = K-k+1 := by
+    simp only [bits, endIterationLowerRangeBits, List.length_map, zeroMapLabels_eq_range', List.length_range']
+    omega
+  have hidx : n+4-value.size-k < bits.length := by omega
+  have hfind : bits.findIdx id = n+4-value.size-k := by
+    apply (List.findIdx_eq hidx).mpr
+    constructor
+    · change bits[n+4-value.size-k] = true
+      rw [← List.getD_eq_getElem bits false hidx,
+        lower_range_packed_bit k K B R value _ pre hk (by omega) hB (by omega) hkK]
+      have he : k+(n+4-value.size-k) = n+4-value.size := by omega
+      rw [he, decide_eq_true hmask, Bool.true_and]
+      have hp : pre.length+R-(n+4-value.size) = value.size-1 := by omega
+      rw [hp]; exact length_high_bit value hpos
+    · intro j hj
+      change bits[j] = false
+      rw [← List.getD_eq_getElem bits false (by omega),
+        lower_range_packed_bit k K B R value j pre hk (by omega) hB (by omega) hkK]
+      have hp : value.size ≤ pre.length+R-(k+j) := by omega
+      have hv : value < 2^(pre.length+R-(k+j)) := Nat.size_le.mp hp
+      rw [Nat.testBit_lt_two_pow hv, Bool.and_false]
+  change lowerLengthOfBits n width k bits = _
+  unfold lowerLengthOfBits
+  rw [hfind, if_pos hidx]
+  congr 1
+  omega
+
+/-- A zero packed remainder yields the all-ones sentinel, independent of the
+masked prefix and without a highest-bit window premise. -/
+theorem lowerLengthOfBits_packed_zero (n width k K B R : Nat) (pre : List Bool)
+    (hk : 0 < k) (hkK : k ≤ K) (hK : K ≤ pre.length+R) (hB : pre.length < B) :
+    lowerLengthOfBits n width k
+      (endIterationLowerRangeBits true B (zeroMapLabels k K)
+        (pre ++ (constantBits R 0).reverse)) = 2^width-1 := by
+  let bits := endIterationLowerRangeBits true B (zeroMapLabels k K)
+    (pre ++ (constantBits R 0).reverse)
+  have hlen : bits.length = K-k+1 := by
+    simp only [bits, endIterationLowerRangeBits, List.length_map, zeroMapLabels_eq_range', List.length_range']
+    omega
+  have hf : bits.findIdx id = bits.length := by
+    apply List.findIdx_eq_length_of_false
+    intro bit hbit
+    obtain ⟨i, hi, he⟩ := List.mem_iff_getElem.mp hbit
+    rw [← he]
+    change bits[i] = false
+    rw [← List.getD_eq_getElem bits false hi,
+      lower_range_packed_bit k K B R 0 i pre hk hK hB (by omega) hkK]
+    simp only [Nat.zero_testBit, Bool.and_false]
+  change lowerLengthOfBits n width k bits = _
+  simp only [lowerLengthOfBits, hf, Nat.lt_irrefl, if_false]
+
 end ShorECDLP.Paper2607_13816
