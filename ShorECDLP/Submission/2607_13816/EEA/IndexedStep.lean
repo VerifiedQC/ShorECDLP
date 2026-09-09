@@ -13396,4 +13396,175 @@ theorem blockEForward_inactive (r : IndexedStepRegisters) (n index : Nat)
   exact (blockEForward_correct r n index window s h hw hr).1.trans
     (terminal_blockE_idle r n index window s h hw hr hp)
 
+private theorem endpoint_input_payload (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) {wire : Wire}
+    (hw : wire ∈ indexedStepPayload r) : blockHEndInputState r s wire = s wire := by
+  have hqmem : r.sourceScratch.getD 0 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hsmem : r.sourceScratch.getD 1 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hq := (h.aux_not_payload (h.sourceScratch_mem_aux hqmem) hw).symm
+  have hs := (h.aux_not_payload (h.sourceScratch_mem_aux hsmem) hw).symm
+  have hc := (h.aux_not_payload h.control_mem_aux hw).symm
+  have he := (h.aux_not_payload h.shiftEpoch_mem_aux hw).symm
+  simp only [blockHEndInputState, blockHZeroSState, blockHBeforeSState,
+    blockHZeroQState, andXorWireState, andListXorState, upd, hq, hs, hc, he, if_false]
+
+private theorem endpoint_input_enabled (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hr : IndexedStepReady r s)
+    (hQ : wireAnd r.lengthQ s = true) (hS : wireAnd r.lengthS s = true)
+    (hepoch : s r.shiftEpoch = false) : blockHEndInputState r s r.control = true := by
+  have hqmem : r.sourceScratch.getD 0 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hsmem : r.sourceScratch.getD 1 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hcq : r.control ≠ r.sourceScratch.getD 0 0 := fun he => h.control_not_sourceScratch (he ▸ hqmem)
+  have hcs : r.control ≠ r.sourceScratch.getD 1 0 := fun he => h.control_not_sourceScratch (he ▸ hsmem)
+  have heq : r.shiftEpoch ≠ r.sourceScratch.getD 0 0 := fun he => h.shiftEpoch_not_sourceScratch (he ▸ hqmem)
+  have hes : r.shiftEpoch ≠ r.sourceScratch.getD 1 0 := fun he => h.shiftEpoch_not_sourceScratch (he ▸ hsmem)
+  have hn : (r.sourceScratch.getD 0 0 :: r.sourceScratch.getD 1 0 :: r.sourceScratch.drop 2).Nodup := by
+    rw [h.sourceScratch_view2]; exact h.sourceScratch_nodup
+  have hsq : r.sourceScratch.getD 1 0 ≠ r.sourceScratch.getD 0 0 := by
+    intro he; exact (List.nodup_cons.mp hn).1 (by simp only [List.mem_cons]; exact Or.inl he.symm)
+  have hqS : r.sourceScratch.getD 0 0 ∉ r.lengthS := by
+    intro hw
+    exact (h.aux_not_payload (h.sourceScratch_mem_aux hqmem) (by simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false, hw, or_true, true_or])) rfl
+  have heS : r.shiftEpoch ∉ r.lengthS := by
+    intro hw; exact (h.aux_not_payload h.shiftEpoch_mem_aux (by simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false, hw, or_true, true_or])) rfl
+  have hc0 : s r.control = false := hr _ (by simp [IndexedStepRegisters.sharedScratch])
+  have hq0 : s (r.sourceScratch.getD 0 0) = false := hr _ (by simp only [IndexedStepRegisters.sharedScratch, List.mem_append, List.mem_cons]; exact Or.inr (Or.inl hqmem))
+  have hs0 : s (r.sourceScratch.getD 1 0) = false := hr _ (by simp only [IndexedStepRegisters.sharedScratch, List.mem_append, List.mem_cons]; exact Or.inr (Or.inl hsmem))
+  have hp : wireAnd (r.lengthS ++ [r.shiftEpoch]) (blockHBeforeSState r s) = true := by
+    rw [endIdle_wireAnd_append]
+    simp only [blockHBeforeSState, blockHZeroQState, andListXorState]
+    rw [endIdle_wireAnd_update _ _ _ _ heS, endIdle_wireAnd_update _ _ _ _ hqS]
+    simp only [upd, heq, if_false, hepoch, hS, Bool.not_false, Bool.true_and, if_true]
+  have hz : blockHZeroSState r s = (blockHBeforeSState r s)[r.sourceScratch.getD 1 0 ↦ true] := by
+    rw [blockHZeroSState, andListXorState, hp]
+    congr 1
+    simp only [blockHBeforeSState, blockHZeroQState, andListXorState, upd,
+      Ne.symm hes, hsq, if_false, hs0, Bool.false_xor]
+  rw [blockHEndInputState, hz]
+  simp only [andXorWireState, blockHBeforeSState, blockHZeroQState,
+    andListXorState, upd, hcq, hcs, heq, hes, hsq, Ne.symm heq, Ne.symm hes,
+    Ne.symm hsq, h.control_ne_shiftEpoch, if_false, if_true, hc0, hq0,
+    hQ, Bool.false_xor, Bool.true_and]
+
+private theorem endpoint_iter_not_mutable (r : IndexedStepRegisters) (n T : Nat)
+    (h : IndexedStepLayout r n T) : r.iter ∉ endIterationMutableWires r := by
+  have hn := h.physical
+  simp only [IndexedStepRegisters.allWires, List.cons_append, List.nil_append,
+    List.nodup_cons] at hn
+  intro hw
+  apply hn.2.2.1
+  simp only [endIterationMutableWires, List.mem_append] at hw
+  simp only [List.mem_append, List.mem_cons]
+  rcases hw with ((hw | hw) | hw) | hw <;> simp only [hw, or_true, true_or]
+
+private theorem endpoint_H_payload (r : IndexedStepRegisters) (n T b4 b5 : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hstep : T % 4 = 0)
+    {wire : Wire} (hw : wire ∈ indexedStepPayload r) :
+    blockHForwardState r n T b4 b5 s wire =
+      (xorWireState r.control r.iter
+        (endIterationForwardState r n T b4 b5 (blockHEndInputState r s))) wire := by
+  have hqmem : r.sourceScratch.getD 0 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hsmem : r.sourceScratch.getD 1 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hq := (h.aux_not_payload (h.sourceScratch_mem_aux hqmem) hw).symm
+  have hs := (h.aux_not_payload (h.sourceScratch_mem_aux hsmem) hw).symm
+  have hc := (h.aux_not_payload h.control_mem_aux hw).symm
+  have he := (h.aux_not_payload h.shiftEpoch_mem_aux hw).symm
+  simp only [blockHForwardState, hstep, if_true, andListXorState, andXorWireState,
+    upd, hq, hs, hc, he, if_false]
+
+/-- At a scheduled zero-Q, zero-S endpoint, the literal H circuit exchanges both
+complete banks and flips iteration parity, with its scratch returned clean. Decoder
+routes and their bounds are derived from the actual intermediate states. -/
+theorem blockHForward_endpoint_banks (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hr : IndexedStepReady r s)
+    (hstep : T % 4 = 0) (hQ : wireAnd r.lengthQ s = true)
+    (hS : wireAnd r.lengthS s = true) (hepoch : s r.shiftEpoch = false) :
+    let out := run (blockHForward r n T) s
+    wireValues r.work1 out = wireValues r.work2 s ∧
+      wireValues r.work2 out = wireValues r.work1 s ∧
+      out r.iter = !s r.iter ∧ out r.shiftEpoch = false ∧ IndexedStepReady r out := by
+  let e := r.endIteration n T
+  let w := endIterationWindowsAt n T
+  let swapped := run (controlledWorkSwap e.control e.work1 e.work2) (blockHEndInputState r s)
+  let upper := run (constMinus e.lengthRP e.constants e.carry (n+2)) swapped
+  let lower := run (addConstant e.lengthT e.constants e.carry 3)
+    (run (lenUpdateLtUnary n w.k4 w.K4 (e.upperTree w) e.control
+      (e.rangeAccumulator w.k4 w.K4) (e.temporary w.k4 w.K4) e.carry
+      (e.path w.k4 w.K4) e.work1At e.work2At e.lengthT e.lengthRP e.constants) swapped)
+  let b4 := (e.upperTree w).routeLabel upper
+  let b5 := (e.lowerTree n w).routeLabel lower
+  have he := h.endIteration hstep
+  have hb4 : w.k4 ≤ b4 ∧ b4 ≤ w.K4 := by
+    apply (mem_zeroMapLabels he.k4_le_K4).mp
+    rw [← e.upperTree_visitLabels w he.k4_le_K4, UnaryActionTree.visitLabels_inc]
+    exact UnaryActionTree.routeLabel_mem_labels _ _
+  have hb5 : w.k5 ≤ b5 ∧ b5 ≤ w.K5Decode n := by
+    apply (mem_zeroMapLabels he.k5_le_decode).mp
+    rw [← e.lowerTree_visitLabels n w he.k5_le_decode, UnaryActionTree.visitLabels_inc]
+    exact UnaryActionTree.routeLabel_mem_labels _ _
+  let enabled := blockHEndInputState r s
+  let changed := endIterationForwardState r n T b4 b5 enabled
+  have hc : enabled r.control = true := endpoint_input_enabled r n T s h hr hQ hS hepoch
+  have hp (wire : Wire) (hw : wire ∈ indexedStepPayload r) : enabled wire = s wire :=
+    endpoint_input_payload r n T s h hw
+  have hp1 : wireValues r.work1 enabled = wireValues r.work1 s := by
+    apply List.map_congr_left
+    intro wire hw
+    exact hp wire (by simp only [indexedStepPayload, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false, hw, or_true, true_or])
+  have hp2 : wireValues r.work2 enabled = wireValues r.work2 s := by
+    apply List.map_congr_left
+    intro wire hw
+    exact hp wire (by simp only [indexedStepPayload, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false, hw, or_true, true_or])
+  have her : EndIterationReady e enabled := by
+    have hh := blockHPrefix_run r n T s h hr
+    rw [hh.1] at hh
+    exact hh.2
+  have hrun := run_endIterationForwardState r n T b4 b5 hb4 hb5 enabled h hstep rfl rfl her
+  have hspec := swapWorkAndLengthUnaryShared_correct e n w b4 b5 hb4 hb5 enabled he rfl rfl her
+  rw [hrun.1] at hspec
+  have hw1 : wireValues r.work1 changed = wireValues r.work2 s := by
+    have hh := hspec.1
+    simp only [endIterationSwappedWorkWords, show enabled e.control = true from hc, if_true] at hh
+    exact hh.trans hp2
+  have hw2 : wireValues r.work2 changed = wireValues r.work1 s := by
+    have hh := hspec.2.1
+    simp only [endIterationSwappedWorkWords, show enabled e.control = true from hc, if_true] at hh
+    exact hh.trans hp1
+  have hi := endpoint_iter_not_mutable r n T h
+  have hstate := blockHForward_correct r n T b4 b5 hb4 hb5 s h (fun _ => rfl) (fun _ => rfl) hr
+  have hpost (wire : Wire) (hw : wire ∈ indexedStepPayload r) :
+      blockHForwardState r n T b4 b5 s wire = (xorWireState r.control r.iter changed) wire :=
+    endpoint_H_payload r n T b4 b5 s h hstep hw
+  have hbank (wire : Wire) (hw : wire ∈ r.work1 ++ r.work2) :
+      blockHForwardState r n T b4 b5 s wire = changed wire := by
+    have hne : wire ≠ r.iter := by
+      intro heq; subst wire; apply hi
+      exact List.mem_append_left _ (List.mem_append_left _ hw)
+    rw [hpost wire (by simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]; rcases List.mem_append.mp hw with hw | hw <;> simp only [hw, or_true, true_or])]
+    exact xorWireState_preserves _ _ _ hne
+  refine ⟨?_, ?_, ?_, ?_, hstate.2⟩
+  · rw [hstate.1]
+    exact (show wireValues r.work1 (blockHForwardState r n T b4 b5 s) = wireValues r.work1 changed from
+      List.map_congr_left (fun wire hw => hbank wire (List.mem_append_left _ hw))).trans hw1
+  · rw [hstate.1]
+    exact (show wireValues r.work2 (blockHForwardState r n T b4 b5 s) = wireValues r.work2 changed from
+      List.map_congr_left (fun wire hw => hbank wire (List.mem_append_right _ hw))).trans hw2
+  · rw [hstate.1, hpost r.iter (by simp [indexedStepPayload])]
+    have hic : changed r.iter = s r.iter :=
+      (endIterationForwardState_preservesOutside r n T b4 b5 enabled hi).trans
+        (hp r.iter (by simp [indexedStepPayload]))
+    have hcc : changed r.control = true :=
+      (endIterationForwardState_preservesOutside r n T b4 b5 enabled
+        (h.aux_not_endIterationMutable h.control_mem_aux)).trans hc
+    simp [xorWireState, upd, hic, hcc]
+  · rw [hstate.1, active_H_epoch r n T b4 b5 s h, hepoch]
+
 end ShorECDLP.Paper2607_13816

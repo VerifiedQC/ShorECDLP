@@ -2256,3 +2256,11 @@ clean auxiliary bank. The low shift metadata is derived from the complete
 counter encoding. Initial phase/length, capacity and window bounds remain
 explicit; this does not discharge production reachability or the final
 shift-to-zero bank swap.
+
+`blockHForward_endpoint_banks` derives the enable control of the literal H
+block from zero-Q and zero-S counter words with a clear epoch. At scheduled
+indices divisible by four, it proves both entire banks exchange, iteration
+parity flips, the epoch stays clear, and shared scratch is clean. All decoder
+routes and bounds are selected from the actual intermediate states. Bank data
+and the other length words may be arbitrary; this theorem does not yet identify
+the recomputed lengths with canonical bit lengths or establish endpoint reachability.
