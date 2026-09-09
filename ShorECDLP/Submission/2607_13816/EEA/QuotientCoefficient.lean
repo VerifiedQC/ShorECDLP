@@ -253,4 +253,104 @@ theorem blockDEFForward_coefficient (r : IndexedStepRegisters) (n index : Nat)
   simp only [hp2f,Bool.false_eq_true,ite_false] at hf
   have result := And.intro hf.1 (And.intro hf.2.1 (And.intro hd.2.2.1 hr.2))
   simpa only [blockFForward,mid,circuit,Classical.run_append] using result
+
+/-- The actual swap comparison followed by post-shift restores the first bank,
+decrements the paired rotation/counter, and retains the comparison sign. -/
+theorem blockEFForward_swap (r : IndexedStepRegisters) (n index : Nat)
+    (window : ActiveWindow) (s : BasisState) (v : EEAState)
+    (h : IndexedStepLayout r n index)
+    (hw : window = (certifiedActiveWindows n index).coefficient)
+    (hr : IndexedStepReady r s) (hp1 : s r.phase1 = true) (hp2 : s r.phase2 = true)
+    (htmeta : boolWordToNat (wireValues r.lengthT s) = truthMinusOneValue r.lengthT.length v.lT)
+    (hrmeta : boolWordToNat (wireValues r.lengthRPrime s) = truthMinusOneValue r.lengthT.length v.lRPrime)
+    (hsmeta : boolWordToNat (wireValues r.tBoundary.lengthSLow s) = truthMinusOneValue r.lengthT.length v.shift)
+    (hthi : v.lT+1 < 2^r.lengthT.length)
+    (hspan : v.lT+1+v.lRPrime ≤ n+3)
+    (hshift : 0 < v.shift) (hlo : v.lRPrime+v.shift ≤ n+3)
+    (hhi : n+3-v.lRPrime-v.shift < 2^r.lengthT.length)
+    (hv : n+3-v.lRPrime-v.shift ∈ quotientSwapLabels window.start window.stop)
+    (ht : v.t < 2^v.lT) (htB : v.t < 2^(n+3-v.lRPrime-v.shift))
+    (htp : v.tPrime < 2^(n+3-v.lRPrime)) (hrem : v.r < 2^v.lRPrime)
+    (hsfull : boolWordToNat (wireValues r.lengthS s) = truthMinusOneValue r.lengthS.length v.shift)
+    (hswidth : 0 < r.lengthS.length) (hsfit : v.shift < 2^r.lengthS.length)
+    (hwork1 : wireValues r.work1 s = constantBits v.lT v.t ++ [false] ++
+      (constantBits (n+3-(v.lT+1)) v.r).reverse)
+    (hwork2 : wireValues r.work2 s =
+      (constantBits (n+3-v.lRPrime) v.tPrime ++
+        (constantBits v.lRPrime v.rPrime).reverse).rotate v.shift) :
+    let final := run (blockEForward r n window ++ blockFForward r) s
+    wireValues r.work1 final = wireValues r.work1 s ∧
+      wireValues r.work2 final = (constantBits (n+3-v.lRPrime) v.tPrime ++
+        (constantBits v.lRPrime v.rPrime).reverse).rotate (v.shift-1) ∧
+      boolWordToNat (wireValues r.lengthS final) = truthMinusOneValue r.lengthS.length (v.shift-1) ∧
+      final r.sign = (s r.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime)) ∧
+      IndexedStepReady r final ∧
+      AgreesOutside (r.sign :: r.work2 ++ r.lengthS) final s := by
+  let mid := run (blockEForward r n window) s
+  have he := blockEForward_swapComparison r n index window s v h hw hr hp1 hp2
+    htmeta hrmeta hsmeta hthi hspan hshift hlo hhi hv ht htB htp hrem hwork1 hwork2
+  change wireValues r.work1 mid = _ ∧ _ at he
+  have heframe : ∀ wire, wire ≠ r.sign → mid wire = s wire := by
+    intro wire hn
+    by_cases h1 : wire ∈ r.work1
+    · exact (List.map_eq_map_iff.mp he.1) wire h1
+    by_cases h2 : wire ∈ r.work2
+    · exact (List.map_eq_map_iff.mp he.2.1) wire h2
+    apply he.2.2.2.2
+    intro hm
+    simp only [List.mem_cons,List.mem_append] at hm
+    rcases hm with (hh | hh) | hh
+    · exact hn hh
+    · exact h1 (List.mem_of_mem_drop (List.mem_of_mem_take hh))
+    · exact h2 (List.mem_of_mem_drop (List.mem_of_mem_take hh))
+  have hsep := coefficient_metadata_separation r h.physical
+  have hp1m : mid r.phase1 = true := (heframe _ (by
+    intro hh; exact (List.disjoint_left.mp hsep) (a :=  r.phase1) (by simp) (by simp [hh]))).trans hp1
+  have hp2m : mid r.phase2 = true := (heframe _ (by
+    intro hh; exact (List.disjoint_left.mp hsep) (a :=  r.phase2) (by simp) (by simp [hh]))).trans hp2
+  have hsword : wireValues r.lengthS mid = wireValues r.lengthS s := by
+    apply List.map_congr_left
+    intro wire hm
+    apply heframe wire
+    intro hh
+    exact (List.disjoint_left.mp hsep) (a :=  wire) (by simp [hm]) (by simp [hh])
+  have hready := blockFForward_readiness r n index mid h he.2.2.2.1
+  have hf := postShiftUnitary_shiftEncoding r.postShift mid h.postShift hready.1 hp1m
+    (constantBits (n+3-v.lRPrime) v.tPrime ++ (constantBits v.lRPrime v.rPrime).reverse)
+    v.shift (he.2.1.trans hwork2)
+    (by simpa only [IndexedStepRegisters.postShift,hsword] using hsfull)
+    (by change 0 < r.work2.length; rw [h.work2_length]; omega)
+    hswidth hsfit (fun _ => hshift) (by simpa only [IndexedStepRegisters.postShift,hp2m,Bool.true_eq_false] using (False.elim : False → v.shift+1 < 2^r.lengthS.length))
+  have hfs := postShiftUnitary_frame r.postShift mid h.postShift hready.1
+  have hsepF := regroup_disjoint ([r.phase1,r.phase2,r.iter,r.sign] ++ r.work1) r.work2
+    (r.lengthT ++ r.lengthQ) r.lengthS (r.lengthRPrime ++ r.aux)
+    (by simpa only [IndexedStepRegisters.allWires,List.append_assoc,List.cons_append,List.nil_append] using h.physical)
+  have hfirst : wireValues r.work1 (run (blockFForward r) mid) = wireValues r.work1 s := by
+    trans wireValues r.work1 mid
+    · apply List.map_congr_left
+      intro wire hm
+      apply hfs
+      change wire ∉ r.work2 ++ r.lengthS
+      intro hn
+      apply (List.disjoint_left.mp hsepF) (a :=  wire) (by simp [hm])
+      simpa only [List.mem_append,or_comm] using hn
+    · exact he.1
+  have hsign : run (blockFForward r) mid r.sign = (s r.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime)) :=
+    (hfs r.sign (by
+      change r.sign ∉ r.work2 ++ r.lengthS
+      intro hn
+      apply (List.disjoint_left.mp hsepF) (a := r.sign) (by simp)
+      simpa only [List.mem_append,or_comm] using hn)).trans he.2.2.1
+  have hframe : AgreesOutside (r.sign :: r.work2 ++ r.lengthS) (run (blockFForward r) mid) s := by
+    intro wire hn
+    change wire ∉ r.sign :: (r.work2 ++ r.lengthS) at hn
+    have hn1 : wire ≠ r.sign := fun hh => hn (by simp only [hh,List.mem_cons, true_or])
+    have hn2 : wire ∉ r.work2 ++ r.lengthS := fun hh => hn (List.mem_cons_of_mem _ hh)
+    exact (hfs wire hn2).trans (heframe wire hn1)
+  have hp2f : mid r.postShift.phase2 = true := hp2m
+  dsimp only at hf ⊢
+  simp only [hp2f,ite_true] at hf
+  simpa only [Classical.run_append,blockFForward,mid] using
+    And.intro hfirst (And.intro hf.1 (And.intro hf.2.1 (And.intro hsign (And.intro hready.2 hframe))))
+
 end ShorECDLP.Paper2607_13816
