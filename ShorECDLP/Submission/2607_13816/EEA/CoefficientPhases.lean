@@ -307,7 +307,7 @@ theorem blockEForward_swapComparison (r : IndexedStepRegisters) (n index : Nat)
     by_cases hh : v.tPrime < v.t*2^v.shift <;> cases s r.sign <;> simp_all
   exact ⟨hf.2.2.1,hf.1.trans hwork2.symm,(by simpa only [Bool.true_and] using hf.2.2.2.1.trans hs),hf.2.2.2.2⟩
 
-private theorem endpoint_packed_repartition (bank T R t rem : Nat)
+theorem endpoint_packed_repartition (bank T R t rem : Nat)
     (hspan : T+1+R ≤ bank) (ht : t < 2^T) (hr : rem < 2^R) :
     constantBits T t ++ [false] ++ (constantBits (bank-(T+1)) rem).reverse =
       constantBits (bank-R) t ++ (constantBits R rem).reverse := by
