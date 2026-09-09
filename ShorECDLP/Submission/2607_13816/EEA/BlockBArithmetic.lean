@@ -83,4 +83,52 @@ theorem blockB1Forward_logicalValues (r : IndexedStepRegisters) (n index ellT el
   · rw [hf.1,hout]
     exact hb
   · exact hf.2.2
+/-- When the restore predicate is active, actual Block B3 adds the aligned work2
+field to work1 modulo its width and returns the entire auxiliary bank clean.
+Logical encoding and endpoint bounds remain explicit reachable-state obligations. -/
+theorem blockB3Forward_logicalValues (r : IndexedStepRegisters) (n index ellT ellQ shift : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state)
+    (hphase : state r.phase1 = false) (hrp : wireAnd r.lengthRPrime state = false)
+    (hrestore : (state r.phase2 && state r.sign) = false)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length ellT)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length ellQ)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : (certifiedActiveWindows n index).remainder.start ≤ ellT+ellQ+2)
+    (hleftHigh : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start < 2^r.lengthQ.length)
+    (hrightLow : shift+(certifiedActiveWindows n index).remainder.start ≤ n+3)
+    (hrightHigh : n+3-shift-(certifiedActiveWindows n index).remainder.start < 2^r.lengthS.length)
+    (horder : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start ≤
+      n+3-shift-(certifiedActiveWindows n index).remainder.start) :
+    let w := (certifiedActiveWindows n index).remainder
+    let width := n+3-shift-(ellT+ellQ+2)+1
+    let value := fun ws s => boolWordToNat ((((wireValues ws s).drop (ellT+ellQ+1)).take width).reverse)
+    value r.work1 (run (blockB3Forward r n w) state) =
+      (value r.work1 state + value r.work2 state) % 2^width ∧
+    Clean r.aux (run (blockB3Forward r n w) state) := by
+  let w := (certifiedActiveWindows n index).remainder
+  let enabled := state[r.control ↦ (!state r.phase1 && !(state r.phase2 && state r.sign) && !wireAnd r.lengthRPrime state)]
+  let changed := run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .add false .work1) enabled
+  have hf := run_blockB3Forward_interval r n index state h hc
+  have he : enabled r.control = true := by simp [enabled,hphase,hrp,hrestore]
+  have hdata (ws : List Wire) (hm : ∀ wire ∈ ws, wire ∈ dataWires r) :
+      wireValues ws enabled = wireValues ws state := data_words_update r n index h ws hm state _
+  have hT := hdata r.lengthT (by intro wire hw; simp [dataWires,hw])
+  have hQ := hdata r.lengthQ (by intro wire hw; simp [dataWires,hw])
+  have hS := hdata r.lengthS (by intro wire hw; simp [dataWires,hw])
+  have hW1 := hdata r.work1 (by intro wire hw; simp [dataWires,hw])
+  have hW2 := hdata r.work2 (by intro wire hw; simp [dataWires,hw])
+  have hout := data_words_update r n index h r.work1 (by intro wire hw; simp [dataWires,hw]) changed false
+  have hstart : 1 ≤ w.start := by simp only [w,certifiedActiveWindows,certifiedRemainderWindow]; omega
+  have hrange : n+3-shift-w.start ≤ intervalTopRelative w.start w.stop := by
+    simp only [intervalTopRelative,intervalLaneCount,w,certifiedActiveWindows,certifiedRemainderWindow]
+    omega
+  have hb := run_remainderInterval_logicalValues r w n ellT ellQ shift .add false .work1 enabled h.remainder
+    hstart hf.2.1 he (by simpa only [hT] using ht) (by simpa only [hQ] using hq) (by simpa only [hS] using hs)
+    hleftLow hleftHigh hrightLow hrightHigh hrange horder
+  dsimp only at hb ⊢
+  rw [hW1,hW2] at hb
+  constructor
+  · rw [hf.1,hout]
+    exact hb
+  · exact hf.2.2
 end ShorECDLP.Paper2607_13816

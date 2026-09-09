@@ -1619,3 +1619,12 @@ field from work1 when phase1 is false and the divisor is nonterminal, with the
 entire auxiliary bank clean afterward. Encoded logical lengths and endpoint
 bounds/order remain explicit. The sign-adjustment/addback blocks and the full
 logical remainder update still require composition.
+
+### Actual Block B3 conditional addback arithmetic
+
+`run_blockB3Forward_interval` identifies the actual source addback interval and
+control cleanup. Its enable condition is `!phase1 && !(phase2 && sign)` together
+with a nonterminal divisor. `blockB3Forward_logicalValues` proves addition modulo
+the selected field width under that condition, returning all auxiliary wires
+clean. Encoded lengths and endpoint bounds remain explicit. The sign adjustment
+and full Block B composition remain next.

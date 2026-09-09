@@ -301,7 +301,7 @@ private def blockB2 (registers : IndexedStepRegisters) : Circuit :=
     remainderPhase2Control registers
   }
 
-private def blockB3Forward
+def blockB3Forward
     (registers : IndexedStepRegisters) (n : Nat) (window : ActiveWindow) : Circuit :=
   circuit! {
     remainderRestoreControl registers;
@@ -12445,4 +12445,93 @@ theorem run_blockB1Forward_interval (r : IndexedStepRegisters) (n index : Nat)
     rw [rControlState_preserves _ _ _ _ _ _ hn,← hi]
     simp only [upd,hn,if_false]
     rfl
+
+/-- The restore control is active before phase one, outside the terminal state,
+unless both phase two and the sign flag are set. -/
+private theorem remainderRestoreControlState_eq (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state) :
+    remainderRestoreControlState r state =
+      state[r.control ↦ (!state r.phase1 && !(state r.phase2 && state r.sign) &&
+        !wireAnd r.lengthRPrime state)] := by
+  have htS : r.terminal ∈ r.sourceScratch := by rw [← h.scratch_view]; simp
+  have htA := h.sourceScratch_mem_aux htS
+  have htc : r.terminal ≠ r.control := fun he => h.control_not_sourceScratch (he ▸ htS)
+  have ht1 : r.terminal ≠ r.phase1 := h.aux_not_payload htA (by simp [indexedStepPayload])
+  have hc0 := hc _ h.control_mem_aux
+  have ht0 := hc _ htA
+  have hz : r.blockScratch.getD 0 0 ∈ r.blockScratch :=
+    indexedStep_getD_mem _ _ _ (by have := h.terminalPaddingCapacity; omega)
+  have hzcond : r.blockScratch.getD 0 0 ∉ [r.phase1,r.terminal] := by
+    simp only [List.mem_cons,List.not_mem_nil,or_false,not_or]
+    exact ⟨h.aux_not_payload (h.blockScratch_mem_aux hz) (by simp [indexedStepPayload]),
+      fun he => h.terminal_not_blockScratch (he ▸ hz)⟩
+  have hlength : wireAnd r.lengthRPrime (andXorWireState r.phase2 r.sign r.terminal state) =
+      wireAnd r.lengthRPrime state := by
+    apply wireAnd_congr
+    intro wire hw
+    have hn : wire ≠ r.terminal := (h.aux_not_payload htA (by simp [indexedStepPayload,hw])).symm
+    simp [andXorWireState,upd,hn]
+  have hf := remainderRestoreControl_correct r n index state h (by intro wire hw _; exact hc wire hw)
+  apply funext
+  intro wire
+  by_cases hcontrol : wire = r.control
+  · subst wire
+    simp only [remainderRestoreControlState,andXorWireState,upd,htc.symm,if_false,
+      rControlState,if_true,hc0,Bool.false_xor]
+    rw [rControlNonterminalPredicate_eq _ _ _ _ _ hzcond]
+    simp [registerMatches,registerMatchesFrom,andXorWireState,upd,ht1.symm,ht0] at hlength ⊢
+    rw [hlength]
+  · by_cases hterminal : wire = r.terminal
+    · subst wire
+      have hh := hf.2 r.terminal htA htc
+      simpa only [upd,htc,if_false,ht0] using hh
+    · rw [remainderRestoreControlState_preserves r state hterminal hcontrol]
+      simp [upd,hcontrol]
+
+/-- Actual Block B3 is the conditional interval addback followed by control
+cleanup. Its sign flag is not changed by the interval. -/
+theorem run_blockB3Forward_interval (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state) :
+    let w := (certifiedActiveWindows n index).remainder
+    let enabled := state[r.control ↦ (!state r.phase1 && !(state r.phase2 && state r.sign) &&
+      !wireAnd r.lengthRPrime state)]
+    let changed := run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .add false .work1) enabled
+    run (blockB3Forward r n w) state = changed[r.control ↦ false] ∧
+      IntervalReady (r.remainder w) enabled ∧ Clean r.aux (run (blockB3Forward r n w) state) := by
+  let w := (certifiedActiveWindows n index).remainder
+  let enabled := state[r.control ↦ (!state r.phase1 && !(state r.phase2 && state r.sign) &&
+    !wireAnd r.lengthRPrime state)]
+  have he := remainderRestoreControlState_eq r n index state h hc
+  have hr : IntervalReady (r.remainder w) enabled := by
+    intro wire hw
+    have hn : wire ≠ r.control := by
+      intro heq
+      subst wire
+      exact h.control_not_remainder_scratch w rfl hw
+    simp only [enabled,upd,hn,if_false]
+    exact hc wire (h.remainder_scratch_sub_aux w wire hw)
+  have hf := blockB3Forward_correct r n index w state h rfl hc
+  have hi := run_intervalAddSubUnitary_state (r.remainder w) n w.start w.stop .add false .work1 enabled h.remainder hr
+  have htS : r.terminal ∈ r.sourceScratch := by rw [← h.scratch_view]; simp
+  have htA := h.sourceScratch_mem_aux htS
+  have htc : r.terminal ≠ r.control := fun heq => h.control_not_sourceScratch (heq ▸ htS)
+  have hterm : run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .add false .work1) enabled r.terminal = false := by
+    exact remainderInterval_clean_auxAwayControl r n index w .add false enabled h rfl
+      (by intro wire hw hn; simpa only [enabled,upd,hn,if_false] using hc wire hw) r.terminal htA htc
+  dsimp only
+  refine ⟨?_,hr,hf.2⟩
+  apply funext
+  intro wire
+  by_cases hn : wire = r.control
+  · subst wire
+    simpa [upd] using hf.2 r.control h.control_mem_aux
+  · by_cases ht : wire = r.terminal
+    · subst wire
+      simpa only [w,enabled,upd,htc,if_false] using (hf.2 r.terminal htA).trans hterm.symm
+    · rw [hf.1]
+      simp only [blockB3ForwardState,he]
+      rw [remainderRestoreControlState_preserves r _ ht hn,← hi]
+      simp only [upd,hn,if_false]
+      rfl
+
 end ShorECDLP.Paper2607_13816
