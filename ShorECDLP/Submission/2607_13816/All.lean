@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.CoefficientInvariant
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientCoefficient
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPhases
 import ShorECDLP.Submission.«2607_13816».EEA.PackedCoefficient
