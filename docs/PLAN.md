@@ -1261,3 +1261,10 @@ At other indices the end-iteration block is absent, so the input-based result
 covers all counter values. This removes an unnecessary restriction from both
 active-step endpoints; the first-step instantiation now uses that absence
 directly. Fourth-step boundary transitions and reachable arithmetic remain open.
+
+`indexedStepUnitary_active_clean` now returns the entire auxiliary bank clear
+from a clean, nonterminal input at every index, including fourth-step counter
+boundaries. The end-iteration block preserves the borrowed epoch by restoring
+its temporary complements; the remaining scratch follows the existing step
+correctness theorem. Certified routes remain required. This cleanliness result
+does not assert the next terminal encoding or logical arithmetic transition.
