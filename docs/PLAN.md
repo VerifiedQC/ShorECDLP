@@ -1370,3 +1370,12 @@ inverse rotation recovers the complete word, so canonical field decoding can be
 applied after undoing a stored shift. This establishes rotation semantics; the
 reachable relation between the shift metadata and the packed EEA fields remains
 open.
+
+`preShiftUnitary_work_bits` and `postShiftUnitary_work_bits` give the combined
+work-bank action of the actual shift wrappers. The enabled phase rotates left
+when phase two is false and right when phase two is true; the pre-shift is enabled
+by phase one being false and the post-shift by phase one being true. The proof
+composes the source's left-one/right-two sequence and proves counter updates and
+scratch marking do not alter the work bank. Together with the existing counter
+semantics, this aligns the physical rotation direction with the counter update;
+relating the encoded counter to a reachable logical shift remains open.
