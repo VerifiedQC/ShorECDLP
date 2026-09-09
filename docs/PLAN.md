@@ -1927,3 +1927,13 @@ The theorem also proves the new coefficient fits its field, preserves the
 complete addend bank, and retains the sign, readiness and local frame facts.
 The logical packing and selected-span premises still require reachable-state
 induction; this theorem does not claim full EEA refinement or stopping.
+
+### Canonical coefficient contract from logical length metadata
+
+`blockEForward_logicalCoefficient` derives the selected endpoint from the
+truth-minus-one encodings of `lT`, `lRPrime` and the shift counter. It selects
+`lT+1` or `n+3-lRPrime-shift` according to phase 2, then applies the complete
+canonical coefficient theorem. The separate equation relating prepared circuit
+words to an abstract boundary is no longer a caller premise. Endpoint capacity,
+nonnegative subtraction, window membership, input packing and selected-field
+spans remain explicit and still need to follow from reachable-state induction.
