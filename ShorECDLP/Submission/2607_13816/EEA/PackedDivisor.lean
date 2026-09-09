@@ -108,4 +108,67 @@ theorem blockBForward_packedRemainder (r : IndexedStepRegisters) (n index : Nat)
   rw [hdecode,hwidth,hwork2,hd] at hb
   exact hb
 
+private theorem canonical_bank (bits pre : List Bool) (width value : Nat)
+    (hlen : bits.length = pre.length+width)
+    (hp : bits.take pre.length = pre)
+    (hv : boolWordToNat (bits.drop pre.length).reverse = value) :
+    bits = pre ++ (constantBits width value).reverse := by
+  have hl : (bits.drop pre.length).length = width := by rw [List.length_drop,hlen]; omega
+  have hb : value < 2^width := by
+    have hh := boolWordToNat_lt_pow_two (bits.drop pre.length).reverse
+    simpa only [List.length_reverse,hl,hv] using hh
+  have he : (bits.drop pre.length).reverse = constantBits width value := by
+    apply boolWordToNat_injective_of_length
+    · simp only [List.length_reverse,hl,constantBits_length]
+    · rw [hv,boolWordToNat_constantBits,Nat.mod_eq_of_lt hb]
+  have hd : bits.drop pre.length = (constantBits width value).reverse := by
+    simpa only [List.reverse_reverse] using congrArg List.reverse he
+  have hh := List.take_append_drop pre.length bits
+  rw [hp,hd] at hh
+  exact hh.symm
+/-- Actual Block B preserves the canonical first-bank packing, changing only
+the logical remainder according to its active phase. -/
+theorem blockBForward_packedWork1 (r : IndexedStepRegisters) (n index : Nat)
+    (logical : EEAState) (state : BasisState) (h : IndexedStepLayout r n index)
+    (hc : Clean r.aux state) (hphase : state r.phase1 = false) (hsign0 : state r.sign = false)
+    (hrp : wireAnd r.lengthRPrime state = false)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length logical.lT)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length logical.lQ)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length logical.shift)
+    (hleftLow : (certifiedActiveWindows n index).remainder.start ≤ logical.lT+logical.lQ+2)
+    (hleftHigh : logical.lT+logical.lQ+2-(certifiedActiveWindows n index).remainder.start < 2^r.lengthQ.length)
+    (hrightLow : logical.shift+(certifiedActiveWindows n index).remainder.start ≤ n+3)
+    (hrightHigh : n+3-logical.shift-(certifiedActiveWindows n index).remainder.start < 2^r.lengthS.length)
+    (horder : logical.lT+logical.lQ+2-(certifiedActiveWindows n index).remainder.start ≤
+      n+3-logical.shift-(certifiedActiveWindows n index).remainder.start)
+    (hdivWidth : logical.lRPrime ≤ n+3)
+    (hspan : logical.lT+logical.lQ+1+logical.shift ≤ n+3-logical.lRPrime)
+    (hcoeff : logical.tPrime < 2^(logical.lT+logical.lQ+1+logical.shift))
+    (hdiv : logical.rPrime < 2^logical.lRPrime)
+    (hrem : logical.r < 2^(n+3-(logical.lT+logical.lQ+1)))
+    (hwork1 : wireValues r.work1 state =
+      constantBits logical.lT logical.t ++ [false] ++ (constantBits logical.lQ logical.q).reverse ++
+        (constantBits (n+3-(logical.lT+logical.lQ+1)) logical.r).reverse)
+    (hwork2 : wireValues r.work2 state =
+      (constantBits (n+3-logical.lRPrime) logical.tPrime ++
+        (constantBits logical.lRPrime logical.rPrime).reverse).rotate logical.shift) :
+    let result := if state r.phase2 && decide (logical.rPrime*2^logical.shift ≤ logical.r) then
+      logical.r-logical.rPrime*2^logical.shift else logical.r
+    wireValues r.work1 (run (blockBForward r n (certifiedActiveWindows n index).remainder) state) =
+      constantBits logical.lT logical.t ++ [false] ++ (constantBits logical.lQ logical.q).reverse ++
+        (constantBits (n+3-(logical.lT+logical.lQ+1)) result).reverse := by
+  let pre := constantBits logical.lT logical.t ++ [false] ++ (constantBits logical.lQ logical.q).reverse
+  have hpre : pre.length = logical.lT+logical.lQ+1 := by simp only [pre,List.length_append,List.length_reverse,constantBits_length,List.length_singleton]; omega
+  have hf := blockBForward_fieldFrame r n index logical.lT logical.lQ logical.shift state h hc
+    ht hq hs hleftLow hleftHigh hrightLow hrightHigh horder
+  have hv := blockBForward_packedRemainder r n index logical state h hc hphase hsign0 hrp
+    ht hq hs hleftLow hleftHigh hrightLow hrightHigh horder hdivWidth hspan hcoeff hdiv hrem hwork1 hwork2
+  apply canonical_bank (pre := pre)
+  · simp only [wireValues,List.length_map,h.work1_length,hpre]
+    omega
+  · rw [hpre,hf.1,hwork1]
+    change (pre ++ (constantBits (n+3-(logical.lT+logical.lQ+1)) logical.r).reverse).take (logical.lT+logical.lQ+1) = pre
+    exact List.take_left' hpre
+  · simpa only [hpre] using hv
+
 end ShorECDLP.Paper2607_13816
