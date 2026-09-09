@@ -1698,3 +1698,13 @@ field times `2^shift`, or preservation in the comparison phase. The proof
 retains the low bits, derives the full-width comparison from their bound, and
 uses the actual complete Block B word theorem. Identifying the aligned work2
 field with the canonical rotated divisor and proving reachability remain open.
+
+### Canonical rotated divisor and actual packed remainder update
+
+`packedRotatedDivisor_value` identifies the selected work2 field after circular
+rotation as the logical divisor: the coefficient fit bound forces intervening
+bits to zero. `blockBForward_packedRemainder` applies this to actual Block B
+with canonical input bank words and derives conditional subtraction of
+`rPrime * 2^shift` from the logical remainder. Encoding, nonterminal phase,
+initial sign, endpoint, and packing fit obligations remain explicit. Establishing
+these obligations for reachable microsteps remains outstanding.
