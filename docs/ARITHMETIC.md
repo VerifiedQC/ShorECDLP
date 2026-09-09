@@ -2201,3 +2201,15 @@ Positive shift, coefficient/remainder capacity, selected-addend capacity,
 metadata encoding, layout and active-window membership remain explicit. This
 is a local swap-stage contract; subsequent shift/phase/bank-swap composition
 and reachable-state discharge remain open. Circuit definitions are unchanged.
+
+### Swap comparison followed by backward shift
+
+`blockEFForward_swap` composes the actual comparison with the post-shift.
+It restores work1, preserves the non-strict comparison sign, rotates work2
+back by one position and decrements its complete truth-minus-one shift counter.
+Its frame permits changes only to sign, work2 and the shift counter; indexed
+scratch readiness is restored. All intermediate counter, phase and readiness
+conditions are derived from the initial state and the comparison frame.
+
+The initial comparison bounds and full shift encoding/capacity remain explicit.
+Phase update and the final conditional bank swap remain separate obligations.
