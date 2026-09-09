@@ -1948,3 +1948,14 @@ sign toggle included. `blockEForward_inactive` proves the entire physical state
 is unchanged when phase 1 is clear, using only layout and scratch readiness;
 it needs no boundary-membership or logical-packing assumptions. The active
 logical contract retains the explicit metadata, capacity and span premises.
+
+### Ordinary shifted coefficient arithmetic
+
+`blockEForward_coefficientOrdinary` connects the actual stage to Algorithm 3's
+ordinary `tPrime + 2^shift*t` update and full-value `tPrime < t*2^shift`
+comparison. It derives the zero-based field offset from the certified
+coefficient window's start at one. Selected-addend and coefficient fits, plus
+a conditional bound preventing addition overflow, are explicit; the retained
+canonical fit, divisor/addend preservation, sign, readiness and local frame all
+belong to the same actual circuit. Deriving these bounds along reachable
+microsteps remains necessary before unconditional inversion can be claimed.
