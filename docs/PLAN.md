@@ -1628,3 +1628,13 @@ with a nonterminal divisor. `blockB3Forward_logicalValues` proves addition modul
 the selected field width under that condition, returning all auxiliary wires
 clean. Encoded lengths and endpoint bounds remain explicit. The sign adjustment
 and full Block B composition remain next.
+
+### Complete Block B control composition
+
+`run_blockB2_sign` proves that the actual B2 circuit changes only the sign,
+flipping it exactly when phase one is off, phase two is on, and the divisor is
+nonterminal. `run_blockBForward_intervals` composes the actual B1 subtraction,
+B2 sign update, and B3 addback into one complete-state equality and proves
+auxiliary cleanup for the entire block. The interval calls are concrete source
+circuits. A combined logical remainder formula and reachable-state bounds
+still require proof.

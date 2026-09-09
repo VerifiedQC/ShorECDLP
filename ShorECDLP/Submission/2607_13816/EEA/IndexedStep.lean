@@ -294,7 +294,7 @@ private def blockB1Inverse
     remainderSubControl registers
   }
 
-private def blockB2 (registers : IndexedStepRegisters) : Circuit :=
+def blockB2 (registers : IndexedStepRegisters) : Circuit :=
   circuit! {
     remainderPhase2Control registers;
     gate! Gate.CX registers.control registers.sign;
@@ -319,7 +319,7 @@ private def blockB3Inverse
     remainderRestoreControl registers
   }
 
-private def blockBForward
+def blockBForward
     (registers : IndexedStepRegisters) (n : Nat) (window : ActiveWindow) : Circuit :=
   circuit! {
     blockB1Forward registers n window;
@@ -12533,5 +12533,35 @@ theorem run_blockB3Forward_interval (r : IndexedStepRegisters) (n index : Nat)
       rw [remainderRestoreControlState_preserves r _ ht hn,← hi]
       simp only [upd,hn,if_false]
       rfl
+
+/-- Actual Block B2 flips only the sign, exactly in nonterminal phase two. -/
+theorem run_blockB2_sign (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state) :
+    run (blockB2 r) state = state[r.sign ↦ (state r.sign ^^
+      (!state r.phase1 && state r.phase2 && !wireAnd r.lengthRPrime state))] ∧
+    Clean r.aux (run (blockB2 r) state) := by
+  have hf := blockB2_correct r n index state h hc
+  have hc0 := hc _ h.control_mem_aux
+  have hcs : r.control ≠ r.sign := by
+    simpa only [List.mem_cons,List.not_mem_nil,or_false] using (List.nodup_cons.mp h.controlSign).1
+  have htA : r.terminal ∈ r.aux := h.sourceScratch_mem_aux (by rw [← h.scratch_view]; simp)
+  have htn : r.terminal ∉ [r.phase1,r.phase2] := by
+    simp only [List.mem_cons,List.not_mem_nil,or_false,not_or]
+    exact ⟨h.aux_not_payload htA (by simp [indexedStepPayload]),
+      h.aux_not_payload htA (by simp [indexedStepPayload])⟩
+  have hp : rControlNonterminalPredicate [r.phase1,r.phase2] 2 r.lengthRPrime r.terminal state =
+      (!state r.phase1 && state r.phase2 && !wireAnd r.lengthRPrime state) := by
+    rw [rControlNonterminalPredicate_eq _ _ _ _ _ htn]
+    have hb : Nat.testBit 2 1 = true := by decide
+    simp [registerMatches,registerMatchesFrom,hb]
+  refine ⟨?_,hf.2⟩
+  apply funext
+  intro wire
+  by_cases hn : wire = r.control
+  · subst wire
+    simpa [upd,hcs,hc0] using hf.2 r.control h.control_mem_aux
+  · rw [hf.1]
+    simp only [blockB2State,rControlState_preserves _ _ _ _ _ _ hn]
+    simp [xorWireState,rControlState,upd,hn,hcs.symm,hc0,hp]
 
 end ShorECDLP.Paper2607_13816

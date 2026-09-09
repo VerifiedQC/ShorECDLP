@@ -131,4 +131,27 @@ theorem blockB3Forward_logicalValues (r : IndexedStepRegisters) (n index ellT el
   · rw [hf.1,hout]
     exact hb
   · exact hf.2.2
+/-- The complete actual Block B consists of subtraction, a phase-two sign flip,
+and conditional addback, with controls and the auxiliary bank cleaned. Both
+arithmetic calls below are the source interval circuits. -/
+theorem run_blockBForward_intervals (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state) :
+    let w := (certifiedActiveWindows n index).remainder
+    let first := (run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .sub true .work1)
+      state[r.control ↦ rControlNonterminalPredicate [r.phase1] 0 r.lengthRPrime r.terminal state])[r.control ↦ false]
+    let second := first[r.sign ↦ (first r.sign ^^ (!first r.phase1 && first r.phase2 && !wireAnd r.lengthRPrime first))]
+    let third := run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .add false .work1)
+      second[r.control ↦ (!second r.phase1 && !(second r.phase2 && second r.sign) && !wireAnd r.lengthRPrime second)]
+    run (blockBForward r n w) state = third[r.control ↦ false] ∧
+      Clean r.aux (run (blockBForward r n w) state) := by
+  let w := (certifiedActiveWindows n index).remainder
+  have h1 := run_blockB1Forward_interval r n index state h hc
+  have h2 := run_blockB2_sign r n index (run (blockB1Forward r n w) state) h h1.2.2
+  have h3 := run_blockB3Forward_interval r n index
+    (run (blockB2 r) (run (blockB1Forward r n w) state)) h h2.2
+  constructor
+  · simp only [blockBForward,Classical.run_append]
+    rw [h3.1,h2.1,h1.1]
+  · simpa only [blockBForward,Classical.run_append] using h3.2.2
+
 end ShorECDLP.Paper2607_13816

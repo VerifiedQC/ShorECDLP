@@ -331,6 +331,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.blockB1Forward_logicalValues
 #print axioms ShorECDLP.Paper2607_13816.run_blockB3Forward_interval
 #print axioms ShorECDLP.Paper2607_13816.blockB3Forward_logicalValues
+#print axioms ShorECDLP.Paper2607_13816.run_blockB2_sign
+#print axioms ShorECDLP.Paper2607_13816.run_blockBForward_intervals
 #print axioms ShorECDLP.Paper2607_13816.run_remainderInterval_logicalValues
 #print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubBody_slices
 #print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubUnitary_slices
@@ -1206,8 +1208,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1182 ]]; then
-  printf 'expected 1182 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1184 ]]; then
+  printf 'expected 1184 #print axioms results\n' >&2
   exit 1
 fi
 
