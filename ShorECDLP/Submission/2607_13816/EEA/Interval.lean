@@ -902,7 +902,7 @@ private theorem intervalCarry_ne_sign
     (registers.carry k K) (by
       simp [intervalCarry_mem_scratch registers k K target hlayout]) equality.symm
 
-private def intervalTopFirst
+def intervalTopFirst
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
     (target : IntervalTarget) : Circuit :=
   if intervalHasTopSpecial k K then
@@ -915,7 +915,7 @@ private def intervalTopFirst
       registers.control registers.control
   else []
 
-private def intervalTopSecond
+def intervalTopSecond
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
     (target : IntervalTarget) : Circuit :=
   if intervalHasTopSpecial k K then
@@ -1706,7 +1706,7 @@ private theorem intervalPrepare_cleanScratch
     (intervalScratch_not_mem_lengthS registers k K target hlayout hwire)]
   exact hready wire hwire
 
-private theorem run_intervalTopFirst_state
+theorem run_intervalTopFirst_state
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
     (target : IntervalTarget) (state : BasisState)
     (hlayout : IntervalLayout registers k K target)
@@ -1726,7 +1726,7 @@ private theorem run_intervalTopFirst_state
       registers.control registers.control state (hlayout.topSpecial hspecial) hclean
   · simp [intervalTopFirst, intervalTopFirstState, hspecial]
 
-private theorem run_intervalTopSecond_state
+theorem run_intervalTopSecond_state
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
     (target : IntervalTarget) (state : BasisState)
     (hlayout : IntervalLayout registers k K target)

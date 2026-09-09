@@ -1489,3 +1489,14 @@ instantiate the inclusive scan with the actual interval tree and existing
 clean path/cell scratch and the incoming accumulator boundary. No separate route
 or pulse interpretation premise remains. Initializing that boundary in the full
 interval block and fusing its two passes into arithmetic remain next.
+
+### Top-lane accumulator boundaries
+
+`intervalTopFirst_accumulatorBoundary` proves that the actual separate top-lane
+operation initializes the accumulator boundary required by the decreasing scan,
+starting from a zero accumulator. `intervalTopSecond_accumulatorClean` proves
+that its counterpart consumes the increasing scan's outgoing boundary and
+restores the accumulator to zero. These results use numeric equality of bounded
+endpoint words, their order and lane bounds, the physical layout and clean
+comparison scratch. They cover special and ordinary windows. Composition through
+the full prepared interval block and arithmetic fusion remain next.

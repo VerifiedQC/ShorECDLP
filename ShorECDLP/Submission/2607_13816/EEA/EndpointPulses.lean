@@ -6,7 +6,7 @@ namespace ShorECDLP.Paper2607_13816
 open Classical Quantum
 noncomputable section
 
-private theorem top_power (k K : Nat) (h : intervalHasTopSpecial k K = true) :
+theorem intervalTopRelative_eq_pow_topBit (k K : Nat) (h : intervalHasTopSpecial k K = true) :
     intervalTopRelative k K = 2^intervalTopBit k K := by
   have hh : 1 < intervalLaneCount k K ∧
       ((intervalLaneCount k K-1) &&& (intervalLaneCount k K-2)) = 0 := by
@@ -54,7 +54,7 @@ theorem intervalTree_numericEndpointPulses
         if maskedZeroLeaf (intervalHasTopSpecial k K) j then !state (registers.leftTop k K) else true) =
           (state registers.control && decide (j = boolWordToNat (wireValues registers.lengthQ state)))) := by
   by_cases hspecial : intervalHasTopSpecial k K = true
-  · have hp := top_power k K hspecial
+  · have hp := intervalTopRelative_eq_pow_topBit k K hspecial
     have hm : intervalMainLabels k K = List.range (2^intervalTopBit k K) := by
       simp only [intervalMainLabels, hspecial, ↓reduceIte]
       exact congrArg List.range hp
