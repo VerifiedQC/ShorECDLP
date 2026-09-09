@@ -1512,3 +1512,10 @@ accumulator boundaries. No separate pulse or scan-accumulator premises remain.
 restoration, assuming the prepared endpoints are ordered and in range.
 Arithmetic fusion and deriving those endpoint conditions from reachable metadata
 remain open.
+
+The separate top-lane circuits also have complete-state inclusive cell semantics:
+`run_intervalTopFirst_inclusive` and `run_intervalTopSecond_inclusive` use the
+same numeric control as ordinary lanes. Their accumulator boundary hypotheses
+are the values established by the preceding top/scan results. These theorems
+cover special windows; ordinary windows have no separate top operation.
+Combining all lanes into one arithmetic interpretation remains open.
