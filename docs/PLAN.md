@@ -1679,3 +1679,13 @@ window back to work1: its coefficient prefix ends at `T+Q+1`, its selected field
 is replaced by the ripple result, and its suffix begins at `n+3-shift`. The
 physical frame preserves the prefix before the window. Packed remainder value
 reconstruction and reachable-state bounds remain outstanding.
+
+### Complete Block B word and field frame
+
+`blockB1Forward_fieldFrame`, `blockB3Forward_fieldFrame`, and
+`blockBForward_fieldFrame` preserve both neighboring work1 slices in every
+phase under encoded endpoint bounds. Metadata needed by B3 is transported
+from the initial state through the physical frame. `blockBForward_activeWord`
+combines this with the active-phase arithmetic, giving the entire output bank
+as original prefix, fixed-width binary result, and original suffix. Packed
+remainder decoding and reachable-state invariants remain next.
