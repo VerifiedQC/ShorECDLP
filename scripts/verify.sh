@@ -353,6 +353,11 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientSecondPrefixCell
 #print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixFirstTraversal_scan
 #print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixSecondTraversal_scan
+#print axioms ShorECDLP.Paper2607_13816.coefficientFirstPrefixFold_words
+#print axioms ShorECDLP.Paper2607_13816.coefficientSecondPrefixFold_words
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixPair_fusion
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixFirstTraversal_words
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixSecondTraversal_words
 #print axioms ShorECDLP.Paper2607_13816.blockD1Forward_contract
 #print axioms ShorECDLP.Paper2607_13816.blockD3Forward_contract
 #print axioms ShorECDLP.Paper2607_13816.blockD1Forward_logicalLength
@@ -1245,8 +1250,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1221 ]]; then
-  printf 'expected 1221 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1226 ]]; then
+  printf 'expected 1226 #print axioms results\n' >&2
   exit 1
 fi
 
