@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.QuotientPacking
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientStep
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientCounters
 import ShorECDLP.Submission.«2607_13816».EEA.PhaseQuotient

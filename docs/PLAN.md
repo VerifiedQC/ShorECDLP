@@ -1774,3 +1774,15 @@ The selector uses the length after the first counter; its bounds are supplied
 at that intermediate logical value. Enabled-decrement positivity is transported
 through the unchanged phases. Canonical work-bank repacking and reachable-state
 proofs remain open.
+
+### Canonical quotient push/pop packing
+
+`blockDForward_pushPacking` and `blockDForward_popPacking` interpret the actual
+complete Block D on a packed coefficient/separator/quotient/remainder bank.
+Phase 2 appends the sign bit to the quotient and clears the sign when the high
+remainder bit is zero. Phase 3 extracts the last quotient bit into a clear sign,
+shrinks the quotient and extends the remainder with a zero high bit. Both prove
+the exact bank word, the new quotient value bound, the lengthQ encoding, the
+outside frame and clean auxiliaries. Input packing, quotient/remainder bounds,
+phase conditions and selector bounds remain explicit; reachable-state induction
+and the coefficient Block E composition are subsequent boundaries.
