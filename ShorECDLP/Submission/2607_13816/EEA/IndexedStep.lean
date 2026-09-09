@@ -366,6 +366,22 @@ private def quotientXorControlInverse (registers : IndexedStepRegisters) : Circu
 private def lengthCarries (registers : IndexedStepRegisters) : List Wire :=
   registers.sourceScratch.take (registers.lengthQ.length - 1)
 
+/-- Phase-2 quotient-length increment at the start of Block D. -/
+def blockD1Forward (registers : IndexedStepRegisters) : Circuit :=
+  circuit! {
+    phase2LengthControl registers;
+    controlledIncrement registers.control registers.lengthQ (lengthCarries registers);
+    phase2LengthControl registers
+  }
+
+/-- Phase-3 quotient-length decrement at the end of Block D. -/
+def blockD3Forward (registers : IndexedStepRegisters) : Circuit :=
+  circuit! {
+    phase3LengthControl registers;
+    controlledDecrement registers.control registers.lengthQ (lengthCarries registers);
+    phase3LengthControl registers
+  }
+
 /-- Phase-controlled quotient/sign selector used by the source Block D. -/
 def blockD2Forward (registers : IndexedStepRegisters) (window : ActiveWindow) : Circuit :=
   circuit! {
@@ -377,13 +393,9 @@ def blockD2Forward (registers : IndexedStepRegisters) (window : ActiveWindow) : 
 private def blockDForward
     (registers : IndexedStepRegisters) (window : ActiveWindow) : Circuit :=
   circuit! {
-    phase2LengthControl registers;
-    controlledIncrement registers.control registers.lengthQ (lengthCarries registers);
-    phase2LengthControl registers;
+    blockD1Forward registers;
     blockD2Forward registers window;
-    phase3LengthControl registers;
-    controlledDecrement registers.control registers.lengthQ (lengthCarries registers);
-    phase3LengthControl registers
+    blockD3Forward registers
   }
 
 private def blockDInverse
@@ -5548,7 +5560,7 @@ private theorem blockDForward_correct
                   (lengthCarries registers);
                 phase2LengthControl registers
               }) state)) := by
-                simp [blockDForward, blockD2Forward, Classical.run_append]
+                simp [blockDForward, blockD1Forward, blockD2Forward, blockD3Forward, Classical.run_append]
       _ = blockDForwardState registers window state := by
         rw [hfirst.1, hsecond.1, hthird.1]
         rfl
@@ -7304,7 +7316,7 @@ private theorem blockDForward_wellFormed
     (hwindow : window = (certifiedActiveWindows n T).quotientSwap) :
     CircuitWellFormed (blockDForward registers window) := by
   subst window
-  simp only [blockDForward, blockD2Forward, circuitWellFormed_append, and_assoc]
+  simp only [blockDForward, blockD1Forward, blockD2Forward, blockD3Forward, circuitWellFormed_append, and_assoc]
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact phase2LengthControl_wellFormed registers n T hlayout
   · exact controlledIncrement_wellFormed _ _ _ hlayout.lengthCarryPhysical
@@ -8834,7 +8846,7 @@ private theorem blockDInverse_after_forward
           (run firstInverse
             (run lastForward
               (run middle (run firstForward state))))) by
-    simp [blockDInverse, blockDForward, blockD2Forward, firstForward, middle,
+    simp [blockDInverse, blockDForward, blockD1Forward, blockD2Forward, blockD3Forward, firstForward, middle,
       lastForward, firstInverse, lastInverse, Classical.run_append]]
   rw [show run firstInverse
       (run lastForward (run middle (run firstForward state))) =
@@ -9308,7 +9320,7 @@ theorem indexedStepUnitary_HPFree
     (registers : IndexedStepRegisters) (n T : Nat) :
     HPFree (indexedStepUnitary registers n T) := by
   simp [indexedStepUnitary, blockAForward, blockBForward, blockB1Forward,
-    blockB2, blockB3Forward, blockCForward, blockDForward, blockD2Forward, blockEForward,
+    blockB2, blockB3Forward, blockCForward, blockDForward, blockD1Forward, blockD2Forward, blockD3Forward, blockEForward,
     blockFForward, blockGForward, toggleTerminal,
     remainderSubControl, remainderPhase2Control, remainderRestoreControl,
     toggleRControl, phase2LengthControl, phase3LengthControl,
@@ -9435,7 +9447,7 @@ private theorem indexedStepAdaptive_CDEFGH_coherent
     (IndexedStepBorrowedReady registers)
   have htail := indexedStepAdaptive_EFGH_coherent registers n T hlayout
   have hall := indexedStep_coherent_seq_circuits hprefix htail
-    (by simp [blockCForward, blockDForward, blockD2Forward, toggleTerminal,
+    (by simp [blockCForward, blockDForward, blockD1Forward, blockD2Forward, blockD3Forward, toggleTerminal,
       phase2LengthControl, phase3LengthControl, quotientXorControl,
       quotientXorControlInverse])
     (fun state hready ↦ blockCDForward_ready registers n T state hlayout hready)
@@ -12059,6 +12071,77 @@ private theorem active_D1_frame (r : IndexedStepRegisters) (s : BasisState)
   rw [matchXorState_preserves _ _ _ _ hc,
     indexedIncrementWordState_preservesOutside _ _ _ hq,
     matchXorState_preserves _ _ _ _ hc]
+
+/-- The phase-2 quotient counter update, with every other wire restored. -/
+theorem blockD1Forward_contract (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux s) :
+    let final := run (blockD1Forward r) s
+    wireValues r.lengthQ final = incrementBits (!s r.phase1 && s r.phase2) (wireValues r.lengthQ s) ∧
+      AgreesOutside r.lengthQ final s ∧ Clean r.aux final := by
+  dsimp only
+  have hready : IndexedStepReady r s := by
+    intro wire hw
+    apply hc wire
+    simp only [IndexedStepRegisters.sharedScratch,List.mem_cons,List.mem_append] at hw
+    rcases hw with he | hs | hr
+    · subst wire; exact h.control_mem_aux
+    · exact h.sourceScratch_mem_aux hs
+    · exact List.mem_of_mem_drop hr
+  have hrun := blockD1Forward_correct r n index s h hready
+  change run (blockD1Forward r) s = blockD1ForwardState r s ∧
+    IndexedStepReady r (run (blockD1Forward r) s) at hrun
+  have hcontrol := hc r.control h.control_mem_aux
+  have hf : AgreesOutside r.lengthQ (run (blockD1Forward r) s) s := by
+    intro wire hw
+    by_cases he : wire = r.control
+    · subst wire
+      exact (hrun.2 r.control (by simp [IndexedStepRegisters.sharedScratch])).trans hcontrol.symm
+    · rw [hrun.1]
+      exact active_D1_frame r s hw he
+  refine ⟨?_,hf,?_⟩
+  · rw [hrun.1,active_D1_bits r n index s h hcontrol]
+    have hb : Nat.testBit 2 1 = true := by decide
+    simp [registerMatches,registerMatchesFrom,hb]
+  · intro wire hw
+    rw [hf wire (by intro hq; exact (h.aux_not_payload hw (by simp [indexedStepPayload,hq])) rfl)]
+    exact hc wire hw
+
+/-- The phase-3 quotient counter update, with every other wire restored. -/
+theorem blockD3Forward_contract (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux s) :
+    let final := run (blockD3Forward r) s
+    wireValues r.lengthQ final = decrementBits (s r.phase1 && !s r.phase2) (wireValues r.lengthQ s) ∧
+      AgreesOutside r.lengthQ final s ∧ Clean r.aux final := by
+  dsimp only
+  have hready : IndexedStepReady r s := by
+    intro wire hw
+    apply hc wire
+    simp only [IndexedStepRegisters.sharedScratch,List.mem_cons,List.mem_append] at hw
+    rcases hw with he | hs | hr
+    · subst wire; exact h.control_mem_aux
+    · exact h.sourceScratch_mem_aux hs
+    · exact List.mem_of_mem_drop hr
+  have hrun := blockD3Forward_correct r n index s h hready
+  change run (blockD3Forward r) s = blockD3ForwardState r s ∧
+    IndexedStepReady r (run (blockD3Forward r) s) at hrun
+  have hcontrol := hc r.control h.control_mem_aux
+  have hf : AgreesOutside r.lengthQ (run (blockD3Forward r) s) s := by
+    intro wire hw
+    by_cases he : wire = r.control
+    · subst wire
+      exact (hrun.2 r.control (by simp [IndexedStepRegisters.sharedScratch])).trans hcontrol.symm
+    · rw [hrun.1]
+      unfold blockD3ForwardState
+      rw [matchXorState_preserves _ _ _ _ he,
+        indexedDecrementWordState_preservesOutside _ _ _ hw,
+        matchXorState_preserves _ _ _ _ he]
+  refine ⟨?_,hf,?_⟩
+  · rw [hrun.1,active_D3_bits r n index s h hcontrol]
+    have hb : Nat.testBit 1 1 = false := by decide
+    simp [registerMatches,registerMatchesFrom,hb]
+  · intro wire hw
+    rw [hf wire (by intro hq; exact (h.aux_not_payload hw (by simp [indexedStepPayload,hq])) rfl)]
+    exact hc wire hw
 
 private theorem active_D2_frame (r : IndexedStepRegisters) (n T : Nat)
     (window : ActiveWindow) (s : BasisState) (hl : IndexedStepLayout r n T)
