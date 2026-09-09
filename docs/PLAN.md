@@ -1753,3 +1753,14 @@ phase2 differ, and restores every other wire, including the prepared control.
 The source Block D now names this unchanged substream explicitly. Its length
 encodings describe the state at the selector boundary; connecting the preceding
 increment and following decrement, and deriving reachable bounds, remain open.
+
+### Logical quotient counter boundaries
+
+The named source `blockD1Forward` and `blockD3Forward` retain the unchanged
+increment/decrement streams inside Block D. Their contracts expose the updated
+lengthQ bits, complete external frame, and clean auxiliaries at each boundary.
+`blockD1Forward_logicalLength` derives the logical increment even at length zero;
+`blockD3Forward_logicalLength` derives the decrement when the enabled phase has
+a positive logical length. The latter positivity premise remains explicit.
+Composing these interfaces with the selector and deriving their reachable-state
+conditions remain the next boundary.
