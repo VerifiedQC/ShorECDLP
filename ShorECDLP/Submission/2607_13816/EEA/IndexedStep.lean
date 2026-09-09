@@ -390,7 +390,7 @@ def blockD2Forward (registers : IndexedStepRegisters) (window : ActiveWindow) : 
     quotientXorControlInverse registers
   }
 
-private def blockDForward
+def blockDForward
     (registers : IndexedStepRegisters) (window : ActiveWindow) : Circuit :=
   circuit! {
     blockD1Forward registers;

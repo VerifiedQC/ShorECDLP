@@ -1764,3 +1764,13 @@ lengthQ bits, complete external frame, and clean auxiliaries at each boundary.
 a positive logical length. The latter positivity premise remains explicit.
 Composing these interfaces with the selector and deriving their reachable-state
 conditions remain the next boundary.
+
+### Complete logical quotient block
+
+`blockDForward_logical` composes the actual increment, phase-controlled selector,
+and decrement. It reconstructs the final lengthQ word and describes every
+other wire by the exact sign/work1 boundary swap, with clean auxiliaries.
+The selector uses the length after the first counter; its bounds are supplied
+at that intermediate logical value. Enabled-decrement positivity is transported
+through the unchanged phases. Canonical work-bank repacking and reachable-state
+proofs remain open.
