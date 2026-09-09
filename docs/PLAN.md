@@ -2029,3 +2029,9 @@ retains indexed readiness. Metadata and the zero epoch are derived from the
 preceding frame and clean auxiliary bank. A representability bound for the
 divisor length remains explicit with the existing initial encoding/routing
 premises; A–C, H and whole-loop induction remain to be composed.
+
+The coefficient phase also has a complete-state identity theorem for the actual
+A–C remainder prefix: `indexedStepRemainderPrefix_coefficient_idle`. It requires
+physical layout, clean auxiliary wires, phase1=true and phase2=false, with no
+logical packing, capacity or endpoint-routing assumptions. The whole coefficient
+microstep still needs the final H-stage composition.
