@@ -1519,3 +1519,14 @@ same numeric control as ordinary lanes. Their accumulator boundary hypotheses
 are the values established by the preceding top/scan results. These theorems
 cover special windows; ordinary windows have no separate top operation.
 Combining all lanes into one arithmetic interpretation remains open.
+
+### Arithmetic of a contiguous ripple mask
+
+`maskedRippleWords_fusion` proves the two passes with a distinct Boolean control
+per bit restore the addend and incoming carry. Disabled first-pass writes are
+retained and cancel in the matching second pass. `maskedRippleWords_interval`
+proves a contiguous enabled slice leaves both outside slices unchanged;
+`maskedRippleWords_interval_value` derives modular addition/subtraction on that
+slice, including the input carry. The existing uniform ripple arithmetic proof
+is reused. Connecting these word-level passes to the complete physical interval
+body remains open.
