@@ -2043,3 +2043,12 @@ aggregate. The complete indexed circuit has the D/E/F physical result with the
 last-quotient-bit phase/sign transition and readiness. Initial packing, capacity,
 selected-window and strict coefficient bounds remain explicit. Other phase
 refinements and a reachable whole-loop invariant remain open.
+
+`IndexedPackedState` collects the two canonical packed banks, four logical
+metadata words, phase/sign/parity and clean auxiliary bank. The actual complete
+coefficient microstep preserves this interpretation for `coefficientMicrostep`,
+with quotient/coefficient capacity, strict coefficient bound and weighted
+conservation proved together. The low shift-word encoding needed by boundary
+preparation is derived from the full word by modular projection. Active-window
+and arithmetic input bounds remain explicit; iterating this phase is the next
+step toward reachable-state refinement.
