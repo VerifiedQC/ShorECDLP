@@ -276,7 +276,7 @@ private def remainderRestoreControl (registers : IndexedStepRegisters) : Circuit
     gate! Gate.CCX registers.phase2 registers.sign registers.terminal
   }
 
-private def blockB1Forward
+def blockB1Forward
     (registers : IndexedStepRegisters) (n : Nat) (window : ActiveWindow) : Circuit :=
   circuit! {
     remainderSubControl registers;
@@ -12405,4 +12405,44 @@ theorem indexedStepUnitary_active_encoded
     simp only [IndexedStepEpochEncoded, hconditionOut, Bool.false_eq_true, if_false]
     exact hcleanOut _ hlayout.shiftEpoch_mem_aux
 
+
+
+/-- Block B1 prepares its nonterminal phase control, executes the actual interval,
+and clears the control again. The existing complete-state proof supplies both
+the prepared interval readiness and final clean auxiliary bank. -/
+theorem run_blockB1Forward_interval (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state) :
+    let w := (certifiedActiveWindows n index).remainder
+    let enabled := state[r.control ↦ rControlNonterminalPredicate [r.phase1] 0 r.lengthRPrime r.terminal state]
+    let changed := run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .sub true .work1) enabled
+    run (blockB1Forward r n w) state = changed[r.control ↦ false] ∧
+      IntervalReady (r.remainder w) enabled ∧ Clean r.aux (run (blockB1Forward r n w) state) := by
+  let w := (certifiedActiveWindows n index).remainder
+  let enabled := state[r.control ↦ rControlNonterminalPredicate [r.phase1] 0 r.lengthRPrime r.terminal state]
+  have hzero := hc _ h.control_mem_aux
+  have he : rControlState [r.phase1] 0 r.control r.lengthRPrime r.terminal state = enabled := by
+    simp only [rControlState,hzero,Bool.false_xor,enabled]
+  have hr : IntervalReady (r.remainder w) enabled := by
+    intro wire hw
+    have hne : wire ≠ r.control := by
+      intro heq
+      subst wire
+      exact h.control_not_remainder_scratch w rfl hw
+    simp only [enabled,upd,hne,if_false]
+    exact hc wire (h.remainder_scratch_sub_aux w wire hw)
+  have hf := blockB1Forward_correct r n index w state h rfl hc
+  have hi := run_intervalAddSubUnitary_state (r.remainder w) n w.start w.stop .sub true .work1 enabled h.remainder hr
+  have hcontrol := hf.2 r.control h.control_mem_aux
+  dsimp only
+  refine ⟨?_,hr,hf.2⟩
+  apply funext
+  intro wire
+  by_cases hn : wire = r.control
+  · subst wire
+    simpa [upd] using hcontrol
+  · rw [hf.1]
+    simp only [blockB1ForwardState,he]
+    rw [rControlState_preserves _ _ _ _ _ _ hn,← hi]
+    simp only [upd,hn,if_false]
+    rfl
 end ShorECDLP.Paper2607_13816

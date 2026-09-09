@@ -1609,3 +1609,13 @@ immediately after the coefficient and quotient prefix. Encoding and endpoint
 bounds/order remain explicit. This proves arithmetic for the actual isolated
 interval used in Block B; control preparation and the full block's logical
 remainder relation still require composition.
+
+### Actual Block B1 subtraction arithmetic
+
+`run_blockB1Forward_interval` reuses the existing complete-state control proof
+to identify the actual interval call and subsequent control cleanup.
+`blockB1Forward_logicalValues` proves modular subtraction of the aligned work2
+field from work1 when phase1 is false and the divisor is nonterminal, with the
+entire auxiliary bank clean afterward. Encoded logical lengths and endpoint
+bounds/order remain explicit. The sign-adjustment/addback blocks and the full
+logical remainder update still require composition.
