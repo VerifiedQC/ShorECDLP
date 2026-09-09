@@ -1717,3 +1717,12 @@ logical remainder. It combines the actual field frame with decoded arithmetic
 and equal-width encoding uniqueness; output fit is derived from the word length.
 Initial packing and endpoint assumptions remain explicit, so this closes the
 first-bank preservation step without claiming a reachable-state invariant.
+
+### Canonical Block B comparison and combined contract
+
+`blockBForward_packedSign` identifies the final sign as the logical shifted-
+divisor comparison XOR phase2, deriving the full comparison from the high field
+and bounded low bits. `blockBForward_packedContract` combines the canonical
+output work1 word, sign, complete external frame, and clean auxiliary bank for
+the same actual source circuit. Initial encoding, packing fit, endpoint and
+active-phase assumptions remain explicit; whole-microstep reachability is open.
