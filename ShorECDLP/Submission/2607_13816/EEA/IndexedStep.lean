@@ -11873,6 +11873,53 @@ theorem indexedStepRemainderPrefix_coefficient_idle
     rw [(blockCForward_correct r n T s h hc).1, blockCForwardState, hmatch, hepoch, hmatch]
   simp only [indexedStepRemainderPrefix, Classical.run_append, ha, hb, hC]
 
+private theorem coefficient_blockH_idle (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hr : IndexedStepReady r s)
+    (hz : (wireAnd r.lengthS s && !s r.shiftEpoch) = false) :
+    run (blockHForward r n T) s = s := by
+  by_cases hstep : T % 4 = 0
+  · let e := r.endIteration n T
+    let w := endIterationWindowsAt n T
+    let swapped := run (controlledWorkSwap e.control e.work1 e.work2) (blockHEndInputState r s)
+    let upper := run (constMinus e.lengthRP e.constants e.carry (n+2)) swapped
+    let lower := run (addConstant e.lengthT e.constants e.carry 3)
+      (run (lenUpdateLtUnary n w.k4 w.K4 (e.upperTree w) e.control
+        (e.rangeAccumulator w.k4 w.K4) (e.temporary w.k4 w.K4) e.carry
+        (e.path w.k4 w.K4) e.work1At e.work2At e.lengthT e.lengthRP e.constants) swapped)
+    let b4 := (e.upperTree w).routeLabel upper
+    let b5 := (e.lowerTree n w).routeLabel lower
+    have he := h.endIteration hstep
+    have hb4 : w.k4 ≤ b4 ∧ b4 ≤ w.K4 := by
+      apply (mem_zeroMapLabels he.k4_le_K4).mp
+      rw [← e.upperTree_visitLabels w he.k4_le_K4, UnaryActionTree.visitLabels_inc]
+      exact UnaryActionTree.routeLabel_mem_labels _ _
+    have hb5 : w.k5 ≤ b5 ∧ b5 ≤ w.K5Decode n := by
+      apply (mem_zeroMapLabels he.k5_le_decode).mp
+      rw [← e.lowerTree_visitLabels n w he.k5_le_decode, UnaryActionTree.visitLabels_inc]
+      exact UnaryActionTree.routeLabel_mem_labels _ _
+    rw [(blockHForward_correct r n T b4 b5 hb4 hb5 s h (fun _ => rfl) (fun _ => rfl) hr).1]
+    exact terminal_blockH_idle r n T b4 b5 s h hr hz
+  · simp only [blockHForward, hstep, if_false, Classical.run_nil]
+
+/-- Once the actual D–G coefficient stage leaves the shift-zero control disabled,
+A–C and H are identities. The equation concerns the entire indexed circuit. -/
+theorem indexedStepUnitary_coefficient_tail (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hc : Clean r.aux s)
+    (hp1 : s r.phase1 = true) (hp2 : s r.phase2 = false)
+    (hr : IndexedStepReady r (run (blockDForward r (certifiedActiveWindows n T).quotientSwap ++
+      blockEForward r n (certifiedActiveWindows n T).coefficient ++ blockFForward r ++ blockGForward r) s))
+    (hz : let out := run (blockDForward r (certifiedActiveWindows n T).quotientSwap ++
+      blockEForward r n (certifiedActiveWindows n T).coefficient ++ blockFForward r ++ blockGForward r) s
+      (wireAnd r.lengthS out && !out r.shiftEpoch) = false) :
+    run (indexedStepUnitary r n T) s =
+      run (blockDForward r (certifiedActiveWindows n T).quotientSwap ++
+        blockEForward r n (certifiedActiveWindows n T).coefficient ++ blockFForward r ++ blockGForward r) s := by
+  have ha := indexedStepRemainderPrefix_coefficient_idle r n T s h hc hp1 hp2
+  have hh := coefficient_blockH_idle r n T _ h hr hz
+  simp only [indexedStepRemainderPrefix, Classical.run_append] at ha
+  simp only [Classical.run_append] at hh ⊢
+  simpa only [indexedStepUnitary, Classical.run_append, ha] using hh
+
 /-- A clean, nonterminal input returns every auxiliary wire clear after A--F.
 In particular the borrowed epoch remains zero rather than gaining a padding bit. -/
 theorem indexedStepShiftPrefix_clean (r : IndexedStepRegisters) (n T : Nat)
