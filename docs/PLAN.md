@@ -1413,3 +1413,12 @@ Cuccaro numeric lemma moves unchanged from TBoundary to WordNat.
 
 Reachable states must still establish the metadata and output-bound premises;
 composing the changing interval control with the ripple arithmetic remains open.
+
+### Inclusive control at interval leaves
+
+`intervalFirstLeaf_inclusive` and `intervalSecondLeaf_inclusive` bind each actual
+source leaf to a ripple cell controlled by `enabled && (L ≤ label ∧ label ≤ R)`.
+They also prove the next accumulator phase and the complete state action. The
+source's masked zero leaf and shared dynamic control wire are supported.
+Endpoint-match and incoming accumulator predicates remain explicit premises;
+the decoder traversal and scan induction must establish them for the full interval.
