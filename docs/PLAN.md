@@ -1735,3 +1735,12 @@ selector swaps sign with this label and restores its temporary preparation.
 `run_indexedQuotientSwap_logical` cancels the one-based window offset to locate
 full-bank work1 index `T+Q`. Integrating Block D's counter updates and deriving
 reachable selector bounds remain outstanding.
+
+### Nonterminal terminal-restoration composition
+
+`blockCForward_nonterminal` proves complete-state identity for actual Block C
+on clean, nonterminal inputs. `blockBCForward_eq_blockB` derives the needed
+cleanliness and divisor-length preservation from Block B's external frame,
+so its full canonical output contract carries through the appended Block C.
+This bridge applies to every phase and does not assume logical endpoint bounds.
+Reachable-state bounds and Block D counter/selector composition remain open.

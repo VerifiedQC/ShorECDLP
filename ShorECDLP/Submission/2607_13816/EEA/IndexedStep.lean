@@ -335,7 +335,7 @@ private def blockBInverse
     blockB1Inverse registers n window
   }
 
-private def blockCForward (registers : IndexedStepRegisters) : Circuit :=
+def blockCForward (registers : IndexedStepRegisters) : Circuit :=
   circuit! {
     toggleTerminal registers;
     terminalEpochRestore registers.terminal registers.shiftEpoch registers.quotientLow;
@@ -11749,6 +11749,16 @@ private theorem active_C_idle (r : IndexedStepRegisters) (s : BasisState)
     simp only [terminalEpochRestoreState, controlledSwapState, ht, Bool.false_eq_true,
       ↓reduceIte, xorWireState, Bool.xor_false, endIdle_update_read]
   rw [blockCForwardState, hmark, hrestore, hmark]
+
+/-- Terminal restoration is the identity on every wire of a clean nonterminal state. -/
+theorem blockCForward_nonterminal (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index)
+    (hc : Clean r.aux state) (hrp : wireAnd r.lengthRPrime state = false) :
+    run (blockCForward r) state = state := by
+  rw [(blockCForward_correct r n index state h hc).1]
+  apply active_C_idle r state _ hrp
+  apply hc r.terminal
+  exact h.sourceScratch_mem_aux (by rw [← h.scratch_view]; simp)
 
 /-- A clean, nonterminal input returns every auxiliary wire clear after A--F.
 In particular the borrowed epoch remains zero rather than gaining a padding bit. -/

@@ -346,6 +346,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.blockBForward_fieldFrame
 #print axioms ShorECDLP.Paper2607_13816.packedRotatedDivisor_value
 #print axioms ShorECDLP.Paper2607_13816.run_quotientSwapUnitary_logical
+#print axioms ShorECDLP.Paper2607_13816.blockCForward_nonterminal
+#print axioms ShorECDLP.Paper2607_13816.blockBCForward_eq_blockB
 #print axioms ShorECDLP.Paper2607_13816.run_indexedQuotientSwap_logical
 #print axioms ShorECDLP.Paper2607_13816.blockBForward_packedSign
 #print axioms ShorECDLP.Paper2607_13816.blockBForward_packedContract
@@ -1231,8 +1233,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1207 ]]; then
-  printf 'expected 1207 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1209 ]]; then
+  printf 'expected 1209 #print axioms results\n' >&2
   exit 1
 fi
 
