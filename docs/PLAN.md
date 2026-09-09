@@ -1689,3 +1689,12 @@ from the initial state through the physical frame. `blockBForward_activeWord`
 combines this with the active-phase arithmetic, giving the entire output bank
 as original prefix, fixed-width binary result, and original suffix. Packed
 remainder decoding and reachable-state invariants remain next.
+
+### Decoded full remainder effect of Block B
+
+`blockBForward_remainderValue` decodes all work1 remainder bits after the
+coefficient prefix. It proves conditional subtraction by the aligned work2
+field times `2^shift`, or preservation in the comparison phase. The proof
+retains the low bits, derives the full-width comparison from their bound, and
+uses the actual complete Block B word theorem. Identifying the aligned work2
+field with the canonical rotated divisor and proving reachability remain open.
