@@ -32,7 +32,7 @@ theorem registerMatches_eq_numeric (register : List Wire) (value : Nat) (state :
   · intro h i hi
     rw [← hb i hi, h]
 
-private theorem physical_separation (r : IntervalRegisters) (h : r.allWires.Nodup) :
+theorem intervalInputs_disjoint_workScratch (r : IntervalRegisters) (h : r.allWires.Nodup) :
     List.Disjoint (r.control :: (r.lengthQ ++ r.lengthS)) (r.work1 ++ r.work2 ++ r.scratch) := by
   obtain ⟨_, ht, hc⟩ := List.nodup_append.mp h
   obtain ⟨_, ht, hw1⟩ := List.nodup_append.mp ht
@@ -60,7 +60,7 @@ private theorem getD_mem (xs : List Wire) (i : Nat) (hi : i < xs.length) : xs.ge
   rw [List.getD_eq_getElem _ _ hi]
   exact List.getElem_mem hi
 
-private theorem written_roles (r : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+theorem intervalWrittenRoles_mem_workScratch (r : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (h : IntervalLayout r k K target) (j : Nat) (hj : j < intervalLaneCount k K) :
     ∀ w ∈ [r.accumulator k K, r.targetAt target j, r.addendAt target j, r.carry k K],
       w ∈ r.work1 ++ r.work2 ++ r.scratch := by
@@ -114,7 +114,7 @@ private theorem second_accumulator (mode : RippleMode) (value : Nat)
     registerMatchesFrom_upd_not_mem _ _ _ _ acc _ (hreg acc (by simp))]
   simp [upd, hcell.1, hcell.2.1, hcell.2.2, hroot.1, hroot.2.1, hroot.2.2.1, hroot.2.2.2]
 
-private theorem top_inputs (r : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
+theorem intervalTopInputs_disjoint_roles (r : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (h : IntervalLayout r k K target) :
     ∀ w ∈ [r.accumulator k K, r.targetAt target (intervalTopRelative k K),
       r.addendAt target (intervalTopRelative k K), r.carry k K],
@@ -122,8 +122,8 @@ private theorem top_inputs (r : IntervalRegisters) (k K : Nat) (target : Interva
   intro w hw hi
   have hj : intervalTopRelative k K < intervalLaneCount k K := by
     simp [intervalTopRelative, intervalLaneCount]
-  exact List.disjoint_left.mp (physical_separation r h.physical) hi
-    (written_roles r k K target h _ hj w hw)
+  exact List.disjoint_left.mp (intervalInputs_disjoint_workScratch r h.physical) hi
+    (intervalWrittenRoles_mem_workScratch r k K target h _ hj w hw)
 
 private theorem top_first_numeric (r : IntervalRegisters) (k K : Nat) (mode : RippleMode)
     (target : IntervalTarget) (state : BasisState) (h : IntervalLayout r k K target)
@@ -133,7 +133,7 @@ private theorem top_first_numeric (r : IntervalRegisters) (k K : Nat) (mode : Ri
       (state (r.accumulator k K) ^^
         (state r.control && decide (boolWordToNat (wireValues r.lengthS state) = intervalTopRelative k K)) ^^
         (state r.control && decide (boolWordToNat (wireValues r.lengthQ state) = intervalTopRelative k K))) := by
-  have hi := top_inputs r k K target h
+  have hi := intervalTopInputs_disjoint_roles r k K target h
   have hroot : r.control ≠ r.accumulator k K ∧
       r.control ≠ r.targetAt target (intervalTopRelative k K) ∧
       r.control ≠ r.addendAt target (intervalTopRelative k K) ∧ r.control ≠ r.carry k K := by
@@ -164,7 +164,7 @@ private theorem top_second_numeric (r : IntervalRegisters) (k K : Nat) (mode : R
       (state (r.accumulator k K) ^^
         (state r.control && decide (boolWordToNat (wireValues r.lengthQ state) = intervalTopRelative k K)) ^^
         (state r.control && decide (boolWordToNat (wireValues r.lengthS state) = intervalTopRelative k K))) := by
-  have hi := top_inputs r k K target h
+  have hi := intervalTopInputs_disjoint_roles r k K target h
   have hroot : r.control ≠ r.accumulator k K ∧
       r.control ≠ r.targetAt target (intervalTopRelative k K) ∧
       r.control ≠ r.addendAt target (intervalTopRelative k K) ∧ r.control ≠ r.carry k K := by

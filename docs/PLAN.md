@@ -1500,3 +1500,15 @@ restores the accumulator to zero. These results use numeric equality of bounded
 endpoint words, their order and lane bounds, the physical layout and clean
 comparison scratch. They cover special and ordinary windows. Composition through
 the full prepared interval block and arithmetic fusion remain next.
+
+### Complete interval numeric scans
+
+`run_intervalAddSubBody_numeric` identifies the actual interval body with two
+fixed numeric inclusive scans, retaining the actual separate top operations and
+sign update. Endpoint and control preservation carries the original values
+through both scans; the first top operation and first scan supply the incoming
+accumulator boundaries. No separate pulse or scan-accumulator premises remain.
+`run_intervalAddSubUnitary_numeric` includes actual endpoint preparation and
+restoration, assuming the prepared endpoints are ordered and in range.
+Arithmetic fusion and deriving those endpoint conditions from reachable metadata
+remain open.

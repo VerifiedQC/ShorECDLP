@@ -121,7 +121,7 @@ theorem intervalTree_labels (registers : IntervalRegisters) (k K : Nat) :
       simpa [DualUnaryActionTree.buildSourceFromList] using
         intervalTree_built registers k K)
 
-private theorem intervalTree_label_lt_laneCount
+theorem intervalTree_label_lt_laneCount
     (registers : IntervalRegisters) (k K label : Nat)
     (hlabel : label ∈ (intervalTree registers k K).labels) :
     label < intervalLaneCount k K := by
@@ -736,7 +736,7 @@ private theorem intervalScratch_ne_sign
   exact hcross registers.sign (by simp) wire (by
     simp [hscratch]) equality.symm
 
-private theorem intervalAccumulator_mem_scratch
+theorem intervalAccumulator_mem_scratch
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     registers.accumulator k K ∈ registers.scratch := by
@@ -745,7 +745,7 @@ private theorem intervalAccumulator_mem_scratch
     omega
   exact list_getD_mem registers.scratch _ 0 hbound
 
-private theorem intervalCellScratch_mem_scratch
+theorem intervalCellScratch_mem_scratch
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     registers.cellScratch k K ∈ registers.scratch := by
@@ -956,7 +956,7 @@ private def intervalTopSecondAdaptive
       registers.control registers.control
   else .unitary [] .done
 
-private def intervalSignUpdate
+def intervalSignUpdate
     (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool) : Circuit :=
   if signUpdate then [.CX (registers.carry k K) registers.sign] else []
 
@@ -1186,7 +1186,7 @@ private theorem intervalLeftPaths_mem_equalityScratch
       exact Nat.le_max_left _ _)
   exact htwice
 
-private theorem intervalTopScratch_mem_scratch
+theorem intervalTopScratch_mem_scratch
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     ∀ wire, wire ∈ registers.cellScratch k K :: registers.equalityScratch k K →
@@ -1678,7 +1678,7 @@ def intervalSignUpdateState
     state[registers.sign ↦ Bool.xor (state registers.sign) (state (registers.carry k K))]
   else state
 
-private theorem intervalPrepare_cleanScratch
+theorem intervalPrepare_cleanScratch
     (registers : IntervalRegisters) (n k K : Nat) (target : IntervalTarget)
     (state : BasisState) (hlayout : IntervalLayout registers k K target)
     (hready : IntervalReady registers state) :
@@ -1746,7 +1746,7 @@ theorem run_intervalTopSecond_state
       registers.control registers.control state (hlayout.topSpecial hspecial) (hclean hspecial)
   · simp [intervalTopSecond, intervalTopSecondState, hspecial]
 
-private theorem intervalTopFirst_cleanTopScratch
+theorem intervalTopFirst_cleanTopScratch
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
     (target : IntervalTarget) (state : BasisState)
     (hlayout : IntervalLayout registers k K target)
@@ -1772,7 +1772,7 @@ private theorem run_intervalSignUpdate_state
       intervalSignUpdateState registers k K signUpdate state := by
   cases signUpdate <;> rfl
 
-private theorem intervalSignUpdate_preservesScratch
+theorem intervalSignUpdate_preservesScratch
     (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool)
     (target : IntervalTarget) (state : BasisState)
     (hlayout : IntervalLayout registers k K target) :
@@ -1786,7 +1786,7 @@ private theorem intervalSignUpdate_preservesScratch
       simp [intervalSignUpdate, Classical.run, Classical.applyGate,
         upd_other _ _ _ hne]
 
-private theorem intervalSignUpdate_agreesOutsideSign
+theorem intervalSignUpdate_agreesOutsideSign
     (registers : IntervalRegisters) (k K : Nat) (signUpdate : Bool)
     (state : BasisState) :
     AgreesOutside [registers.sign]
@@ -1798,7 +1798,7 @@ private theorem intervalSignUpdate_agreesOutsideSign
   | true =>
       simp [intervalSignUpdate, Classical.run, Classical.applyGate, upd, hwire]
 
-private theorem intervalPaths_clean_of_topScratch
+theorem intervalPaths_clean_of_topScratch
     (registers : IntervalRegisters) (k K : Nat) (state : BasisState)
     (hclean : Clean
       (registers.cellScratch k K :: registers.equalityScratch k K) state) :
@@ -3413,7 +3413,7 @@ private theorem intervalSignUpdate_adjoint
       intervalSignUpdate registers k K signUpdate := by
   cases signUpdate <;> simp [intervalSignUpdate, Circuit.adjoint]
 
-private def intervalAddSubBodyUnitary
+def intervalAddSubBodyUnitary
     (registers : IntervalRegisters) (k K : Nat) (mode : RippleMode)
     (signUpdate : Bool) (target : IntervalTarget) : Circuit :=
   intervalTopFirst registers k K mode target ++
