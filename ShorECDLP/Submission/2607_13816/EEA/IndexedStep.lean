@@ -12244,4 +12244,165 @@ theorem indexedStepShiftPrefix_quotient_counter (r : IndexedStepRegisters) (n T 
   cases hp1 : state r.phase1 <;> cases hp2 : state r.phase2 <;>
     simp [registerMatches, registerMatchesFrom, hp1, hp2, wireValues, Nat.testBit]
 
+private theorem active_H_quotient_idle (registers : IndexedStepRegisters) (n T b4 b5 : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state)
+    (hz : wireAnd registers.lengthQ state = false) :
+    blockHForwardState registers n T b4 b5 state = state := by
+  have hqmem : registers.sourceScratch.getD 0 0 ∈ registers.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [hlayout.sourceScratch_length]; decide)
+  have hsmem : registers.sourceScratch.getD 1 0 ∈ registers.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [hlayout.sourceScratch_length]; decide)
+  have hqaux := hlayout.sourceScratch_mem_aux hqmem
+  have hsaux := hlayout.sourceScratch_mem_aux hsmem
+  have hcq : registers.control ≠ registers.sourceScratch.getD 0 0 := by
+    intro he
+    exact hlayout.control_not_sourceScratch (he ▸ hqmem)
+  have hcs : registers.control ≠ registers.sourceScratch.getD 1 0 := by
+    intro he
+    exact hlayout.control_not_sourceScratch (he ▸ hsmem)
+  have heq : registers.shiftEpoch ≠ registers.sourceScratch.getD 0 0 := by
+    intro he
+    exact hlayout.shiftEpoch_not_sourceScratch (he ▸ hqmem)
+  have hes : registers.shiftEpoch ≠ registers.sourceScratch.getD 1 0 := by
+    intro he
+    exact hlayout.shiftEpoch_not_sourceScratch (he ▸ hsmem)
+  have hnodup : (registers.sourceScratch.getD 0 0 :: registers.sourceScratch.getD 1 0 ::
+      registers.sourceScratch.drop 2).Nodup := by
+    rw [hlayout.sourceScratch_view2]
+    exact hlayout.sourceScratch_nodup
+  have hsq : registers.sourceScratch.getD 1 0 ≠ registers.sourceScratch.getD 0 0 := by
+    intro he
+    exact (List.nodup_cons.mp hnodup).1 (by simp only [List.mem_cons]; exact Or.inl he.symm)
+  have hqQ : registers.sourceScratch.getD 0 0 ∉ registers.lengthQ := by
+    intro hm
+    exact (hlayout.aux_not_payload hqaux (by simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]; tauto)) rfl
+  have hsS : registers.sourceScratch.getD 1 0 ∉ registers.lengthS ++ [registers.shiftEpoch] := by
+    simp only [List.mem_append, List.mem_singleton, not_or]
+    refine ⟨?_, Ne.symm hes⟩
+    intro hm
+    exact (hlayout.aux_not_payload hsaux (by simp only [indexedStepPayload, List.mem_append, List.mem_cons, List.not_mem_nil, or_false]; tauto)) rfl
+  have hqzero := hready _ (hlayout.sourceScratch_mem_sharedScratch hqmem)
+  have hczero := hready registers.control (by simp [IndexedStepRegisters.sharedScratch])
+  have hc : blockHEndInputState registers state registers.control = false := by
+    simp only [blockHEndInputState, blockHZeroSState, blockHBeforeSState,
+      blockHZeroQState, andXorWireState, andListXorState, upd,
+      hcq, hcs, hlayout.control_ne_shiftEpoch, heq.symm, hsq.symm,
+      hz, hqzero, hczero, ↓reduceIte, Bool.xor_false, Bool.false_and]
+  exact endIdle_block registers n T b4 b5 state hqQ hsS (Ne.symm hcq) (Ne.symm hcs) hc
+
+private theorem active_H_Q_frame (r : IndexedStepRegisters) (n T b4 b5 : Nat)
+    (state : BasisState) (hl : IndexedStepLayout r n T)
+    {wire : Wire} (hw : wire ∈ r.lengthQ) :
+    blockHForwardState r n T b4 b5 state wire = state wire := by
+  have hp : wire ∈ indexedStepPayload r := by simp [indexedStepPayload, hw]
+  have hqmem : r.sourceScratch.getD 0 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [hl.sourceScratch_length]; decide)
+  have hsmem : r.sourceScratch.getD 1 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [hl.sourceScratch_length]; decide)
+  have hq := (hl.aux_not_payload (hl.sourceScratch_mem_aux hqmem) hp).symm
+  have hs := (hl.aux_not_payload (hl.sourceScratch_mem_aux hsmem) hp).symm
+  have hc := (hl.aux_not_payload hl.control_mem_aux hp).symm
+  have he := (hl.aux_not_payload hl.shiftEpoch_mem_aux hp).symm
+  have hi : wire ≠ r.iter := hl.lengthQ_ne_outside hw (Or.inl (by
+    simp [indexedStepBeforeLengthQ]))
+  have fq (s : BasisState) := andListXorState_preserves r.lengthQ
+    (r.sourceScratch.getD 0 0) s hq
+  have fs (s : BasisState) := andListXorState_preserves (r.lengthS ++ [r.shiftEpoch])
+    (r.sourceScratch.getD 1 0) s hs
+  have fc (s : BasisState) := andXorWireState_preserves
+    (r.sourceScratch.getD 0 0) (r.sourceScratch.getD 1 0) r.control s hc
+  have fi (s : BasisState) := xorWireState_preserves r.control r.iter s hi
+  have fm (s : BasisState) := endIterationForwardState_preservesOutside r n T b4 b5 s
+    (hl.lengthQ_not_endIterationMutable hw)
+  by_cases hT : T % 4 = 0
+  · simp only [blockHForwardState, hT, ↓reduceIte, blockHEndInputState,
+      blockHZeroSState, blockHBeforeSState, blockHZeroQState, fq, fs, fc, fi, fm,
+      upd, he, ↓reduceIte]
+  · simp only [blockHForwardState, hT, ↓reduceIte]
+
+
+private theorem active_wireAnd_member (ws : List Wire) (state : BasisState)
+    (h : wireAnd ws state = true) {wire : Wire} (hw : wire ∈ ws) : state wire = true := by
+  induction ws with
+  | nil => simp at hw
+  | cons w ws ih =>
+    simp only [wireAnd, Bool.and_eq_true] at h
+    rcases List.mem_cons.mp hw with he | hm
+    · subst wire; exact h.1
+    · exact ih h.2 hm
+
+set_option maxHeartbeats 1000000 in
+/-- A routed step from a clean nonterminal input preserves the terminal epoch encoding,
+including enabled end-iteration boundaries. -/
+theorem indexedStepUnitary_active_encoded
+    (r : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
+      boundary4 ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ boundary5 ∧
+      boundary5 ≤ (endIterationWindowsAt n T).K5Decode n)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hclean : Clean r.aux state) (hrp : wireAnd r.lengthRPrime state = false)
+    (hroutes : T % 4 = 0 → indexedStepEndRoutes r n T state = (boundary4, boundary5)) :
+    IndexedStepEpochEncoded r (run (indexedStepUnitary r n T) state) := by
+  have hready : IndexedStepReady r state := by
+    intro wire hw
+    apply hclean wire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst wire; exact hlayout.control_mem_aux
+    · exact hlayout.sourceScratch_mem_aux he
+    · exact hlayout.remainderRepairScratch_mem_aux he
+  have hcondition : registerMatches (terminalConditionWires r) (terminalConditionValue r) state = false := by
+    rw [terminalConditionWires, terminalConditionValue, terminal_detection, hrp]
+    simp
+  have hencoded : IndexedStepEpochEncoded r state := by
+    simp only [IndexedStepEpochEncoded, hcondition, Bool.false_eq_true, if_false]
+    exact hclean _ hlayout.shiftEpoch_mem_aux
+  have hf := indexedStepUnitary_correct r n T boundary4 boundary5 hboundary4 hboundary5
+    state hlayout hready hencoded hroutes
+  have hp := active_shift_prefix r n T state hlayout hready hencoded
+  have hout : run (indexedStepUnitary r n T) state =
+      blockHForwardState r n T boundary4 boundary5
+        (blockGForwardState r (run (indexedStepShiftPrefix r n T) state)) := by
+    rw [hf.1, indexedStepForwardState, ← hp.1]
+  have hcleanOut := indexedStepUnitary_active_clean r n T boundary4 boundary5
+    hboundary4 hboundary5 state hlayout hclean hrp hroutes
+  have hg := blockGForward_correct r n T _ hlayout hp.2
+  have hgReady := hg.2
+  rw [hg.1] at hgReady
+  have hR : wireAnd r.lengthRPrime
+      (blockGForwardState r (run (indexedStepShiftPrefix r n T) state)) = false := by
+    calc
+      _ = wireAnd r.lengthRPrime (run (indexedStepShiftPrefix r n T) state) :=
+        wireAnd_congr _ _ _ (fun wire hw => active_phase_frame r n T _ hlayout (by
+          simp [indexedStepAfterSign, hw]))
+      _ = wireAnd r.lengthRPrime state := wireAnd_congr _ _ _
+        (fun wire hw => indexedStepShiftPrefix_remainder r n T state hlayout hclean hrp wire hw)
+      _ = false := hrp
+  by_cases hQ : wireAnd r.lengthQ
+      (blockGForwardState r (run (indexedStepShiftPrefix r n T) state)) = true
+  · have hbit := active_wireAnd_member _ _ hQ hlayout.quotientLow_mem_lengthQ
+    have hbitOut : run (indexedStepUnitary r n T) state r.quotientLow = true := by
+      rw [hout, active_H_Q_frame r n T boundary4 boundary5 _ hlayout
+        hlayout.quotientLow_mem_lengthQ]
+      exact hbit
+    unfold IndexedStepEpochEncoded
+    split
+    · exact hbitOut
+    · exact hcleanOut _ hlayout.shiftEpoch_mem_aux
+  · have hQfalse : wireAnd r.lengthQ
+        (blockGForwardState r (run (indexedStepShiftPrefix r n T) state)) = false :=
+      Bool.eq_false_iff.mpr hQ
+    have hidle := active_H_quotient_idle r n T boundary4 boundary5 _ hlayout hgReady hQfalse
+    have hRout : wireAnd r.lengthRPrime (run (indexedStepUnitary r n T) state) = false := by
+      rw [hout, hidle]
+      exact hR
+    have hconditionOut : registerMatches (terminalConditionWires r)
+        (terminalConditionValue r) (run (indexedStepUnitary r n T) state) = false := by
+      rw [terminalConditionWires, terminalConditionValue, terminal_detection, hRout]
+      simp
+    simp only [IndexedStepEpochEncoded, hconditionOut, Bool.false_eq_true, if_false]
+    exact hcleanOut _ hlayout.shiftEpoch_mem_aux
+
 end ShorECDLP.Paper2607_13816

@@ -1276,3 +1276,12 @@ proof tracks both counter wrappers and the intervening quotient swap, with all
 other blocks framing the word. Input auxiliaries are clean and the input remainder
 is nonterminal. Reachable quotient-length relations and terminal encoding remain
 open; no circuit definitions or resource counts change.
+
+`indexedStepUnitary_active_encoded` now preserves the next terminal encoding
+from any clean, nonterminal input with certified routes, including fourth-step
+boundaries. H preserves the quotient counter: when its all-ones guard holds,
+the low quotient bit supplies the terminal marker; otherwise H is idle and the
+remainder remains nonterminal. Together with full auxiliary cleanup, this closes
+the active step's scratch and encoding obligations without a counter exclusion.
+Reachable routing, logical arithmetic and the terminal-entry phase relation
+remain open; no circuit definitions or resource counts change.
