@@ -1361,3 +1361,12 @@ the separating guard bit and the big-endian quotient/remainder fields; the secon
 bank is explicitly unrotated. Field-capacity bounds remain premises. These results
 interpret the representation already established at initialization; preservation
 through the bit-serial trace and the second bank's rotation remain open.
+
+`controlledRotateLeftOne_numeric` and `controlledRotateRightTwo_numeric` bind the
+actual controlled rotation circuits to numeric field exchange in a little-endian
+packed word. Empty and short registers are covered, including the right-by-two
+identity for widths at most two. `packedRotation_roundTrip` proves a normalized
+inverse rotation recovers the complete word, so canonical field decoding can be
+applied after undoing a stored shift. This establishes rotation semantics; the
+reachable relation between the shift metadata and the packed EEA fields remains
+open.
