@@ -1453,3 +1453,15 @@ root control conjoined with equality to that bank's routed label. Duplicate-free
 labels are explicit, and the complete frame and clean-scratch premises are
 inherited from the logical-traversal theorem. The interval-cell instantiation
 and arithmetic interpretation of this fold remain open.
+
+### Concrete interval ripple scans
+
+`run_intervalFirstTraversal_as_routedFold` and
+`run_intervalSecondTraversal_as_routedFold` instantiate the decoder theorem for
+the actual interval circuits, in decreasing and increasing visit order respectively.
+Their logical cells retain the source zero-leaf mask, endpoint XOR switches and
+ripple operations. The complete-state equalities require the existing traversal
+layout, unique labels, clean path stacks and clean cell scratch; no abstract leaf
+simulation premise remains. Decoder controls are selected from the decoder wires,
+while the preserved interface additionally contains scratch. Numeric accumulator
+induction and the arithmetic meaning of the entire scan remain next.

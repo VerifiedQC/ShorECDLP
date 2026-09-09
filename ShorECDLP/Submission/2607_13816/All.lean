@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.IntervalLogical
 import ShorECDLP.Submission.«2607_13816».EEA.DualPulses
 import ShorECDLP.Submission.«2607_13816».EEA.DualLogical
 import ShorECDLP.Submission.«2607_13816».EEA.DualRouting

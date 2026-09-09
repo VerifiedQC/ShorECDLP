@@ -99,16 +99,18 @@ theorem DualUnaryActionTree.runLogicalTree_eq_fold_routes
 theorem run_dualUnaryActionUnitary_as_routedFold
     (order : UnaryOrder) (leaf : Nat → Wire → Wire → Circuit)
     (logicalLeaf : Nat → Bool → Bool → BasisState → BasisState)
-    (tree : DualUnaryActionTree) (ca cb : Wire) (pa pb protectedWires cleanWires : List Wire)
+    (tree : DualUnaryActionTree) (ca cb : Wire) (pa pb dynamicWires protectedWires cleanWires : List Wire)
     (state : BasisState) (hnodup : tree.labels.Nodup) (hlayout : tree.Layout ca cb pa pb)
-    (hleaf : DualUnaryLeafPreservesOn leaf tree.labels protectedWires protectedWires)
-    (hlogical : ∀ label ∈ tree.labels, ∀ a b, a ∈ protectedWires → b ∈ protectedWires →
+    (hleaf : DualUnaryLeafPreservesOn leaf tree.labels dynamicWires protectedWires)
+    (hlogical : ∀ label ∈ tree.labels, ∀ a b, a ∈ dynamicWires → b ∈ dynamicWires →
       ∀ s t, Clean cleanWires s → AgreesOutside protectedWires s t →
         AgreesOutside protectedWires (run (leaf label a b) s)
           (logicalLeaf label (s a) (s b) t))
     (hlogicalPreserves : ∀ label ∈ tree.labels, ∀ a b state wire, wire ∈ protectedWires →
       logicalLeaf label a b state wire = state wire)
     (hroles : ∀ w ∈ tree.decoderWires ca cb pa pb, w ∈ protectedWires)
+    (hdynamic : ∀ w ∈ tree.decoderWires ca cb pa pb, w ∈ dynamicWires)
+    (hsubset : ∀ w ∈ dynamicWires, w ∈ protectedWires)
     (hcleanA : Clean pa state) (hcleanB : Clean pb state)
     (hworkRoles : ∀ w ∈ cleanWires, w ∈ protectedWires)
     (hworkPaths : ∀ w ∈ cleanWires, w ∉ pa ++ pb)
@@ -118,7 +120,7 @@ theorem run_dualUnaryActionUnitary_as_routedFold
         logicalLeaf label (state ca && decide (label = (tree.project false).routeLabel state))
           (state cb && decide (label = (tree.project true).routeLabel state)) s) state := by
   rw [run_dualUnaryActionUnitary_as_runLogicalTree order leaf logicalLeaf tree ca cb pa pb
-    protectedWires cleanWires state hlayout hleaf hlogical hlogicalPreserves hroles hcleanA hcleanB
+    dynamicWires protectedWires cleanWires state hlayout hleaf hlogical hlogicalPreserves hroles hdynamic hsubset hcleanA hcleanB
     hworkRoles hworkPaths hworkClean]
   exact tree.runLogicalTree_eq_fold_routes order logicalLeaf (state ca) (state cb) state state hnodup
 
