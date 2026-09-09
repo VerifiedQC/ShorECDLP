@@ -68,4 +68,14 @@ theorem endIterationLowerRangeBits_extract (work : List Bool) (k K boundary : Na
   congr 3
   omega
 
+/-- Replacing a fitting little-endian slice preserves the low and high numeric fields. -/
+theorem boolWordToNat_splice (bits replacement : List Bool) (start : Nat)
+    (hfit : start + replacement.length ≤ bits.length) :
+    boolWordToNat (bits.take start ++ replacement ++ bits.drop (start+replacement.length)) =
+      boolWordToNat bits % 2^start + 2^start * boolWordToNat replacement +
+        2^(start+replacement.length) * (boolWordToNat bits / 2^(start+replacement.length)) := by
+  rw [extract_append,extract_append,extract_take bits start (by omega),
+    extract_drop bits (start+replacement.length) hfit]
+  simp only [List.length_append,List.length_take,Nat.min_eq_left (by omega : start ≤ bits.length)]
+
 end ShorECDLP.Paper2607_13816

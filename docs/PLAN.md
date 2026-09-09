@@ -1914,5 +1914,16 @@ The actual complete Block E circuit updates the canonical selected bits using
 those numeric slices, preserves the entire addend bank and all neighboring
 bits, and gives the sign overflow and clean-scratch guarantees. Coefficient
 fits, selected-field spans and prepared boundary membership remain explicit.
-Unrotating the result into an updated logical coefficient and deriving these
-premises from reachable states remain subsequent work.
+The canonical reconstruction below now undoes the rotation algebraically.
+Deriving these premises from reachable states remains subsequent work.
+
+### Canonical updated coefficient and divisor preservation
+
+`blockEForward_canonicalCoefficient` expresses the actual output bank as the
+rotation of an updated canonical coefficient followed by the unchanged divisor
+bits. For selected bit offset `pos = shift + (window.start - 1)`, the updated coefficient is its
+original low field plus the new field at `pos` plus its original high field.
+The theorem also proves the new coefficient fits its field, preserves the
+complete addend bank, and retains the sign, readiness and local frame facts.
+The logical packing and selected-span premises still require reachable-state
+induction; this theorem does not claim full EEA refinement or stopping.
