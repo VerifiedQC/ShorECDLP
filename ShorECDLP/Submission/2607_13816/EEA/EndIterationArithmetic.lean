@@ -712,4 +712,51 @@ theorem EndIterationRegisters.lowerTree_canonical_route (r : EndIterationRegiste
     (endpoint_source_width _ _ _ hpos (by omega))
     (by rw [hv]; exact (mem_zeroMapLabels h.k5_le_decode).mpr hwindow), hv]
 
+/-- Canonical packed coefficients determine the actual upper-stage result and
+therefore the subsequent lower decoder route. -/
+theorem lenUpdateLtUnary_canonical_endpoint
+    (r : EndIterationRegisters) (n : Nat) (w : EndIterationWindows)
+    (s : BasisState) (h : EndIterationLayout r n w) (hr : EndIterationReady r s)
+    (hen : s r.control = true) (R old new : Nat) (tail1 tail2 : List Bool)
+    (hR : 0 < R) (hRb : R ≤ n+3) (hcap : n+3 < 2^r.width)
+    (hw4 : w.k4 ≤ n+3-R ∧ n+3-R ≤ w.K4)
+    (hw5 : w.k5 ≤ new.size+2 ∧ new.size+2 ≤ w.K5Decode n)
+    (hold : w.k4 ≤ old.size ∧ old.size ≤ w.K4)
+    (hnew : w.k4 ≤ new.size ∧ new.size ≤ w.K4)
+    (hfitOld : old < 2^(n+3-R)) (hfitNew : new < 2^(n+3-R))
+    (hbank1 : wireValues r.work1 s = constantBits (n+3-R) new ++ tail1)
+    (hbank2 : wireValues r.work2 s = constantBits (n+3-R) old ++ tail2)
+    (hT : wireValues r.lengthT s = constantBits r.lengthT.length
+      (truthMinusOneValue r.lengthT.length old.size))
+    (hRP : wireValues r.lengthRP s = constantBits r.lengthRP.length
+      (truthMinusOneValue r.lengthRP.length R)) :
+    let after := run
+      (lenUpdateLtUnary n w.k4 w.K4 (r.upperTree w) r.control
+        (r.rangeAccumulator w.k4 w.K4) (r.temporary w.k4 w.K4) r.carry
+        (r.path w.k4 w.K4) r.work1At r.work2At r.lengthT r.lengthRP r.constants) s
+    wireValues r.lengthT after = constantBits r.lengthT.length
+        (truthMinusOneValue r.lengthT.length new.size) ∧
+      EndIterationReady r after ∧
+      (∀ wire, wire ∉ r.lengthT → after wire = s wire) ∧
+      (r.lowerTree n w).routeLabel
+        (run (addConstant r.lengthT r.constants r.carry 3) after) = new.size+2 := by
+  have hu := lenUpdateLtUnary_endpoint_stage r n w (n+3-R) s h hr hw4
+    (r.upperTree_canonical_route n w s h hr R hR hRb hcap hw4 hRP)
+  have hsOld := upperLengthOfBits_packed_coefficient r.lengthT.length w.k4 w.K4
+    (n+3-R) old tail2 h.k4_positive hold.1 hold.2 hfitOld
+  have hsNew := upperLengthOfBits_packed_coefficient r.lengthT.length w.k4 w.K4
+    (n+3-R) new tail1 h.k4_positive hnew.1 hnew.2 hfitNew
+  have hlen (word : List Bool) :
+      (endIterationUpperRangeBits true (n+3-R) (zeroMapLabels w.k4 w.K4) word).length = w.K4-w.k4+1 := by
+    simp only [endIterationUpperRangeBits, List.length_map, zeroMapLabels_eq_range', List.length_range']
+    have hk := h.k4_le_K4
+    omega
+  have ht := hu.1
+  rw [hen] at ht
+  rw [upper_replace _ _ _ h.k4_le_K4 _ _ _ (hlen _) (hlen _)
+    (by rw [hbank2, hsOld]; exact hT), hbank1, hsNew] at ht
+  refine ⟨ht, hu.2.1, hu.2.2, ?_⟩
+  exact r.lowerTree_canonical_route n w _ h hu.2.1 new.size
+    (lt_of_lt_of_le h.k4_positive hnew.1) hcap hw5 ht
+
 end ShorECDLP.Paper2607_13816

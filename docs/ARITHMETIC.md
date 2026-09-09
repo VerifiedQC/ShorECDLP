@@ -2300,3 +2300,11 @@ scratch, bank capacity and active-window coverage. Decoder source width is
 derived rather than assumed. Applying the lower theorem to the whole endpoint
 still requires proving the updated coefficient metadata at its intermediate
 state; the reachable geometry and complete endpoint composition remain open.
+
+`lenUpdateLtUnary_canonical_endpoint` now proves the executed upper stage
+returns canonical updated coefficient metadata, restores shared scratch and
+preserves every wire outside that metadata word. It derives the actual next
+lower decoder route from this intermediate result. Both decoder routes follow
+from canonical positive lengths and window/capacity conditions, with no assumed
+route equality. The input banks are the already exchanged banks: connecting
+the initial bank swap and the complete scheduled H endpoint remains next.

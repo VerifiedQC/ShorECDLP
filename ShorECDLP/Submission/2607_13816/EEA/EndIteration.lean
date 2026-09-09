@@ -4443,4 +4443,67 @@ theorem swapWorkAndLengthUnaryShared_small_resources :
 
 end
 
+/-- The executed upper endpoint stage changes only coefficient metadata and
+restores shared scratch before the lower decoder starts. -/
+theorem lenUpdateLtUnary_endpoint_stage
+    (registers : EndIterationRegisters) (n : Nat) (windows : EndIterationWindows)
+    (boundary : Nat) (state : BasisState)
+    (hlayout : EndIterationLayout registers n windows)
+    (hready : EndIterationReady registers state)
+    (hboundary : windows.k4 ≤ boundary ∧ boundary ≤ windows.K4)
+    (hroute : (registers.upperTree windows).routeLabel
+      (run (constMinus registers.lengthRP registers.constants registers.carry (n+2)) state) = boundary) :
+    let after := run
+      (lenUpdateLtUnary n windows.k4 windows.K4 (registers.upperTree windows) registers.control
+        (registers.rangeAccumulator windows.k4 windows.K4)
+        (registers.temporary windows.k4 windows.K4) registers.carry
+        (registers.path windows.k4 windows.K4) registers.work1At registers.work2At
+        registers.lengthT registers.lengthRP registers.constants) state
+    wireValues registers.lengthT after =
+      highestPositionWordAction registers.lengthT.length windows.k4 windows.K4
+        (state registers.control)
+        (endIterationUpperRangeBits (state registers.control) boundary
+          (zeroMapLabels windows.k4 windows.K4) (wireValues registers.work1 state))
+        (highestPositionWordAction registers.lengthT.length windows.k4 windows.K4
+          (state registers.control)
+          (endIterationUpperRangeBits (state registers.control) boundary
+            (zeroMapLabels windows.k4 windows.K4) (wireValues registers.work2 state))
+          (wireValues registers.lengthT state)) ∧
+      EndIterationReady registers after ∧
+      ∀ wire, wire ∉ registers.lengthT → after wire = state wire := by
+  obtain ⟨hconstants, hpath, hrange, htemporary⟩ := hlayout.clean_components4 hready
+  have hpos : 0 < registers.lengthRP.length := by
+    rw [hlayout.lengthRP_length]; exact hlayout.width_positive
+  have hlen : registers.constants.length = registers.lengthRP.length :=
+    hlayout.constants_length.trans hlayout.lengthRP_length.symm
+  have hu := lenUpdateLtUnary_correct_shared n windows.k4 windows.K4 boundary
+    hlayout.k4_le_K4 hboundary (registers.upperTree windows) registers.control
+    (registers.rangeAccumulator windows.k4 windows.K4)
+    (registers.temporary windows.k4 windows.K4) registers.carry
+    (registers.path windows.k4 windows.K4) registers.work1At registers.work2At
+    registers.lengthT registers.lengthRP registers.constants state hpos hlen hlayout.upper
+    (registers.upperTree_visitLabels windows hlayout.k4_le_K4) hroute
+    hconstants hpath hrange htemporary
+  have hv (wires : List Wire) (hlen : wires.length = n+3) :
+      ∀ label, label ∈ zeroMapLabels windows.k4 windows.K4 → 0 < label ∧ label ≤ wires.length := by
+    intro label hl
+    have hb := (mem_zeroMapLabels hlayout.k4_le_K4).mp hl
+    have hp := hlayout.k4_positive
+    have hK := hlayout.K4_le_work
+    omega
+  have hv1 : upperRangeBits (state registers.control) boundary (zeroMapLabels windows.k4 windows.K4)
+      registers.work1At state = endIterationUpperRangeBits (state registers.control) boundary
+      (zeroMapLabels windows.k4 windows.K4) (wireValues registers.work1 state) :=
+    endIteration_upperRangeBits_wireValues _ _ _ _ _ (hv _ hlayout.work1_length)
+  have hv2 : upperRangeBits (state registers.control) boundary (zeroMapLabels windows.k4 windows.K4)
+      registers.work2At state = endIterationUpperRangeBits (state registers.control) boundary
+      (zeroMapLabels windows.k4 windows.K4) (wireValues registers.work2 state) :=
+    endIteration_upperRangeBits_wireValues _ _ _ _ _ (hv _ hlayout.work2_length)
+  have ht := hu.1
+  rw [hv1, hv2] at ht
+  refine ⟨ht, ?_, hu.2.2.2.2⟩
+  intro wire hw
+  rw [hu.2.2.2.2 wire (hlayout.scratch_not_lengthT hw)]
+  exact hready wire hw
+
 end ShorECDLP.Paper2607_13816
