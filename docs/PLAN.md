@@ -1353,3 +1353,11 @@ uses the omitted suffix length as its division offset. Generic fitting-slice
 lemmas cover zero-width extraction as well. The range values are now explicit
 numeric fields of the bank; proving their evolving logical EEA interpretation
 and consistency with the stored metadata remains open.
+
+`packedWork1_decode` and `packedWork2_decode` recover all five logical values
+from the canonical concatenated bank representations by numeric field extraction,
+and prove the bank lengths equal their declared width. The first bank includes
+the separating guard bit and the big-endian quotient/remainder fields; the second
+bank is explicitly unrotated. Field-capacity bounds remain premises. These results
+interpret the representation already established at initialization; preservation
+through the bit-serial trace and the second bank's rotation remain open.
