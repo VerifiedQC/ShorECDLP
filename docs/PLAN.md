@@ -1433,3 +1433,14 @@ the source's singleton main tree without any endpoint-value restriction. The
 quotient circuit retains its original first-bank projection. These are decoder
 selection facts; the actual traversal must still establish each dynamic control
 and the accumulator invariant used by the inclusive leaf theorems.
+
+### Synchronized logical traversal
+
+`run_dualUnaryActionUnitary_as_runLogicalTree` proves the actual dual traversal
+equals a source-ordered execution on Boolean endpoint pulses with frozen index
+bits. Its complete-state equality restores both path stacks and the possibly
+shared root controls. A caller-selected clean leaf-scratch interface is preserved
+throughout; physical/logical leaf simulation is required only when that scratch
+is clean. The leaf simulation and decoder-frame premises remain explicit.
+Instantiating them for interval cells and reducing the logical scan to arithmetic
+remain the next composition steps.

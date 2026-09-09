@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.DualLogical
 import ShorECDLP.Submission.«2607_13816».EEA.DualRouting
 import ShorECDLP.Submission.«2607_13816».EEA.IntervalControl
 import ShorECDLP.Submission.«2607_13816».EEA.EndpointArithmetic
