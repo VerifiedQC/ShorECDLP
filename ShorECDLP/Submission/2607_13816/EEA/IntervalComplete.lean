@@ -195,4 +195,38 @@ theorem run_intervalAddSubUnitary_slices (r : IntervalRegisters) (n k K : Nat) (
     · exact congrArg (fun x : List Bool × List Bool × Bool => x.1) hb.1
     · exact congrArg (fun x : List Bool × List Bool × Bool => x.2.1) hb.1
   · exact hb.2
+/-- With control enabled, the actual subtraction interval XORs unsigned borrow
+into its sign flag. Inputs here are the selected slices of the original state. -/
+theorem run_intervalAddSubUnitary_sub_borrow (r : IntervalRegisters) (n k K : Nat)
+    (target : IntervalTarget) (state : BasisState)
+    (h : IntervalLayout r k K target) (hready : IntervalReady r state) (he : state r.control = true)
+    (hvalues : let p := run (prepareIntervalEndpoints r.lengthT r.lengthQ r.lengthS
+        r.endpointScratch (r.carry k K) n k) state
+      boolWordToNat (wireValues r.lengthS p) ≤ intervalTopRelative k K ∧
+        boolWordToNat (wireValues r.lengthQ p) ≤ boolWordToNat (wireValues r.lengthS p)) :
+    let p := run (prepareIntervalEndpoints r.lengthT r.lengthQ r.lengthS r.endpointScratch (r.carry k K) n k) state
+    let L := boolWordToNat (wireValues r.lengthQ p)
+    let R := boolWordToNat (wireValues r.lengthS p)
+    let ts := (List.range (intervalLaneCount k K)).map (r.targetAt target)
+    let ads := (List.range (intervalLaneCount k K)).map (r.addendAt target)
+    let value := fun ws => boolWordToNat ((((wireValues ws state).drop L).take (R-L+1)).reverse)
+    run (intervalAddSubUnitary r n k K .sub true target) state r.sign =
+      (state r.sign ^^ decide (value ts < value ads)) := by
+  let p := run (prepareIntervalEndpoints r.lengthT r.lengthQ r.lengthS r.endpointScratch (r.carry k K) n k) state
+  let L := boolWordToNat (wireValues r.lengthQ p)
+  let R := boolWordToNat (wireValues r.lengthS p)
+  let ts := (List.range (intervalLaneCount k K)).map (r.targetAt target)
+  let ads := (List.range (intervalLaneCount k K)).map (r.addendAt target)
+  have hs := run_intervalAddSubUnitary_slices r n k K .sub true target state h hready hvalues
+  have hb := uniformRippleExpectedWords_sub_borrow
+    (((wireValues ts state).drop L).take (R-L+1))
+    (((wireValues ads state).drop L).take (R-L+1)) false
+    (by simp [wireValues,ts,ads])
+  dsimp only at hs ⊢
+  rw [he] at hs
+  rw [hs.2]
+  simp only [if_true]
+  exact congrArg (Bool.xor (state r.sign)) (by
+    simpa only [Bool.toNat_false,Nat.add_zero] using hb)
+
 end ShorECDLP.Paper2607_13816

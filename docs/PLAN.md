@@ -1638,3 +1638,13 @@ B2 sign update, and B3 addback into one complete-state equality and proves
 auxiliary cleanup for the entire block. The interval calls are concrete source
 circuits. A combined logical remainder formula and reachable-state bounds
 still require proof.
+
+### Unsigned borrow in actual Block B1
+
+`uniformRippleExpectedWords_sub_borrow` identifies the outgoing subtraction
+flag with unsigned borrow, including incoming borrow. The interval and logical
+endpoint theorems propagate this result to `blockB1Forward_logicalBorrow`: in
+the active nonterminal phase, sign is XORed with the comparison of the aligned
+work1/work2 field values, and aux is clean afterward. Logical endpoint preparation
+is shared with the existing numeric theorem. The combined conditional remainder
+formula still requires carrying the preserved metadata through the three blocks.
