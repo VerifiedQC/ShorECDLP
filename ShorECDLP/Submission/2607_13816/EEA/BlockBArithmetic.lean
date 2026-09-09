@@ -270,4 +270,120 @@ theorem blockBForward_frame (r : IndexedStepRegisters) (n index : Nat)
   have hs : second wire = first wire := by simpa only [upd,hsign,if_false] using congrFun h2.1 wire
   simpa only [blockBForward,Classical.run_append] using (h3 wire hn).trans (hs.trans (hf wire hn))
 
+private theorem remainder_field_frame (r : IndexedStepRegisters) (n index T Q shift : Nat)
+    (mode : RippleMode) (signUpdate : Bool) (state : BasisState)
+    (h : IndexedStepLayout r n index)
+    (hready : IntervalReady (r.remainder (certifiedActiveWindows n index).remainder) state)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length T)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length Q)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : (certifiedActiveWindows n index).remainder.start ≤ T+Q+2) (hleftHigh : T+Q+2-(certifiedActiveWindows n index).remainder.start < 2^r.lengthQ.length)
+    (hrightLow : shift+(certifiedActiveWindows n index).remainder.start ≤ n+3) (hrightHigh : n+3-shift-(certifiedActiveWindows n index).remainder.start < 2^r.lengthS.length)
+    (hrange : n+3-shift-(certifiedActiveWindows n index).remainder.start ≤ intervalTopRelative (certifiedActiveWindows n index).remainder.start (certifiedActiveWindows n index).remainder.stop)
+    (horder : T+Q+2-(certifiedActiveWindows n index).remainder.start ≤ n+3-shift-(certifiedActiveWindows n index).remainder.start) :
+    let w := (certifiedActiveWindows n index).remainder
+    let final := run (intervalAddSubUnitary (r.remainder w) n w.start w.stop mode signUpdate .work1) state
+    (wireValues r.work1 final).take (T+Q+1) = (wireValues r.work1 state).take (T+Q+1) ∧
+    (wireValues r.work1 final).drop (n+3-shift) = (wireValues r.work1 state).drop (n+3-shift) := by
+  let w := (certifiedActiveWindows n index).remainder
+  change w.start ≤ T+Q+2 at hleftLow
+  change shift+w.start ≤ n+3 at hrightLow
+  change T+Q+2-w.start ≤ n+3-shift-w.start at horder
+  have hb := run_remainderInterval_logicalSlices r n index T Q shift mode signUpdate state h hready
+    ht hq hs hleftLow hleftHigh hrightLow hrightHigh hrange horder
+  have hw : 1 ≤ w.start := by simp only [w,certifiedActiveWindows,certifiedRemainderWindow]; omega
+  have hspan : T+Q+1 ≤ n+3-shift := by omega
+  have hlen : (wireValues r.work1 state).length = n+3 := by simp only [wireValues,List.length_map,h.work1_length]
+  have hwidth : n+3-shift-(T+Q+2)+1 = n+3-shift-(T+Q+1) := by omega
+  dsimp only at hb ⊢
+  rw [hb.1]
+  have hp : ((wireValues r.work1 state).take (T+Q+1)).length = T+Q+1 := by simp only [List.length_take,hlen]; omega
+  have hl : (uniformRippleExpectedWords mode (state r.control)
+      (((wireValues r.work1 state).drop (T+Q+1)).take (n+3-shift-(T+Q+2)+1))
+      (((wireValues r.work2 state).drop (T+Q+1)).take (n+3-shift-(T+Q+2)+1)) false).1.length = n+3-shift-(T+Q+1) := by
+    rw [uniformRippleExpectedWords_length,List.length_take,List.length_drop,hlen,hwidth]
+    omega
+  have general (pre mid post : List Bool) :
+      ((pre ++ mid) ++ post).take pre.length = pre ∧
+      ((pre ++ mid) ++ post).drop (pre.length+mid.length) = post := by
+    simp [List.append_assoc,List.drop_append]
+  have hg := general ((wireValues r.work1 state).take (T+Q+1))
+    (uniformRippleExpectedWords mode (state r.control)
+      (((wireValues r.work1 state).drop (T+Q+1)).take (n+3-shift-(T+Q+2)+1))
+      (((wireValues r.work2 state).drop (T+Q+1)).take (n+3-shift-(T+Q+2)+1)) false).1
+    ((wireValues r.work1 state).drop (n+3-shift))
+  simpa only [hp,hl,Nat.add_sub_of_le hspan] using hg
+
+/-- Block B1 preserves both portions of work1 outside the logical remainder field. -/
+theorem blockB1Forward_fieldFrame (r : IndexedStepRegisters) (n index ellT ellQ shift : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length ellT)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length ellQ)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : (certifiedActiveWindows n index).remainder.start ≤ ellT+ellQ+2)
+    (hleftHigh : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start < 2^r.lengthQ.length)
+    (hrightLow : shift+(certifiedActiveWindows n index).remainder.start ≤ n+3)
+    (hrightHigh : n+3-shift-(certifiedActiveWindows n index).remainder.start < 2^r.lengthS.length)
+    (horder : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start ≤
+      n+3-shift-(certifiedActiveWindows n index).remainder.start) :
+    let final := run (blockB1Forward r n (certifiedActiveWindows n index).remainder) state
+    (wireValues r.work1 final).take (ellT+ellQ+1) = (wireValues r.work1 state).take (ellT+ellQ+1) ∧
+    (wireValues r.work1 final).drop (n+3-shift) = (wireValues r.work1 state).drop (n+3-shift) := by
+  let w := (certifiedActiveWindows n index).remainder
+  let enabled := state[r.control ↦ (rControlNonterminalPredicate [r.phase1] 0 r.lengthRPrime r.terminal state)]
+  let changed := run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .sub true .work1) enabled
+  have hf := run_blockB1Forward_interval r n index state h hc
+  have hdata (ws : List Wire) (hm : ∀ wire ∈ ws, wire ∈ dataWires r) :
+      wireValues ws enabled = wireValues ws state := data_words_update r n index h ws hm state _
+  have hT := hdata r.lengthT (by intro wire hw; simp [dataWires,hw])
+  have hQ := hdata r.lengthQ (by intro wire hw; simp [dataWires,hw])
+  have hS := hdata r.lengthS (by intro wire hw; simp [dataWires,hw])
+  have hW1 := hdata r.work1 (by intro wire hw; simp [dataWires,hw])
+  have hout := data_words_update r n index h r.work1 (by intro wire hw; simp [dataWires,hw]) changed false
+  have hrange : n+3-shift-w.start ≤ intervalTopRelative w.start w.stop := by
+    simp only [intervalTopRelative,intervalLaneCount,w,certifiedActiveWindows,certifiedRemainderWindow]
+    omega
+  have hb := remainder_field_frame r n index ellT ellQ shift .sub true enabled h hf.2.1
+    (by simpa only [hT] using ht) (by simpa only [hQ] using hq) (by simpa only [hS] using hs)
+    hleftLow hleftHigh hrightLow hrightHigh hrange horder
+  dsimp only at hb ⊢
+  rw [hf.1,hout]
+  simpa only [hW1] using hb
+
+/-- Block B3 preserves both portions of work1 outside the logical remainder field. -/
+theorem blockB3Forward_fieldFrame (r : IndexedStepRegisters) (n index ellT ellQ shift : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length ellT)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length ellQ)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : (certifiedActiveWindows n index).remainder.start ≤ ellT+ellQ+2)
+    (hleftHigh : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start < 2^r.lengthQ.length)
+    (hrightLow : shift+(certifiedActiveWindows n index).remainder.start ≤ n+3)
+    (hrightHigh : n+3-shift-(certifiedActiveWindows n index).remainder.start < 2^r.lengthS.length)
+    (horder : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start ≤
+      n+3-shift-(certifiedActiveWindows n index).remainder.start) :
+    let final := run (blockB3Forward r n (certifiedActiveWindows n index).remainder) state
+    (wireValues r.work1 final).take (ellT+ellQ+1) = (wireValues r.work1 state).take (ellT+ellQ+1) ∧
+    (wireValues r.work1 final).drop (n+3-shift) = (wireValues r.work1 state).drop (n+3-shift) := by
+  let w := (certifiedActiveWindows n index).remainder
+  let enabled := state[r.control ↦ (!state r.phase1 && !(state r.phase2 && state r.sign) && !wireAnd r.lengthRPrime state)]
+  let changed := run (intervalAddSubUnitary (r.remainder w) n w.start w.stop .add false .work1) enabled
+  have hf := run_blockB3Forward_interval r n index state h hc
+  have hdata (ws : List Wire) (hm : ∀ wire ∈ ws, wire ∈ dataWires r) :
+      wireValues ws enabled = wireValues ws state := data_words_update r n index h ws hm state _
+  have hT := hdata r.lengthT (by intro wire hw; simp [dataWires,hw])
+  have hQ := hdata r.lengthQ (by intro wire hw; simp [dataWires,hw])
+  have hS := hdata r.lengthS (by intro wire hw; simp [dataWires,hw])
+  have hW1 := hdata r.work1 (by intro wire hw; simp [dataWires,hw])
+  have hout := data_words_update r n index h r.work1 (by intro wire hw; simp [dataWires,hw]) changed false
+  have hrange : n+3-shift-w.start ≤ intervalTopRelative w.start w.stop := by
+    simp only [intervalTopRelative,intervalLaneCount,w,certifiedActiveWindows,certifiedRemainderWindow]
+    omega
+  have hb := remainder_field_frame r n index ellT ellQ shift .add false enabled h hf.2.1
+    (by simpa only [hT] using ht) (by simpa only [hQ] using hq) (by simpa only [hS] using hs)
+    hleftLow hleftHigh hrightLow hrightHigh hrange horder
+  dsimp only at hb ⊢
+  rw [hf.1,hout]
+  simpa only [hW1] using hb
+
 end ShorECDLP.Paper2607_13816

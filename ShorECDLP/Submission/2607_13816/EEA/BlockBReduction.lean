@@ -196,4 +196,114 @@ theorem blockBForward_activeArithmetic (r : IndexedStepRegisters) (n index ellT 
   · rw [hshape]
     exact h3.2.2
 
+/-- The complete Block B preserves the coefficient prefix and low remainder
+suffix in every phase, subject to the logical endpoint encoding. -/
+theorem blockBForward_fieldFrame (r : IndexedStepRegisters) (n index ellT ellQ shift : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length ellT)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length ellQ)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : (certifiedActiveWindows n index).remainder.start ≤ ellT+ellQ+2)
+    (hleftHigh : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start < 2^r.lengthQ.length)
+    (hrightLow : shift+(certifiedActiveWindows n index).remainder.start ≤ n+3)
+    (hrightHigh : n+3-shift-(certifiedActiveWindows n index).remainder.start < 2^r.lengthS.length)
+    (horder : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start ≤
+      n+3-shift-(certifiedActiveWindows n index).remainder.start) :
+    let final := run (blockBForward r n (certifiedActiveWindows n index).remainder) state
+    (wireValues r.work1 final).take (ellT+ellQ+1) = (wireValues r.work1 state).take (ellT+ellQ+1) ∧
+    (wireValues r.work1 final).drop (n+3-shift) = (wireValues r.work1 state).drop (n+3-shift) := by
+  let w := (certifiedActiveWindows n index).remainder
+  let first := run (blockB1Forward r n w) state
+  let second := run (blockB2 r) first
+  have h1 := blockB1Forward_fieldFrame r n index ellT ellQ shift state h hc ht hq hs
+    hleftLow hleftHigh hrightLow hrightHigh horder
+  have hc1 := (run_blockB1Forward_interval r n index state h hc).2.2
+  have h2 := run_blockB2_sign r n index first h hc1
+  have hframe := blockB1Forward_frame r n index state h hc
+  have hfirst (wire : Wire) (hw : wire ∈ preservedWires r) : first wire = state wire :=
+    hframe wire (preserved_not_changes r n index h wire hw)
+  have hsecond (wire : Wire) (hw : wire ∈ preservedWires r) : second wire = state wire := by
+    have hn : wire ≠ r.sign := fun he => preserved_not_changes r n index h wire hw (by simp [he])
+    have hh := congrFun h2.1 wire
+    simpa only [upd,hn,if_false,hfirst wire hw] using hh
+  have hwords (ws : List Wire) (hw : ∀ wire ∈ ws, wire ∈ preservedWires r) :
+      wireValues ws second = wireValues ws state := by
+    apply List.map_congr_left
+    intro wire hm
+    exact hsecond wire (hw wire hm)
+  have hT := hwords r.lengthT (by intro wire hw; simp [preservedWires,hw])
+  have hQ := hwords r.lengthQ (by intro wire hw; simp [preservedWires,hw])
+  have hS := hwords r.lengthS (by intro wire hw; simp [preservedWires,hw])
+  have hW1 : wireValues r.work1 second = wireValues r.work1 first := by
+    apply List.map_congr_left
+    intro wire hw
+    simpa only [upd,work1_ne_sign r n index h wire hw,if_false] using congrFun h2.1 wire
+  have h3 := blockB3Forward_fieldFrame r n index ellT ellQ shift second h h2.2
+    (by simpa only [hT] using ht) (by simpa only [hQ] using hq) (by simpa only [hS] using hs)
+    hleftLow hleftHigh hrightLow hrightHigh horder
+  have hshape : run (blockBForward r n w) state = run (blockB3Forward r n w) second := by
+    simp only [blockBForward,first,second,Classical.run_append]
+  dsimp only at h1 h3 ⊢
+  rw [hshape]
+  rw [hW1] at h3
+  exact ⟨h3.1.trans h1.1,h3.2.trans h1.2⟩
+
+/-- Complete output word of actual Block B in either active phase: the field
+contains the arithmetic result and all neighboring bits retain their input values. -/
+theorem blockBForward_activeWord (r : IndexedStepRegisters) (n index ellT ellQ shift : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state)
+    (hphase : state r.phase1 = false) (hsign0 : state r.sign = false)
+    (hrp : wireAnd r.lengthRPrime state = false)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length ellT)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length ellQ)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : (certifiedActiveWindows n index).remainder.start ≤ ellT+ellQ+2)
+    (hleftHigh : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start < 2^r.lengthQ.length)
+    (hrightLow : shift+(certifiedActiveWindows n index).remainder.start ≤ n+3)
+    (hrightHigh : n+3-shift-(certifiedActiveWindows n index).remainder.start < 2^r.lengthS.length)
+    (horder : ellT+ellQ+2-(certifiedActiveWindows n index).remainder.start ≤
+      n+3-shift-(certifiedActiveWindows n index).remainder.start) :
+    let w := (certifiedActiveWindows n index).remainder
+    let start := ellT+ellQ+1
+    let width := n+3-shift-(ellT+ellQ+2)+1
+    let before := wireValues r.work1 state
+    let value := fun ws => boolWordToNat ((((wireValues ws state).drop start).take width).reverse)
+    let result := if state r.phase2 && decide (value r.work2 ≤ value r.work1) then value r.work1-value r.work2 else value r.work1
+    wireValues r.work1 (run (blockBForward r n w) state) =
+      before.take start ++ (constantBits width result).reverse ++ before.drop (n+3-shift) := by
+  let w := (certifiedActiveWindows n index).remainder
+  let start := ellT+ellQ+1
+  let width := n+3-shift-(ellT+ellQ+2)+1
+  let before := wireValues r.work1 state
+  let after := wireValues r.work1 (run (blockBForward r n w) state)
+  let value := fun ws => boolWordToNat ((((wireValues ws state).drop start).take width).reverse)
+  let result := if state r.phase2 && decide (value r.work2 ≤ value r.work1) then value r.work1-value r.work2 else value r.work1
+  have hn := blockBForward_activeArithmetic r n index ellT ellQ shift state h hc hphase hsign0 hrp ht hq hs
+    hleftLow hleftHigh hrightLow hrightHigh horder
+  have hf := blockBForward_fieldFrame r n index ellT ellQ shift state h hc ht hq hs
+    hleftLow hleftHigh hrightLow hrightHigh horder
+  change w.start ≤ ellT+ellQ+2 at hleftLow
+  change shift+w.start ≤ n+3 at hrightLow
+  change ellT+ellQ+2-w.start ≤ n+3-shift-w.start at horder
+  have hw : 1 ≤ w.start := by simp only [w,certifiedActiveWindows,certifiedRemainderWindow]; omega
+  have hend : start+width = n+3-shift := by dsimp only [start,width]; omega
+  have hlen : after.length = n+3 := by simp only [after,wireValues,List.length_map,h.work1_length]
+  have hfit : result < 2^width := by
+    have hx : value r.work1 < 2^width := fieldValue_lt r.work1 state start width
+    dsimp only [result]
+    split <;> omega
+  have hfield : ((after.drop start).take width).reverse = constantBits width result := by
+    apply boolWordToNat_injective_of_length
+    · simp only [List.length_reverse,List.length_take,List.length_drop,hlen,constantBits_length]
+      omega
+    · rw [boolWordToNat_constantBits,Nat.mod_eq_of_lt hfit]
+      exact hn.1
+  have he : (after.drop start).take width = (constantBits width result).reverse := by
+    simpa only [List.reverse_reverse] using congrArg List.reverse hfield
+  change after = before.take start ++ (constantBits width result).reverse ++ before.drop (n+3-shift)
+  calc
+    after = after.take start ++ ((after.drop start).take width ++ (after.drop start).drop width) := by simp only [List.take_append_drop]
+    _ = before.take start ++ (constantBits width result).reverse ++ before.drop (n+3-shift) := by
+      rw [List.drop_drop,hend,he,hf.1,hf.2,List.append_assoc]
+
 end ShorECDLP.Paper2607_13816
