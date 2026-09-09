@@ -1538,3 +1538,11 @@ wire outside that target list, including the addend and arbitrary incoming carry
 These are wire-state semantics, with no additional circuit introduced. Matching
 the source interval traversal and its accumulator writes to these passes remains
 the next connection.
+
+`intervalFirstInclusiveFold_words` and `intervalSecondInclusiveFold_words`
+connect the source numeric inclusive-cell folds to those masked word passes.
+Their accumulator updates do not affect target/addend reads or carry under
+global wire separation. `intervalInclusivePair_fusion` gives the fused word
+and restoration outside the target list plus accumulator. The complete source
+body still needs its separate top operations and intervening sign update
+combined with these folds before claiming full interval arithmetic.
