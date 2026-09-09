@@ -420,6 +420,9 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_coefficientPhase
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_coefficient_packed
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_coefficient_packed
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_coefficient_complete
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_append
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_coefficient_swap_packed
 #print axioms ShorECDLP.Paper2607_13816.blockGForward_logical
 #print axioms ShorECDLP.Paper2607_13816.blockDEFForward_completeCoefficient
 #print axioms ShorECDLP.Paper2607_13816.blockDEFForward_coefficientInvariant
@@ -1325,8 +1328,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1301 ]]; then
-  printf 'expected 1301 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1304 ]]; then
+  printf 'expected 1304 #print axioms results\n' >&2
   exit 1
 fi
 

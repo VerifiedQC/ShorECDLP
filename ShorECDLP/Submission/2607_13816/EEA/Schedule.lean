@@ -401,4 +401,17 @@ theorem indexedScheduleUnitary_snoc (r : IndexedStepRegisters) (n start count : 
         indexedStepUnitary r n (start+(k+1))
     rw [ih,List.append_assoc,show start+1+k = start+(k+1) by omega]
 
+/-- Concatenate adjacent portions of the actual indexed schedule. -/
+theorem indexedScheduleUnitary_append (r : IndexedStepRegisters) (n start first second : Nat) :
+    indexedScheduleUnitary r n start (first+second) =
+      indexedScheduleUnitary r n start first ++ indexedScheduleUnitary r n (start+first) second := by
+  induction first generalizing start with
+  | zero => simp [indexedScheduleUnitary]
+  | succ k ih =>
+    rw [Nat.succ_add]
+    change indexedStepUnitary r n start ++ indexedScheduleUnitary r n (start+1) (k+second) =
+      (indexedStepUnitary r n start ++ indexedScheduleUnitary r n (start+1) k) ++
+        indexedScheduleUnitary r n (start+(k+1)) second
+    rw [ih,List.append_assoc,show start+1+k=start+(k+1) by omega]
+
 end ShorECDLP.Paper2607_13816

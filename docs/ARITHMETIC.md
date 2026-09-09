@@ -2385,3 +2385,24 @@ coverage are required; intermediate physical states and phase decisions are not
 assumed. Alignment of the final H step remains explicit. Deriving these initial
 conditions from the coefficient phase and establishing production-window coverage
 through the entire EEA remain subsequent obligations.
+
+### Coefficient completion supplies the swap interval
+
+`indexedScheduleUnitary_coefficient_complete` specializes the actual coefficient
+schedule to consume its complete quotient. A positive quotient with its true
+bit length, and a positive second-remainder length, derive the swap entry phase
+and sign. The final quotient and quotient length are zero, shift is increased
+by the consumed length, and the coefficient equals the accumulated weighted sum.
+
+The same result proves the tight interval required by the swap-phase induction:
+`2^(next.shift-1)*next.t ≤ next.tPrime < 2^next.shift*next.t`. The lower bound
+follows from the quotient's leading bit; the upper bound follows from the
+verified coefficient invariant. It also bounds the new coefficient's bit length
+by the initial coefficient width plus the final shift. The numerical capacity
+and per-step window hypotheses remain explicit. `indexedScheduleUnitary_coefficient_swap_packed` then composes the two actual
+schedules. The intermediate swap interval, zero quotient, entry phase/sign,
+coefficient bounds and guard space are derived from the original input. The
+combined circuit returns a canonical packed state with a strictly smaller second
+remainder. The quotient's true bit length, initial numerical bounds, layouts,
+window coverage and final H alignment remain explicit; their production
+reachability is not claimed.
