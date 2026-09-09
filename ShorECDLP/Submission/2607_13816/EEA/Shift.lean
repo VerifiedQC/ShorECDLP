@@ -3855,4 +3855,22 @@ theorem preShiftUnitary_counter_bits (r : ShiftRegisters) (state : BasisState)
   rw [hpayload, hm]
   simp only [marked, upd_same, upd_other _ _ _ h2]
 
+
+/-- The pre-shift reads phase two without changing it. -/
+theorem preShiftUnitary_preserves_phase2 (r : ShiftRegisters) (state : BasisState)
+    (hlayout : ShiftLayout r) (hready : ShiftReady r state) :
+    run (preShiftUnitary r) state r.phase2 = state r.phase2 := by
+  have hn := hlayout.preBodyNodup
+  have hz : r.phase2 ≠ r.phase1IsZero := by
+    intro he
+    exact (List.nodup_cons.mp hn).1 (by simp [he])
+  have hout := (List.nodup_cons.mp (List.nodup_cons.mp hn).2).1
+  have hw : r.phase2 ∉ r.work := fun hm => hout (by simp [hm])
+  have hs : r.phase2 ∉ r.lengthS := fun hm => hout (by simp [hm])
+  have hb : r.phase2 ≠ r.both := fun he => hout (by simp [he])
+  rw [run_preShiftUnitary r state hlayout hready]
+  unfold preShiftState
+  rw [upd_other _ _ _ hz, shiftPayloadState_preservesOutside _ _ _ _ _ _ hw hs hb]
+  exact upd_other _ _ _ hz
+
 end ShorECDLP.Paper2607_13816

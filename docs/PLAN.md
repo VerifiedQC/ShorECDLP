@@ -1224,3 +1224,11 @@ includes endpoint preparation and restoration; the coefficient scratch-cleanline
 result is derived from its stronger frame theorem. This establishes restoration
 of the intervening length registers for future composition with the shift-counter
 semantics. The reachable active prefix is still open.
+
+`indexedStepShiftPrefix_counter` now derives the actual A–F counter transition
+from the original input: with clean auxiliary wires and a non-sentinel remainder
+length, it increments once when phase two is false and decrements once when phase
+two is true, modulo the counter width. The proof composes inactive padding, the
+two complementary shifts, and metadata restoration by the intervening blocks.
+It does not assume the counter value after the prefix. Reachability of these input
+conditions and the active boundary transitions remain open.
