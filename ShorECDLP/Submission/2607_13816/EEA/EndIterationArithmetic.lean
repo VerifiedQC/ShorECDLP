@@ -759,4 +759,58 @@ theorem lenUpdateLtUnary_canonical_endpoint
   exact r.lowerTree_canonical_route n w _ h hu.2.1 new.size
     (lt_of_lt_of_le h.k4_positive hnew.1) hcap hw5 ht
 
+/-- The complete enabled endpoint returns canonical exchanged lengths with both actual decoder routes derived internally. -/
+theorem swapWorkAndLengthUnaryShared_canonical_endpoint
+    (r : EndIterationRegisters) (n : Nat)
+    (windows : EndIterationWindows)
+    (t tPrime remainder rPrime R RPrime : Nat) (tail1 tail2 pre1 pre2 : List Bool)
+    (hrPrimePositive : 0 < rPrime) (hcapacity : n+3 < 2^r.width)
+    (hboundary4 : windows.k4 ≤ (n+3-rPrime.size) ∧ (n+3-rPrime.size) ≤ windows.K4)
+    (hboundary5 : windows.k5 ≤ (tPrime.size+2) ∧
+      (tPrime.size+2) ≤ windows.K5Decode n)
+    (state : BasisState)
+    (hlayout : EndIterationLayout r n windows)
+    (hready : EndIterationReady r state)
+    (henabled : state r.control = true)
+    (hw1u : wireValues r.work1 state = constantBits (n+3-rPrime.size) t ++ tail1)
+    (hw2u : wireValues r.work2 state = constantBits (n+3-rPrime.size) tPrime ++ tail2)
+    (hw1l : wireValues r.work1 state = pre1 ++ (constantBits R remainder).reverse)
+    (hw2l : wireValues r.work2 state = pre2 ++ (constantBits RPrime rPrime).reverse)
+    (ht : t < 2^(n+3-rPrime.size)) (htp : tPrime < 2^(n+3-rPrime.size))
+    (hr : remainder < 2^R) (hrp : rPrime < 2^RPrime)
+    (htWindow : windows.k4 ≤ t.size ∧ t.size ≤ windows.K4)
+    (htpWindow : windows.k4 ≤ tPrime.size ∧ tPrime.size ≤ windows.K4)
+    (hp1 : pre1.length < (tPrime.size+2)) (hp2 : pre2.length < (tPrime.size+2))
+    (hrWindow : remainder ≠ 0 → windows.k5 ≤ n+4-remainder.size ∧
+      n+4-remainder.size ≤ windows.K5Decode n ∧ (tPrime.size+2) ≤ n+4-remainder.size)
+    (hrpWindow : rPrime ≠ 0 → windows.k5 ≤ n+4-rPrime.size ∧
+      n+4-rPrime.size ≤ windows.K5Decode n ∧ (tPrime.size+2) ≤ n+4-rPrime.size)
+    (hT : wireValues r.lengthT state = constantBits r.lengthT.length
+      (truthMinusOneValue r.lengthT.length t.size))
+    (hRP : wireValues r.lengthRP state = constantBits r.lengthRP.length
+      (truthMinusOneValue r.lengthRP.length rPrime.size)) :
+    (wireValues r.lengthT (run (swapWorkAndLengthUnaryShared r n windows) state),
+      wireValues r.lengthRP (run (swapWorkAndLengthUnaryShared r n windows) state)) =
+      (constantBits r.lengthT.length (truthMinusOneValue r.lengthT.length tPrime.size),
+       constantBits r.lengthRP.length (truthMinusOneValue r.lengthRP.length remainder.size)) := by
+  let swapped := run (controlledWorkSwap r.control r.work1 r.work2) state
+  have hs := controlledWorkSwap_endpoint_context r n windows state hlayout hready henabled
+  have hRpos := Nat.size_pos.mpr hrPrimePositive
+  have hRbank : rPrime.size ≤ n+3 := by
+    have hh := congrArg List.length hw2l
+    simp only [wireValues, List.length_map, List.length_append, List.length_reverse,
+      constantBits_length, hlayout.work2_length] at hh
+    have hfit := Nat.size_le.mpr hrp
+    omega
+  have hroute4 := r.upperTree_canonical_route n windows swapped hlayout hs.2.2.2.2.1
+    rPrime.size hRpos hRbank hcapacity hboundary4 (hs.2.2.2.1.trans hRP)
+  have hu := lenUpdateLtUnary_canonical_endpoint r n windows swapped hlayout hs.2.2.2.2.1
+    hs.2.2.2.2.2 rPrime.size t tPrime tail2 tail1 hRpos hRbank hcapacity
+    hboundary4 hboundary5 htWindow htpWindow ht htp
+    (hs.1.trans hw2u) (hs.2.1.trans hw1u) (hs.2.2.1.trans hT) (hs.2.2.2.1.trans hRP)
+  exact swapWorkAndLengthUnaryShared_canonical_lengths r n windows (n+3-rPrime.size)
+    (tPrime.size+2) hboundary4 hboundary5 state hlayout hroute4 hu.2.2.2 hready henabled
+    t tPrime remainder rPrime R RPrime tail1 tail2 pre1 pre2 hw1u hw2u hw1l hw2l
+    ht htp hr hrp htWindow htpWindow hp1 hp2 hrWindow hrpWindow hT hRP
+
 end ShorECDLP.Paper2607_13816

@@ -4506,4 +4506,38 @@ theorem lenUpdateLtUnary_endpoint_stage
   rw [hu.2.2.2.2 wire (hlayout.scratch_not_lengthT hw)]
   exact hready wire hw
 
+/-- The initial enabled bank swap preserves metadata and readiness for the two
+length-update stages. -/
+theorem controlledWorkSwap_endpoint_context
+    (r : EndIterationRegisters) (n : Nat) (w : EndIterationWindows)
+    (s : BasisState) (h : EndIterationLayout r n w) (hr : EndIterationReady r s)
+    (hen : s r.control = true) :
+    let after := run (controlledWorkSwap r.control r.work1 r.work2) s
+    wireValues r.work1 after = wireValues r.work2 s ∧
+      wireValues r.work2 after = wireValues r.work1 s ∧
+      wireValues r.lengthT after = wireValues r.lengthT s ∧
+      wireValues r.lengthRP after = wireValues r.lengthRP s ∧
+      EndIterationReady r after ∧ after r.control = true := by
+  have hc1 : r.control ∉ r.work1 := by
+    intro hw
+    exact (List.nodup_cons.mp h.work_nodup).1 (List.mem_append_left r.work2 hw)
+  have hc2 : r.control ∉ r.work2 := by
+    intro hw
+    exact (List.nodup_cons.mp h.work_nodup).1 (List.mem_append_right r.work1 hw)
+  have hf := controlledWorkSwap_preservesOutsideWords r.control r.work1 r.work2 s hc1 hc2
+  have hb := controlledWorkSwap_correct r.control r.work1 r.work2 s
+    (h.work1_length.trans h.work2_length.symm) h.work_nodup
+  simp only [hen, if_true] at hb
+  refine ⟨hb.1, hb.2, ?_, ?_, ?_, ?_⟩
+  · apply List.map_congr_left
+    intro wire hw
+    exact hf wire (h.lengthT_not_work1 hw) (h.lengthT_not_work2 hw)
+  · apply List.map_congr_left
+    intro wire hw
+    exact hf wire (h.lengthRP_not_work1 hw) (h.lengthRP_not_work2 hw)
+  · intro wire hw
+    rw [hf wire (h.scratch_not_work1 hw) (h.scratch_not_work2 hw)]
+    exact hr wire hw
+  · rw [hf r.control hc1 hc2, hen]
+
 end ShorECDLP.Paper2607_13816
