@@ -300,6 +300,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalTree_routeLabels
 #print axioms ShorECDLP.Paper2607_13816.intervalTree_singleton_route
 #print axioms ShorECDLP.Paper2607_13816.run_dualUnaryActionUnitary_as_runLogicalTree
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.runLogicalTree_eq_fold_routes
+#print axioms ShorECDLP.Paper2607_13816.run_dualUnaryActionUnitary_as_routedFold
 #print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_restores
 #print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_restores
 #print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_preservesOutsideTarget
@@ -1168,8 +1170,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1144 ]]; then
-  printf 'expected 1144 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1146 ]]; then
+  printf 'expected 1146 #print axioms results\n' >&2
   exit 1
 fi
 
