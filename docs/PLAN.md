@@ -1379,3 +1379,13 @@ composes the source's left-one/right-two sequence and proves counter updates and
 scratch marking do not alter the work bank. Together with the existing counter
 semantics, this aligns the physical rotation direction with the counter update;
 relating the encoded counter to a reachable logical shift remains open.
+
+`preShiftUnitary_shiftEncoding` and `postShiftUnitary_shiftEncoding` preserve one
+logical shift across the actual rotated bank and its truth-minus-one counter.
+For an enabled wrapper, the bank remains the same canonical word rotated by the
+updated shift, and the counter encodes that same bounded value. Decrement requires
+a positive shift; increment requires the successor to fit the counter. Nonempty
+work/counter registers and the old paired encoding are explicit premises. This
+closes local shift-encoding preservation under those bounds, including zero's
+all-ones sentinel; deriving the bounds and paired encoding along the complete EEA
+trace remains open.
