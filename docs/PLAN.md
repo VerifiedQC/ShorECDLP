@@ -1669,3 +1669,13 @@ successful subtraction. All auxiliaries return clean. Intermediate metadata,
 addend values, sign updates, and conditional addback are derived. Initial
 logical encoding and endpoint bounds remain explicit. Connecting these fields
 to the packed logical remainder and proving reachable-state bounds remain open.
+
+### Logical field reconstruction in the full remainder bank
+
+`run_intervalAddSubUnitary_logicalSlices` gives the complete interval words and
+sign for either target, operation, and control value under logical endpoint
+encoding. `run_remainderInterval_logicalSlices` translates the actual certified
+window back to work1: its coefficient prefix ends at `T+Q+1`, its selected field
+is replaced by the ripple result, and its suffix begins at `n+3-shift`. The
+physical frame preserves the prefix before the window. Packed remainder value
+reconstruction and reachable-state bounds remain outstanding.

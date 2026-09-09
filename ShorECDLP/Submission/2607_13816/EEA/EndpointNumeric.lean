@@ -95,4 +95,34 @@ theorem run_intervalAddSubUnitary_logicalBorrow (r : IntervalRegisters) (n k K T
   dsimp only at hb ⊢
   simpa only [hp.1,hp.2] using hb
 
+/-- Full source interval word semantics in logical endpoint coordinates. -/
+theorem run_intervalAddSubUnitary_logicalSlices (r : IntervalRegisters) (n k K T Q shift : Nat)
+    (mode : RippleMode) (signUpdate : Bool) (target : IntervalTarget) (state : BasisState)
+    (h : IntervalLayout r k K target) (hready : IntervalReady r state)
+    (ht : boolWordToNat (wireValues r.lengthT state) = truthMinusOneValue r.lengthQ.length T)
+    (hq : boolWordToNat (wireValues r.lengthQ state) = truthMinusOneValue r.lengthQ.length Q)
+    (hs : boolWordToNat (wireValues r.lengthS state) = truthMinusOneValue r.lengthS.length shift)
+    (hleftLow : k ≤ T+Q+2) (hleftHigh : T+Q+2-k < 2^r.lengthQ.length)
+    (hrightLow : shift+k ≤ n+3) (hrightHigh : n+3-shift-k < 2^r.lengthS.length)
+    (hrange : n+3-shift-k ≤ intervalTopRelative k K)
+    (horder : T+Q+2-k ≤ n+3-shift-k) :
+    let L := T+Q+2-k
+    let R := n+3-shift-k
+    let ts := (List.range (intervalLaneCount k K)).map (r.targetAt target)
+    let ads := (List.range (intervalLaneCount k K)).map (r.addendAt target)
+    let before := wireValues ts state
+    let addend := wireValues ads state
+    let result := uniformRippleExpectedWords mode (state r.control)
+      ((before.drop L).take (R-L+1)) ((addend.drop L).take (R-L+1)) false
+    let final := run (intervalAddSubUnitary r n k K mode signUpdate target) state
+    (wireValues ts final,wireValues ads final) =
+      (before.take L ++ result.1 ++ before.drop (R+1),addend) ∧
+    final r.sign = (if signUpdate then state r.sign ^^ result.2 else state r.sign) := by
+  have hp := logicalEndpoints r n k K T Q shift target state h hready ht hq hs
+    hleftLow hleftHigh hrightLow hrightHigh
+  have hb := run_intervalAddSubUnitary_slices r n k K mode signUpdate target state h hready
+    (by dsimp only; rw [hp.1,hp.2]; exact ⟨hrange,horder⟩)
+  dsimp only at hb ⊢
+  simpa only [hp.1,hp.2] using hb
+
 end ShorECDLP.Paper2607_13816
