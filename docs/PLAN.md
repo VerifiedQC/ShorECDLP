@@ -1477,3 +1477,15 @@ source zero-leaf mask. The actual tree must have the stated consecutive labels;
 the incoming accumulator and numeric interpretation of the effective endpoint
 pulses remain explicit premises. Arithmetic fusion of the two passes and
 establishing these endpoint premises in the enclosing interval block remain next.
+
+### Numeric endpoint selection
+
+`intervalTree_numericEndpointPulses` derives both effective decoder pulses from
+the endpoint register values, including singleton main trees and the special top
+endpoint. The source bitwise condition implies a power-of-two top lane; its high
+bit suppresses exactly the aliased zero route. The two `numericScan` corollaries
+instantiate the inclusive scan with the actual interval tree and existing
+`IntervalLayout`. They require ordered endpoints within the physical lane bounds,
+clean path/cell scratch and the incoming accumulator boundary. No separate route
+or pulse interpretation premise remains. Initializing that boundary in the full
+interval block and fusing its two passes into arithmetic remain next.
