@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.BlockECoefficient
 import ShorECDLP.Submission.«2607_13816».EEA.TBoundaryArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientComposition

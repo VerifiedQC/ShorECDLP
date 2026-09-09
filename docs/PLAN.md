@@ -1880,3 +1880,18 @@ is the arithmetic composition, not a reachable-state range proof.
 `blockEForward_arithmetic` specializes that same circuit to truth-minus-one
 encoded logical lengths. Its endpoint is `T+1` when phase2 is false or `n+3-R-S` when
 phase2 is true, with capacity, nonnegative subtraction and window membership explicit.
+
+### Numeric coefficient update
+
+`blockEForward_coefficient_value` interprets the complete source circuit using
+ordinary arithmetic on the selected low prefix. It first subtracts modulo the
+prefix width when the subtraction predicate holds, then adds modulo that same
+width when phase1 holds. The final sign is the old sign XOR phase1 XOR the
+explicit addition-overflow predicate. High bits, the addend, metadata and shared
+scratch are retained. Boundary membership remains explicit; packed coefficient
+reconstruction and reachable-state induction remain subsequent work.
+
+`blockEForward_coefficient_packed` reconstructs the exact output as the canonical
+little-endian coefficient prefix followed by the original high fields. It derives
+that packing from the numeric result and fixed physical word length, preserving
+the same sign, addend, readiness and metadata guarantees.

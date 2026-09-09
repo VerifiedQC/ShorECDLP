@@ -467,4 +467,26 @@ theorem uniformRippleExpectedWords_sub_borrow (ts ads : List Bool) (carry : Bool
     apply decide_eq_true
     omega
 
+/-- The output carry of an enabled addition is exactly the overflow predicate. -/
+theorem uniformRippleExpectedWords_add_carry (ts ads : List Bool) (carry : Bool)
+    (hlen : ts.length = ads.length) :
+    (uniformRippleExpectedWords .add true ts ads carry).2 =
+      decide (2^ts.length ≤ boolWordToNat ts.reverse + boolWordToNat ads.reverse + carry.toNat) := by
+  have h := uniformRippleExpectedWords_add_value ts ads carry hlen
+  have hb := boolWordToNat_lt_pow_two (uniformRippleExpectedWords .add true ts ads carry).1.reverse
+  simp only [List.length_reverse,uniformRippleExpectedWords_length] at hb
+  cases hc : (uniformRippleExpectedWords .add true ts ads carry).2 with
+  | false =>
+    rw [hc] at h
+    simp only [Bool.toNat_false,Nat.mul_zero,Nat.add_zero] at h
+    symm
+    apply decide_eq_false
+    omega
+  | true =>
+    rw [hc] at h
+    simp only [Bool.toNat_true,Nat.mul_one] at h
+    symm
+    apply decide_eq_true
+    omega
+
 end ShorECDLP.Paper2607_13816
