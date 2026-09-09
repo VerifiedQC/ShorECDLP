@@ -2264,3 +2264,13 @@ parity flips, the epoch stays clear, and shared scratch is clean. All decoder
 routes and bounds are selected from the actual intermediate states. Bank data
 and the other length words may be arbitrary; this theorem does not yet identify
 the recomputed lengths with canonical bit lengths or establish endpoint reachability.
+
+`swapWorkAndLengthUnaryShared_numeric_lengths` connects the actual enabled
+bank-and-length circuit to numerical bit lengths of its two swapped scan words.
+The upper result includes the one-based window offset; the lower result uses the
+reversed word's bit length to recover its first set position. Zero scan words
+produce the all-ones sentinel, including zero-width metadata and modular wrap.
+The proof derives the relation between bit length and first/last set position
+by induction on Boolean words. Old metadata consistency and decoder routing
+remain explicit; connecting these scanned numeric words to the canonical packed
+coefficient and remainder fields remains the next boundary.
