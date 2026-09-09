@@ -307,4 +307,31 @@ theorem blockEForward_swapComparison (r : IndexedStepRegisters) (n index : Nat)
     by_cases hh : v.tPrime < v.t*2^v.shift <;> cases s r.sign <;> simp_all
   exact ⟨hf.2.2.1,hf.1.trans hwork2.symm,(by simpa only [Bool.true_and] using hf.2.2.2.1.trans hs),hf.2.2.2.2⟩
 
+private theorem endpoint_packed_repartition (bank T R t rem : Nat)
+    (hspan : T+1+R ≤ bank) (ht : t < 2^T) (hr : rem < 2^R) :
+    constantBits T t ++ [false] ++ (constantBits (bank-(T+1)) rem).reverse =
+      constantBits (bank-R) t ++ (constantBits R rem).reverse := by
+  rw [coefficient_widen_packing bank T R t rem hspan ht hr]
+  have hfit : t < 2^(bank-R-1) :=
+    ht.trans_le (Nat.pow_le_pow_right (by decide) (by omega))
+  rw [coefficient_zero_extend (bank-R-1) (bank-R) t (by omega) hfit]
+  have he : bank-R-(bank-R-1) = 1 := by omega
+  rw [he]
+  rfl
+/-- Zero padding gives the upper and lower endpoint views of the same canonical banks. -/
+theorem endpoint_canonical_bank_views (bank oldT newT RP old new rem rp : Nat)
+    (hT : oldT ≤ newT) (hspan : newT+1+RP ≤ bank)
+    (hold : old < 2^oldT) (hnew : new < 2^newT)
+    (hrem : rem < 2^RP) (hrp : rp < 2^RP) :
+    let first := constantBits oldT old ++ [false] ++ (constantBits (bank-(oldT+1)) rem).reverse
+    let second := constantBits (bank-RP) new ++ (constantBits RP rp).reverse
+    first = constantBits (bank-RP) old ++ (constantBits RP rem).reverse ∧
+      first = constantBits newT old ++ [false] ++ (constantBits (bank-(newT+1)) rem).reverse ∧
+      second = constantBits newT new ++ [false] ++ (constantBits (bank-(newT+1)) rp).reverse := by
+  have ho := endpoint_packed_repartition bank oldT RP old rem (by omega) hold hrem
+  have hon := hold.trans_le (Nat.pow_le_pow_right (by decide) hT)
+  exact ⟨ho, ho.trans (endpoint_packed_repartition bank newT RP old rem hspan hon hrem).symm,
+    (endpoint_packed_repartition bank newT RP new rp hspan hnew hrp).symm⟩
+
+
 end ShorECDLP.Paper2607_13816

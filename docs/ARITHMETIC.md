@@ -2325,3 +2325,12 @@ internally. The existing H circuit is now public for subsequent packed-state
 composition. Canonical bank views, positive old right remainder, metadata
 capacity and active-window/mask coverage remain assumptions; this is not yet
 a reachable-state proof of those conditions.
+
+`blockHForward_packed_lengths` derives the endpoint scan views from
+`IndexedPackedState` at zero quotient length and zero shift. Coherent stored
+bit lengths, a smaller remainder, nondecreasing coefficient bit length and
+room for the guard/remainder imply the four views by zero-padding identities.
+Readiness, epoch cleanliness and zero-counter controls follow from the packed
+state. The actual H metadata theorem therefore needs no physical-view or route
+premises at this level. These arithmetic bounds, bit-length coherence and
+active-window coverage still require the reachable-state invariant.

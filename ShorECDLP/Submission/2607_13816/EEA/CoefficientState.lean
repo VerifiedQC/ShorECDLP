@@ -352,4 +352,120 @@ theorem indexedStepUnitary_swap_packed (r : IndexedStepRegisters) (n index : Nat
     have haux : wireValues r.aux out = wireValues r.aux s := hmeta _ (by intro w hm; simp [hm])
     exact ((List.map_eq_map_iff.mp haux) wire hw).trans (hp.clean wire hw)
 
+private theorem packed_endpoint_word (ws : List Wire) (s : BasisState) (value : Nat)
+    (hv : boolWordToNat (wireValues ws s) = truthMinusOneValue ws.length value) :
+    wireValues ws s = constantBits ws.length (truthMinusOneValue ws.length value) := by
+  apply boolWordToNat_injective_of_length (by simp only [wireValues,List.length_map,constantBits_length])
+  rw [hv, boolWordToNat_constantBits]
+  change (_ % _) = (_ % _) % _
+  exact (Nat.mod_mod _ _).symm
+
+private theorem packed_endpoint_zero (ws : List Wire) (s : BasisState)
+    (hv : boolWordToNat (wireValues ws s) = truthMinusOneValue ws.length 0) :
+    wireAnd ws s = true := by
+  rw [wireAnd_eq_numeric_allOnes, hv]
+  have hz : truthMinusOneValue ws.length 0 = 2^ws.length-1 := by
+    change (0+2^ws.length-1%2^ws.length)%2^ws.length = 2^ws.length-1
+    have hp : 0 < 2^ws.length := Nat.two_pow_pos _
+    by_cases h : 2^ws.length = 1
+    · simp [h]
+    · have hh : 1 < 2^ws.length := by omega
+      rw [Nat.mod_eq_of_lt hh]
+      simp only [zero_add]
+      rw [Nat.mod_eq_of_lt (by omega)]
+  simp only [hz, decide_true]
+
+/-- At a scheduled zero-Q/zero-shift endpoint, the logical packed state determines
+both output length words. Physical scan views and decoder routes are derived. -/
+theorem blockHForward_packed_lengths (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (v : EEAState) (h : IndexedStepLayout r n index)
+    (hp : IndexedPackedState r n s v) (hstep : index % 4 = 0)
+    (hQ : v.lQ = 0) (hS : v.shift = 0)
+    (hT : v.lT = v.t.size) (hRP : v.lRPrime = v.rPrime.size)
+    (hrem : v.r < v.rPrime) (hmono : v.lT ≤ v.tPrime.size)
+    (hspan : v.tPrime.size+1+v.lRPrime ≤ n+3)
+    (hcapacity : n+3 < 2^r.lengthT.length)
+    (hboundary4 : (endIterationWindowsAt n index).k4 ≤ n+3-v.lRPrime ∧
+      n+3-v.lRPrime ≤ (endIterationWindowsAt n index).K4)
+    (hboundary5 : (endIterationWindowsAt n index).k5 ≤ v.tPrime.size+2 ∧
+      v.tPrime.size+2 ≤ (endIterationWindowsAt n index).K5Decode n)
+    (htWindow : (endIterationWindowsAt n index).k4 ≤ v.t.size ∧
+      v.t.size ≤ (endIterationWindowsAt n index).K4)
+    (htpWindow : (endIterationWindowsAt n index).k4 ≤ v.tPrime.size ∧
+      v.tPrime.size ≤ (endIterationWindowsAt n index).K4)
+    (hrWindow : v.r ≠ 0 → (endIterationWindowsAt n index).k5 ≤ n+4-v.r.size ∧
+      n+4-v.r.size ≤ (endIterationWindowsAt n index).K5Decode n)
+    (hrpWindow : (endIterationWindowsAt n index).k5 ≤ n+4-v.rPrime.size ∧
+      n+4-v.rPrime.size ≤ (endIterationWindowsAt n index).K5Decode n) :
+    (wireValues r.lengthT (run (blockHForward r n index) s),
+      wireValues r.lengthRPrime (run (blockHForward r n index) s)) =
+      (constantBits r.lengthT.length (truthMinusOneValue r.lengthT.length v.tPrime.size),
+       constantBits r.lengthRPrime.length (truthMinusOneValue r.lengthRPrime.length v.r.size)) := by
+  have hrpfit : v.rPrime < 2^v.lRPrime := by rw [hRP]; exact Nat.lt_size_self _
+  have hremfit := hrem.trans hrpfit
+  have htfit : v.t < 2^v.lT := by rw [hT]; exact Nat.lt_size_self _
+  have htpfit := Nat.lt_size_self v.tPrime
+  have hv := endpoint_canonical_bank_views (n+3) v.lT v.tPrime.size v.lRPrime
+    v.t v.tPrime v.r v.rPrime hmono hspan htfit htpfit hremfit hrpfit
+  have hw1 : wireValues r.work1 s = constantBits v.lT v.t ++ [false] ++
+      (constantBits (n+3-(v.lT+1)) v.r).reverse := by
+    simpa only [hQ, constantBits, List.replicate_zero, xorConstantBits,
+      List.reverse_nil, List.append_nil, Nat.add_zero] using hp.work1
+  have hw2 : wireValues r.work2 s = constantBits (n+3-v.lRPrime) v.tPrime ++
+      (constantBits v.lRPrime v.rPrime).reverse := by
+    simpa only [hS, List.rotate_zero] using hp.work2
+  have ready : IndexedStepReady r s := by
+    intro wire hw
+    apply hp.clean wire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | hw | hw
+    · subst wire
+      change r.aux.getD 0 0 ∈ r.aux
+      rw [List.getD_eq_getElem _ _ (by rw [h.aux_length]; decide)]
+      exact List.getElem_mem _
+    · exact List.mem_of_mem_take (List.mem_of_mem_drop hw)
+    · exact List.mem_of_mem_drop hw
+  have hepoch : s r.shiftEpoch = false := by
+    apply hp.clean
+    change r.aux.getD 1 0 ∈ r.aux
+    rw [List.getD_eq_getElem _ _ (by rw [h.aux_length]; decide)]
+    exact List.getElem_mem _
+  have hq := packed_endpoint_zero r.lengthQ s (by simpa only [hQ] using hp.lengthQ)
+  have hs := packed_endpoint_zero r.lengthS s (by simpa only [hS] using hp.lengthS)
+  have hmT := packed_endpoint_word r.lengthT s v.lT hp.lengthT
+  have hmRP := packed_endpoint_word r.lengthRPrime s v.lRPrime hp.lengthRP
+  have hwide : v.lRPrime ≤ n+3-(v.tPrime.size+1) := by omega
+  have hremWide := hremfit.trans_le (Nat.pow_le_pow_right (by decide) hwide)
+  have hrpWide := hrpfit.trans_le (Nat.pow_le_pow_right (by decide) hwide)
+  have htWide := htfit.trans_le (Nat.pow_le_pow_right (by decide)
+    (by omega : v.lT ≤ n+3-v.lRPrime))
+  have htpWide := htpfit.trans_le (Nat.pow_le_pow_right (by decide)
+    (by omega : v.tPrime.size ≤ n+3-v.lRPrime))
+  apply blockHForward_canonical_endpoint r n index v.t v.tPrime v.r v.rPrime
+    (n+3-(v.tPrime.size+1)) (n+3-(v.tPrime.size+1))
+    (constantBits v.lRPrime v.r).reverse (constantBits v.lRPrime v.rPrime).reverse
+    (constantBits v.tPrime.size v.t ++ [false]) (constantBits v.tPrime.size v.tPrime ++ [false])
+    (by omega) hcapacity (by simpa only [hRP] using hboundary4) hboundary5
+    s h ready hstep hq hs hepoch
+  · simpa only [← hRP] using hw1.trans hv.1
+  · simpa only [← hRP] using hw2
+  · exact hw1.trans hv.2.1
+  · exact hw2.trans hv.2.2
+  · simpa only [← hRP] using htWide
+  · simpa only [← hRP] using htpWide
+  · exact hremWide
+  · exact hrpWide
+  · exact htWindow
+  · exact htpWindow
+  · simp only [List.length_append, constantBits_length, List.length_singleton]; omega
+  · simp only [List.length_append, constantBits_length, List.length_singleton]; omega
+  · intro hz
+    have hb := hrWindow hz
+    have hsize := Nat.size_le.mpr hremfit
+    exact ⟨hb.1, hb.2, by omega⟩
+  · intro _
+    exact ⟨hrpWindow.1, hrpWindow.2, by omega⟩
+  · simpa only [hT] using hmT
+  · simpa only [hRP] using hmRP
+
 end ShorECDLP.Paper2607_13816
