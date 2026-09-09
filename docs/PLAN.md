@@ -1970,3 +1970,14 @@ coefficient/quotient fits and scratch readiness. Intermediate metadata and
 readiness are derived using physical separation, rather than assumed by the
 caller. Initial packing, route/span bounds and conditional no-overflow remain
 explicit; the full reachable microstep invariant is still open.
+
+### Post-shift composition after quotient/coefficient arithmetic
+
+`blockDEFForward_coefficient` carries the actual D/E result through the source
+post-shift. The canonical updated coefficient bank rotates by `shift+1`, and
+the full truth-minus-one shift counter encodes that same value; coefficient
+fit and indexed scratch readiness are retained. The D/E contract now also
+exposes its complete frame outside quotient metadata, sign and the two work
+banks. That frame supplies phase and counter preservation for the post-shift
+handoff. Full shift encoding and increment capacity remain explicit initial
+premises, in addition to the D/E bounds; reachable-state induction remains open.
