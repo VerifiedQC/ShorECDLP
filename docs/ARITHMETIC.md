@@ -2352,3 +2352,20 @@ coherent input lengths, a strictly smaller remainder, coefficient-length
 monotonicity, guard space, metadata capacity, and active-window coverage. This is
 a complete H-block preservation theorem, not yet a reachable-state proof of
 those hypotheses or the preceding E/F/G composition.
+
+### Final swap microstep
+
+`blockEFGForward_swap_packed` extends the packed swap proof to every positive
+shift, including one. Its logical `swapBeforeEndpointMicrostep` decreases the
+shift and applies the comparison-dependent phase change. The old nonfinal
+`indexedStepUnitary_swap_packed` now follows from this shared proof and H's
+inactivity at positive output shift.
+
+For input shift one on a scheduled endpoint,
+`indexedStepUnitary_swap_endpoint_packed` composes E/F/G with H and proves the
+complete packed output of the actual eight-block indexed circuit. The initial
+A/B/C/D prefix is proved idle from the swap phase and clean auxiliaries. All
+output bank views, counters, phase/sign/parity, and auxiliary cleanup follow
+from the composition; no intermediate physical state is assumed. Numerical
+coherence, strict remainder order, coefficient space, capacity, and active-window
+coverage are still explicit and must be established by reachability separately.
