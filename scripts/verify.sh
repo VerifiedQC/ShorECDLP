@@ -321,6 +321,9 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.maskedRippleWords_fusion
 #print axioms ShorECDLP.Paper2607_13816.maskedRippleWords_interval
 #print axioms ShorECDLP.Paper2607_13816.maskedRippleWords_interval_value
+#print axioms ShorECDLP.Paper2607_13816.maskedRippleFirstState_words
+#print axioms ShorECDLP.Paper2607_13816.maskedRippleSecondState_words
+#print axioms ShorECDLP.Paper2607_13816.maskedRippleState_fusion
 #print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_restores
 #print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_restores
 #print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_preservesOutsideTarget
@@ -1189,8 +1192,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1165 ]]; then
-  printf 'expected 1165 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1168 ]]; then
+  printf 'expected 1168 #print axioms results\n' >&2
   exit 1
 fi
 

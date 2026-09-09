@@ -1530,3 +1530,11 @@ proves a contiguous enabled slice leaves both outside slices unchanged;
 slice, including the input carry. The existing uniform ripple arithmetic proof
 is reused. Connecting these word-level passes to the complete physical interval
 body remains open.
+
+`maskedRippleFirstState_words` and `maskedRippleSecondState_words` connect
+per-bit masked ripple updates on distinct wire lists to the word-level passes.
+`maskedRippleState_fusion` derives the fused target word and restores every
+wire outside that target list, including the addend and arbitrary incoming carry.
+These are wire-state semantics, with no additional circuit introduced. Matching
+the source interval traversal and its accumulator writes to these passes remains
+the next connection.

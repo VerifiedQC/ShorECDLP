@@ -182,7 +182,7 @@ theorem uniformRippleExpectedWords_disabled (mode : RippleMode) (ts ads : List B
       simp only [uniformRippleExpectedWords, ih, Bool.false_eq_true, ↓reduceIte]
       cases mode <;> cases t <;> cases a <;> cases carry <;> rfl
 
-private theorem rippleWrite_outside (t a c : Wire) (bits : RippleCellBits) (state : BasisState)
+theorem rippleWrite_outside (t a c : Wire) (bits : RippleCellBits) (state : BasisState)
     (w : Wire) (ht : w ≠ t) (ha : w ≠ a) (hc : w ≠ c) :
     writeRippleCell t a c bits state w = state w := by
   simp [writeRippleCell, upd, ht, ha, hc]
@@ -222,13 +222,13 @@ private theorem rippleLayout_tail (control carry t a : Wire) (ts ads : List Wire
   exact List.Sublist.cons₂ _ (List.Sublist.cons₂ _
     ((List.sublist_cons_self _ _).append (List.sublist_cons_self _ _)))
 
-private theorem rippleWrite_read (t a c : Wire) (bits : RippleCellBits) (state : BasisState)
+theorem rippleWrite_read (t a c : Wire) (bits : RippleCellBits) (state : BasisState)
     (hta : t ≠ a) (htc : t ≠ c) (hac : a ≠ c) :
     readRippleCell t a c (writeRippleCell t a c bits state) = bits := by
   cases bits
   simp [readRippleCell, writeRippleCell, upd, hta, htc, hac]
 
-private theorem rippleWrite_values (t a c : Wire) (bits : RippleCellBits) (state : BasisState)
+theorem rippleWrite_values (t a c : Wire) (bits : RippleCellBits) (state : BasisState)
     (ws : List Wire) (ht : t ∉ ws) (ha : a ∉ ws) (hc : c ∉ ws) :
     wireValues ws (writeRippleCell t a c bits state) = wireValues ws state := by
   apply List.map_congr_left
@@ -380,7 +380,7 @@ private theorem rippleCombined_words (mode : RippleMode) (control : Wire)
     (state carry) (by simpa only [wireValues, List.length_map] using hlen)).1
   exact hs.trans h
 
-private theorem rippleRead_member (ws : List Wire) (s t : BasisState)
+theorem rippleRead_member (ws : List Wire) (s t : BasisState)
     (h : wireValues ws s = wireValues ws t) (w : Wire) (hw : w ∈ ws) : s w = t w := by
   induction ws with
   | nil => simp at hw
