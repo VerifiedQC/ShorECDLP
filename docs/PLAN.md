@@ -1838,3 +1838,13 @@ preserved outside the control and those two words. The reusable control sandwich
 allows an arbitrary initial control, so its XOR contract also supports cleanup.
 This does not yet compose Block E's arithmetic scans or prove that reachable states
 supply an in-range prepared boundary.
+
+### Logical coefficient-boundary values
+
+`prepareLatestPaperTBoundary_arithmetic` and `blockEPrepareForward_arithmetic`
+interpret the same preparation circuits in logical lengths. The stored modular
+truth-minus-one encoding yields endpoints `T+1` and `n+3-R-S`; phase 2 selects
+their order. Logical zero is included. Nonnegativity and word-capacity bounds
+remain explicit, as does the later obligation that the selected endpoint lies
+inside the active coefficient window. The Block E theorem retains its control,
+frame and scratch conclusions.
