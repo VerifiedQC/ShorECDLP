@@ -1444,3 +1444,12 @@ throughout; physical/logical leaf simulation is required only when that scratch
 is clean. The leaf simulation and decoder-frame premises remain explicit.
 Instantiating them for interval cells and reducing the logical scan to arithmetic
 remain the next composition steps.
+
+### Routed-label scan
+
+`run_dualUnaryActionUnitary_as_routedFold` reduces the same physical decoder
+circuit to a fold over its actual visit order. Each Boolean pulse is the enabled
+root control conjoined with equality to that bank's routed label. Duplicate-free
+labels are explicit, and the complete frame and clean-scratch premises are
+inherited from the logical-traversal theorem. The interval-cell instantiation
+and arithmetic interpretation of this fold remain open.
