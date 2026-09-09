@@ -72,16 +72,17 @@ private theorem inputs_values (r : IntervalRegisters) (s t : BasisState)
     intro w hw
     exact h w (by simp [inputs, hw])
 
-private theorem sign_inputs (r : IntervalRegisters) (k K : Nat) (signUpdate : Bool)
+theorem intervalSignUpdate_preservesInputs (r : IntervalRegisters) (k K : Nat) (signUpdate : Bool)
     (target : IntervalTarget) (state : BasisState) (h : IntervalLayout r k K target) :
-    sameInputs r (run (intervalSignUpdate r k K signUpdate) state) state := by
+    ∀ w ∈ r.control :: (r.lengthQ ++ r.lengthS),
+      run (intervalSignUpdate r k K signUpdate) state w = state w := by
   obtain ⟨hc, _, ht⟩ := List.nodup_append.mp h.physical
   intro w hw
   apply intervalSignUpdate_agreesOutsideSign r k K signUpdate state w
   simp only [List.mem_singleton]
   intro he
   subst w
-  simp only [inputs, List.mem_cons, List.mem_append] at hw
+  simp only [List.mem_cons, List.mem_append] at hw
   rcases hw with he | hq | hs
   · have hn := (List.nodup_cons.mp hc).1
     exact hn (by simp [he])
@@ -154,7 +155,7 @@ theorem run_intervalAddSubBody_numeric (r : IntervalRegisters) (k K : Nat) (mode
     (r.targetAt target) (r.addendAt target) (intervalTree r k K) r.control r.control
     (r.rightPaths k K) (r.leftPaths k K) afterTop h.traversal htPaths.1 htPaths.2 htCell
   let afterSign := run (intervalSignUpdate r k K signUpdate) afterFirst
-  have hsFrame := sign_inputs r k K signUpdate target afterFirst h
+  have hsFrame := intervalSignUpdate_preservesInputs r k K signUpdate target afterFirst h
   have hsValues := inputs_values r afterSign state (fun w hw => (hsFrame w hw).trans (hfFrame w hw))
   have hsClean (ws : List Wire) (hc : Clean ws afterFirst) (hm : ∀ w ∈ ws, w ∈ r.scratch) : Clean ws afterSign := by
     intro w hw
