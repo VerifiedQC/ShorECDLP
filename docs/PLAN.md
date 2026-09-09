@@ -1599,3 +1599,13 @@ Both control values are covered; the full interval starts with ready scratch.
 The numeric body theorem now derives from this common word decomposition.
 Prepared endpoint bounds/order and reachable packed-field interpretation remain
 explicit proof boundaries.
+
+### Remainder interval in full work-bank coordinates
+
+`run_remainderInterval_logicalValues` lifts the actual indexed remainder view
+from its local window to the original full work banks. The one-based window
+offset cancels, so the selected field begins at zero-based index `T + Q + 1`,
+immediately after the coefficient and quotient prefix. Encoding and endpoint
+bounds/order remain explicit. This proves arithmetic for the actual isolated
+interval used in Block B; control preparation and the full block's logical
+remainder relation still require composition.
