@@ -42,10 +42,14 @@ def quotientSwapUnaryDepth (k K : Nat) : Nat :=
   let count := K - k + 1
   if count ≤ 1 then 0 else Nat.clog 2 (count - 1) + 1
 
-private def quotientProjectA : DualUnaryActionTree → UnaryActionTree
+/-- Select one endpoint bank of a synchronized decoder tree; `false` selects A. -/
+def DualUnaryActionTree.project (second : Bool) : DualUnaryActionTree → UnaryActionTree
   | .leaf label => .leaf label
-  | .node indexBitA _ zero one =>
-      .node indexBitA (quotientProjectA zero) (quotientProjectA one)
+  | .node indexBitA indexBitB zero one =>
+      .node (if second then indexBitB else indexBitA)
+        (project second zero) (project second one)
+
+private abbrev quotientProjectA := DualUnaryActionTree.project false
 
 @[simp]
 private theorem quotientProjectA_labels (tree : DualUnaryActionTree) :
@@ -53,7 +57,7 @@ private theorem quotientProjectA_labels (tree : DualUnaryActionTree) :
   induction tree with
   | leaf => rfl
   | node indexBitA indexBitB zero one ihZero ihOne =>
-      simp [quotientProjectA, UnaryActionTree.labels,
+      simp [quotientProjectA, DualUnaryActionTree.project, UnaryActionTree.labels,
         DualUnaryActionTree.labels, ihZero, ihOne]
 
 @[simp]
@@ -62,7 +66,7 @@ private theorem quotientProjectA_indexWires (tree : DualUnaryActionTree) :
   induction tree with
   | leaf => rfl
   | node indexBitA indexBitB zero one ihZero ihOne =>
-      simp [quotientProjectA, UnaryActionTree.indexWires,
+      simp [quotientProjectA, DualUnaryActionTree.project, UnaryActionTree.indexWires,
         DualUnaryActionTree.indexAWires, ihZero, ihOne]
 
 @[simp]
@@ -71,7 +75,7 @@ private theorem quotientProjectA_internalNodes (tree : DualUnaryActionTree) :
   induction tree with
   | leaf => rfl
   | node indexBitA indexBitB zero one ihZero ihOne =>
-      simp [quotientProjectA, UnaryActionTree.internalNodes,
+      simp [quotientProjectA, DualUnaryActionTree.project, UnaryActionTree.internalNodes,
         DualUnaryActionTree.internalNodes, ihZero, ihOne]
 
 @[simp]
@@ -80,7 +84,7 @@ private theorem quotientProjectA_leaves (tree : DualUnaryActionTree) :
   induction tree with
   | leaf => rfl
   | node indexBitA indexBitB zero one ihZero ihOne =>
-      simp [quotientProjectA, UnaryActionTree.leaves,
+      simp [quotientProjectA, DualUnaryActionTree.project, UnaryActionTree.leaves,
         DualUnaryActionTree.leaves, ihZero, ihOne]
 
 private theorem testBit_of_aligned_block
@@ -117,7 +121,7 @@ private theorem testBit_of_aligned_block
     rw [Nat.testBit_lt_two_pow hlt]
     simp [hright]
 
-private theorem getD_false_eq_testBit_boolWordToNat
+theorem getD_false_eq_testBit_boolWordToNat
     (bits : List Bool) {bit : Nat} (hbit : bit < bits.length) :
     bits.getD bit false = (boolWordToNat bits).testBit bit := by
   induction bits generalizing bit with
@@ -191,15 +195,17 @@ private theorem aligned_one_child
   rw [Nat.add_mod, aligned_zero_child hbase]
   simp
 
-private theorem quotientProjectA_routeLabel_of_sourceBuilt
+/-- A source-built decoder selects an in-range label from either endpoint bank. -/
+theorem DualUnaryActionTree.project_routeLabel_of_sourceBuilt
+    (second : Bool)
     {indexA indexB : Nat → Wire} {labels : Finset Nat}
     {depth base : Nat} {tree : DualUnaryActionTree}
     (hbuilt : DualUnaryActionTree.SourceBuilt indexA indexB labels depth base tree)
     (hbase : base % 2 ^ depth = 0)
     (state : BasisState) {label : Nat} (hlabel : label ∈ tree.labels)
     (hstate : ∀ bit, bit < depth →
-      state (indexA bit) = label.testBit bit) :
-    (quotientProjectA tree).routeLabel state = label := by
+      state (if second then indexB bit else indexA bit) = label.testBit bit) :
+    (tree.project second).routeLabel state = label := by
   induction hbuilt with
   | leaf base hbaseMem =>
       simp only [DualUnaryActionTree.labels, List.mem_singleton] at hlabel
@@ -223,9 +229,9 @@ private theorem quotientProjectA_routeLabel_of_sourceBuilt
             omega)]
           simp only [decide_eq_false_iff_not]
           omega
-        have hroute : state (indexA depth) = false := by
+        have hroute : state (if second then indexB depth else indexA depth) = false := by
           rw [hstate depth (Nat.lt_succ_self depth), hbit]
-        simp only [quotientProjectA, UnaryActionTree.routeLabel, hroute,
+        simp only [DualUnaryActionTree.project, UnaryActionTree.routeLabel, hroute,
           Bool.false_eq_true, if_false]
         apply ihZero (aligned_zero_child hbase) hlabel
         intro bit hbit
@@ -237,9 +243,9 @@ private theorem quotientProjectA_routeLabel_of_sourceBuilt
             omega)]
           simp only [decide_eq_true_eq]
           exact hb.1
-        have hroute : state (indexA depth) = true := by
+        have hroute : state (if second then indexB depth else indexA depth) = true := by
           rw [hstate depth (Nat.lt_succ_self depth), hbit]
-        simp only [quotientProjectA, UnaryActionTree.routeLabel, hroute, if_true]
+        simp only [DualUnaryActionTree.project, UnaryActionTree.routeLabel, hroute, if_true]
         apply ihOne (aligned_one_child hbase) hlabel
         intro bit hbit
         exact hstate bit (Nat.lt_succ_of_lt hbit)
@@ -607,7 +613,7 @@ private theorem quotientProjectA_treeDepth (tree : DualUnaryActionTree) :
   induction tree with
   | leaf => rfl
   | node indexA indexB zero one ihZero ihOne =>
-      simp [quotientProjectA, quotientTreeDepth,
+      simp [quotientProjectA, DualUnaryActionTree.project, quotientTreeDepth,
         DualUnaryActionTree.pathDepth, ihZero, ihOne]
 
 private theorem quotientSwapTree_depth_le
@@ -785,7 +791,7 @@ theorem quotientSwapTree_routeLabel_eq_of_width
     (DualUnaryActionTree.sourceWidth labels) labels
     (quotientSwapDualTree registers k K) hbuild
   change (quotientProjectA (quotientSwapDualTree registers k K)).routeLabel state = value
-  apply quotientProjectA_routeLabel_of_sourceBuilt hsource (by simp) state
+  apply DualUnaryActionTree.project_routeLabel_of_sourceBuilt false hsource (by simp) state
   · have hlabels := DualUnaryActionTree.buildSource_labels_eq_sort
       registers.index registers.index labels
       (quotientSwapDualTree registers k K) hbuildSource
