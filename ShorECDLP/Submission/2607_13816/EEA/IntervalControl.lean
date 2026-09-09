@@ -14,7 +14,7 @@ private theorem second_phase (enabled : Bool) (L R j : Nat) (h : L ≤ R) :
   cases enabled <;> by_cases hlj : L < j <;> by_cases hjr : j ≤ R <;>
     by_cases he : j=L <;> simp_all <;> omega
 
-private theorem first_leaf_normalize
+theorem intervalFirstLeafState_normalize
     (mode : RippleMode) (topSpecial : Bool)
     (rt lt acc t a c scratch label rc lc : Nat) (state : BasisState)
     (hlayout : IntervalLeafLayout rc lc rt lt acc t a c scratch) :
@@ -39,7 +39,7 @@ private theorem first_leaf_normalize
     hat,haa,hac,Ne.symm hat,Ne.symm haa,Ne.symm hac, ite_false, ite_true]
   by_cases hw : w=acc <;> by_cases hwt : w=t <;> by_cases hwa : w=a <;>
     by_cases hwc : w=c <;> simp_all
-private theorem second_leaf_normalize
+theorem intervalSecondLeafState_normalize
     (mode : RippleMode) (topSpecial : Bool)
     (rt lt acc t a c scratch label rc lc : Nat) (state : BasisState)
     (hlayout : IntervalLeafLayout rc lc rt lt acc t a c scratch) :
@@ -84,7 +84,7 @@ theorem intervalFirstLeaf_inclusive
           (readRippleCell t a c state)) state)
         [acc ↦ enabled && decide (L < label ∧ label ≤ R)] := by
   rw [run_intervalFirstLeaf _ _ _ _ _ _ _ _ _ _ _ _ _ hlayout hclean,
-    first_leaf_normalize _ _ _ _ _ _ _ _ _ _ _ _ _ hlayout]
+    intervalFirstLeafState_normalize _ _ _ _ _ _ _ _ _ _ _ _ _ hlayout]
   dsimp only
   rw [hright, hleft, hacc, first_phase enabled L R label horder]
   have hh := congrArg (fun b => b ^^ (enabled && decide (label=L)))
@@ -112,7 +112,7 @@ theorem intervalSecondLeaf_inclusive
           (readRippleCell t a c state)) state)
         [acc ↦ enabled && decide (L ≤ label ∧ label < R)] := by
   rw [run_intervalSecondLeaf _ _ _ _ _ _ _ _ _ _ _ _ _ hlayout hclean,
-    second_leaf_normalize _ _ _ _ _ _ _ _ _ _ _ _ _ hlayout]
+    intervalSecondLeafState_normalize _ _ _ _ _ _ _ _ _ _ _ _ _ hlayout]
   dsimp only
   rw [hright, hleft, hacc, second_phase enabled L R label horder]
   have hh := congrArg (fun b => b ^^ (enabled && decide (label=R)))

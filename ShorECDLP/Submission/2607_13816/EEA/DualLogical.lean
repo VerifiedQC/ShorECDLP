@@ -44,19 +44,22 @@ private theorem logical_preserves
 
 private theorem physical_preserves
     (order : UnaryOrder) (leaf : Nat → Wire → Wire → Circuit)
-    (tree : DualUnaryActionTree) (ca cb : Wire) (pa pb protectedWires : List Wire) (state : BasisState)
+    (tree : DualUnaryActionTree) (ca cb : Wire) (pa pb dynamicWires protectedWires : List Wire) (state : BasisState)
     (hlayout : tree.Layout ca cb pa pb)
-    (hleaf : DualUnaryLeafPreservesOn leaf tree.labels protectedWires protectedWires)
+    (hleaf : DualUnaryLeafPreservesOn leaf tree.labels dynamicWires protectedWires)
     (hroles : ∀ wire ∈ tree.decoderWires ca cb pa pb, wire ∈ protectedWires)
+    (hdynamic : ∀ wire ∈ tree.decoderWires ca cb pa pb, wire ∈ dynamicWires)
+    (hsubset : ∀ wire ∈ dynamicWires, wire ∈ protectedWires)
     (ha : Clean pa state) (hb : Clean pb state) :
     ∀ wire ∈ protectedWires,
       tree.runLeafState order (fun label a b s => run (leaf label a b) s) ca cb pa pb state wire =
         state wire := by
   rw [← run_dualUnaryActionUnitary_as_runLeafState_on order leaf
-    (fun label a b s => run (leaf label a b) s) tree ca cb pa pb protectedWires state hlayout
-    (by intro label hl a b ha hb state; rfl) hleaf hroles ha hb]
-  exact dualUnaryActionUnitary_preservesOn order leaf tree ca cb pa pb protectedWires protectedWires state
-    hlayout hleaf hroles hroles ha hb
+    (fun label a b s => run (leaf label a b) s) tree ca cb pa pb dynamicWires state hlayout
+    (by intro label hl a b ha hb state; rfl)
+    (by intro label hl a b ha hb state w hw; exact hleaf label hl a b ha hb state w (hsubset w hw)) hdynamic ha hb]
+  exact dualUnaryActionUnitary_preservesOn order leaf tree ca cb pa pb dynamicWires protectedWires state
+    hlayout hleaf hdynamic hroles ha hb
 
 private theorem update_outside {protectedWires : List Wire} {state logical : BasisState}
     (h : AgreesOutside protectedWires state logical) (w : Wire) (b : Bool) (hw : w ∈ protectedWires) :
@@ -92,15 +95,17 @@ private theorem indices_ne_paths
 private theorem logical_outside
     (order : UnaryOrder) (leaf : Nat → Wire → Wire → Circuit)
     (logicalLeaf : Nat → Bool → Bool → BasisState → BasisState)
-    (tree : DualUnaryActionTree) (ca cb : Wire) (pa pb protectedWires cleanWires : List Wire)
+    (tree : DualUnaryActionTree) (ca cb : Wire) (pa pb dynamicWires protectedWires cleanWires : List Wire)
     (state route logical : BasisState) (activeA activeB : Bool)
     (hlayout : tree.Layout ca cb pa pb)
-    (hleaf : DualUnaryLeafPreservesOn leaf tree.labels protectedWires protectedWires)
-    (hlogical : ∀ label ∈ tree.labels, ∀ a b, a ∈ protectedWires → b ∈ protectedWires →
+    (hleaf : DualUnaryLeafPreservesOn leaf tree.labels dynamicWires protectedWires)
+    (hlogical : ∀ label ∈ tree.labels, ∀ a b, a ∈ dynamicWires → b ∈ dynamicWires →
       ∀ s t, Clean cleanWires s → AgreesOutside protectedWires s t →
         AgreesOutside protectedWires (run (leaf label a b) s)
           (logicalLeaf label (s a) (s b) t))
     (hroles : ∀ w ∈ tree.decoderWires ca cb pa pb, w ∈ protectedWires)
+    (hdynamic : ∀ w ∈ tree.decoderWires ca cb pa pb, w ∈ dynamicWires)
+    (hsubset : ∀ w ∈ dynamicWires, w ∈ protectedWires)
     (houtside : AgreesOutside protectedWires state logical)
     (hca : state ca = activeA) (hcb : state cb = activeB)
     (hroute : ∀ w ∈ tree.indexAWires ++ tree.indexBWires, state w = route w)
@@ -115,12 +120,13 @@ private theorem logical_outside
   | leaf label ca cb pa pb hlocal =>
     simpa only [DualUnaryActionTree.runLeafState, DualUnaryActionTree.runLogicalTree, hca, hcb]
       using hlogical label (by simp [DualUnaryActionTree.labels]) ca cb
-        (hroles ca (by simp [DualUnaryActionTree.decoderWires]))
-        (hroles cb (by simp [DualUnaryActionTree.decoderWires])) state logical hworkClean houtside
+        (hdynamic ca (by simp [DualUnaryActionTree.decoderWires]))
+        (hdynamic cb (by simp [DualUnaryActionTree.decoderWires])) state logical hworkClean houtside
   | node ia ib ca cb pa pb zero one ra rb hlocal hz ho ihz iho =>
     obtain ⟨hcai,hcapa,hiapa,hcbi,hcbpb,hibpb,hpapb,hpara,hparb,hpbra,hpbrb,
       hcapb,hiapb,hcbpa,hibpa⟩ := DualUnaryActionTree.Layout.nodeParts ia ib ca cb pa pb zero one ra rb hlocal
     have roles := child_roles ia ib ca cb pa pb zero one ra rb protectedWires hroles
+    have dynamics := child_roles ia ib ca cb pa pb zero one ra rb dynamicWires hdynamic
     have hpa : pa ∈ protectedWires := hroles pa (by simp [DualUnaryActionTree.decoderWires])
     have hpb : pb ∈ protectedWires := hroles pb (by simp [DualUnaryActionTree.decoderWires])
     have hcam : ca ∈ protectedWires := hroles ca (by simp [DualUnaryActionTree.decoderWires])
@@ -147,15 +153,15 @@ private theorem logical_outside
       intro w hw he; subst w; exact hworkPaths pa hw (by simp)
     have workNeB : ∀ w ∈ cleanWires, w ≠ pb := by
       intro w hw he; subst w; exact hworkPaths pb hw (by simp)
-    have leafz : DualUnaryLeafPreservesOn leaf zero.labels protectedWires protectedWires := by
+    have leafz : DualUnaryLeafPreservesOn leaf zero.labels dynamicWires protectedWires := by
       intro label hl; exact hleaf label (by simp [DualUnaryActionTree.labels, hl])
-    have leafo : DualUnaryLeafPreservesOn leaf one.labels protectedWires protectedWires := by
+    have leafo : DualUnaryLeafPreservesOn leaf one.labels dynamicWires protectedWires := by
       intro label hl; exact hleaf label (by simp [DualUnaryActionTree.labels, hl])
-    have logz : ∀ label ∈ zero.labels, ∀ a b, a ∈ protectedWires → b ∈ protectedWires →
+    have logz : ∀ label ∈ zero.labels, ∀ a b, a ∈ dynamicWires → b ∈ dynamicWires →
         ∀ s t, Clean cleanWires s → AgreesOutside protectedWires s t → AgreesOutside protectedWires
           (run (leaf label a b) s) (logicalLeaf label (s a) (s b) t) := by
       intro label hl; exact hlogical label (by simp [DualUnaryActionTree.labels, hl])
-    have logo : ∀ label ∈ one.labels, ∀ a b, a ∈ protectedWires → b ∈ protectedWires →
+    have logo : ∀ label ∈ one.labels, ∀ a b, a ∈ dynamicWires → b ∈ dynamicWires →
         ∀ s t, Clean cleanWires s → AgreesOutside protectedWires s t → AgreesOutside protectedWires
           (run (leaf label a b) s) (logicalLeaf label (s a) (s b) t) := by
       intro label hl; exact hlogical label (by simp [DualUnaryActionTree.labels, hl])
@@ -264,9 +270,9 @@ private theorem logical_outside
     · let z := zero.runLeafState .inc (fun label a b s => run (leaf label a b) s) pa pb ra rb first
       let lz := zero.runLogicalTree .inc logicalLeaf (activeA && !route ia) (activeB && !route ib) route logical
       have zout : AgreesOutside protectedWires z lz :=
-        ihz first logical _ _ leafz logz roles.1 firstOutside firstA firstB
+        ihz first logical _ _ leafz logz roles.1 dynamics.1 firstOutside firstA firstB
           (routeZero first firstRoute) firstCleanA firstCleanB workChild firstWork
-      have zp := physical_preserves .inc leaf zero pa pb ra rb protectedWires first hz leafz roles.1
+      have zp := physical_preserves .inc leaf zero pa pb ra rb dynamicWires protectedWires first hz leafz roles.1 dynamics.1 hsubset
         firstCleanA firstCleanB
       change ∀ w ∈ protectedWires, z w = first w at zp
       have za : Clean ra z := by
@@ -285,7 +291,7 @@ private theorem logical_outside
       have sb : switch z pb = (activeB && route ib) := by
         rw [switchB, zp pb hpb, zp cb hcbm, firstB, firstCB, toggleZero]
       let o := one.runLeafState .inc (fun label a b s => run (leaf label a b) s) pa pb ra rb (switch z)
-      have oout := iho (switch z) lz _ _ leafo logo roles.2 (switchOutside z lz zout) sa sb
+      have oout := iho (switch z) lz _ _ leafo logo roles.2 dynamics.2 (switchOutside z lz zout) sa sb
         (routeOne _ (switchRoute z zr)) (switchCleanA z za) (switchCleanB z zb)
         workChild (switchWork z zw)
       change AgreesOutside protectedWires
@@ -307,11 +313,11 @@ private theorem logical_outside
       let o := one.runLeafState .dec (fun label a b s => run (leaf label a b) s) pa pb ra rb sf
       let lo := one.runLogicalTree .dec logicalLeaf (activeA && route ia) (activeB && route ib) route logical
       have oout : AgreesOutside protectedWires o lo :=
-        iho sf logical _ _ leafo logo roles.2 (switchOutside first logical firstOutside) sa sb
+        iho sf logical _ _ leafo logo roles.2 dynamics.2 (switchOutside first logical firstOutside) sa sb
           (routeOne sf (switchRoute first firstRoute))
           (switchCleanA first firstCleanA) (switchCleanB first firstCleanB)
           workChild (switchWork first firstWork)
-      have op := physical_preserves .dec leaf one pa pb ra rb protectedWires sf ho leafo roles.2
+      have op := physical_preserves .dec leaf one pa pb ra rb dynamicWires protectedWires sf ho leafo roles.2 dynamics.2 hsubset
         (switchCleanA first firstCleanA) (switchCleanB first firstCleanB)
       change ∀ w ∈ protectedWires, o w = sf w at op
       have oa : Clean ra o := by
@@ -333,7 +339,7 @@ private theorem logical_outside
         rw [switchB, op pb hpb, op cb hcbm, sb]
         change ((activeB && route ib) ^^ switch first cb) = _
         rw [switchCB, firstCB, toggleOne]
-      have zout := ihz (switch o) lo _ _ leafz logz roles.1 (switchOutside o lo oout) za zb
+      have zout := ihz (switch o) lo _ _ leafz logz roles.1 dynamics.1 (switchOutside o lo oout) za zb
         (routeZero _ (switchRoute o oor)) (switchCleanA o oa) (switchCleanB o ob)
         workChild (switchWork o ow)
       change AgreesOutside protectedWires
@@ -346,20 +352,24 @@ private theorem logical_outside
 /-- The actual synchronized decoder traversal equals its source-ordered Boolean-pulse
 execution. Physical leaves preserve the declared decoder interface and simulate logical
 leaves outside that interface; logical leaves preserve it too. Both clean path stacks
-and the possibly shared root controls are restored in the complete-state equality. -/
+and the possibly shared root controls are restored in the complete-state equality.
+Dynamic leaf controls come from `dynamicWires`; the larger preserved interface may
+also contain clean leaf scratch that cannot serve as a decoder control. -/
 theorem run_dualUnaryActionUnitary_as_runLogicalTree
     (order : UnaryOrder) (leaf : Nat → Wire → Wire → Circuit)
     (logicalLeaf : Nat → Bool → Bool → BasisState → BasisState)
-    (tree : DualUnaryActionTree) (ca cb : Wire) (pa pb protectedWires cleanWires : List Wire)
+    (tree : DualUnaryActionTree) (ca cb : Wire) (pa pb dynamicWires protectedWires cleanWires : List Wire)
     (state : BasisState) (hlayout : tree.Layout ca cb pa pb)
-    (hleaf : DualUnaryLeafPreservesOn leaf tree.labels protectedWires protectedWires)
-    (hlogical : ∀ label ∈ tree.labels, ∀ a b, a ∈ protectedWires → b ∈ protectedWires →
+    (hleaf : DualUnaryLeafPreservesOn leaf tree.labels dynamicWires protectedWires)
+    (hlogical : ∀ label ∈ tree.labels, ∀ a b, a ∈ dynamicWires → b ∈ dynamicWires →
       ∀ s t, Clean cleanWires s → AgreesOutside protectedWires s t →
         AgreesOutside protectedWires (run (leaf label a b) s)
           (logicalLeaf label (s a) (s b) t))
     (hlogicalPreserves : ∀ label ∈ tree.labels, ∀ a b state wire, wire ∈ protectedWires →
       logicalLeaf label a b state wire = state wire)
     (hroles : ∀ w ∈ tree.decoderWires ca cb pa pb, w ∈ protectedWires)
+    (hdynamic : ∀ w ∈ tree.decoderWires ca cb pa pb, w ∈ dynamicWires)
+    (hsubset : ∀ w ∈ dynamicWires, w ∈ protectedWires)
     (hcleanA : Clean pa state) (hcleanB : Clean pb state)
     (hworkRoles : ∀ w ∈ cleanWires, w ∈ protectedWires)
     (hworkPaths : ∀ w ∈ cleanWires, w ∉ pa ++ pb)
@@ -367,13 +377,14 @@ theorem run_dualUnaryActionUnitary_as_runLogicalTree
     run (dualUnaryActionUnitary order leaf tree ca cb pa pb) state =
       tree.runLogicalTree order logicalLeaf (state ca) (state cb) state state := by
   have hr := run_dualUnaryActionUnitary_as_runLeafState_on order leaf
-    (fun label a b s => run (leaf label a b) s) tree ca cb pa pb protectedWires state hlayout
-    (by intro label hl a b ha hb state; rfl) hleaf hroles hcleanA hcleanB
-  have ho := logical_outside order leaf logicalLeaf tree ca cb pa pb protectedWires cleanWires
-    state state state (state ca) (state cb) hlayout hleaf hlogical hroles
+    (fun label a b s => run (leaf label a b) s) tree ca cb pa pb dynamicWires state hlayout
+    (by intro label hl a b ha hb state; rfl)
+    (by intro label hl a b ha hb state w hw; exact hleaf label hl a b ha hb state w (hsubset w hw)) hdynamic hcleanA hcleanB
+  have ho := logical_outside order leaf logicalLeaf tree ca cb pa pb dynamicWires protectedWires cleanWires
+    state state state (state ca) (state cb) hlayout hleaf hlogical hroles hdynamic hsubset
     (by intro w hw; rfl) rfl rfl (by intro w hw; rfl) hcleanA hcleanB hworkRoles hworkPaths hworkClean
-  have hp := dualUnaryActionUnitary_preservesOn order leaf tree ca cb pa pb protectedWires
-    protectedWires state hlayout hleaf hroles hroles hcleanA hcleanB
+  have hp := dualUnaryActionUnitary_preservesOn order leaf tree ca cb pa pb dynamicWires
+    protectedWires state hlayout hleaf hdynamic hroles hcleanA hcleanB
   have hl := logical_preserves order logicalLeaf tree (state ca) (state cb) state state
     protectedWires hlogicalPreserves
   funext wire

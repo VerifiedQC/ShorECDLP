@@ -4129,7 +4129,7 @@ def IntervalTraversalLayout
         (tree.decoderWires rightRoot leftRoot rightPaths leftPaths)
         rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
 
-private theorem intervalTraversalLayout_decoderScratch
+theorem intervalTraversalLayout_decoderScratch
     (tree : DualUnaryActionTree) (rightRoot leftRoot : Wire)
     (rightPaths leftPaths : List Wire)
     (rightTop leftTop accumulator carry scratch : Wire)
@@ -4148,7 +4148,7 @@ private theorem intervalTraversalLayout_decoderScratch
   subst decoder
   exact (houtside hdecoder (by simp)).elim
 
-private theorem intervalLeafLayout_of_decoder
+theorem intervalLeafLayout_of_decoderRoles
     (protectedWires : List Wire)
     (rightControl leftControl rightTop leftTop accumulator target addend carry scratch : Wire)
     (hroles : [rightTop, leftTop, accumulator, target, addend, carry, scratch].Nodup)
@@ -4187,7 +4187,7 @@ theorem intervalFirstLeaf_preservesScratch_of_decoder
       state scratch := by
   exact intervalFirstLeaf_preservesScratch mode topSpecial rightTop leftTop accumulator
     target addend carry scratch label rightControl leftControl state
-    (intervalLeafLayout_of_decoder protectedWires rightControl leftControl
+    (intervalLeafLayout_of_decoderRoles protectedWires rightControl leftControl
       rightTop leftTop accumulator target addend carry scratch hroles houtside
       hright hleft)
 
@@ -4207,7 +4207,7 @@ theorem intervalSecondLeaf_preservesScratch_of_decoder
       state scratch := by
   exact intervalSecondLeaf_preservesScratch mode topSpecial rightTop leftTop accumulator
     target addend carry scratch label rightControl leftControl state
-    (intervalLeafLayout_of_decoder protectedWires rightControl leftControl
+    (intervalLeafLayout_of_decoderRoles protectedWires rightControl leftControl
       rightTop leftTop accumulator target addend carry scratch hroles houtside
       hright hleft)
 
@@ -4229,7 +4229,7 @@ private theorem intervalFirstLeaf_dualWellFormed
   intro label hlabel rightControl hright leftControl hleft
   exact intervalFirstLeaf_wellFormed mode topSpecial rightTop leftTop accumulator
     (targetAt label) (addendAt label) carry scratch label rightControl leftControl
-      (intervalLeafLayout_of_decoder protectedWires rightControl leftControl
+      (intervalLeafLayout_of_decoderRoles protectedWires rightControl leftControl
         rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
         (hfamily label hlabel).1 (hfamily label hlabel).2 hright hleft)
 
@@ -4251,7 +4251,7 @@ private theorem intervalSecondLeaf_dualWellFormed
   intro label hlabel rightControl hright leftControl hleft
   exact intervalSecondLeaf_wellFormed mode topSpecial rightTop leftTop accumulator
     (targetAt label) (addendAt label) carry scratch label rightControl leftControl
-      (intervalLeafLayout_of_decoder protectedWires rightControl leftControl
+      (intervalLeafLayout_of_decoderRoles protectedWires rightControl leftControl
         rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
         (hfamily label hlabel).1 (hfamily label hlabel).2 hright hleft)
 
@@ -4274,7 +4274,7 @@ private theorem intervalFirstLeaf_dualAdaptiveWellFormed
   exact intervalFirstLeafAdaptive_wellFormed mode topSpecial rightTop leftTop
     accumulator (targetAt label) (addendAt label) carry scratch label
     rightControl leftControl
-    (intervalLeafLayout_of_decoder protectedWires rightControl leftControl
+    (intervalLeafLayout_of_decoderRoles protectedWires rightControl leftControl
       rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
       (hfamily label hlabel).1 (hfamily label hlabel).2 hright hleft)
 
@@ -4297,7 +4297,7 @@ private theorem intervalSecondLeaf_dualAdaptiveWellFormed
   exact intervalSecondLeafAdaptive_wellFormed mode topSpecial rightTop leftTop
     accumulator (targetAt label) (addendAt label) carry scratch label
     rightControl leftControl
-    (intervalLeafLayout_of_decoder protectedWires rightControl leftControl
+    (intervalLeafLayout_of_decoderRoles protectedWires rightControl leftControl
       rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
       (hfamily label hlabel).1 (hfamily label hlabel).2 hright hleft)
 
@@ -4341,7 +4341,7 @@ private theorem intervalSecondLeafFamily_dualPreserves
     accumulator (targetAt label) (addendAt label) carry scratch
     label rightControl leftControl state wire (houtside hwire)
 
-private theorem intervalFirstLeafFamily_dualPreservesWithScratch
+theorem intervalFirstLeafFamily_dualPreservesWithScratch
     (mode : RippleMode) (topSpecial : Bool)
     (rightTop leftTop accumulator carry scratch : Wire)
     (targetAt addendAt : Nat → Wire) (labels : List Nat)
@@ -4370,7 +4370,7 @@ private theorem intervalFirstLeafFamily_dualPreservesWithScratch
       rightControl leftControl decoderWires state (hfamily label hlabel).1
       (hfamily label hlabel).2 hright hleft
 
-private theorem intervalSecondLeafFamily_dualPreservesWithScratch
+theorem intervalSecondLeafFamily_dualPreservesWithScratch
     (mode : RippleMode) (topSpecial : Bool)
     (rightTop leftTop accumulator carry scratch : Wire)
     (targetAt addendAt : Nat → Wire) (labels : List Nat)
@@ -4605,7 +4605,7 @@ theorem run_intervalFirstTraversal_state
     · simp only [intervalFirstLeafTotalState, hclean, if_pos]
       exact run_intervalFirstLeaf mode topSpecial rightTop leftTop accumulator
         (targetAt label) (addendAt label) carry scratch label rightControl leftControl
-        next (intervalLeafLayout_of_decoder decoderSupport rightControl leftControl
+        next (intervalLeafLayout_of_decoderRoles decoderSupport rightControl leftControl
           rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
           (hlayout.2 label hlabel).1 (hlayout.2 label hlabel).2 hright hleft) hclean
     · simp_all [intervalFirstLeafTotalState]
@@ -4645,7 +4645,7 @@ theorem run_intervalSecondTraversal_state
     · simp only [intervalSecondLeafTotalState, hclean, if_pos]
       exact run_intervalSecondLeaf mode topSpecial rightTop leftTop accumulator
         (targetAt label) (addendAt label) carry scratch label rightControl leftControl
-        next (intervalLeafLayout_of_decoder decoderSupport rightControl leftControl
+        next (intervalLeafLayout_of_decoderRoles decoderSupport rightControl leftControl
           rightTop leftTop accumulator (targetAt label) (addendAt label) carry scratch
           (hlayout.2 label hlabel).1 (hlayout.2 label hlabel).2 hright hleft) hclean
     · simp_all [intervalSecondLeafTotalState]
@@ -4899,7 +4899,7 @@ theorem intervalFirstTraversal_coherent
       exact intervalFirstLeafAdaptive_coherent mode topSpecial rightTop leftTop
         accumulator (targetAt label) (addendAt label) carry scratch label
         rightControl leftControl
-        (intervalLeafLayout_of_decoder
+        (intervalLeafLayout_of_decoderRoles
           (tree.decoderWires rightRoot leftRoot rightPaths leftPaths)
           rightControl leftControl rightTop leftTop accumulator (targetAt label)
           (addendAt label) carry scratch (hfamily label hlabel).1
@@ -4950,7 +4950,7 @@ theorem intervalSecondTraversal_coherent
       exact intervalSecondLeafAdaptive_coherent mode topSpecial rightTop leftTop
         accumulator (targetAt label) (addendAt label) carry scratch label
         rightControl leftControl
-        (intervalLeafLayout_of_decoder
+        (intervalLeafLayout_of_decoderRoles
           (tree.decoderWires rightRoot leftRoot rightPaths leftPaths)
           rightControl leftControl rightTop leftTop accumulator (targetAt label)
           (addendAt label) carry scratch (hfamily label hlabel).1
