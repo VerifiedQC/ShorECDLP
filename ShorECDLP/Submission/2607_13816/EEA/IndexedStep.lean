@@ -423,13 +423,18 @@ private def coefficientSubControl (registers : IndexedStepRegisters) : Circuit :
 private def coefficientAddControl (registers : IndexedStepRegisters) : Circuit :=
   computeControl ([registers.phase1]) 1 registers.control registers.blockScratch
 
+/-- The source subtraction-control sandwich, shared by preparation and cleanup. -/
+def coefficientSubtractControl (r : IndexedStepRegisters) : Circuit :=
+  coefficientTemporaryControl r ++ coefficientSubControl r ++ coefficientTemporaryControl r
+
+/-- Block E up to the prepared coefficient boundary, before either arithmetic scan. -/
+def blockEPrepareForward (r : IndexedStepRegisters) (n : Nat) : Circuit :=
+  coefficientSubtractControl r ++ prepareLatestPaperTBoundary r.tBoundary n
+
 private def blockEForward
     (registers : IndexedStepRegisters) (n : Nat) (window : ActiveWindow) : Circuit :=
   circuit! {
-    coefficientTemporaryControl registers;
-    coefficientSubControl registers;
-    coefficientTemporaryControl registers;
-    prepareLatestPaperTBoundary registers.tBoundary n;
+    blockEPrepareForward registers n;
     coefficientPrefixUnitary (registers.coefficient window) window.start window.stop
       .sub false .work2;
     coefficientTemporaryControl registers;
@@ -5923,7 +5928,7 @@ private theorem blockEForward_correct
   have hrestored := run_tBoundaryRestoreState registers n T addCleared hlayout
     haddClearedBlock
   have hrun : run (blockEForward registers n window) state = restored := by
-    simp only [blockEForward, Classical.run_append]
+    simp only [blockEForward, blockEPrepareForward, coefficientSubtractControl, Classical.run_append]
     rw [htemporary1Run, hsubEnabledRun, htemporaryCleared1Run,
       hprepared.1, hsubtracted.1, htemporary2Run, hsubClearedRun,
       htemporaryCleared2Run, hsignChangedRun, haddEnabledRun,
@@ -7376,7 +7381,7 @@ private theorem blockEForward_wellFormed
     (hwindow : window = (certifiedActiveWindows n T).coefficient) :
     CircuitWellFormed (blockEForward registers n window) := by
   subst window
-  simp only [blockEForward, circuitWellFormed_append]
+  simp only [blockEForward, blockEPrepareForward, coefficientSubtractControl, circuitWellFormed_append]
   refine ⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨⟨?_, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩,
     ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩
   · exact coefficientTemporaryControl_wellFormed registers n T hlayout
@@ -7961,7 +7966,7 @@ private theorem blockEAdaptive_coherent
         exact coefficientPrefix_preservesBlockScratch registers n T window .sub false
           _ hlayout hwindow
           (blockEPrefix_cleanBlockScratch registers n T state hlayout hready))
-  simpa [blockEAdaptive, blockEForward, firstCircuit, tailCircuit,
+  simpa [blockEAdaptive, blockEForward, blockEPrepareForward, coefficientSubtractControl, firstCircuit, tailCircuit,
     blockEPrefix, blockEMiddle, blockESuffix, subCircuit,
     List.append_assoc] using hall
 
@@ -8309,7 +8314,7 @@ private theorem blockEInverse_after_forward
                       (run addControlCircuit
                         (run prepareCircuit
                           (run restoreCircuit beforeRestore))))))))) := by
-    simp [blockEInverse, blockEForward, wrapper, coefficientSubWrapper,
+    simp [blockEInverse, blockEForward, blockEPrepareForward, coefficientSubtractControl, wrapper, coefficientSubWrapper,
       prepareCircuit, restoreCircuit, subForward, subInverse, signCircuit,
       addControlCircuit, addForward, addInverse, beforeRestore, afterAdd,
       afterAddControl, afterSign, afterW2, afterSub, afterPrepare, afterW1,
@@ -9320,7 +9325,7 @@ theorem indexedStepUnitary_HPFree
     (registers : IndexedStepRegisters) (n T : Nat) :
     HPFree (indexedStepUnitary registers n T) := by
   simp [indexedStepUnitary, blockAForward, blockBForward, blockB1Forward,
-    blockB2, blockB3Forward, blockCForward, blockDForward, blockD1Forward, blockD2Forward, blockD3Forward, blockEForward,
+    blockB2, blockB3Forward, blockCForward, blockDForward, blockD1Forward, blockD2Forward, blockD3Forward, blockEForward, blockEPrepareForward, coefficientSubtractControl,
     blockFForward, blockGForward, toggleTerminal,
     remainderSubControl, remainderPhase2Control, remainderRestoreControl,
     toggleRControl, phase2LengthControl, phase3LengthControl,
@@ -9417,7 +9422,7 @@ private theorem indexedStepAdaptive_EFGH_coherent
     hlayout rfl
   have htail := indexedStepAdaptive_FGH_coherent registers n T hlayout
   have hall := indexedStep_coherent_seq_circuits hcoefficient htail
-    (by simp [blockEForward, coefficientTemporaryControl,
+    (by simp [blockEForward, blockEPrepareForward, coefficientSubtractControl, coefficientTemporaryControl,
       coefficientSubControl, coefficientAddControl])
     (fun state hready ↦
       (blockEForward_correct registers n T windows.coefficient state
@@ -12662,5 +12667,100 @@ theorem run_blockB2_sign (r : IndexedStepRegisters) (n index : Nat)
   · rw [hf.1]
     simp only [blockB2State,rControlState_preserves _ _ _ _ _ _ hn]
     simp [xorWireState,rControlState,upd,hn,hcs.symm,hc0,hp]
+
+/-- The subtraction control toggles by the source phase/sign predicate, returning
+its temporary flag and block scratch unchanged. The initial control may be arbitrary. -/
+theorem run_coefficientSubtractControl (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n index)
+    (hc : Clean r.blockScratch s) (ht : s r.terminal = false) :
+    run (coefficientSubtractControl r) s =
+      s[r.control ↦ (s r.control ^^ (s r.phase1 && !(!s r.phase2 && s r.sign)))] ∧
+      Clean r.blockScratch (run (coefficientSubtractControl r) s) := by
+  let a := matchXorState [r.phase2,r.sign] 2 r.terminal s
+  have ha := run_computeControl_state [r.phase2,r.sign] 2 r.terminal r.blockScratch s h.coefficientTemporary hc
+  let b := matchXorState [r.phase1,r.terminal] 1 r.control a
+  have hb := run_computeControl_state [r.phase1,r.terminal] 1 r.control r.blockScratch a h.coefficientSub (by
+    simpa only [ha.1] using ha.2)
+  let c := matchXorState [r.phase2,r.sign] 2 r.terminal b
+  have hc' := run_computeControl_state [r.phase2,r.sign] 2 r.terminal r.blockScratch b h.coefficientTemporary (by
+    simpa only [hb.1] using hb.2)
+  have hr : run (coefficientSubtractControl r) s = c := by
+    simp only [coefficientSubtractControl,coefficientTemporaryControl,coefficientSubControl,Classical.run_append]
+    rw [ha.1,hb.1,hc'.1]
+  refine ⟨?_,by simpa only [hr,hc'.1] using hc'.2⟩
+  have hta : r.terminal ∈ r.aux := h.sourceScratch_mem_aux (by rw [← h.scratch_view]; simp)
+  have hn (w : Wire) (hw : w ∈ [r.phase1,r.phase2,r.sign]) :
+      w ≠ r.control ∧ w ≠ r.terminal := by
+    have hp : w ∈ indexedStepPayload r := by
+      simp only [List.mem_cons,List.not_mem_nil,or_false] at hw
+      rcases hw with rfl | rfl | rfl <;> simp [indexedStepPayload]
+    exact ⟨Ne.symm (h.aux_not_payload h.control_mem_aux hp),Ne.symm (h.aux_not_payload hta hp)⟩
+  have h1 := hn r.phase1 (by simp)
+  have h2 := hn r.phase2 (by simp)
+  have hs := hn r.sign (by simp)
+  have hb2 : Nat.testBit 2 1 = true := by decide
+  have hb1 : Nat.testBit 1 1 = false := by decide
+  rw [hr]
+  funext w
+  by_cases hw : w = r.terminal
+  · subst w
+    simp [c,b,a,matchXorState,upd,h.control_ne_terminal,Ne.symm h.control_ne_terminal,
+      h1.2,h2.1,h2.2,hs.1,hs.2,ht,registerMatches,registerMatchesFrom,hb2,hb1]
+  · by_cases hwc : w = r.control
+    · subst w
+      simp [c,b,a,matchXorState,upd,h.control_ne_terminal,Ne.symm h.control_ne_terminal,
+        h1.2,h2.1,h2.2,hs.1,hs.2,ht,registerMatches,registerMatchesFrom,hb2,hb1]
+    · simp [c,b,a,matchXorState,upd,hw,hwc]
+
+/-- Block E's actual preparation computes the subtraction enable and the prepared
+boundary words, preserving everything outside the control and two length words. -/
+theorem blockEPrepareForward_contract (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n index)
+    (hc : Clean r.blockScratch s) (ht : s r.terminal = false) :
+    let final := run (blockEPrepareForward r n) s
+    (wireValues r.lengthT final,wireValues r.lengthRPrime final) =
+      prepareLatestPaperTBoundaryWords (s r.phase2) (wireValues r.lengthT s)
+        (wireValues r.lengthRPrime s) (wireValues r.tBoundary.lengthSLow s) n ∧
+      final r.control = (s r.control ^^ (s r.phase1 && !(!s r.phase2 && s r.sign))) ∧
+      AgreesOutside (r.control :: r.lengthT ++ r.lengthRPrime) final s ∧
+      Clean r.blockScratch final := by
+  let enabled := s[r.control ↦ (s r.control ^^ (s r.phase1 && !(!s r.phase2 && s r.sign)))]
+  have he := run_coefficientSubtractControl r n index s h hc ht
+  have hclean : Clean r.blockScratch enabled := by simpa only [he.1] using he.2
+  have hb := prepareLatestPaperTBoundary_correct r.tBoundary n enabled h.tBoundary
+    (fun w hw => hclean w (h.tBoundary_usedScratch_sub_block w hw))
+  have hr : run (blockEPrepareForward r n) s = run (prepareLatestPaperTBoundary r.tBoundary n) enabled := by
+    simp only [blockEPrepareForward,Classical.run_append,he.1,enabled]
+  have hwords (ws : List Wire) (hw : ∀ w ∈ ws, w ∈ indexedStepPayload r) :
+      wireValues ws enabled = wireValues ws s := by
+    apply List.map_congr_left
+    intro w hmem
+    simp [enabled,upd,Ne.symm (h.aux_not_payload h.control_mem_aux (hw w hmem))]
+  have htword := hwords r.lengthT (by intro w hw; simp [indexedStepPayload,hw])
+  have hrword := hwords r.lengthRPrime (by intro w hw; simp [indexedStepPayload,hw])
+  have hsword := hwords r.tBoundary.lengthSLow (by
+    intro w hw
+    have hs : w ∈ r.lengthS := List.mem_of_mem_take hw
+    simp [indexedStepPayload,hs])
+  have hp2 : enabled r.phase2 = s r.phase2 := by
+    have hn : r.phase2 ≠ r.control := Ne.symm (h.aux_not_payload h.control_mem_aux (show r.phase2 ∈ indexedStepPayload r by simp [indexedStepPayload]))
+    simp [enabled,upd,hn]
+  have hct : r.control ∉ r.lengthT := by
+    intro hw; exact (h.aux_not_payload h.control_mem_aux (by simp [indexedStepPayload,hw])) rfl
+  have hcr : r.control ∉ r.lengthRPrime := by
+    intro hw; exact (h.aux_not_payload h.control_mem_aux (by simp [indexedStepPayload,hw])) rfl
+  dsimp only
+  rw [hr]
+  refine ⟨?_,?_,?_,(run_tBoundaryPrepareState r n index enabled h hclean).2⟩
+  · have hbwords := hb.1
+    change (wireValues r.lengthT _,wireValues r.lengthRPrime _) =
+      prepareLatestPaperTBoundaryWords (enabled r.phase2) (wireValues r.lengthT enabled)
+        (wireValues r.lengthRPrime enabled) (wireValues r.tBoundary.lengthSLow enabled) n at hbwords
+    simpa only [htword,hrword,hsword,hp2] using hbwords
+  · exact (hb.2.2 r.control hct hcr).trans (by simp [enabled])
+  · intro w hw
+    have hn : w ≠ r.control ∧ w ∉ r.lengthT ∧ w ∉ r.lengthRPrime := by
+      simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using hw
+    exact (hb.2.2 w hn.2.1 hn.2.2).trans (by simp [enabled,upd,hn.1])
 
 end ShorECDLP.Paper2607_13816
