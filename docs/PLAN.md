@@ -1708,3 +1708,12 @@ with canonical input bank words and derives conditional subtraction of
 `rPrime * 2^shift` from the logical remainder. Encoding, nonterminal phase,
 initial sign, endpoint, and packing fit obligations remain explicit. Establishing
 these obligations for reachable microsteps remains outstanding.
+
+### Canonical first-bank preservation through Block B
+
+`blockBForward_packedWork1` reconstructs the complete canonical output work1
+word with unchanged coefficient, separator, and quotient fields and the updated
+logical remainder. It combines the actual field frame with decoded arithmetic
+and equal-width encoding uniqueness; output fit is derived from the word length.
+Initial packing and endpoint assumptions remain explicit, so this closes the
+first-bank preservation step without claiming a reachable-state invariant.
