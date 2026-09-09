@@ -1648,3 +1648,13 @@ the active nonterminal phase, sign is XORed with the comparison of the aligned
 work1/work2 field values, and aux is clean afterward. Logical endpoint preparation
 is shared with the existing numeric theorem. The combined conditional remainder
 formula still requires carrying the preserved metadata through the three blocks.
+
+### Complete interval and Block B frame
+
+`intervalAddSubUnitary_preservesOutsideTarget` lifts the existing interval-body
+frame through endpoint preparation and restoration: only the selected work bank
+and sign may change. It requires a valid physical layout and clean scratch, but
+no numeric endpoint bounds. `blockB1Forward_frame` and `blockBForward_frame`
+propagate this to the actual source blocks, restoring the addend and all metadata.
+This supplies the preserved encoding inputs needed for the combined remainder
+formula; reachable-state bounds remain outstanding.

@@ -203,4 +203,71 @@ theorem blockB1Forward_logicalBorrow (r : IndexedStepRegisters) (n index ellT el
   · rw [hf.1,hout]
     exact hb
   · exact hf.2.2
+private theorem controlledInterval_frame (r : IndexedStepRegisters) (n index : Nat)
+    (mode : RippleMode) (signUpdate value : Bool) (state : BasisState)
+    (h : IndexedStepLayout r n index) (hc : Clean r.aux state)
+    (hr : IntervalReady (r.remainder (certifiedActiveWindows n index).remainder)
+      state[r.control ↦ value]) :
+    let w := (certifiedActiveWindows n index).remainder
+    AgreesOutside (r.sign :: r.work1)
+      (run (intervalAddSubUnitary (r.remainder w) n w.start w.stop mode signUpdate .work1)
+        state[r.control ↦ value])[r.control ↦ false] state := by
+  let w := (certifiedActiveWindows n index).remainder
+  have hi := intervalAddSubUnitary_preservesOutsideTarget (r.remainder w) n w.start w.stop mode signUpdate .work1
+    state[r.control ↦ value] h.remainder hr
+  have hcontrol : state r.control = false := by
+    apply hc
+    change r.aux.getD 0 0 ∈ r.aux
+    rw [List.getD_eq_getElem r.aux 0 (by rw [h.aux_length]; decide)]
+    exact List.getElem_mem _
+  dsimp only
+  intro wire hn
+  by_cases he : wire = r.control
+  · subst wire
+    simp [upd,hcontrol]
+  · have hv : wire ∉ (r.remainder w).sign :: (r.remainder w).work1 := by
+      change wire ∉ r.sign :: IndexedStepRegisters.windowSlice r.work1 w
+      intro hw
+      rcases List.mem_cons.mp hw with hw | hw
+      · exact hn (List.mem_cons.mpr (Or.inl hw))
+      · exact hn (List.mem_cons.mpr (Or.inr (List.mem_of_mem_drop (List.mem_of_mem_take hw))))
+    have hb := hi wire (by simpa only [if_pos rfl] using hv)
+    simpa only [upd,he,if_false] using hb
+
+/-- Actual B1 preserves the addend, all metadata, and every other wire outside
+its target work bank and sign. -/
+theorem blockB1Forward_frame (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state) :
+    AgreesOutside (r.sign :: r.work1)
+      (run (blockB1Forward r n (certifiedActiveWindows n index).remainder) state) state := by
+  have hb := run_blockB1Forward_interval r n index state h hc
+  rw [hb.1]
+  exact controlledInterval_frame r n index .sub true _ state h hc hb.2.1
+
+private theorem blockB3Forward_frame (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state) :
+    AgreesOutside (r.sign :: r.work1)
+      (run (blockB3Forward r n (certifiedActiveWindows n index).remainder) state) state := by
+  have hb := run_blockB3Forward_interval r n index state h hc
+  rw [hb.1]
+  exact controlledInterval_frame r n index .add false _ state h hc hb.2.1
+
+/-- The full source Block B restores all metadata and the addend work bank;
+only work1 and sign can change. -/
+theorem blockBForward_frame (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state) :
+    AgreesOutside (r.sign :: r.work1)
+      (run (blockBForward r n (certifiedActiveWindows n index).remainder) state) state := by
+  let w := (certifiedActiveWindows n index).remainder
+  let first := run (blockB1Forward r n w) state
+  let second := run (blockB2 r) first
+  have h1 := run_blockB1Forward_interval r n index state h hc
+  have h2 := run_blockB2_sign r n index first h h1.2.2
+  have hf := blockB1Forward_frame r n index state h hc
+  have h3 := blockB3Forward_frame r n index second h h2.2
+  intro wire hn
+  have hsign : wire ≠ r.sign := fun he => hn (List.mem_cons.mpr (Or.inl he))
+  have hs : second wire = first wire := by simpa only [upd,hsign,if_false] using congrFun h2.1 wire
+  simpa only [blockBForward,Classical.run_append] using (h3 wire hn).trans (hs.trans (hf wire hn))
+
 end ShorECDLP.Paper2607_13816
