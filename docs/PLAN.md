@@ -1546,3 +1546,14 @@ global wire separation. `intervalInclusivePair_fusion` gives the fused word
 and restoration outside the target list plus accumulator. The complete source
 body still needs its separate top operations and intervening sign update
 combined with these folds before claiming full interval arithmetic.
+
+### Complete physical interval body word semantics
+
+`run_intervalAddSubBody_words` combines the actual separate top operations,
+source main scans and intervening sign update. Its target word equals the
+masked ripple arithmetic result; the addend and incoming carry are restored.
+The optional sign update XORs the first pass's outgoing carry/borrow.
+The theorem derives data-bank separation from `IntervalLayout` and assumes
+clean top scratch, a zero initial accumulator, and ordered bounded numeric
+endpoints. Endpoint preparation/restoration, reachable metadata conditions and
+the complete packed EEA arithmetic connection remain separate boundaries.

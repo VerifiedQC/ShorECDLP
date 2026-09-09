@@ -347,7 +347,7 @@ private theorem intervalLengthS_sub_two_le_equalityScratch
   exact le_trans (Nat.sub_le _ _) (le_trans (Nat.le_max_right _ _)
     (Nat.le_max_right _ _))
 
-private theorem intervalCarry_mem_scratch
+theorem intervalCarry_mem_scratch
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     registers.carry k K ∈ registers.scratch := by
@@ -418,7 +418,7 @@ private theorem intervalAddendAt_mem_allWires
       rw [IntervalRegisters.allWires]
       exact List.mem_append_right _ (List.mem_append_left _ hmem)
 
-private theorem intervalWork1_nodup
+theorem intervalWork1_nodup
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     registers.work1.Nodup := by
@@ -427,7 +427,7 @@ private theorem intervalWork1_nodup
   exact (List.nodup_append.mp
     (List.nodup_append.mp hphysical).2.1).1
 
-private theorem intervalWork2_nodup
+theorem intervalWork2_nodup
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     registers.work2.Nodup := by
@@ -437,7 +437,7 @@ private theorem intervalWork2_nodup
   have hafterWork1 := (List.nodup_append.mp hafterControls).2.1
   exact (List.nodup_append.mp hafterWork1).1
 
-private theorem intervalWork1_disjoint_work2
+theorem intervalWork1_disjoint_work2
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     List.Disjoint registers.work1 registers.work2 := by
@@ -683,7 +683,7 @@ private theorem intervalScratch_not_mem_lengthQ
   intro hq
   exact hcross wire hq wire (by simp [hscratch]) rfl
 
-private theorem intervalScratch_not_mem_work1
+theorem intervalScratch_not_mem_work1
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target)
     {wire : Wire} (hscratch : wire ∈ registers.scratch) :
@@ -695,7 +695,7 @@ private theorem intervalScratch_not_mem_work1
   intro hwork
   exact hcross wire hwork wire (by simp [hscratch]) rfl
 
-private theorem intervalScratch_not_mem_work2
+theorem intervalScratch_not_mem_work2
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target)
     {wire : Wire} (hscratch : wire ∈ registers.scratch) :
@@ -724,7 +724,7 @@ private theorem intervalScratch_not_mem_lengthS
   intro hs
   exact hcross wire hs wire hscratch rfl
 
-private theorem intervalScratch_ne_sign
+theorem intervalScratch_ne_sign
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target)
     {wire : Wire} (hscratch : wire ∈ registers.scratch) :
@@ -792,7 +792,7 @@ private theorem intervalLeftTop_mem_allWires
     exact List.mem_append_right _ (List.mem_append_right _
       (List.mem_append_right _ (List.mem_append_left _ hmem)))
 
-private theorem intervalTargetAt_ne_sign
+theorem intervalTargetAt_ne_sign
     (registers : IntervalRegisters) (k K label : Nat)
     (target : IntervalTarget) (hlayout : IntervalLayout registers k K target)
     (hlabel : label < intervalLaneCount k K) :
@@ -811,7 +811,7 @@ private theorem intervalTargetAt_ne_sign
       apply intervalNonSignTail_ne_sign registers k K .work2 hlayout
       exact List.mem_append_right registers.work1 (List.mem_append_left _ hmem)
 
-private theorem intervalAddendAt_ne_sign
+theorem intervalAddendAt_ne_sign
     (registers : IntervalRegisters) (k K label : Nat)
     (target : IntervalTarget) (hlayout : IntervalLayout registers k K target)
     (hlabel : label < intervalLaneCount k K) :
@@ -1097,7 +1097,7 @@ private theorem intervalMainTarget_not_mem_topSpecialSupport
       List.mem_of_mem_take heq
     simp [intervalFixedWires, hscratch]
 
-private theorem intervalEqualityScratch_outsideLeafRoles
+theorem intervalEqualityScratch_outsideLeafRoles
     (registers : IntervalRegisters) (k K label : Nat)
     (target : IntervalTarget) (hlayout : IntervalLayout registers k K target)
     (hspecial : intervalHasTopSpecial k K = true)
