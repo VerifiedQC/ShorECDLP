@@ -11914,4 +11914,84 @@ theorem indexedStepUnitary_active_correct
     hboundary4 hboundary5 state hlayout hready hencoded hroutes hr
     (he _ hlayout.shiftEpoch_mem_aux) hs
 
+private theorem active_H_epoch (r : IndexedStepRegisters) (n T b4 b5 : Nat)
+    (state : BasisState) (hl : IndexedStepLayout r n T) :
+    blockHForwardState r n T b4 b5 state r.shiftEpoch = state r.shiftEpoch := by
+  have hq : r.shiftEpoch ≠ r.sourceScratch.getD 0 0 := by
+    intro h
+    apply hl.shiftEpoch_not_sourceScratch
+    rw [h, ← hl.sourceScratch_view2]
+    simp
+  have hs : r.shiftEpoch ≠ r.sourceScratch.getD 1 0 := by
+    intro h
+    apply hl.shiftEpoch_not_sourceScratch
+    rw [h, ← hl.sourceScratch_view2]
+    simp
+  have hc := hl.control_ne_shiftEpoch.symm
+  have hi : r.shiftEpoch ≠ r.iter := hl.aux_not_payload hl.shiftEpoch_mem_aux
+    (by simp [indexedStepPayload])
+  have hm := hl.aux_not_endIterationMutable hl.shiftEpoch_mem_aux
+  have fq (s : BasisState) := andListXorState_preserves r.lengthQ
+    (r.sourceScratch.getD 0 0) s hq
+  have fs (s : BasisState) := andListXorState_preserves (r.lengthS ++ [r.shiftEpoch])
+    (r.sourceScratch.getD 1 0) s hs
+  have fc (s : BasisState) := andXorWireState_preserves
+    (r.sourceScratch.getD 0 0) (r.sourceScratch.getD 1 0) r.control s hc
+  have fi (s : BasisState) := xorWireState_preserves r.control r.iter s hi
+  have fm (s : BasisState) := endIterationForwardState_preservesOutside r n T b4 b5 s hm
+  by_cases hT : T % 4 = 0
+  · simp only [blockHForwardState, hT, ↓reduceIte, blockHEndInputState,
+      blockHZeroSState, blockHBeforeSState, blockHZeroQState, fq, fs, fc, fi, fm,
+      upd_same, Bool.not_not]
+  · simp only [blockHForwardState, hT, ↓reduceIte]
+
+/-- A clean nonterminal input returns the entire auxiliary bank clear even when
+the end-iteration block runs. This does not assert the next terminal encoding. -/
+theorem indexedStepUnitary_active_clean
+    (r : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
+      boundary4 ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ boundary5 ∧
+      boundary5 ≤ (endIterationWindowsAt n T).K5Decode n)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hclean : Clean r.aux state) (hrp : wireAnd r.lengthRPrime state = false)
+    (hroutes : T % 4 = 0 → indexedStepEndRoutes r n T state = (boundary4, boundary5)) :
+    Clean r.aux (run (indexedStepUnitary r n T) state) := by
+  have hready : IndexedStepReady r state := by
+    intro wire hw
+    apply hclean wire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst wire; exact hlayout.control_mem_aux
+    · exact hlayout.sourceScratch_mem_aux he
+    · exact hlayout.remainderRepairScratch_mem_aux he
+  have hcondition : registerMatches (terminalConditionWires r) (terminalConditionValue r) state = false := by
+    rw [terminalConditionWires, terminalConditionValue, terminal_detection, hrp]
+    simp
+  have hencoded : IndexedStepEpochEncoded r state := by
+    simp only [IndexedStepEpochEncoded, hcondition, Bool.false_eq_true, if_false]
+    exact hclean _ hlayout.shiftEpoch_mem_aux
+  have hf := indexedStepUnitary_correct r n T boundary4 boundary5 hboundary4 hboundary5
+    state hlayout hready hencoded hroutes
+  have hp := active_shift_prefix r n T state hlayout hready hencoded
+  have hc := indexedStepShiftPrefix_clean r n T state hlayout hclean hrp
+  have hout : run (indexedStepUnitary r n T) state =
+      blockHForwardState r n T boundary4 boundary5
+        (blockGForwardState r (run (indexedStepShiftPrefix r n T) state)) := by
+    rw [hf.1, indexedStepForwardState, ← hp.1]
+  have hz : run (indexedStepUnitary r n T) state r.shiftEpoch = false := by
+    rw [hout, active_H_epoch r n T boundary4 boundary5 _ hlayout]
+    exact (active_phase_frame r n T _ hlayout (by
+      simp [indexedStepAfterSign, hlayout.shiftEpoch_mem_aux])).trans
+      (hc _ hlayout.shiftEpoch_mem_aux)
+  intro wire hw
+  rw [← hlayout.aux_view] at hw
+  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with (h | h) | h | h
+  · subst wire
+    exact hf.2 _ (by simp [IndexedStepRegisters.sharedScratch])
+  · subst wire; exact hz
+  · exact hf.2 _ (hlayout.sourceScratch_mem_sharedScratch h)
+  · exact hf.2 _ (hlayout.remainderRepairScratch_mem_sharedScratch h)
+
 end ShorECDLP.Paper2607_13816
