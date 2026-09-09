@@ -366,15 +366,21 @@ private def quotientXorControlInverse (registers : IndexedStepRegisters) : Circu
 private def lengthCarries (registers : IndexedStepRegisters) : List Wire :=
   registers.sourceScratch.take (registers.lengthQ.length - 1)
 
+/-- Phase-controlled quotient/sign selector used by the source Block D. -/
+def blockD2Forward (registers : IndexedStepRegisters) (window : ActiveWindow) : Circuit :=
+  circuit! {
+    quotientXorControl registers;
+    quotientSwapUnitary (registers.quotient window) window.start window.stop;
+    quotientXorControlInverse registers
+  }
+
 private def blockDForward
     (registers : IndexedStepRegisters) (window : ActiveWindow) : Circuit :=
   circuit! {
     phase2LengthControl registers;
     controlledIncrement registers.control registers.lengthQ (lengthCarries registers);
     phase2LengthControl registers;
-    quotientXorControl registers;
-    quotientSwapUnitary (registers.quotient window) window.start window.stop;
-    quotientXorControlInverse registers;
+    blockD2Forward registers window;
     phase3LengthControl registers;
     controlledDecrement registers.control registers.lengthQ (lengthCarries registers);
     phase3LengthControl registers
@@ -5542,7 +5548,7 @@ private theorem blockDForward_correct
                   (lengthCarries registers);
                 phase2LengthControl registers
               }) state)) := by
-                simp [blockDForward, Classical.run_append]
+                simp [blockDForward, blockD2Forward, Classical.run_append]
       _ = blockDForwardState registers window state := by
         rw [hfirst.1, hsecond.1, hthird.1]
         rfl
@@ -7298,8 +7304,8 @@ private theorem blockDForward_wellFormed
     (hwindow : window = (certifiedActiveWindows n T).quotientSwap) :
     CircuitWellFormed (blockDForward registers window) := by
   subst window
-  simp only [blockDForward, circuitWellFormed_append]
-  refine ⟨⟨⟨⟨⟨⟨⟨⟨?_, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩
+  simp only [blockDForward, blockD2Forward, circuitWellFormed_append, and_assoc]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · exact phase2LengthControl_wellFormed registers n T hlayout
   · exact controlledIncrement_wellFormed _ _ _ hlayout.lengthCarryPhysical
   · exact phase2LengthControl_wellFormed registers n T hlayout
@@ -8828,7 +8834,7 @@ private theorem blockDInverse_after_forward
           (run firstInverse
             (run lastForward
               (run middle (run firstForward state))))) by
-    simp [blockDInverse, blockDForward, firstForward, middle,
+    simp [blockDInverse, blockDForward, blockD2Forward, firstForward, middle,
       lastForward, firstInverse, lastInverse, Classical.run_append]]
   rw [show run firstInverse
       (run lastForward (run middle (run firstForward state))) =
@@ -9302,7 +9308,7 @@ theorem indexedStepUnitary_HPFree
     (registers : IndexedStepRegisters) (n T : Nat) :
     HPFree (indexedStepUnitary registers n T) := by
   simp [indexedStepUnitary, blockAForward, blockBForward, blockB1Forward,
-    blockB2, blockB3Forward, blockCForward, blockDForward, blockEForward,
+    blockB2, blockB3Forward, blockCForward, blockDForward, blockD2Forward, blockEForward,
     blockFForward, blockGForward, toggleTerminal,
     remainderSubControl, remainderPhase2Control, remainderRestoreControl,
     toggleRControl, phase2LengthControl, phase3LengthControl,
@@ -9429,7 +9435,7 @@ private theorem indexedStepAdaptive_CDEFGH_coherent
     (IndexedStepBorrowedReady registers)
   have htail := indexedStepAdaptive_EFGH_coherent registers n T hlayout
   have hall := indexedStep_coherent_seq_circuits hprefix htail
-    (by simp [blockCForward, blockDForward, toggleTerminal,
+    (by simp [blockCForward, blockDForward, blockD2Forward, toggleTerminal,
       phase2LengthControl, phase3LengthControl, quotientXorControl,
       quotientXorControlInverse])
     (fun state hready ↦ blockCDForward_ready registers n T state hlayout hready)
