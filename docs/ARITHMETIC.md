@@ -2283,3 +2283,12 @@ remainder yields the sentinel without a highest-bit premise. Window coverage,
 mask bounds and field capacity remain explicit. These results connect scan
 words to canonical fields; deriving their geometry and old metadata consistency
 throughout reachable endpoints remains open.
+
+`swapWorkAndLengthUnaryShared_canonical_lengths` now derives old scan
+consistency from canonical upper/lower views of the physical banks. The actual
+enabled circuit replaces old coefficient/remainder metadata by truth-minus-one
+encodings of the exchanged coefficient and remainder bit lengths. Zero
+remainders are included. The right-position encoding is proved equal to the
+canonical length encoding for arbitrary metadata width, including modular wrap.
+Capacity, window/mask geometry and actual decoder routes remain explicit; no
+reachable-endpoint invariant is assumed proven.
