@@ -2213,3 +2213,15 @@ conditions are derived from the initial state and the comparison frame.
 
 The initial comparison bounds and full shift encoding/capacity remain explicit.
 Phase update and the final conditional bank swap remain separate obligations.
+
+### Swap-stage phase transition
+
+`blockEFGForward_swapPhase` connects comparison and backward shift to the actual
+epoch-aware phase update. For zero quotient length and nonzero divisor length,
+it clears sign, sets phase1 to `shift ≠ 1`, and sets phase2 to the comparison
+sign XOR `shift = 1`. The complete output is the verified E/F state with exactly
+these three flag updates; readiness is preserved. The proof derives unchanged
+Q/R metadata and the clean epoch from the E/F frame, while its full S output
+provides the zero test. Initial packing, capacities, selected-window membership
+and clean epoch remain explicit. Full indexed-prefix and final bank-swap
+composition are still open.
