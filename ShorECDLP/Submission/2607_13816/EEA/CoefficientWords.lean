@@ -46,7 +46,7 @@ private theorem first_fold (r : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget) (enabled : Bool) (B : Nat) (labels : List Nat) (s u : BasisState)
     (h : sameExceptAcc (r.accumulator k K) s u)
     (ht : ∀ j ∈ labels, (r.targetAt target k) j ≠ (r.accumulator k K)) (ha : ∀ j ∈ labels, (r.addendAt target k) j ≠ (r.accumulator k K))
-   
+
     (hc : (r.carry k K) ≠ (r.accumulator k K)) :
     sameExceptAcc (r.accumulator k K)
       (labels.reverse.foldl (fun state j => coefficientFirstPrefixCell r k K mode target enabled B j state) s)
@@ -65,7 +65,7 @@ private theorem second_fold (r : CoefficientPrefixRegisters) (k K : Nat)
     (mode : RippleMode) (target : CoefficientTarget) (enabled : Bool) (B : Nat) (labels : List Nat) (s u : BasisState)
     (h : sameExceptAcc (r.accumulator k K) s u)
     (ht : ∀ j ∈ labels, (r.targetAt target k) j ≠ (r.accumulator k K)) (ha : ∀ j ∈ labels, (r.addendAt target k) j ≠ (r.accumulator k K))
-   
+
     (hc : (r.carry k K) ≠ (r.accumulator k K)) :
     sameExceptAcc (r.accumulator k K)
       (labels.foldl (fun state j => coefficientSecondPrefixCell r k K mode target enabled B j state) s)
