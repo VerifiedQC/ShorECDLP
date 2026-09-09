@@ -1569,3 +1569,13 @@ then uses the existing masked ripple arithmetic and complete-body word theorem.
 The physical layout, clean comparison scratch, zero accumulator and ordered
 bounded endpoints remain explicit. Preparation/restoration and reachable-state
 metadata still need connection to this arithmetic theorem.
+
+### Complete interval arithmetic through endpoint restoration
+
+`run_intervalAddSubUnitary_value` carries selected-slice modular arithmetic
+through the actual endpoint preparation and restoration circuits. The selected
+endpoints are those computed by preparation; their order and bounds remain
+explicit. Ready scratch supplies zero carry, and physical support proves that
+both endpoint transformations preserve the data banks and control. This is the
+complete interval circuit, while reachable metadata and its relation to the
+packed EEA step remain separate obligations.
