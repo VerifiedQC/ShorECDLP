@@ -270,6 +270,43 @@ theorem blockBForward_frame (r : IndexedStepRegisters) (n index : Nat)
   have hs : second wire = first wire := by simpa only [upd,hsign,if_false] using congrFun h2.1 wire
   simpa only [blockBForward,Classical.run_append] using (h3 wire hn).trans (hs.trans (hf wire hn))
 
+/-- On clean nonterminal inputs, terminal restoration after Block B preserves
+its complete output, so every canonical remainder contract carries through C. -/
+theorem blockBCForward_eq_blockB (r : IndexedStepRegisters) (n index : Nat)
+    (state : BasisState) (h : IndexedStepLayout r n index) (hc : Clean r.aux state)
+    (hrp : wireAnd r.lengthRPrime state = false) :
+    run (blockBForward r n (certifiedActiveWindows n index).remainder ++ blockCForward r) state =
+      run (blockBForward r n (certifiedActiveWindows n index).remainder) state := by
+  let final := run (blockBForward r n (certifiedActiveWindows n index).remainder) state
+  have hf := blockBForward_frame r n index state h hc
+  let pre := [r.phase1,r.phase2,r.iter,r.sign] ++ r.work1 ++ r.work2 ++ r.lengthT ++ r.lengthQ ++ r.lengthS
+  have hp : (pre ++ (r.lengthRPrime ++ r.aux)).Nodup := by
+    simpa only [pre,IndexedStepRegisters.allWires,List.append_assoc] using h.physical
+  have hn (wire : Wire) (hw : wire ∈ r.lengthRPrime ++ r.aux) : wire ∉ r.sign :: r.work1 := by
+    intro hm
+    have hm' : wire ∈ pre := by
+      simp only [List.mem_cons] at hm
+      simp only [pre,List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+      aesop
+    exact (List.nodup_append.mp hp).2.2 wire hm' wire hw rfl
+  have hclean : Clean r.aux final := by
+    intro wire hw
+    change run (blockBForward r n (certifiedActiveWindows n index).remainder) state wire = false
+    rw [hf wire (hn wire (List.mem_append_right _ hw))]
+    exact hc wire hw
+  have hagree : ∀ wire ∈ r.lengthRPrime, final wire = state wire := by
+    intro wire hw
+    exact hf wire (hn wire (List.mem_append_left _ hw))
+  have hand : wireAnd r.lengthRPrime final = wireAnd r.lengthRPrime state := by
+    generalize r.lengthRPrime = wires at hagree ⊢
+    induction wires with
+    | nil => rfl
+    | cons w ws ih =>
+      simp only [wireAnd]
+      rw [hagree w (by simp),ih (fun v hv => hagree v (by simp [hv]))]
+  rw [Classical.run_append]
+  exact blockCForward_nonterminal r n index final h hclean (hand.trans hrp)
+
 private theorem remainder_field_frame (r : IndexedStepRegisters) (n index T Q shift : Nat)
     (mode : RippleMode) (signUpdate : Bool) (state : BasisState)
     (h : IndexedStepLayout r n index)
