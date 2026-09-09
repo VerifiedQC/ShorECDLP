@@ -157,4 +157,50 @@ theorem blockEPrepareForward_arithmetic (r : IndexedStepRegisters) (n index T R 
     (by simpa only [wireValues,List.length_map] using hhi)
   have he := congrArg (fun p : List Bool × List Bool => (boolWordToNat p.1,boolWordToNat p.2)) hv.1
   exact he.trans hp
+/-- Complete Block E arithmetic at the endpoint selected by logical lengths. -/
+theorem blockEForward_arithmetic (r : IndexedStepRegisters) (n index T R S : Nat)
+    (window : ActiveWindow) (s : BasisState) (h : IndexedStepLayout r n index)
+    (hw : window = (certifiedActiveWindows n index).coefficient)
+    (hready : IndexedStepReady r s)
+    (ht : boolWordToNat (wireValues r.lengthT s) = truthMinusOneValue r.lengthT.length T)
+    (hr : boolWordToNat (wireValues r.lengthRPrime s) = truthMinusOneValue r.lengthT.length R)
+    (hs : boolWordToNat (wireValues r.tBoundary.lengthSLow s) = truthMinusOneValue r.lengthT.length S)
+    (hthi : T+1 < 2^r.lengthT.length) (hlo : R+S ≤ n+3) (hhi : n+3-R-S < 2^r.lengthT.length)
+    (hv : (if s r.phase2 then n+3-R-S else T+1) ∈ quotientSwapLabels window.start window.stop) :
+    let cr := r.coefficient window
+    let B := (if s r.phase2 then n+3-R-S else T+1)
+    let m := B-window.start+1
+    let sub := uniformRippleExpectedWords .sub (s r.phase1 && !(!s r.phase2 && s r.sign))
+      ((wireValues cr.work2 s).take m).reverse ((wireValues cr.work1 s).take m).reverse false
+    let middle := sub.1.reverse ++ (wireValues cr.work2 s).drop m
+    let add := uniformRippleExpectedWords .add (s r.phase1)
+      (middle.take m).reverse ((wireValues cr.work1 s).take m).reverse false
+    let final := run (blockEForward r n window) s
+    wireValues cr.work2 final = add.1.reverse ++ middle.drop m ∧
+      wireValues cr.work1 final = wireValues cr.work1 s ∧
+      final r.sign = ((s r.sign ^^ s r.phase1) ^^ add.2) ∧
+      IndexedStepReady r final ∧
+      AgreesOutside (r.sign :: r.work1 ++ r.work2) final s := by
+  have hp := prepared_values (s r.phase2) (wireValues r.lengthT s)
+    (wireValues r.lengthRPrime s) (wireValues r.tBoundary.lengthSLow s) T R S n
+    (by simpa only [wireValues,List.length_map] using h.tBoundary.lengthRP_length.symm)
+    (by simp only [wireValues,List.length_map,TBoundaryRegisters.lengthSLow,List.length_take,
+        Nat.min_eq_left h.tBoundary.lengthS_capacity]; rfl)
+    (by simpa only [wireValues,List.length_map] using h.tBoundary.positive)
+    (by simpa only [wireValues,List.length_map] using ht)
+    (by simpa only [wireValues,List.length_map] using hr)
+    (by simpa only [wireValues,List.length_map] using hs)
+    (by simpa only [wireValues,List.length_map] using hthi) hlo
+    (by simpa only [wireValues,List.length_map] using hhi)
+  have he : boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
+      (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
+      (wireValues r.tBoundary.lengthSLow s) n).1 =
+      (if s r.phase2 then n+3-R-S else T+1) := by
+    have hh := congrArg Prod.fst hp
+    cases hhphase : s r.phase2 <;> simpa only [hhphase,Bool.false_eq_true,if_false,if_true] using hh
+  have hv' : boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
+      (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
+      (wireValues r.tBoundary.lengthSLow s) n).1 ∈ quotientSwapLabels window.start window.stop := by
+    rw [he]; exact hv
+  simpa only [he] using blockEForward_words r n index window s h hw hready hv'
 end ShorECDLP.Paper2607_13816

@@ -1870,3 +1870,13 @@ and block scratch is clean after the actual boundary restore. Both half-contract
 now frame the actual local coefficient windows, preserving unused work bits. The prepared boundary
 must lie in the certified coefficient window. Composing the two arithmetic halves
 and discharging their logical window conditions remains the next boundary.
+
+`blockEForward_words` composes both actual Block E halves on the same prepared
+boundary. It states the subtraction and subsequent addition words, the final
+phase/carry sign update, preserved addend, shared-scratch readiness and complete
+metadata frame. The prepared endpoint range is still an explicit premise; this
+is the arithmetic composition, not a reachable-state range proof.
+
+`blockEForward_arithmetic` specializes that same circuit to truth-minus-one
+encoded logical lengths. Its endpoint is `T+1` when phase2 is false or `n+3-R-S` when
+phase2 is true, with capacity, nonnegative subtraction and window membership explicit.

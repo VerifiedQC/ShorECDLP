@@ -444,7 +444,7 @@ def blockEFinishForward (r : IndexedStepRegisters) (n : Nat) (window : ActiveWin
     coefficientPrefixUnitary (r.coefficient window) window.start window.stop .add true .work2 ++
     coefficientAddControl r ++ restoreLatestPaperTBoundary r.tBoundary n
 
-private def blockEForward
+def blockEForward
     (registers : IndexedStepRegisters) (n : Nat) (window : ActiveWindow) : Circuit :=
   blockESubtractForward registers n window ++ blockEFinishForward registers n window
 
@@ -13029,5 +13029,106 @@ theorem blockEFinishForward_words (r : IndexedStepRegisters) (n index : Nat)
     change (q[r.control ↦ false]) w = s w
     rw [show (q[r.control ↦ false]) w = q w by simp [upd,hn.1],hqw]
     simp [p,a,upd,hn.1,hn.2.1]
+
+/-- Both actual Block E arithmetic halves compose, preserving the metadata and
+returning the shared scratch ready. The inclusive boundary is an explicit input obligation. -/
+theorem blockEForward_words (r : IndexedStepRegisters) (n index : Nat)
+    (window : ActiveWindow) (s : BasisState) (h : IndexedStepLayout r n index)
+    (hw : window = (certifiedActiveWindows n index).coefficient)
+    (hr : IndexedStepReady r s)
+    (hv : boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
+      (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
+      (wireValues r.tBoundary.lengthSLow s) n).1 ∈ quotientSwapLabels window.start window.stop) :
+    let cr := r.coefficient window
+    let B := boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
+      (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
+      (wireValues r.tBoundary.lengthSLow s) n).1
+    let m := B-window.start+1
+    let sub := uniformRippleExpectedWords .sub (s r.phase1 && !(!s r.phase2 && s r.sign))
+      ((wireValues cr.work2 s).take m).reverse ((wireValues cr.work1 s).take m).reverse false
+    let middle := sub.1.reverse ++ (wireValues cr.work2 s).drop m
+    let add := uniformRippleExpectedWords .add (s r.phase1)
+      (middle.take m).reverse ((wireValues cr.work1 s).take m).reverse false
+    let final := run (blockEForward r n window) s
+    wireValues cr.work2 final = add.1.reverse ++ middle.drop m ∧
+      wireValues cr.work1 final = wireValues cr.work1 s ∧
+      final r.sign = ((s r.sign ^^ s r.phase1) ^^ add.2) ∧
+      IndexedStepReady r final ∧
+      AgreesOutside (r.sign :: r.work1 ++ r.work2) final s := by
+  have hc : Clean r.blockScratch s := fun w hm => hr w (h.blockScratch_mem_sharedScratch hm)
+  have ht : s r.terminal = false := hr r.terminal (by
+    have hs : r.terminal ∈ r.sourceScratch := by rw [← h.scratch_view]; simp
+    simp [IndexedStepRegisters.sharedScratch,hs])
+  have hctrl : s r.control = false := hr r.control (by simp [IndexedStepRegisters.sharedScratch])
+  let p := run (blockEPrepareForward r n) s
+  let q := run (blockESubtractForward r n window) s
+  let cr := r.coefficient window
+  have hp := blockEPrepareForward_contract r n index s h hc ht
+  have hs := blockESubtractForward_words r n index window s h hw hc ht hctrl hv
+  have hqframe := hs.2.2.2.2.2.2
+  have hqclean : Clean r.blockScratch q := hs.2.2.2.2.2.1
+  have hqctrl : q r.control = false := hs.2.2.2.1
+  have hqsign : q r.sign = s r.sign := hs.2.2.1
+  -- Phase and boundary are retained by the subtraction frame.
+  have hq1 : q r.phase1 = s r.phase1 := by
+    have hn := h.phase1_not_coefficient window
+    have hn' : r.phase1 ∉ r.control :: r.sign :: cr.work1 ++ cr.work2 := by
+      intro hm
+      apply hn
+      change r.phase1 ∈ [r.control,r.sign] ++ (cr.work1 ++ (cr.work2 ++ (r.lengthT ++ cr.scratch)))
+      simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false,or_assoc] at hm ⊢
+      rcases hm with hm | hm | hm | hm
+      · exact Or.inl hm
+      · exact Or.inr (Or.inl hm)
+      · exact Or.inr (Or.inr (Or.inl hm))
+      · exact Or.inr (Or.inr (Or.inr (Or.inl hm)))
+    exact (hqframe r.phase1 hn').trans (hp.2.2.1 r.phase1 (by
+      have hh := h.coefficientFixed_not_words r.phase1 (by simp)
+      simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using And.intro (Ne.symm h.control_ne_phase1) hh))
+  have hqb : wireValues r.lengthT q = wireValues r.lengthT p := by
+    apply wireValues_congr_indexedStep
+    intro w hm
+    apply hqframe w
+    have hnc : w ≠ r.control := fun he => (h.coefficientFixed_not_words r.control (by simp)).1 (he ▸ hm)
+    have hns : w ≠ r.sign := fun he => (h.coefficientFixed_not_words r.sign (by simp)).1 (he ▸ hm)
+    have hn1 : w ∉ cr.work1 := fun hw' =>
+      (coefficient_bank_separation r n index h (List.mem_append_left _ (windowSlice_mem r.work1 window hw'))).2.1 hm
+    have hn2 : w ∉ cr.work2 := fun hw' =>
+      (coefficient_bank_separation r n index h (List.mem_append_right _ (windowSlice_mem r.work2 window hw'))).2.1 hm
+    simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using And.intro hnc (And.intro hns (And.intro hn1 hn2))
+  have hb := congrArg Prod.fst hp.1
+  change wireValues r.lengthT p = _ at hb
+  have hbound := hqb.trans hb
+  have hvq : boolWordToNat (wireValues r.lengthT q) ∈ quotientSwapLabels window.start window.stop := by
+    rw [hbound]; exact hv
+  have hf := blockEFinishForward_words r n index window q h hw hqclean hqctrl hvq
+  have he := blockEForward_correct r n index window s h hw hr
+  have hrun : run (blockEForward r n window) s = run (blockEFinishForward r n window) q := by
+    simp only [blockEForward,Classical.run_append]; rfl
+  have hsw := hs.1
+  change wireValues (r.coefficient window).work2 q = _ at hsw
+  have hsadd := hs.2.1
+  change wireValues (r.coefficient window).work1 q = _ at hsadd
+  dsimp only at hs hf ⊢
+  rw [hrun]
+  refine ⟨?_,?_,?_,?_,?_⟩
+  · simpa only [hbound,hq1,hsw,hsadd] using hf.1
+  · exact hf.2.1.trans hs.2.1
+  · simpa only [hbound,hq1,hqsign,hsw,hsadd] using hf.2.2.1
+  · simpa only [hrun] using he.2
+  · intro w hn
+    rw [← hrun,he.1]
+    by_cases hcw : w = r.control
+    · subst w
+      have hfctrl := he.2 r.control (by simp [IndexedStepRegisters.sharedScratch])
+      rw [he.1] at hfctrl
+      exact hfctrl.trans hctrl.symm
+    by_cases htw : w = r.terminal
+    · subst w
+      have hsour : r.terminal ∈ r.sourceScratch := by rw [← h.scratch_view]; simp
+      have hfterm := he.2 r.terminal (by simp [IndexedStepRegisters.sharedScratch,hsour])
+      rw [he.1] at hfterm
+      exact hfterm.trans ht.symm
+    exact active_E_frame r n index window s h hw hc hn hcw htw
 
 end ShorECDLP.Paper2607_13816
