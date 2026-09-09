@@ -1285,3 +1285,20 @@ remainder remains nonterminal. Together with full auxiliary cleanup, this closes
 the active step's scratch and encoding obligations without a counter exclusion.
 Reachable routing, logical arithmetic and the terminal-entry phase relation
 remain open; no circuit definitions or resource counts change.
+
+`eeaPreprocess_activeSchedule_correct` composes the active-step proofs across any
+initialized production prefix of at most 1,620 steps. Its only trace condition is
+that each step's input remainder length is nonterminal; the final output may be
+terminal. It derives the operational schedule invariant, equality of the actual
+coherent circuit with the direct routed trace, full auxiliary cleanup and final
+epoch encoding. Production route ranges are supplied internally. Proving the
+arithmetic stopping index and the terminal-entry phase/counter relation remains
+open; the theorem does not assume epoch encoding at every intermediate state.
+
+`eeaPreprocess_scheduleInvariant_of_terminalEntry` joins that active prefix to
+the proved terminal padding suffix. For a stopping boundary between steps 1,024
+and 1,620, the remaining assumptions are nonterminal earlier inputs and the four
+entry facts: phase 00, terminal remainder length and a zero shift encoded as 511.
+All scratch and epoch premises throughout the full schedule are derived. These
+entry facts and the stopping boundary still require arithmetic refinement; this
+is a conditional operational theorem, not a completed inverse-arithmetic proof.

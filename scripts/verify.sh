@@ -1006,6 +1006,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.boolWordToNat_decrementBits
 #print axioms ShorECDLP.Paper2607_13816.indexedStepShiftPrefix_quotient_counter
 #print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_firstStep_correct
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_activeSchedule_correct
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_scheduleInvariant_of_terminalEntry
 #print axioms ShorECDLP.Paper2607_13816.preShiftUnitary_idle
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubUnitary_idle
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ModularSub_counts
@@ -1126,8 +1128,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1102 ]]; then
-  printf 'expected 1102 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1104 ]]; then
+  printf 'expected 1104 #print axioms results\n' >&2
   exit 1
 fi
 
