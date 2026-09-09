@@ -11733,4 +11733,179 @@ theorem indexedStepShiftPrefix_remainder (r : IndexedStepRegisters) (n T : Nat)
   rw [hb.1, active_B_frame r n T _ a hlayout rfl har hdata hcontrol hterminal, hap]
   exact preShiftUnitary_preservesOutside _ _ (hlayout.lengthRPrime_not_preShift hw)
 
+private theorem active_C_idle (r : IndexedStepRegisters) (s : BasisState)
+    (ht : s r.terminal = false) (hr : wireAnd r.lengthRPrime s = false) :
+    blockCForwardState r s = s := by
+  have hm : registerMatches (terminalConditionWires r) (terminalConditionValue r) s = false := by
+    rw [terminalConditionWires, terminalConditionValue, terminal_detection, hr]
+    simp
+  have hmark : matchXorState (terminalConditionWires r) (terminalConditionValue r) r.terminal s = s := by
+    simp only [matchXorState, hm, Bool.xor_false, endIdle_update_read]
+  have hrestore : terminalEpochRestoreState r.terminal r.shiftEpoch r.quotientLow s = s := by
+    simp only [terminalEpochRestoreState, controlledSwapState, ht, Bool.false_eq_true,
+      ↓reduceIte, xorWireState, Bool.xor_false, endIdle_update_read]
+  rw [blockCForwardState, hmark, hrestore, hmark]
+
+/-- A clean, nonterminal input returns every auxiliary wire clear after A--F.
+In particular the borrowed epoch remains zero rather than gaining a padding bit. -/
+theorem indexedStepShiftPrefix_clean (r : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T) (hclean : Clean r.aux state)
+    (hrp : wireAnd r.lengthRPrime state = false) :
+    Clean r.aux (run (indexedStepShiftPrefix r n T) state) := by
+  have hready : IndexedStepReady r state := by
+    intro wire hw
+    apply hclean wire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst wire; exact hlayout.control_mem_aux
+    · exact hlayout.sourceScratch_mem_aux he
+    · exact hlayout.remainderRepairScratch_mem_aux he
+  have hcondition : registerMatches (terminalConditionWires r) (terminalConditionValue r) state = false := by
+    rw [terminalConditionWires, terminalConditionValue, terminal_detection, hrp]
+    simp
+  have hencoded : IndexedStepEpochEncoded r state := by
+    simp only [IndexedStepEpochEncoded, hcondition, Bool.false_eq_true, if_false]
+    exact hclean _ hlayout.shiftEpoch_mem_aux
+  let a := run (blockAForward r) state
+  have ha := blockAForward_correct r n T state hlayout hready
+  have har := blockAForward_borrowedReady r n T state hlayout hready hencoded
+  have hap : a = run (preShiftUnitary r.preShift) state :=
+    ha.1.trans (active_A_shift r n T state hlayout hclean hcondition)
+  let b := run (blockBForward r n (certifiedActiveWindows n T).remainder) a
+  have hb := blockBForward_correct r n T _ a hlayout rfl har
+  let c := run (blockCForward r) b
+  have hc := blockCForward_correct r n T b hlayout hb.2
+  let d := run (blockDForward r (certifiedActiveWindows n T).quotientSwap) c
+  have hd := blockDForward_correct r n T _ c hlayout rfl hc.2
+  let e := run (blockEForward r n (certifiedActiveWindows n T).coefficient) d
+  have he := blockEForward_correct r n T _ d hlayout rfl hd.2
+
+  have hbits : ∀ wire ∈ r.lengthRPrime, b wire = state wire := by
+    intro wire hw
+    have hg := active_boundary_geometry r n T hlayout (w := wire) (by simp [hw])
+    dsimp only [b]
+    rw [hb.1, active_B_frame r n T _ a hlayout rfl har hg.1 hg.2.1 hg.2.2, hap]
+    exact preShiftUnitary_preservesOutside _ _ (hlayout.lengthRPrime_not_preShift hw)
+  have hbrp : wireAnd r.lengthRPrime b = false := (wireAnd_congr _ b state hbits).trans hrp
+  have hterminal : r.terminal ∈ r.sourceScratch := by rw [← hlayout.scratch_view]; simp
+  have hcidle : c = b := hc.1.trans (active_C_idle r b
+    (hb.2 _ (hlayout.sourceScratch_mem_aux hterminal)) hbrp)
+  have hedata : r.shiftEpoch ∉ r.sign :: r.work1 ++ r.work2 := by
+    intro hm
+    apply hlayout.aux_not_payload hlayout.shiftEpoch_mem_aux (payloadWire := r.shiftEpoch) ?_ rfl
+    simp only [List.mem_append, List.mem_cons] at hm
+    rcases hm with (h | h) | h <;> simp [indexedStepPayload, h]
+  have hesign : r.shiftEpoch ≠ r.sign := by intro h; exact hedata (by simp [h])
+  have hework : r.shiftEpoch ∉ r.work1 := fun h => hedata (by simp [h])
+  have heQ : r.shiftEpoch ∉ r.lengthQ := by
+    intro h
+    exact hlayout.aux_not_payload hlayout.shiftEpoch_mem_aux (by simp [indexedStepPayload, h]) rfl
+  have hect := hlayout.control_ne_shiftEpoch.symm
+  have heterm : r.shiftEpoch ≠ r.terminal := fun h =>
+    hlayout.shiftEpoch_not_sourceScratch (h.symm ▸ hterminal)
+  have hezero : e r.shiftEpoch = false := by
+    dsimp only [e]
+    rw [he.1, active_E_frame r n T _ d hlayout rfl
+      (fun w h => hd.2 w (hlayout.blockScratch_mem_sharedScratch h)) hedata hect heterm]
+    dsimp only [d]
+    rw [hd.1, active_D_frame r n T _ c hlayout rfl hesign hework heQ hect, hcidle]
+    exact hb.2 _ hlayout.shiftEpoch_mem_aux
+  have hpost : r.shiftEpoch ∉ r.postShift.postUsedWires := by
+    intro hu
+    have hs : r.shiftEpoch ∉ r.postShift.scratch := fun h =>
+      hlayout.shiftEpoch_not_sourceScratch (hlayout.postShift_scratch_sub_source _ h)
+    have hp1 := hlayout.phase1_ne_shiftEpoch.symm
+    have hp2 : r.shiftEpoch ≠ r.phase2 := hlayout.aux_not_payload hlayout.shiftEpoch_mem_aux
+      (by simp [indexedStepPayload])
+    have hw2 := hlayout.shiftEpoch_not_work2
+    have hS := hlayout.shiftEpoch_not_lengthS
+    simp only [ShiftRegisters.postUsedWires, List.mem_cons, List.mem_append,
+      List.not_mem_nil, or_false] at hu
+    change r.shiftEpoch ∉ [r.postShift.phase1IsZero, r.postShift.both] ++
+      r.postShift.carries ++ r.postShift.reserved at hs
+    simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false, not_or] at hs
+    rcases hu with (((h | h | h) | h) | h) | h
+    · exact hp1 h
+    · exact hp2 h
+    · exact hs.1.1.2 h
+    · exact hw2 h
+    · exact hS h
+    · exact hs.1.2 h
+  have hf := blockFForward_correct r n T e hlayout he.2
+  have hshape : run (indexedStepShiftPrefix r n T) state = run (blockFForward r) e := by
+    simp only [indexedStepShiftPrefix, indexedStepRemainderPrefix, e, d, c, b, a,
+      Classical.run_append]
+  rw [hshape]
+  intro wire hw
+  rw [← hlayout.aux_view] at hw
+  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with (h | h) | h | h
+  · subst wire
+    exact hf.2 _ (by simp [IndexedStepRegisters.sharedScratch])
+  · subst wire
+    exact (postShiftUnitary_preservesOutside r.postShift e hpost).trans hezero
+  · exact hf.2 _ (hlayout.sourceScratch_mem_sharedScratch h)
+  · exact hf.2 _ (hlayout.remainderRepairScratch_mem_sharedScratch h)
+
+private theorem active_all_ones (ws : List Wire) (s : BasisState)
+    (h : wireAnd ws s = true) : boolWordToNat (wireValues ws s) = 2^ws.length - 1 := by
+  induction ws with
+  | nil => simp [wireValues]
+  | cons w ws ih =>
+    simp only [wireAnd, Bool.and_eq_true] at h
+    have ht := ih h.2
+    change boolWordToNat (List.map s ws) = 2^ws.length - 1 at ht
+    simp only [wireValues, List.map_cons, boolWordToNat, h.1, Bool.toNat_true,
+      List.length_cons, Nat.pow_succ]
+    have hp := Nat.two_pow_pos ws.length
+    omega
+
+/-- Away from the shift-counter sentinel, the active full step reduces to its
+phase update from conditions on the original input, with no A--F output premise. -/
+theorem indexedStepUnitary_active_correct
+    (r : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
+      boundary4 ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ boundary5 ∧
+      boundary5 ≤ (endIterationWindowsAt n T).K5Decode n)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hclean : Clean r.aux state) (hrp : wireAnd r.lengthRPrime state = false)
+    (hroutes : T % 4 = 0 → indexedStepEndRoutes r n T state = (boundary4, boundary5))
+    (hshift : (if state r.phase2 then
+        (boolWordToNat (wireValues r.lengthS state) + 2^r.lengthS.length - 1) % 2^r.lengthS.length
+      else (1 + boolWordToNat (wireValues r.lengthS state)) % 2^r.lengthS.length) ≠
+        2^r.lengthS.length - 1) :
+    run (indexedStepUnitary r n T) state =
+      phaseUpdateEpochState r.phaseUpdate r.shiftEpoch
+        (run (indexedStepShiftPrefix r n T) state) ∧
+    IndexedStepReady r (run (indexedStepUnitary r n T) state) ∧
+    IndexedStepEpochEncoded r (run (indexedStepUnitary r n T) state) := by
+  have hready : IndexedStepReady r state := by
+    intro wire hw
+    apply hclean wire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst wire; exact hlayout.control_mem_aux
+    · exact hlayout.sourceScratch_mem_aux he
+    · exact hlayout.remainderRepairScratch_mem_aux he
+  have hcondition : registerMatches (terminalConditionWires r) (terminalConditionValue r) state = false := by
+    rw [terminalConditionWires, terminalConditionValue, terminal_detection, hrp]
+    simp
+  have hencoded : IndexedStepEpochEncoded r state := by
+    simp only [IndexedStepEpochEncoded, hcondition, Bool.false_eq_true, if_false]
+    exact hclean _ hlayout.shiftEpoch_mem_aux
+  have hr : wireAnd r.lengthRPrime (run (indexedStepShiftPrefix r n T) state) = false :=
+    (wireAnd_congr _ _ state (indexedStepShiftPrefix_remainder r n T state hlayout hclean hrp)).trans hrp
+  have he := indexedStepShiftPrefix_clean r n T state hlayout hclean hrp
+  have hs : wireAnd r.lengthS (run (indexedStepShiftPrefix r n T) state) = false := by
+    cases hh : wireAnd r.lengthS (run (indexedStepShiftPrefix r n T) state) with
+    | false => rfl
+    | true =>
+      have hv := active_all_ones r.lengthS (run (indexedStepShiftPrefix r n T) state) hh
+      rw [indexedStepShiftPrefix_counter r n T state hlayout hclean hrp] at hv
+      exact (hshift hv).elim
+  exact indexedStepUnitary_active_tail_correct r n T boundary4 boundary5
+    hboundary4 hboundary5 state hlayout hready hencoded hroutes hr
+    (he _ hlayout.shiftEpoch_mem_aux) hs
+
 end ShorECDLP.Paper2607_13816
