@@ -2308,3 +2308,11 @@ lower decoder route from this intermediate result. Both decoder routes follow
 from canonical positive lengths and window/capacity conditions, with no assumed
 route equality. The input banks are the already exchanged banks: connecting
 the initial bank swap and the complete scheduled H endpoint remains next.
+
+`swapWorkAndLengthUnaryShared_canonical_endpoint` connects the initial bank
+swap to both length-update stages. Canonical physical bank views and metadata
+now determine the final exchanged numeric lengths without either decoder-route
+premise. The initial nonzero right remainder, metadata capacity and window/mask
+coverage remain explicit; zero output remainder is included. Lifting this
+complete inner endpoint to the scheduled H wrapper and deriving reachable
+geometry remain separate obligations.
