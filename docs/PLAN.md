@@ -1959,3 +1959,14 @@ a conditional bound preventing addition overflow, are explicit; the retained
 canonical fit, divisor/addend preservation, sign, readiness and local frame all
 belong to the same actual circuit. Deriving these bounds along reachable
 microsteps remains necessary before unconditional inversion can be claimed.
+
+### Quotient extraction composed with ordinary coefficient arithmetic
+
+`blockDEForward_coefficient` proves the actual concatenated D/E circuit in the
+coefficient phase. It consumes the low packed quotient bit, decreases its
+length, preserves the remainder and addend, and conditionally adds `2^shift*t`
+to `tPrime`. The result includes canonical banks, quotient metadata, sign,
+coefficient/quotient fits and scratch readiness. Intermediate metadata and
+readiness are derived using physical separation, rather than assumed by the
+caller. Initial packing, route/span bounds and conditional no-overflow remain
+explicit; the full reachable microstep invariant is still open.
