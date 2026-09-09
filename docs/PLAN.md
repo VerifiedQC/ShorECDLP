@@ -1248,3 +1248,10 @@ its A–F output followed by the phase update, with readiness and epoch encoding
 restored. All conditions are on the original input; certified route conditions
 remain explicit. Reachable arithmetic encoding and counter-boundary transitions
 are still open.
+
+`eeaPreprocess_firstStep_correct` now instantiates the active-step theorem on the
+concrete state established by preprocessing. The initial remainder length is
+nonterminal, the auxiliary bank is clear, and the first prefix counter is zero.
+The first complete physical step satisfies readiness and epoch encoding without
+additional assumptions about its intermediate states. This bootstraps one step;
+later reachable arithmetic and counter-boundary transitions remain open.
