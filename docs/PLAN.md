@@ -1217,3 +1217,10 @@ decrements when phase two is true, modulo the physical counter width. Pre-shift
 is enabled when phase one is false; post-shift is enabled when it is true.
 The proofs include wraparound and disabled inputs. Connecting these per-block
 transitions to the reachable active arithmetic encoding remains open.
+
+The complete interval and coefficient-prefix arithmetic blocks now have frame
+theorems: only the work banks and optional sign can change. The interval result
+includes endpoint preparation and restoration; the coefficient scratch-cleanliness
+result is derived from its stronger frame theorem. This establishes restoration
+of the intervening length registers for future composition with the shift-counter
+semantics. The reachable active prefix is still open.

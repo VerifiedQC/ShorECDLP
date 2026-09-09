@@ -4756,4 +4756,92 @@ theorem intervalAddSubUnitary_idle
 
 end
 
+
+/-- The complete interval restores its decoder registers: only the work banks and
+optional sign can change. This includes the endpoint preparation and restoration. -/
+theorem intervalAddSubUnitary_frame (r : IntervalRegisters) (n k K : Nat)
+    (mode : RippleMode) (signUpdate : Bool) (target : IntervalTarget)
+    (state : BasisState) (hlayout : IntervalLayout r k K target)
+    (hready : IntervalReady r state) :
+    AgreesOutside (r.sign :: r.work1 ++ r.work2)
+      (run (intervalAddSubUnitary r n k K mode signUpdate target) state) state := by
+  let prepare := prepareIntervalEndpoints r.lengthT r.lengthQ r.lengthS
+    r.endpointScratch (r.carry k K) n k
+  let restore := restoreIntervalEndpoints r.lengthT r.lengthQ r.lengthS
+    r.endpointScratch (r.carry k K) n k
+  let prepared := run prepare state
+  let body := intervalAddSubBodyUnitary r k K mode signUpdate target
+  have hp : IntervalReady r prepared :=
+    intervalPrepare_cleanScratch r n k K target state hlayout hready
+  have hsmall := intervalAddSubBodyUnitary_preservesOutsideChanges r k K mode signUpdate target
+    prepared hlayout (by
+      intro wire hw
+      exact hp wire (intervalTopScratch_mem_scratch r k K target hlayout wire hw))
+  have htarget : ∀ label, label < intervalLaneCount k K →
+      r.targetAt target label ∈ r.work1 ++ r.work2 := by
+    intro label hb
+    cases target with
+    | work1 => exact List.mem_append_left _ (list_getD_mem r.work1 label 0 (by
+        rw [hlayout.work1_length]; exact hb))
+    | work2 => exact List.mem_append_right _ (list_getD_mem r.work2 label 0 (by
+        rw [hlayout.work2_length]; exact hb))
+  have hbody : AgreesOutside (r.sign :: r.work1 ++ r.work2) (run body prepared) prepared := by
+    intro wire hw
+    apply hsmall wire
+    intro hm
+    apply hw
+    rcases List.mem_append.mp hm with hm | hm
+    · rcases List.mem_cons.mp hm with he | he
+      · exact List.mem_cons.mpr (Or.inl he)
+      · obtain ⟨label, hl, he⟩ := List.mem_map.mp he
+        exact List.mem_cons.mpr (Or.inr (he ▸ htarget label
+          (intervalTree_label_lt_laneCount r k K label hl)))
+    · simp only [List.mem_singleton] at hm
+      exact List.mem_cons.mpr (Or.inr (hm.symm ▸ htarget _
+        (intervalTopRelative_lt_laneCount k K hlayout.k_le_K)))
+  have havoid : PaperCircuitAvoids (r.sign :: r.work1 ++ r.work2) restore := by
+    have hu := restoreIntervalEndpoints_usesOnly r.lengthT r.lengthQ r.lengthS
+      r.endpointScratch (r.carry k K) n k
+    intro gate hg wire hw hc
+    have hm := hu gate hg wire hw
+    have htail : wire ∈ r.lengthT ++ (r.lengthQ ++ (r.lengthS ++ r.scratch)) := by
+      simp only [intervalEndpointSupport, List.mem_append, List.mem_singleton] at hm
+      rcases hm with ((((he | he) | he) | he) | he)
+      · simp [List.mem_of_mem_take he]
+      · subst wire; simp [intervalCarry_mem_scratch r k K target hlayout]
+      · simp [he]
+      · simp [he]
+      · simp [he]
+    have hphys := hlayout.physical
+    rw [IntervalRegisters.allWires] at hphys
+    have hcontrol := List.nodup_append.mp hphys
+    have hw1 := List.nodup_append.mp hcontrol.2.1
+    have hw2 := List.nodup_append.mp hw1.2.1
+    rcases List.mem_cons.mp hc with he | he
+    · exact hcontrol.2.2 r.sign (by simp) wire
+        (by simp [htail]) he.symm
+    · rcases List.mem_append.mp he with he | he
+      · exact hw1.2.2 wire he wire (List.mem_append_right _ htail) rfl
+      · exact hw2.2.2 wire he wire htail rfl
+  have hround := run_restoreIntervalEndpoints_after_prepare r.lengthT r.lengthQ r.lengthS
+    r.endpointScratch (r.carry k K) n k state hlayout.lengthT_eq_lengthQ
+    (intervalLengthQ_le_endpointScratch r k K target hlayout)
+    (intervalLengthS_le_endpointScratch r k K target hlayout)
+    (intervalLengthS_positive r k K target hlayout) hlayout.endpoints (by
+      intro wire hw
+      apply hready wire
+      rcases List.mem_append.mp hw with hs | hs
+      · exact List.mem_of_mem_take hs
+      · simp only [List.mem_singleton] at hs
+        subst wire
+        exact intervalCarry_mem_scratch r k K target hlayout)
+  have hout := havoid.run_agreesOutside hbody
+  have hshape : run (intervalAddSubUnitary r n k K mode signUpdate target) state =
+      run restore (run body prepared) := by
+    simp only [intervalAddSubUnitary, intervalAddSubBodyUnitary, prepare, body, restore,
+      prepared, Classical.run_append]
+  rw [hshape]
+  intro wire hw
+  exact (hout wire hw).trans (congrFun hround wire)
+
 end ShorECDLP.Paper2607_13816
