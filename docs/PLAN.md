@@ -1302,3 +1302,13 @@ entry facts: phase 00, terminal remainder length and a zero shift encoded as 511
 All scratch and epoch premises throughout the full schedule are derived. These
 entry facts and the stopping boundary still require arithmetic refinement; this
 is a conditional operational theorem, not a completed inverse-arithmetic proof.
+
+`rightLengthXorWrite_firstSet` gives the actual grouped right-length writer an
+arithmetic interpretation: with its control enabled, it XORs the encoded length
+of the first set position in the decoded range into the arbitrary target word.
+An all-zero range contributes the all-ones sentinel. The proof telescopes the
+source's adjacent XOR constants under prefix-zero flags and composes the existing
+gate theorem; dirty-bank and scratch restoration remain supplied by that theorem
+family. This closes the local lower-writer interpretation. Relating its decoded
+range to reachable packed arithmetic, and the corresponding upper writer, remain
+open; circuits and resource counts are unchanged.
