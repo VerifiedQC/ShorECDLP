@@ -4,6 +4,7 @@ import ShorECDLP.Submission.«2607_13816».EEA.RangeExtraction
 import ShorECDLP.Submission.«2607_13816».EEA.PackedFields
 import ShorECDLP.Submission.«2607_13816».EEA.PackedRotation
 import ShorECDLP.Submission.«2607_13816».EEA.ShiftEncoding
+import ShorECDLP.Submission.«2607_13816».EEA.RippleArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.EndIterationArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.LengthArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.ActiveTrace
