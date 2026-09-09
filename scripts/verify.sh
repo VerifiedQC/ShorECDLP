@@ -390,6 +390,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.lowerLengthOfBits_packed_remainder
 #print axioms ShorECDLP.Paper2607_13816.lowerLengthOfBits_packed_zero
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_canonical_lengths
+#print axioms ShorECDLP.Paper2607_13816.EndIterationRegisters.upperTree_canonical_route
+#print axioms ShorECDLP.Paper2607_13816.EndIterationRegisters.lowerTree_canonical_route
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_swapPhase
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_swap_tail
 #print axioms ShorECDLP.Paper2607_13816.indexedStepSwapPrefix_idle
@@ -1304,8 +1306,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1280 ]]; then
-  printf 'expected 1280 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1282 ]]; then
+  printf 'expected 1282 #print axioms results\n' >&2
   exit 1
 fi
 

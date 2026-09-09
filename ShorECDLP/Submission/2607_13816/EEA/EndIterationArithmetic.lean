@@ -625,4 +625,91 @@ theorem swapWorkAndLengthUnaryShared_canonical_lengths
   rw [hu2, hl1] at result
   exact result
 
+private theorem endpoint_affine_ready (r : EndIterationRegisters) (n : Nat)
+    (w : EndIterationWindows) (s : BasisState) (h : EndIterationLayout r n w)
+    (hr : EndIterationReady r s) :
+    r.constants.length = r.width ∧ Clean (r.constants ++ [r.carry]) s := by
+  have hcap := h.scratch_capacity
+  simp only [endIterationScratchSize, endIterationLengthScratchSize] at hcap
+  have hwidth : r.width < r.scratch.length := by omega
+  constructor
+  · simp only [EndIterationRegisters.constants, List.length_take, Nat.min_eq_left (by omega : r.width ≤ r.scratch.length)]
+  · intro wire hw
+    rcases List.mem_append.mp hw with hc | hc
+    · exact hr wire (List.mem_of_mem_take hc)
+    · simp only [List.mem_singleton] at hc
+      subst wire
+      change s (r.scratch.getD r.width 0) = false
+      rw [List.getD_eq_getElem _ _ hwidth]
+      exact hr _ (List.getElem_mem hwidth)
+
+private theorem endpoint_source_width (k K width : Nat) (hw : 0 < width)
+    (hK : K < 2^width) :
+    DualUnaryActionTree.sourceWidth (quotientSwapLabels k K).toFinset ≤ width := by
+  apply DualUnaryActionTree.sourceWidth_le _ _ hw
+  intro label hl
+  simp only [List.mem_toFinset, quotientSwapLabels, List.mem_range'] at hl
+  omega
+
+private theorem endpoint_truth_positive (width value : Nat) (hv : 0 < value)
+    (hfit : value ≤ 2^width) : truthMinusOneValue width value = value-1 := by
+  change (value+2^width-1%2^width)%2^width = value-1
+  rw [endpoint_mod_sub _ _ _ (by omega), Nat.mod_eq_of_lt (by omega)]
+
+/-- The actual upper affine decoder routes canonical right-length metadata to
+its numeric bank partition; no route equality is assumed. -/
+theorem EndIterationRegisters.upperTree_canonical_route (r : EndIterationRegisters)
+    (n : Nat) (w : EndIterationWindows) (s : BasisState)
+    (h : EndIterationLayout r n w) (hr : EndIterationReady r s) (R : Nat)
+    (hR : 0 < R) (hRb : R ≤ n+3) (hcapacity : n+3 < 2^r.width)
+    (hwindow : w.k4 ≤ n+3-R ∧ n+3-R ≤ w.K4)
+    (hword : wireValues r.lengthRP s = constantBits r.lengthRP.length
+      (truthMinusOneValue r.lengthRP.length R)) :
+    (r.upperTree w).routeLabel (run (constMinus r.lengthRP r.constants r.carry (n+2)) s) = n+3-R := by
+  obtain ⟨hlen,hclean⟩ := endpoint_affine_ready r n w s h hr
+  have hpos : 0 < r.lengthRP.length := by rw [h.lengthRP_length]; exact h.width_positive
+  have hcap : n+3 < 2^r.lengthRP.length := by rw [h.lengthRP_length]; exact hcapacity
+  have hK := h.K4_le_work
+  have hlenRP := hlen.trans h.lengthRP_length.symm
+  have ha := constMinus_correct r.lengthRP r.constants r.carry (n+2) s hpos hlenRP h.upper.affine hclean
+  have hv : boolWordToNat (wireValues r.lengthRP (run (constMinus r.lengthRP r.constants r.carry (n+2)) s)) = n+3-R := by
+    rw [ha.1, boolWordToNat_constMinusBits, hword]
+    simp only [constantBits_length, boolWordToNat_constantBits]
+    rw [endpoint_truth_positive _ _ hR (by omega),
+      Nat.mod_eq_of_lt (by omega : R-1 < 2^r.lengthRP.length)]
+    have he : n+2+2^r.lengthRP.length-(R-1) = (n+3-R)+2^r.lengthRP.length := by omega
+    rw [he, Nat.add_mod_right, Nat.mod_eq_of_lt (by omega)]
+  rw [r.upperTree_routeLabel_eq w _ h.k4_le_K4
+    (endpoint_source_width _ _ _ hpos (by omega))
+    (by rw [hv]; exact (mem_zeroMapLabels h.k4_le_K4).mpr hwindow), hv]
+
+/-- The actual lower affine decoder routes canonical coefficient-length metadata
+to the first position after its guard bit; no route equality is assumed. -/
+theorem EndIterationRegisters.lowerTree_canonical_route (r : EndIterationRegisters)
+    (n : Nat) (w : EndIterationWindows) (s : BasisState)
+    (h : EndIterationLayout r n w) (hr : EndIterationReady r s) (T : Nat)
+    (hT : 0 < T) (hcapacity : n+3 < 2^r.width)
+    (hwindow : w.k5 ≤ T+2 ∧ T+2 ≤ w.K5Decode n)
+    (hword : wireValues r.lengthT s = constantBits r.lengthT.length
+      (truthMinusOneValue r.lengthT.length T)) :
+    (r.lowerTree n w).routeLabel (run (addConstant r.lengthT r.constants r.carry 3) s) = T+2 := by
+  obtain ⟨hlen,hclean⟩ := endpoint_affine_ready r n w s h hr
+  have hK : w.K5Decode n ≤ n+3 := Nat.min_le_right _ _
+  have hlenT : r.constants.length = r.lengthT.length := hlen
+  have hpos : 0 < r.lengthT.length := h.width_positive
+  have hcap : n+3 < 2^r.lengthT.length := hcapacity
+  have ha := addConstant_correct r.lengthT r.constants r.carry 3 s hlenT h.lower.affine hclean
+  have hv : boolWordToNat (wireValues r.lengthT (run (addConstant r.lengthT r.constants r.carry 3) s)) = T+2 := by
+    rw [ha.1, boolWordToNat_cuccaroAddBits false _ _ (by simp only [constantBits_length, wireValues, List.length_map]; exact hlenT)]
+    rw [hword]
+    simp only [boolWordToNat_constantBits, constantBits_length, Bool.toNat_false, hlenT]
+    rw [endpoint_truth_positive _ _ hT (by omega),
+      Nat.mod_eq_of_lt (by omega : T-1 < 2^r.lengthT.length),
+      Nat.mod_eq_of_lt (by omega : 3 < 2^r.lengthT.length)]
+    have he : 3+(T-1) = T+2 := by omega
+    rw [he, Nat.mod_eq_of_lt (by omega)]
+  rw [r.lowerTree_routeLabel_eq n w _ h.k5_le_decode
+    (endpoint_source_width _ _ _ hpos (by omega))
+    (by rw [hv]; exact (mem_zeroMapLabels h.k5_le_decode).mpr hwindow), hv]
+
 end ShorECDLP.Paper2607_13816

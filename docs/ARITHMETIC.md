@@ -2292,3 +2292,11 @@ remainders are included. The right-position encoding is proved equal to the
 canonical length encoding for arbitrary metadata width, including modular wrap.
 Capacity, window/mask geometry and actual decoder routes remain explicit; no
 reachable-endpoint invariant is assumed proven.
+
+The canonical upper/lower route theorems now derive the actual affine decoder
+labels from positive canonical right/coefficient lengths. They prove labels
+`n+3-R` and `T+2`, respectively, using the executed affine circuits, clean
+scratch, bank capacity and active-window coverage. Decoder source width is
+derived rather than assumed. Applying the lower theorem to the whole endpoint
+still requires proving the updated coefficient metadata at its intermediate
+state; the reachable geometry and complete endpoint composition remain open.
