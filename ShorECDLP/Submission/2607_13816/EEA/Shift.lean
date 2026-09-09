@@ -3873,4 +3873,139 @@ theorem preShiftUnitary_preserves_phase2 (r : ShiftRegisters) (state : BasisStat
   rw [upd_other _ _ _ hz, shiftPayloadState_preservesOutside _ _ _ _ _ _ hw hs hb]
   exact upd_other _ _ _ hz
 
+private theorem shiftWork_direction (bits : List Bool) :
+    (rotateLeftOne bits).rotate (bits.length-2) = bits.rotate (bits.length-1) := by
+  cases bits with
+  | nil => simp [rotateLeftOne]
+  | cons a tail =>
+    cases tail with
+    | nil => simp [rotateLeftOne]
+    | cons b rest =>
+      have hl : rotateLeftOne (a :: b :: rest) = (a :: b :: rest).rotate 1 := by
+        rw [List.rotate_eq_drop_append_take (by simp)]
+        simp [rotateLeftOne]
+      rw [hl, List.rotate_rotate]
+      congr 1
+      simp only [List.length_cons, Nat.add_sub_cancel]
+      omega
+
+private theorem shiftWork_payload (a b : Bool) (work counter : List Wire)
+    (both : Wire) (state : BasisState)
+    (hnd : work.Nodup) (hdis : List.Disjoint counter work)
+    (hbw : both ∉ work) (hbc : both ∉ counter) (hclear : state both = false) :
+    wireValues work (shiftPayloadState a b work counter both state) =
+      if a then (if b then (wireValues work state).rotate (work.length-1)
+        else rotateLeftOne (wireValues work state)) else wireValues work state := by
+  let left := rotateLeftWordState a work state
+  let increased := incrementWordState a counter left
+  let marked := increased[both ↦ Bool.xor (increased both) (a && b)]
+  let right := if marked both then rotateRightTwoState work marked else marked
+  let dec := decrementWordState (right both) counter right
+  let dec2 := decrementWordState (dec both) counter dec
+  have hiB : increased both = false :=
+    (incrementWordState_preservesOutside a counter left hbc).trans
+      ((rotateLeftWordState_preservesOutside a work state hbw).trans hclear)
+  have hmB : marked both = (a && b) := by simp [marked, hiB]
+  have hl : wireValues work left =
+      if a then rotateLeftOne (wireValues work state) else wireValues work state := by
+    dsimp only [left, rotateLeftWordState]
+    rw [wireValues_writeWireValues _ _ _ hnd (by split <;> simp [rotateLeftOne_length, wireValues])]
+  have hi : wireValues work increased = wireValues work left := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact incrementWordState_preservesOutside a counter left (fun hc => hdis hc hw)
+  have hm : wireValues work marked = wireValues work increased := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro he; subst wire; exact hbw hw)
+  have hr : wireValues work right =
+      if a && b then (wireValues work marked).rotate (work.length-2) else wireValues work marked := by
+    dsimp only [right]
+    rw [hmB]
+    split
+    · exact rotateRightTwoState_values work marked hnd
+    · rfl
+  have hd : wireValues work dec = wireValues work right := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact decrementWordState_preservesOutside _ counter right (fun hc => hdis hc hw)
+  have hd2 : wireValues work dec2 = wireValues work dec := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact decrementWordState_preservesOutside _ counter dec (fun hc => hdis hc hw)
+  have hout : wireValues work (shiftPayloadState a b work counter both state) = wireValues work dec2 := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro he; subst wire; exact hbw hw)
+  rw [hout, hd2, hd, hr, hm, hi, hl]
+  cases a <;> cases b <;> simp only [Bool.false_and, Bool.true_and,
+    Bool.false_eq_true, ↓reduceIte]
+  simpa only [wireValues, List.length_map] using shiftWork_direction (wireValues work state)
+
+private theorem shiftWork_nodup (r : ShiftRegisters) (h : ShiftLayout r) : r.work.Nodup := by
+  have hp := h.physical
+  simp only [ShiftRegisters.allWires, List.append_assoc, List.cons_append, List.nil_append] at hp
+  have ht := (List.nodup_cons.mp (List.nodup_cons.mp
+    (List.nodup_cons.mp (List.nodup_cons.mp hp).2).2).2).2
+  exact (List.nodup_append.mp ht).1
+
+/-- Work-bank action of the actual post-shift, with the phase-two correction composed. -/
+theorem postShiftUnitary_work_bits (r : ShiftRegisters) (state : BasisState)
+    (hlayout : ShiftLayout r) (hready : ShiftReady r state) :
+    wireValues r.work (run (postShiftUnitary r) state) =
+      if state r.phase1 then
+        (if state r.phase2 then (wireValues r.work state).rotate (r.work.length-1)
+         else rotateLeftOne (wireValues r.work state)) else wireValues r.work state := by
+  rw [run_postShiftUnitary r state hlayout hready]
+  exact shiftWork_payload _ _ _ _ _ _ (shiftWork_nodup r hlayout)
+    (shiftCounter_layout r hlayout).2
+    (hlayout.scratchWorkDisjoint _ (by simp [ShiftRegisters.scratch]))
+    (hlayout.scratchLengthDisjoint _ (by simp [ShiftRegisters.scratch]))
+    (hready _ (by simp [ShiftRegisters.scratch]))
+
+/-- Work-bank action of the actual pre-shift, controlled by phase one being false. -/
+theorem preShiftUnitary_work_bits (r : ShiftRegisters) (state : BasisState)
+    (hlayout : ShiftLayout r) (hready : ShiftReady r state) :
+    wireValues r.work (run (preShiftUnitary r) state) =
+      if !state r.phase1 then
+        (if state r.phase2 then (wireValues r.work state).rotate (r.work.length-1)
+         else rotateLeftOne (wireValues r.work state)) else wireValues r.work state := by
+  have hzero : state r.phase1IsZero = false := hready _ (by simp [ShiftRegisters.scratch])
+  have hzwork := hlayout.scratchWorkDisjoint r.phase1IsZero (by simp [ShiftRegisters.scratch])
+  have hpair : [r.phase1IsZero, r.phase2, r.both].Nodup := by
+    apply List.Sublist.nodup ?_ hlayout.physical
+    simp [ShiftRegisters.allWires]
+  have h2 : r.phase2 ≠ r.phase1IsZero := by
+    intro he
+    exact (List.nodup_cons.mp hpair).1 (by simp [he])
+  have hb : r.both ≠ r.phase1IsZero := by
+    intro he
+    exact (List.nodup_cons.mp hpair).1 (by simp [he])
+  let marked := state[r.phase1IsZero ↦ !state r.phase1]
+  have hm : wireValues r.work marked = wireValues r.work state := by
+    apply shift_wireValues_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro he; subst wire; exact hzwork hw)
+  have hpayload := shiftWork_payload (marked r.phase1IsZero) (marked r.phase2)
+    r.work r.lengthS r.both marked (shiftWork_nodup r hlayout)
+    (shiftCounter_layout r hlayout).2
+    (hlayout.scratchWorkDisjoint _ (by simp [ShiftRegisters.scratch]))
+    (hlayout.scratchLengthDisjoint _ (by simp [ShiftRegisters.scratch]))
+    (by dsimp only [marked]; rw [upd_other _ _ _ hb]; exact hready _ (by simp [ShiftRegisters.scratch]))
+  rw [run_preShiftUnitary r state hlayout hready]
+  unfold preShiftState
+  simp only [hzero, Bool.false_xor]
+  have hout : ∀ (s : BasisState) (bit : Bool),
+      wireValues r.work s[r.phase1IsZero ↦ bit] = wireValues r.work s := by
+    intro s bit
+    apply shift_wireValues_congr
+    intro wire hw
+    exact upd_other _ _ _ (by intro he; subst wire; exact hzwork hw)
+  rw [hout]
+  change wireValues r.work (shiftPayloadState (marked r.phase1IsZero)
+    (marked r.phase2) r.work r.lengthS r.both marked) = _
+  rw [hpayload, hm]
+  simp only [marked, upd_same, upd_other _ _ _ h2]
+
+
 end ShorECDLP.Paper2607_13816
