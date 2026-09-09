@@ -1345,3 +1345,11 @@ Their numeric corollaries erase the padding in the respective little-/big-endian
 orientations. These exact slice identities connect the preceding binary-length
 formulas to work-register positions; reachable packed-value consistency still
 requires the arithmetic invariant.
+
+`endIterationUpperRangeBits_extract` and `endIterationLowerRangeBits_extract`
+replace the selected slices with division and reduction modulo powers of two of
+the complete packed work word. The lower formula reads that word big-endian and
+uses the omitted suffix length as its division offset. Generic fitting-slice
+lemmas cover zero-width extraction as well. The range values are now explicit
+numeric fields of the bank; proving their evolving logical EEA interpretation
+and consistency with the stored metadata remains open.
