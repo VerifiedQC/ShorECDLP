@@ -11800,6 +11800,79 @@ theorem blockCForward_nonterminal (r : IndexedStepRegisters) (n index : Nat)
   apply hc r.terminal
   exact h.sourceScratch_mem_aux (by rw [← h.scratch_view]; simp)
 
+private theorem coefficient_rControl_idle (conditions : List Wire) (value : Nat)
+    (control : Wire) (lengthRP : List Wire) (zeroWire : Wire) (scratch : List Wire)
+    (state : BasisState) (h : RControlNonterminalLayout conditions control lengthRP zeroWire scratch)
+    (hm : registerMatches conditions (value % 2^conditions.length) state = false) :
+    rControlState conditions value control lengthRP zeroWire state = state := by
+  have hn := (List.nodup_append.mp h.conditionLayout.2).1
+  have hz : zeroWire ∉ conditions := by
+    intro hw
+    exact (List.nodup_append.mp hn).2.2 zeroWire hw zeroWire (by simp) rfl
+  rw [rControlState, rControlNonterminalPredicate_eq _ _ _ _ _ hz]
+  simp only [hm, Bool.false_and, Bool.xor_false, endIdle_update_read]
+
+/-- In the coefficient phase, the actual remainder prefix is the identity on the
+complete state. No boundary routing or logical operand encoding is required. -/
+theorem indexedStepRemainderPrefix_coefficient_idle
+    (r : IndexedStepRegisters) (n T : Nat) (s : BasisState)
+    (h : IndexedStepLayout r n T) (hc : Clean r.aux s)
+    (hp1 : s r.phase1 = true) (hp2 : s r.phase2 = false) :
+    run (indexedStepRemainderPrefix r n T) s = s := by
+  have hr : IndexedStepReady r s := by
+    intro w hw
+    apply hc w
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst w; exact h.control_mem_aux
+    · exact h.sourceScratch_mem_aux he
+    · exact h.remainderRepairScratch_mem_aux he
+  have hm : registerMatches (terminalConditionWires r) (terminalConditionValue r) s = false := by
+    rw [terminalConditionWires, terminalConditionValue, terminal_detection, hp1]
+    simp
+  have hs : ShiftReady r.preShift s := by
+    intro w hw
+    exact hc w (h.sourceScratch_mem_aux
+      (List.mem_of_mem_drop (h.preShift_scratch_sub_block w hw)))
+  have ha : run (blockAForward r) s = s := by
+    rw [(blockAForward_correct r n T s h hr).1, active_A_shift r n T s h hc hm]
+    exact preShiftUnitary_idle _ _ h.preShift hs hp1
+  have hsub := coefficient_rControl_idle _ 0 _ _ _ _ s h.remainderSub
+    (by simp [registerMatches, registerMatchesFrom, hp1])
+  have hphase := coefficient_rControl_idle _ 2 _ _ _ _ s h.remainderPhase2
+    (by simp [registerMatches, registerMatchesFrom, hp1])
+  have hrest := coefficient_rControl_idle _ 0 _ _ _ _ s h.remainderRestore
+    (by simp [registerMatches, registerMatchesFrom, hp1])
+  have hmark : andXorWireState r.phase2 r.sign r.terminal s = s := by
+    simp only [andXorWireState, hp2, Bool.false_and, Bool.xor_false, endIdle_update_read]
+  have hrestore : remainderRestoreControlState r s = s := by
+    simp only [remainderRestoreControlState, hmark, hrest]
+  have hlocal : IntervalReady (r.remainder (certifiedActiveWindows n T).remainder) s := by
+    intro w hw
+    exact hc w (h.remainder_scratch_sub_aux _ w hw)
+  have hi (mode : RippleMode) (signUpdate : Bool) :
+      intervalAddSubState (r.remainder (certifiedActiveWindows n T).remainder) n
+        (certifiedActiveWindows n T).remainder.start
+        (certifiedActiveWindows n T).remainder.stop mode signUpdate .work1 s = s := by
+    rw [← run_intervalAddSubUnitary_state _ _ _ _ mode signUpdate .work1 s h.remainder hlocal]
+    exact intervalAddSubUnitary_idle _ _ _ _ mode signUpdate .work1 s h.remainder hlocal
+      (hc _ h.control_mem_aux)
+  have hx := terminal_xor_idle r.control r.sign s (hc _ h.control_mem_aux)
+  have hb : run (blockBForward r n (certifiedActiveWindows n T).remainder) s = s := by
+    rw [(blockBForward_correct r n T _ s h rfl hc).1]
+    simp only [blockBForwardState, blockB1ForwardState, hsub, hi, blockB2State,
+      hphase, hx, blockB3ForwardState, hrestore]
+  have ht : s r.terminal = false := hc _ (h.sourceScratch_mem_aux (by
+    rw [← h.scratch_view]; simp))
+  have hmatch : matchXorState (terminalConditionWires r) (terminalConditionValue r) r.terminal s = s := by
+    simp only [matchXorState, hm, Bool.xor_false, endIdle_update_read]
+  have hepoch : terminalEpochRestoreState r.terminal r.shiftEpoch r.quotientLow s = s := by
+    simp only [terminalEpochRestoreState, controlledSwapState, ht, Bool.false_eq_true,
+      ↓reduceIte, xorWireState, Bool.xor_false, endIdle_update_read]
+  have hC : run (blockCForward r) s = s := by
+    rw [(blockCForward_correct r n T s h hc).1, blockCForwardState, hmatch, hepoch, hmatch]
+  simp only [indexedStepRemainderPrefix, Classical.run_append, ha, hb, hC]
+
 /-- A clean, nonterminal input returns every auxiliary wire clear after A--F.
 In particular the borrowed epoch remains zero rather than gaining a padding bit. -/
 theorem indexedStepShiftPrefix_clean (r : IndexedStepRegisters) (n T : Nat)
