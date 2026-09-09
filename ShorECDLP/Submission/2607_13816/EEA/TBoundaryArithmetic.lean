@@ -180,7 +180,7 @@ theorem blockEForward_arithmetic (r : IndexedStepRegisters) (n index T R S : Nat
       wireValues cr.work1 final = wireValues cr.work1 s ∧
       final r.sign = ((s r.sign ^^ s r.phase1) ^^ add.2) ∧
       IndexedStepReady r final ∧
-      AgreesOutside (r.sign :: r.work1 ++ r.work2) final s := by
+      AgreesOutside (r.sign :: cr.work1 ++ cr.work2) final s := by
   have hp := prepared_values (s r.phase2) (wireValues r.lengthT s)
     (wireValues r.lengthRPrime s) (wireValues r.tBoundary.lengthSLow s) T R S n
     (by simpa only [wireValues,List.length_map] using h.tBoundary.lengthRP_length.symm)

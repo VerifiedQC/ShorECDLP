@@ -62,7 +62,7 @@ theorem blockEForward_coefficient_value (r : IndexedStepRegisters) (n index : Na
       final r.sign = ((s r.sign ^^ s r.phase1) ^^
         (s r.phase1 && decide (modulus ≤ middle+x))) ∧
       IndexedStepReady r final ∧
-      AgreesOutside (r.sign :: r.work1 ++ r.work2) final s := by
+      AgreesOutside (r.sign :: cr.work1 ++ cr.work2) final s := by
   let cr := r.coefficient window
   let B := boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
     (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
@@ -153,7 +153,7 @@ theorem blockEForward_coefficient_packed (r : IndexedStepRegisters) (n index : N
       final r.sign = ((s r.sign ^^ s r.phase1) ^^
         (s r.phase1 && decide (modulus ≤ middle+x))) ∧
       IndexedStepReady r final ∧
-      AgreesOutside (r.sign :: r.work1 ++ r.work2) final s := by
+      AgreesOutside (r.sign :: cr.work1 ++ cr.work2) final s := by
   let cr := r.coefficient window
   let B := boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
     (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
@@ -184,5 +184,155 @@ theorem blockEForward_coefficient_packed (r : IndexedStepRegisters) (n index : N
   have hdrop := hf.2.1
   change (wireValues cr.work2 final).drop m = (wireValues cr.work2 s).drop m at hdrop
   rw [hdrop]
+
+private theorem bank_window_frame (ws : List Wire) (start width : Nat)
+    (before after : BasisState) (hn : ws.Nodup)
+    (hf : ∀ w ∈ ws, w ∉ (ws.drop start).take width → after w = before w) :
+    wireValues ws after = (wireValues ws before).take start ++
+      wireValues ((ws.drop start).take width) after ++
+      (wireValues ws before).drop (start+width) := by
+  have hpre : (wireValues ws after).take start = (wireValues ws before).take start := by
+    rw [wireValues,wireValues,← List.map_take,← List.map_take]
+    apply List.map_congr_left
+    intro w hm
+    apply hf w (List.mem_of_mem_take hm)
+    intro hw
+    exact (List.disjoint_left.mp (List.disjoint_take_drop hn (Nat.le_refl start))) hm
+      (List.mem_of_mem_take hw)
+  have hpost : (wireValues ws after).drop (start+width) = (wireValues ws before).drop (start+width) := by
+    rw [wireValues,wireValues,← List.map_drop,← List.map_drop]
+    apply List.map_congr_left
+    intro w hm
+    apply hf w (List.mem_of_mem_drop hm)
+    intro hw
+    have hd : (ws.drop start).Nodup := hn.sublist (List.drop_sublist _ _)
+    have hm' : w ∈ (ws.drop start).drop width := by simpa only [List.drop_drop] using hm
+    exact (List.disjoint_left.mp (List.disjoint_take_drop hd (Nat.le_refl width))) hw hm'
+  calc
+    wireValues ws after = (wireValues ws after).take start ++
+        (((wireValues ws after).drop start).take width ++
+          ((wireValues ws after).drop start).drop width) := by simp only [List.take_append_drop]
+    _ = _ := by
+      rw [List.drop_drop,hpre,hpost]
+      simp only [wireValues,List.map_take,List.map_drop,List.append_assoc]
+
+private theorem coefficient_bank_geometry (r : IndexedStepRegisters) (n index : Nat)
+    (h : IndexedStepLayout r n index) :
+    r.work1.Nodup ∧ r.work2.Nodup ∧
+      (∀ w ∈ r.work1, w ≠ r.sign ∧ w ∉ r.work2) ∧
+      (∀ w ∈ r.work2, w ≠ r.sign ∧ w ∉ r.work1) := by
+  have hn : ([r.phase1,r.phase2,r.iter,r.sign] ++ (r.work1 ++ (r.work2 ++
+      (r.lengthT ++ r.lengthQ ++ r.lengthS ++ r.lengthRPrime ++ r.aux)))).Nodup := by
+    simpa only [IndexedStepRegisters.allWires,List.append_assoc] using h.physical
+  have htail := (List.nodup_append.mp hn).2.1
+  have h1 := (List.nodup_append.mp htail).1
+  have h2 := (List.nodup_append.mp (List.nodup_append.mp htail).2.1).1
+  have hd := (List.nodup_append.mp htail).2.2
+  have hs := (List.nodup_append.mp hn).2.2
+  refine ⟨h1,h2,?_,?_⟩
+  · intro w hw
+    refine ⟨Ne.symm (hs r.sign (by simp) w (by simp [hw])),?_⟩
+    intro hw2
+    exact hd w hw w (by simp [hw2]) rfl
+  · intro w hw
+    refine ⟨Ne.symm (hs r.sign (by simp) w (by simp [hw])),?_⟩
+    intro hw1
+    exact hd w hw1 w (by simp [hw]) rfl
+
+/-- Complete physical work banks after the coefficient update, including all neighboring fields. -/
+theorem blockEForward_workBanks (r : IndexedStepRegisters) (n index : Nat)
+    (window : ActiveWindow) (s : BasisState) (h : IndexedStepLayout r n index)
+    (hw : window = (certifiedActiveWindows n index).coefficient)
+    (hr : IndexedStepReady r s)
+    (hv : boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
+      (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
+      (wireValues r.tBoundary.lengthSLow s) n).1 ∈ quotientSwapLabels window.start window.stop) :
+    let cr := r.coefficient window
+    let B := boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
+      (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
+      (wireValues r.tBoundary.lengthSLow s) n).1
+    let m := B-window.start+1
+    let modulus := 2^m
+    let x := boolWordToNat ((wireValues cr.work1 s).take m)
+    let y := boolWordToNat ((wireValues cr.work2 s).take m)
+    let subEnable := s r.phase1 && !(!s r.phase2 && s r.sign)
+    let middle := if subEnable then (y+modulus-x)%modulus else y
+    let final := run (blockEForward r n window) s
+    wireValues r.work2 final =
+        (wireValues r.work2 s).take (window.start-1) ++ constantBits m (if s r.phase1 then (middle+x)%modulus else middle) ++
+          (wireValues r.work2 s).drop (window.start-1+m) ∧
+      wireValues r.work1 final = wireValues r.work1 s ∧
+      final r.sign = ((s r.sign ^^ s r.phase1) ^^
+        (s r.phase1 && decide (modulus ≤ middle+x))) ∧
+      IndexedStepReady r final ∧
+      AgreesOutside (r.sign :: cr.work1 ++ cr.work2) final s := by
+  let cr := r.coefficient window
+  let offset := window.start-1
+  let width := window.stop-window.start+1
+  let B := boolWordToNat (prepareLatestPaperTBoundaryWords (s r.phase2)
+    (wireValues r.lengthT s) (wireValues r.lengthRPrime s)
+    (wireValues r.tBoundary.lengthSLow s) n).1
+  let m := B-window.start+1
+  let final := run (blockEForward r n window) s
+  have hg := coefficient_bank_geometry r n index h
+  have hf := blockEForward_coefficient_packed r n index window s h hw hr hv
+  have hframe := hf.2.2.2.2
+  have h1 := bank_window_frame r.work1 offset width s final hg.1 (by
+    intro w hm hn
+    apply hframe w
+    have hs := (hg.2.2.1 w hm).1
+    have hnot : w ∉ cr.work2 := fun hh => (hg.2.2.1 w hm).2
+      (List.mem_of_mem_drop (List.mem_of_mem_take hh))
+    change w ∉ cr.work1 at hn
+    simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using And.intro hs (And.intro hn hnot))
+  have h2 := bank_window_frame r.work2 offset width s final hg.2.1 (by
+    intro w hm hn
+    apply hframe w
+    have hs := (hg.2.2.2 w hm).1
+    have hnot : w ∉ cr.work1 := fun hh => (hg.2.2.2 w hm).2
+      (List.mem_of_mem_drop (List.mem_of_mem_take hh))
+    change w ∉ cr.work2 at hn
+    simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using And.intro hs (And.intro hnot hn))
+  change wireValues r.work1 final = (wireValues r.work1 s).take offset ++
+    wireValues cr.work1 final ++ (wireValues r.work1 s).drop (offset+width) at h1
+  change wireValues r.work2 final = (wireValues r.work2 s).take offset ++
+    wireValues cr.work2 final ++ (wireValues r.work2 s).drop (offset+width) at h2
+  have hadd := hf.2.1
+  change wireValues cr.work1 final = wireValues cr.work1 s at hadd
+  rw [hadd] at h1
+  have h1full : wireValues r.work1 final = wireValues r.work1 s := by
+    have hslice : wireValues cr.work1 s = ((wireValues r.work1 s).drop offset).take width := by
+      simp only [cr,IndexedStepRegisters.coefficient,IndexedStepRegisters.windowSlice,
+        wireValues,List.map_take,List.map_drop]
+      rfl
+    have hd : (wireValues r.work1 s).drop (offset+width) =
+        ((wireValues r.work1 s).drop offset).drop width := by simp only [List.drop_drop]
+    simpa only [hslice,hd,List.append_assoc,List.take_append_drop] using h1
+  have hl : CoefficientPrefixLayout cr window.start window.stop := by subst window; exact h.coefficient
+  have hm : m ≤ (wireValues cr.work2 s).length := by
+    have hv' := hv
+    simp only [quotientSwapLabels,List.mem_range'] at hv'
+    simp only [wireValues,List.length_map,hl.work2_length]
+    dsimp [m,B]
+    omega
+  have hrest : (wireValues cr.work2 s).drop m ++ (wireValues r.work2 s).drop (offset+width) =
+      (wireValues r.work2 s).drop (offset+m) := by
+    change (List.map s ((r.work2.drop offset).take width)).drop m ++
+      (List.map s r.work2).drop (offset+width) = _
+    have hm' : m ≤ (((List.map s r.work2).drop offset).take width).length := by
+      simpa only [cr,IndexedStepRegisters.coefficient,IndexedStepRegisters.windowSlice,
+        wireValues,List.map_take,List.map_drop] using hm
+    have hd : (List.map s r.work2).drop (offset+width) =
+        ((List.map s r.work2).drop offset).drop width := by simp only [List.drop_drop]
+    simp only [List.map_take,List.map_drop]
+    rw [hd,← List.drop_append_of_le_length hm',List.take_append_drop,List.drop_drop]
+    rfl
+  have hp := hf.1
+  change wireValues cr.work2 final = constantBits m _ ++ (wireValues cr.work2 s).drop m at hp
+  rw [hp] at h2
+  dsimp only
+  refine ⟨?_,h1full,hf.2.2⟩
+  change wireValues r.work2 final = _
+  simpa only [List.append_assoc,hrest] using h2
 
 end ShorECDLP.Paper2607_13816
