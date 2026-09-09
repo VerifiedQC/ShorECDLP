@@ -1557,3 +1557,15 @@ The theorem derives data-bank separation from `IntervalLayout` and assumes
 clean top scratch, a zero initial accumulator, and ordered bounded numeric
 endpoints. Endpoint preparation/restoration, reachable metadata conditions and
 the complete packed EEA arithmetic connection remain separate boundaries.
+
+### Complete interval body selected-slice arithmetic
+
+`run_intervalAddSubBody_value` now derives modular addition/subtraction on the
+numeric interval selected by the endpoint words, including the incoming
+carry/borrow. It applies to the actual body circuit with its control enabled,
+both target banks and either sign-update setting. The proof decomposes the
+bounded numeric mask into a disabled prefix, enabled slice and disabled suffix,
+then uses the existing masked ripple arithmetic and complete-body word theorem.
+The physical layout, clean comparison scratch, zero accumulator and ordered
+bounded endpoints remain explicit. Preparation/restoration and reachable-state
+metadata still need connection to this arithmetic theorem.
