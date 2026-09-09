@@ -3,6 +3,7 @@ import ShorECDLP.Submission.«2607_13816».EEA.EndIteration
 import ShorECDLP.Submission.«2607_13816».EEA.PhaseUpdate
 import ShorECDLP.Submission.«2607_13816».EEA.StepControl
 import ShorECDLP.Submission.«2607_13816».EEA.TBoundary
+import ShorECDLP.Submission.«2607_13816».EEA.ShiftCounter
 
 /-!
 # One indexed Algorithm-3 microstep
@@ -11126,6 +11127,442 @@ theorem indexedStepUnitary_active_tail_correct
     simp only [Bool.and_false]
   simp only [IndexedStepEpochEncoded, hmatch, Bool.false_eq_true, if_false]
   exact heG
+
+private theorem active_interval_frame (r : IndexedStepRegisters) (n T : Nat)
+    (window : ActiveWindow) (mode : RippleMode) (signUpdate : Bool)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hwindow : window = (certifiedActiveWindows n T).remainder)
+    (hclean : ∀ wire ∈ r.aux, wire ≠ r.control → state wire = false)
+    {wire : Wire} (hwire : wire ∉ r.sign :: r.work1 ++ r.work2) :
+    intervalAddSubState (r.remainder window) n window.start window.stop mode signUpdate .work1
+      state wire = state wire := by
+  have hr : IntervalReady (r.remainder window) state := by
+    intro w hw
+    exact hclean w (hlayout.remainder_scratch_sub_aux window w hw) (by
+      intro he; subst w; exact hlayout.control_not_remainder_scratch window hwindow hw)
+  have hl : IntervalLayout (r.remainder window) window.start window.stop .work1 := by
+    subst window; exact hlayout.remainder
+  rw [← run_intervalAddSubUnitary_state _ _ _ _ _ _ _ _ hl hr]
+  apply intervalAddSubUnitary_frame _ _ _ _ _ _ _ _ hl hr wire
+  intro hm
+  apply hwire
+  change wire ∈ r.sign :: IndexedStepRegisters.windowSlice r.work1 window ++
+    IndexedStepRegisters.windowSlice r.work2 window at hm
+  rcases List.mem_cons.mp hm with he | he
+  · exact List.mem_cons.mpr (Or.inl he)
+  · rcases List.mem_append.mp he with he | he
+    · exact List.mem_cons.mpr (Or.inr (List.mem_append_left _ (windowSlice_mem _ _ he)))
+    · exact List.mem_cons.mpr (Or.inr (List.mem_append_right _ (windowSlice_mem _ _ he)))
+
+private theorem active_B1_frame (r : IndexedStepRegisters) (n T : Nat) (window : ActiveWindow)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hwindow : window = (certifiedActiveWindows n T).remainder)
+    (hready : IndexedStepBorrowedReady r state) {wire : Wire}
+    (hwire : wire ∉ r.sign :: r.work1 ++ r.work2) (hc : wire ≠ r.control) :
+    blockB1ForwardState r n window state wire = state wire := by
+  unfold blockB1ForwardState
+  rw [rControlState_preserves _ _ _ _ _ _ hc]
+  rw [active_interval_frame r n T window .sub true _ hlayout hwindow (by
+    intro w hw hne
+    rw [rControlState_preserves _ _ _ _ _ _ hne]
+    exact hready w hw) hwire]
+  exact rControlState_preserves _ _ _ _ _ _ hc
+
+private theorem active_restore_aux (r : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hready : IndexedStepBorrowedReady r state) :
+    ∀ wire ∈ r.aux, wire ≠ r.control →
+      remainderRestoreControlState r state wire = false := by
+  intro wire hw hc
+  by_cases ht : wire = r.terminal
+  · subst wire
+    have htc : r.terminal ≠ r.control := hlayout.control_ne_terminal.symm
+    simp only [remainderRestoreControlState, andXorWireState, rControlState,
+      upd_same, upd_other _ _ _ htc]
+    have h1 : r.phase2 ≠ r.terminal := by
+      exact Ne.symm (hlayout.aux_not_payload (hlayout.sourceScratch_mem_aux (by rw [← hlayout.scratch_view]; simp)) (by simp [indexedStepPayload]))
+    have h2 : r.sign ≠ r.terminal := by
+      exact Ne.symm (hlayout.aux_not_payload (hlayout.sourceScratch_mem_aux (by rw [← hlayout.scratch_view]; simp)) (by simp [indexedStepPayload]))
+    have h3 : r.phase2 ≠ r.control := by
+      exact Ne.symm (hlayout.aux_not_payload hlayout.control_mem_aux (by simp [indexedStepPayload]))
+    have h4 : r.sign ≠ r.control := by
+      exact Ne.symm (hlayout.aux_not_payload hlayout.control_mem_aux (by simp [indexedStepPayload]))
+    simp only [upd_other _ _ _ h1, upd_other _ _ _ h2,
+      upd_other _ _ _ h3, upd_other _ _ _ h4]
+    rw [hready r.terminal (hlayout.sourceScratch_mem_aux (by rw [← hlayout.scratch_view]; simp))]
+    simp
+  · rw [remainderRestoreControlState_preserves _ _ ht hc]
+    exact hready wire hw
+
+private theorem active_B3_frame (r : IndexedStepRegisters) (n T : Nat) (window : ActiveWindow)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hwindow : window = (certifiedActiveWindows n T).remainder)
+    (hready : IndexedStepBorrowedReady r state) {wire : Wire}
+    (hwire : wire ∉ r.sign :: r.work1 ++ r.work2) (hc : wire ≠ r.control)
+    (ht : wire ≠ r.terminal) : blockB3ForwardState r n window state wire = state wire := by
+  unfold blockB3ForwardState
+  rw [remainderRestoreControlState_preserves _ _ ht hc]
+  rw [active_interval_frame r n T window .add false _ hlayout hwindow
+    (active_restore_aux r n T state hlayout hready) hwire]
+  exact remainderRestoreControlState_preserves _ _ ht hc
+
+private theorem active_B_frame (r : IndexedStepRegisters) (n T : Nat) (window : ActiveWindow)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hwindow : window = (certifiedActiveWindows n T).remainder)
+    (hready : IndexedStepBorrowedReady r state) {wire : Wire}
+    (hwire : wire ∉ r.sign :: r.work1 ++ r.work2) (hc : wire ≠ r.control)
+    (ht : wire ≠ r.terminal) : blockBForwardState r n window state wire = state wire := by
+  have h1 := blockB1Forward_correct r n T window state hlayout hwindow hready
+  have hr1 := h1.2
+  rw [h1.1] at hr1
+  have h2 := blockB2_correct r n T (blockB1ForwardState r n window state) hlayout hr1
+  have hr2 := h2.2
+  rw [h2.1] at hr2
+  rw [blockBForwardState, active_B3_frame r n T window _ hlayout hwindow hr2 hwire hc ht]
+  unfold blockB2State
+  rw [rControlState_preserves _ _ _ _ _ _ hc,
+    xorWireState_preserves _ _ _ (by intro he; exact hwire (by simp [he])),
+    rControlState_preserves _ _ _ _ _ _ hc]
+  exact active_B1_frame r n T window state hlayout hwindow hready hwire hc
+
+private theorem active_quotient_frame (r : IndexedStepRegisters) (n T : Nat)
+    (window : ActiveWindow) (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hwindow : window = (certifiedActiveWindows n T).quotientSwap)
+    {wire : Wire} (hs : wire ≠ r.sign) (hw : wire ∉ r.work1) :
+    indexedQuotientSwapState (r.quotient window) window.start window.stop state wire = state wire := by
+  have hl : QuotientSwapLayout (r.quotient window) window.start window.stop := by
+    subst window; exact hlayout.quotient
+  unfold indexedQuotientSwapState quotientSwapState
+  split
+  · rw [upd_other _ _ _ (by
+      intro he
+      apply hw
+      exact he ▸ windowSlice_mem _ _ (indexedQuotientWorkAt_mem_any _ hl _))]
+    exact upd_other _ _ _ hs
+  · rfl
+
+private theorem active_D_frame (r : IndexedStepRegisters) (n T : Nat)
+    (window : ActiveWindow) (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hwindow : window = (certifiedActiveWindows n T).quotientSwap)
+    {wire : Wire} (hs : wire ≠ r.sign) (hw : wire ∉ r.work1)
+    (hq : wire ∉ r.lengthQ) (hc : wire ≠ r.control) :
+    blockDForwardState r window state wire = state wire := by
+  unfold blockDForwardState blockD3ForwardState
+  rw [matchXorState_preserves _ _ _ _ hc]
+  unfold indexedDecrementWordState
+  rw [indexedWriteWireValues_preservesOutside _ _ _ hq,
+    matchXorState_preserves _ _ _ _ hc]
+  unfold blockD2ForwardState
+  rw [xorWireState_preserves _ _ _ hc, xorWireState_preserves _ _ _ hc,
+    active_quotient_frame r n T window _ hlayout hwindow hs hw,
+    xorWireState_preserves _ _ _ hc, xorWireState_preserves _ _ _ hc]
+  unfold blockD1ForwardState
+  rw [matchXorState_preserves _ _ _ _ hc]
+  unfold indexedIncrementWordState
+  rw [indexedWriteWireValues_preservesOutside _ _ _ hq,
+    matchXorState_preserves _ _ _ _ hc]
+
+private theorem active_coefficient_frame (r : IndexedStepRegisters) (n T : Nat)
+    (window : ActiveWindow) (mode : RippleMode) (signUpdate : Bool) (state : BasisState)
+    (hlayout : IndexedStepLayout r n T)
+    (hwindow : window = (certifiedActiveWindows n T).coefficient)
+    (hclean : Clean r.blockScratch state) :
+    AgreesOutside (r.sign :: r.work1 ++ r.work2)
+      (coefficientPrefixState (r.coefficient window) window.start window.stop
+        mode signUpdate .work2 state) state ∧
+    Clean r.blockScratch (coefficientPrefixState (r.coefficient window) window.start window.stop
+      mode signUpdate .work2 state) := by
+  have hr := run_coefficientPrefixState_from_blockScratch r n T window mode signUpdate state
+    hlayout hwindow hclean
+  dsimp only at hr
+  have hl : CoefficientPrefixLayout (r.coefficient window) window.start window.stop := by
+    subst window; exact hlayout.coefficient
+  constructor
+  · rw [← hr.1]
+    intro wire hw
+    apply coefficientPrefixUnitary_frame _ _ _ _ _ hl wire
+    intro hm
+    apply hw
+    change wire ∈ r.sign :: IndexedStepRegisters.windowSlice r.work1 window ++
+      IndexedStepRegisters.windowSlice r.work2 window at hm
+    rcases List.mem_cons.mp hm with he | he
+    · exact List.mem_cons.mpr (Or.inl he)
+    · rcases List.mem_append.mp he with he | he
+      · exact List.mem_cons.mpr (Or.inr (List.mem_append_left _ (windowSlice_mem _ _ he)))
+      · exact List.mem_cons.mpr (Or.inr (List.mem_append_right _ (windowSlice_mem _ _ he)))
+  · rw [← hr.1]
+    exact hr.2.1
+
+private theorem active_match_clean (r : IndexedStepRegisters) (controls : List Wire)
+    (value : Nat) (target : Wire) (state : BasisState)
+    (hclean : Clean r.blockScratch state) (hn : target ∉ r.blockScratch) :
+    Clean r.blockScratch (matchXorState controls value target state) := by
+  exact clean_upd_not_mem hclean hn
+
+private theorem active_E_frame (r : IndexedStepRegisters) (n T : Nat)
+    (window : ActiveWindow) (state : BasisState) (hlayout : IndexedStepLayout r n T)
+    (hwindow : window = (certifiedActiveWindows n T).coefficient)
+    (hclean : Clean r.blockScratch state) {wire : Wire}
+    (hw : wire ∉ r.sign :: r.work1 ++ r.work2) (hc : wire ≠ r.control)
+    (hf : wire ≠ r.terminal) (ht : wire ∉ r.lengthT) (hrp : wire ∉ r.lengthRPrime) :
+    blockEForwardState r n window state wire = state wire := by
+  have hcn : r.control ∉ r.blockScratch := fun hm =>
+    hlayout.control_not_sourceScratch (List.mem_of_mem_drop hm)
+  have hsn : r.sign ∉ r.blockScratch := by
+    intro hm
+    exact (hlayout.aux_not_payload
+      (hlayout.sourceScratch_mem_aux (List.mem_of_mem_drop hm)) (by simp [indexedStepPayload])) rfl
+  let t1 := matchXorState [r.phase2, r.sign] 2 r.terminal state
+  let e1 := matchXorState [r.phase1, r.terminal] 1 r.control t1
+  let t2 := matchXorState [r.phase2, r.sign] 2 r.terminal e1
+  have hc1 : Clean r.blockScratch t1 := active_match_clean r _ _ _ state hclean hlayout.terminal_not_blockScratch
+  have hc2 : Clean r.blockScratch e1 := active_match_clean r _ _ _ t1 hc1 hcn
+  have hc3 : Clean r.blockScratch t2 := active_match_clean r _ _ _ e1 hc2 hlayout.terminal_not_blockScratch
+  let prepared := tBoundaryPrepareState r n t2
+  have hp := run_tBoundaryPrepareState r n T t2 hlayout hc3
+  have hpc := hp.2
+  rw [hp.1] at hpc
+  let subtracted := coefficientPrefixState (r.coefficient window) window.start window.stop
+    .sub false .work2 prepared
+  have hsub := active_coefficient_frame r n T window .sub false prepared hlayout hwindow hpc
+  let t3 := matchXorState [r.phase2, r.sign] 2 r.terminal subtracted
+  let c1 := matchXorState [r.phase1, r.terminal] 1 r.control t3
+  let t4 := matchXorState [r.phase2, r.sign] 2 r.terminal c1
+  have hc4 : Clean r.blockScratch t3 := active_match_clean r _ _ _ subtracted hsub.2 hlayout.terminal_not_blockScratch
+  have hc5 : Clean r.blockScratch c1 := active_match_clean r _ _ _ t3 hc4 hcn
+  have hc6 : Clean r.blockScratch t4 := active_match_clean r _ _ _ c1 hc5 hlayout.terminal_not_blockScratch
+  let signChanged := xorWireState r.phase1 r.sign t4
+  have hsc : Clean r.blockScratch signChanged := clean_upd_not_mem hc6 hsn
+  let e2 := matchXorState [r.phase1] 1 r.control signChanged
+  have hc7 : Clean r.blockScratch e2 := active_match_clean r _ _ _ signChanged hsc hcn
+  let added := coefficientPrefixState (r.coefficient window) window.start window.stop
+    .add true .work2 e2
+  have hadd := active_coefficient_frame r n T window .add true e2 hlayout hwindow hc7
+  change tBoundaryRestoreState r n (matchXorState [r.phase1] 1 r.control added) wire = state wire
+  rw [tBoundaryRestoreState_preservesOutside _ _ _ ht hrp,
+    matchXorState_preserves _ _ _ _ hc]
+  dsimp only [added]
+  rw [hadd.1 wire hw]
+  dsimp only [e2, signChanged, t4, c1, t3]
+  rw [matchXorState_preserves _ _ _ _ hc,
+    xorWireState_preserves _ _ _ (by intro he; exact hw (by simp [he])),
+    matchXorState_preserves _ _ _ _ hf, matchXorState_preserves _ _ _ _ hc,
+    matchXorState_preserves _ _ _ _ hf]
+  dsimp only [subtracted]
+  rw [hsub.1 wire hw]
+  dsimp only [prepared]
+  rw [tBoundaryPrepareState_preservesOutside _ _ _ ht hrp]
+  dsimp only [t2, e1, t1]
+  rw [matchXorState_preserves _ _ _ _ hf, matchXorState_preserves _ _ _ _ hc,
+    matchXorState_preserves _ _ _ _ hf]
+
+private theorem active_read_write (ws : List Wire) (s : BasisState) :
+    writeReg ws (boolWordToNat (wireValues ws s)) s = s := by
+  induction ws with
+  | nil => rfl
+  | cons w ws ih =>
+    have hb : (Bool.toNat (s w) + 2 * boolWordToNat (wireValues ws s)).testBit 0 = s w := by
+      rw [Nat.testBit_zero]
+      cases s w <;> simp [Nat.add_mod]
+    have hd : (Bool.toNat (s w) + 2 * boolWordToNat (wireValues ws s)) / 2 =
+        boolWordToNat (wireValues ws s) := by
+      cases s w <;> simp
+      omega
+    have hu : s[w ↦ s w] = s := by funext i; by_cases h : i = w <;> simp [upd, h]
+    change writeReg ws ((Bool.toNat (s w) + 2 * boolWordToNat (wireValues ws s)) / 2)
+      (s[w ↦ (Bool.toNat (s w) + 2 * boolWordToNat (wireValues ws s)).testBit 0]) = s
+    rw [hb, hd, hu]
+    exact ih
+private theorem active_inc_false (xs : List Bool) : incrementBits false xs = xs := by
+  induction xs with
+  | nil => rfl
+  | cons x xs ih => simp [incrementBits, ih]
+private theorem active_padding_idle (r : TerminalPaddingRegisters) (s : BasisState) (ht : s r.terminal = false) :
+    terminalPaddingForwardState r s = s := by
+  unfold terminalPaddingForwardState
+  simp only [ht, Bool.false_eq_true, ↓reduceIte, active_read_write, active_inc_false,
+    Bool.false_and, Bool.xor_false]
+  funext i
+  by_cases h : i = r.shiftEpoch <;> simp [upd, h]
+
+private theorem active_A_shift (r : IndexedStepRegisters) (n T : Nat) (state : BasisState)
+    (hlayout : IndexedStepLayout r n T) (hready : IndexedStepBorrowedReady r state)
+    (hcondition : registerMatches (terminalConditionWires r) (terminalConditionValue r) state = false) :
+    blockAForwardState r state = run (preShiftUnitary r.preShift) state := by
+  have htaux : r.terminal ∈ r.aux := hlayout.sourceScratch_mem_aux (by
+    rw [← hlayout.scratch_view]; simp)
+  have ht : state r.terminal = false := hready _ htaux
+  have hpReady : ShiftReady r.preShift state := by
+    intro wire hw
+    exact hready wire (hlayout.sourceScratch_mem_aux
+      (List.mem_of_mem_drop (hlayout.preShift_scratch_sub_block wire hw)))
+  let shifted := preShiftState r.preShift state
+  have hp := run_preShiftUnitary r.preShift state hlayout.preShift hpReady
+  have hst : shifted r.terminal = false := by
+    dsimp only [shifted]
+    rw [← hp]
+    exact (preShiftUnitary_preservesOutside _ _ hlayout.terminal_not_preShift).trans ht
+  have hsc : registerMatches (terminalConditionWires r) (terminalConditionValue r) shifted = false := by
+    rw [← hcondition]
+    apply registerMatches_congr
+    intro wire hw
+    change wire ∈ r.phase1 :: r.lengthRPrime at hw
+    dsimp only [shifted]
+    rw [← hp]
+    rcases List.mem_cons.mp hw with heq | hm
+    · subst wire
+      exact preShiftUnitary_preserves_phase1 _ _ hlayout.preShift hpReady
+    · exact preShiftUnitary_preservesOutside _ _ (hlayout.lengthRPrime_not_preShift hm)
+  have hm : matchXorState (terminalConditionWires r) (terminalConditionValue r) r.terminal state = state := by
+    simp only [matchXorState, hcondition, Bool.xor_false, endIdle_update_read]
+  have hd : xorWireState r.terminal r.phase1 state = state := by
+    simp only [xorWireState, ht, Bool.xor_false, endIdle_update_read]
+  have hrestore : xorWireState r.terminal r.phase1 shifted = shifted := by
+    simp only [xorWireState, hst, Bool.xor_false, endIdle_update_read]
+  have hspill : terminalEpochSpillState r.terminal r.shiftEpoch r.quotientLow shifted = shifted := by
+    simp only [terminalEpochSpillState, xorWireState, Bool.xor_false,
+      endIdle_update_read, controlledSwapState, hst, Bool.false_eq_true, ↓reduceIte]
+  rw [blockAForwardState, hm, active_padding_idle _ _ ht, hd]
+  change matchXorState (terminalConditionWires r) (terminalConditionValue r) r.terminal
+    (terminalEpochSpillState r.terminal r.shiftEpoch r.quotientLow
+      (xorWireState r.terminal r.phase1 shifted)) = _
+  rw [hrestore, hspill]
+  simp only [matchXorState, hsc, Bool.xor_false, endIdle_update_read]
+  exact hp.symm
+
+private theorem active_metadata_geometry (r : IndexedStepRegisters) (n T : Nat) (hl : IndexedStepLayout r n T) :
+    List.Disjoint ([r.phase1, r.phase2] ++ r.lengthS)
+      (r.sign :: r.work1 ++ r.work2 ++ r.lengthT ++ r.lengthQ ++ r.lengthRPrime ++ r.aux) := by
+  have hp := hl.physical
+  simp only [IndexedStepRegisters.allWires, List.append_assoc, List.cons_append,
+    List.nil_append, List.nodup_cons, List.nodup_append] at hp
+  rw [List.disjoint_left]
+  intro w hm hn
+  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hm hn
+  rcases hm with ((h1 | h2) | hs)
+  · subst w
+    aesop
+  · subst w
+    aesop
+  · have h1 := hp.2.2.2.2
+    have h2 := h1.2.1
+    have ht := h2.2.1
+    have hq := ht.2.1
+    have hS := hq.2.1
+    rcases hn with (((((h | h) | h) | h) | h) | h) | h
+    · subst w
+      exact hp.2.2.2.1 (by simp [hs])
+    · exact h1.2.2 w h w (by simp [hs]) rfl
+    · exact h2.2.2 w h w (by simp [hs]) rfl
+    · exact ht.2.2 w h w (by simp [hs]) rfl
+    · exact hq.2.2 w h w (by simp [hs]) rfl
+    · exact hS.2.2 w hs w (by simp [h]) rfl
+    · exact hS.2.2 w hs w (by simp [h]) rfl
+
+/-- Across the actual A--F prefix, a nonterminal input shifts the counter exactly
+once, with direction selected by phase two. Scratch starts fully clear; active
+arithmetic reachability must still establish this input encoding. -/
+theorem indexedStepShiftPrefix_counter (r : IndexedStepRegisters) (n T : Nat)
+    (state : BasisState) (hlayout : IndexedStepLayout r n T) (hclean : Clean r.aux state)
+    (hrp : wireAnd r.lengthRPrime state = false) :
+    boolWordToNat (wireValues r.lengthS (run (indexedStepShiftPrefix r n T) state)) =
+      if state r.phase2 then
+        (boolWordToNat (wireValues r.lengthS state) + 2^r.lengthS.length - 1) % 2^r.lengthS.length
+      else (1 + boolWordToNat (wireValues r.lengthS state)) % 2^r.lengthS.length := by
+  have hready : IndexedStepReady r state := by
+    intro wire hw
+    apply hclean wire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst wire; exact hlayout.control_mem_aux
+    · exact hlayout.sourceScratch_mem_aux he
+    · exact hlayout.remainderRepairScratch_mem_aux he
+  have hcondition : registerMatches (terminalConditionWires r) (terminalConditionValue r) state = false := by
+    rw [terminalConditionWires, terminalConditionValue, terminal_detection, hrp]
+    simp
+  have hencoded : IndexedStepEpochEncoded r state := by
+    simp only [IndexedStepEpochEncoded, hcondition, Bool.false_eq_true, if_false]
+    exact hclean _ hlayout.shiftEpoch_mem_aux
+  let a := run (blockAForward r) state
+  have ha := blockAForward_correct r n T state hlayout hready
+  have har := blockAForward_borrowedReady r n T state hlayout hready hencoded
+  have hap : a = run (preShiftUnitary r.preShift) state :=
+    ha.1.trans (active_A_shift r n T state hlayout hclean hcondition)
+  let b := run (blockBForward r n (certifiedActiveWindows n T).remainder) a
+  have hb := blockBForward_correct r n T _ a hlayout rfl har
+  let c := run (blockCForward r) b
+  have hc := blockCForward_correct r n T b hlayout hb.2
+  let d := run (blockDForward r (certifiedActiveWindows n T).quotientSwap) c
+  have hd := blockDForward_correct r n T _ c hlayout rfl hc.2
+  let e := run (blockEForward r n (certifiedActiveWindows n T).coefficient) d
+  have he := blockEForward_correct r n T _ d hlayout rfl hd.2
+  have hmeta : ∀ wire ∈ [r.phase1, r.phase2] ++ r.lengthS,
+      e wire = run (preShiftUnitary r.preShift) state wire := by
+    intro wire hw
+    have hn := List.disjoint_left.mp (active_metadata_geometry r n T hlayout) hw
+    have hdata : wire ∉ r.sign :: r.work1 ++ r.work2 := by
+      intro hm
+      exact hn (List.mem_append_left _ (List.mem_append_left _
+        (List.mem_append_left _ (List.mem_append_left _ hm))))
+    have hT : wire ∉ r.lengthT := fun hm => hn (by simp [hm])
+    have hQ : wire ∉ r.lengthQ := fun hm => hn (by simp [hm])
+    have hRP : wire ∉ r.lengthRPrime := fun hm => hn (by simp [hm])
+    have haux : ∀ v ∈ r.aux, wire ≠ v := by
+      intro v hv hvw; apply hn; simp [hvw, hv]
+    have hcontrol := haux _ hlayout.control_mem_aux
+    have hterminal := haux r.terminal (hlayout.sourceScratch_mem_aux (by rw [← hlayout.scratch_view]; simp))
+    have hepoch := haux _ hlayout.shiftEpoch_mem_aux
+    have hqlow : wire ≠ r.quotientLow := by
+      intro h; subst wire; exact hQ hlayout.quotientLow_mem_lengthQ
+    have hsign : wire ≠ r.sign := by intro h; exact hdata (by simp [h])
+    have hwork : wire ∉ r.work1 := fun hm => hdata (by simp [hm])
+    dsimp only [e]
+    rw [he.1, active_E_frame r n T _ d hlayout rfl
+      (fun w hw => hd.2 w (hlayout.blockScratch_mem_sharedScratch hw))
+      hdata hcontrol hterminal hT hRP]
+    dsimp only [d]
+    rw [hd.1, active_D_frame r n T _ c hlayout rfl hsign hwork hQ hcontrol]
+    dsimp only [c]
+    rw [hc.1]
+    simp only [blockCForwardState, matchXorState_preserves _ _ _ _ hterminal,
+      terminalEpochRestoreState_preserves _ _ _ _ hepoch hqlow]
+    dsimp only [b]
+    rw [hb.1, active_B_frame r n T _ a hlayout rfl har hdata hcontrol hterminal]
+    exact congrFun hap wire
+  have hpReady : ShiftReady r.preShift state := by
+    intro wire hw
+    exact hclean wire (hlayout.blockScratch_mem_aux (hlayout.preShift_scratch_sub_block wire hw))
+  have hfReady : ShiftReady r.postShift e := by
+    intro wire hw
+    exact he.2 wire (hlayout.sourceScratch_mem_sharedScratch (hlayout.postShift_scratch_sub_source wire hw))
+  have hp1 : e r.phase1 = state r.phase1 :=
+    (hmeta _ (by simp)).trans (preShiftUnitary_preserves_phase1 _ _ hlayout.preShift hpReady)
+  have hp2 : e r.phase2 = state r.phase2 :=
+    (hmeta _ (by simp)).trans (preShiftUnitary_preserves_phase2 _ _ hlayout.preShift hpReady)
+  have hS : wireValues r.lengthS e = wireValues r.lengthS (run (preShiftUnitary r.preShift) state) := by
+    apply wireValues_congr_indexedStep
+    intro wire hw
+    exact hmeta wire (by simp [hw])
+  have hshape : run (indexedStepShiftPrefix r n T) state = run (postShiftUnitary r.postShift) e := by
+    simp only [indexedStepShiftPrefix, indexedStepRemainderPrefix, blockFForward, e, d, c, b, a,
+      Classical.run_append]
+  rw [hshape]
+  change boolWordToNat (wireValues r.postShift.lengthS (run (postShiftUnitary r.postShift) e)) = _
+  rw [postShiftUnitary_counter r.postShift e hlayout.postShift hfReady]
+  change (if e r.phase1 then
+    (if e r.phase2 then (boolWordToNat (wireValues r.lengthS e) + 2^r.lengthS.length - 1) % 2^r.lengthS.length
+      else (1 + boolWordToNat (wireValues r.lengthS e)) % 2^r.lengthS.length)
+    else boolWordToNat (wireValues r.lengthS e)) = _
+  rw [hp1, hp2, hS]
+  have hpre : boolWordToNat (wireValues r.lengthS (run (preShiftUnitary r.preShift) state)) =
+      if !state r.phase1 then
+        (if state r.phase2 then
+          (boolWordToNat (wireValues r.lengthS state) + 2^r.lengthS.length - 1) % 2^r.lengthS.length
+          else (1 + boolWordToNat (wireValues r.lengthS state)) % 2^r.lengthS.length)
+        else boolWordToNat (wireValues r.lengthS state) :=
+    preShiftUnitary_counter r.preShift state hlayout.preShift hpReady
+  rw [hpre]
+  cases state r.phase1 <;> cases state r.phase2 <;> simp
 
 end
 
