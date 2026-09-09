@@ -1937,3 +1937,14 @@ canonical coefficient theorem. The separate equation relating prepared circuit
 words to an abstract boundary is no longer a caller premise. Endpoint capacity,
 nonnegative subtraction, window membership, input packing and selected-field
 spans remain explicit and still need to follow from reachable-state induction.
+
+### Phase cases of the complete coefficient update
+
+`blockEForward_coefficientPhaseCases` reduces the subtraction/addition pair to
+one canonical field update. The coefficient changes only when phase 1 is set,
+phase 2 is clear and the input sign is set; otherwise it is unchanged. The sign
+is the corresponding addition carry or subtraction comparison, with the source
+sign toggle included. `blockEForward_inactive` proves the entire physical state
+is unchanged when phase 1 is clear, using only layout and scratch readiness;
+it needs no boundary-membership or logical-packing assumptions. The active
+logical contract retains the explicit metadata, capacity and span premises.
