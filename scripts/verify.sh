@@ -269,6 +269,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.upperLengthOfBits_size
 #print axioms ShorECDLP.Paper2607_13816.lowerLengthOfBits_size
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_bitLengths
+#print axioms ShorECDLP.Paper2607_13816.endIterationUpperRangeBits_slice
+#print axioms ShorECDLP.Paper2607_13816.endIterationLowerRangeBits_slice
+#print axioms ShorECDLP.Paper2607_13816.endIterationUpperRangeBits_value
+#print axioms ShorECDLP.Paper2607_13816.endIterationLowerRangeBits_value
 #print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_restores
 #print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_restores
 #print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_preservesOutsideTarget
@@ -1137,8 +1141,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1113 ]]; then
-  printf 'expected 1113 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1117 ]]; then
+  printf 'expected 1117 #print axioms results\n' >&2
   exit 1
 fi
 
