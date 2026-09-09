@@ -1422,3 +1422,14 @@ They also prove the next accumulator phase and the complete state action. The
 source's masked zero leaf and shared dynamic control wire are supported.
 Endpoint-match and incoming accumulator predicates remain explicit premises;
 the decoder traversal and scan induction must establish them for the full interval.
+
+### Both interval decoder banks
+
+The existing quotient tree projection and source-built routing proof now support
+either endpoint bank. `intervalTree_routeResidues` and `intervalTree_routeLabels`
+identify both projected main-tree routes from their numeric words, under explicit
+index-width and label-membership conditions. `intervalTree_singleton_route` covers
+the source's singleton main tree without any endpoint-value restriction. The
+quotient circuit retains its original first-bank projection. These are decoder
+selection facts; the actual traversal must still establish each dynamic control
+and the accumulator invariant used by the inclusive leaf theorems.
