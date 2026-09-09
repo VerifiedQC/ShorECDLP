@@ -2005,3 +2005,15 @@ weighted conservation, readiness and the full frame outside the two banks,
 quotient/shift words and sign. The post-shift frame is proved from its exact
 state transition, including restoration of its temporary control. Initial
 packing, phase and routing bounds still await whole-loop induction.
+
+### Logical phase update from encoded lengths
+
+`blockGForward_logical` identifies the entire state produced by the actual
+phase-update block with the source Boolean transition on logical zero tests.
+It derives these tests from bounded truth-minus-one encodings of the quotient
+length, divisor length and full shift counter, including zero-width words when
+the value bound permits them. The borrowed epoch is explicitly zero. Only the
+three phase/sign bits are updated; the exact state equation preserves all other
+wires, and indexed readiness is retained. The existing numeric all-ones lemma
+is shared with terminal padding. These input encodings still need to be supplied
+by composition and the reachable-state invariant.

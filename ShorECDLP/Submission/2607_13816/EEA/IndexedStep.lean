@@ -474,7 +474,7 @@ def blockFForward (registers : IndexedStepRegisters) : Circuit :=
 private def blockFInverse (registers : IndexedStepRegisters) : Circuit :=
   (postShiftUnitary registers.postShift).adjoint
 
-private def blockGForward (registers : IndexedStepRegisters) : Circuit :=
+def blockGForward (registers : IndexedStepRegisters) : Circuit :=
   phaseUpdateEpochUnitary registers.phaseUpdate registers.shiftEpoch
 
 private def blockGInverse (registers : IndexedStepRegisters) : Circuit :=
@@ -6394,6 +6394,15 @@ private theorem blockGForward_correct
   constructor
   · simpa only [blockGForward, blockGForwardState] using hrun
   · simpa only [blockGForward] using hglobalAfter
+
+/-- Phase update borrows its local scratch from indexed readiness and returns
+all indexed scratch clean. -/
+theorem blockGForward_readiness (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n index) (hr : IndexedStepReady r s) :
+    PhaseUpdateReady r.phaseUpdate s ∧ IndexedStepReady r (run (blockGForward r) s) := by
+  refine ⟨?_, (blockGForward_correct r n index s h hr).2⟩
+  intro wire hw
+  exact hr wire (h.sourceScratch_mem_sharedScratch (h.phaseUpdate_scratch_sub_source wire hw))
 
 private theorem blockHForward_run
     (registers : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
