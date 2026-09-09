@@ -1389,3 +1389,14 @@ work/counter registers and the old paired encoding are explicit premises. This
 closes local shift-encoding preservation under those bounds, including zero's
 all-ones sentinel; deriving the bounds and paired encoding along the complete EEA
 trace remains open.
+
+`controlledWindowRipple_arithmetic` proves the actual two-pass controlled ripple
+adds or subtracts the addend and incoming carry modulo the target width, read in
+big-endian physical order. Disabling the control leaves the target unchanged.
+Every wire outside the target is restored, including the addend, arbitrary carry
+and clean scratch. The proof binds both complete passes to a Boolean word
+recurrence, then derives the arithmetic with carry/borrow conservation. Besides
+the existing per-lane layouts, global data-register non-aliasing is required.
+This closes the uniform-control ripple core's arithmetic interpretation; the
+interval's changing unary accumulator, endpoint preparation and sign update
+remain to be composed into the remainder-trial theorem.
