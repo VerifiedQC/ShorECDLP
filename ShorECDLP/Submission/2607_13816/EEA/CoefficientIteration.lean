@@ -24,17 +24,6 @@ private theorem coefficient_still_active (v : EEAState) (count : Nat)
     have hQ := (coefficient_coordinates v k).2.2.2.2.2.2.1
     have hn : (coefficientMicrostep^[k] v).lQ ≠ 1 := by rw [hQ]; omega
     simp [Function.iterate_succ_apply',coefficientMicrostep,hn]
-private theorem coefficient_schedule_snoc (r : IndexedStepRegisters) (n start count : Nat) :
-    indexedScheduleUnitary r n start (count+1) =
-      indexedScheduleUnitary r n start count ++ indexedStepUnitary r n (start+count) := by
-  induction count generalizing start with
-  | zero => simp [indexedScheduleUnitary]
-  | succ k ih =>
-    change indexedStepUnitary r n start ++ indexedScheduleUnitary r n (start+1) (k+1) =
-      (indexedStepUnitary r n start ++ indexedScheduleUnitary r n (start+1) k) ++
-        indexedStepUnitary r n (start+(k+1))
-    rw [ih,List.append_assoc,show start+1+k = start+(k+1) by omega]
-
 /-- A sequence of actual coefficient microsteps preserves the packed interpretation.
 Only the initial arithmetic bounds and the chosen schedule's physical/window bounds
 are required; intermediate packing and coefficient bounds are derived by induction. -/
@@ -110,6 +99,6 @@ theorem indexedScheduleUnitary_coefficient_packed (r : IndexedStepRegisters) (n 
       (by rw [hSS,hTT,hRR]; omega) hbk hqk hrfit hswidth
       (by rw [hSS]; omega) (by simpa only [hRR] using hrcap)
     obtain ⟨hpack,hqnext,htpnext,hbnext,hsnext⟩ := hstep
-    rw [coefficient_schedule_snoc,Classical.run_append,Function.iterate_succ_apply']
+    rw [indexedScheduleUnitary_snoc,Classical.run_append,Function.iterate_succ_apply']
     exact ⟨hpack,hqnext,htpnext,hbnext,hsnext.trans hsk⟩
 end ShorECDLP.Paper2607_13816

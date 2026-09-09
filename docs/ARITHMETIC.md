@@ -2369,3 +2369,19 @@ output bank views, counters, phase/sign/parity, and auxiliary cleanup follow
 from the composition; no intermediate physical state is assumed. Numerical
 coherence, strict remainder order, coefficient space, capacity, and active-window
 coverage are still explicit and must be established by reachability separately.
+
+### Complete swap-phase schedule
+
+`indexedScheduleUnitary_swap_packed` proves that a complete actual swap-phase
+schedule returns to a canonical packed boundary and strictly decreases the second
+remainder. Its initial coefficient interval
+`2^(shift-1)*t ≤ tPrime < 2^shift*t`, together with the entry sign, determines every
+comparison and phase decision. Intermediate packed states, clean auxiliaries and
+metadata follow by induction; the final scheduled step applies the complete
+E/F/G/H theorem. Zero output remainder is included.
+
+Only initial arithmetic/space bounds and the actual schedule's layout and window
+coverage are required; intermediate physical states and phase decisions are not
+assumed. Alignment of the final H step remains explicit. Deriving these initial
+conditions from the coefficient phase and establishing production-window coverage
+through the entire EEA remain subsequent obligations.

@@ -407,6 +407,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.swapBeforeEndpointMicrostep
 #print axioms ShorECDLP.Paper2607_13816.blockEFGForward_swap_packed
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_swap_endpoint_packed
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_snoc
+#print axioms ShorECDLP.Paper2607_13816.swap_iteration_phase
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_swap_prefix_packed
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_swap_packed
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_swapPhase
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_swap_tail
 #print axioms ShorECDLP.Paper2607_13816.indexedStepSwapPrefix_idle
@@ -1321,8 +1325,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1297 ]]; then
-  printf 'expected 1297 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1301 ]]; then
+  printf 'expected 1301 #print axioms results\n' >&2
   exit 1
 fi
 

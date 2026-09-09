@@ -389,4 +389,16 @@ theorem secp256k1EEAForwardAdaptive_coherent
 
 end
 
+/-- Append the next indexed microstep to a finite schedule. -/
+theorem indexedScheduleUnitary_snoc (r : IndexedStepRegisters) (n start count : Nat) :
+    indexedScheduleUnitary r n start (count+1) =
+      indexedScheduleUnitary r n start count ++ indexedStepUnitary r n (start+count) := by
+  induction count generalizing start with
+  | zero => simp [indexedScheduleUnitary]
+  | succ k ih =>
+    change indexedStepUnitary r n start ++ indexedScheduleUnitary r n (start+1) (k+1) =
+      (indexedStepUnitary r n start ++ indexedScheduleUnitary r n (start+1) k) ++
+        indexedStepUnitary r n (start+(k+1))
+    rw [ih,List.append_assoc,show start+1+k = start+(k+1) by omega]
+
 end ShorECDLP.Paper2607_13816
