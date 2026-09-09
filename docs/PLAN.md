@@ -2052,3 +2052,12 @@ conservation proved together. The low shift-word encoding needed by boundary
 preparation is derived from the full word by modular projection. Active-window
 and arithmetic input bounds remain explicit; iterating this phase is the next
 step toward reachable-state refinement.
+
+`indexedScheduleUnitary_coefficient_packed` proves the actual consecutive
+coefficient-phase schedule by induction, for any count up to the initial quotient
+length. Intermediate packing, capacities and strict coefficient bounds are
+derived from the initial arithmetic bounds and the schedule's layout/window
+conditions. The theorem gives the quotient-length decrease and shift advance;
+consuming the complete quotient leaves zero quotient and adds its full weighted
+contribution to the coefficient. These initial schedule conditions still need to
+be connected to the other EEA phases and the production reachable-state invariant.
