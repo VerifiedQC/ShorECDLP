@@ -1828,3 +1828,13 @@ It retains the restored addend, optional sign carry/borrow, scratch cleanup and 
 the full bank width. Both results use the same `coefficientPrefixUnitary` term.
 Block E preparation and phase controls, reachable-state invariants and aggregate
 resources remain open; the prepared boundary must still lie in `k..K`.
+
+### Block E subtraction enable and boundary preparation
+
+The actual source prefix is now named `blockEPrepareForward`. Its contract derives
+the subtraction control from the phase/sign bits, restores the temporary flag and
+block scratch, and computes the prepared pair of boundary words. The full state is
+preserved outside the control and those two words. The reusable control sandwich
+allows an arbitrary initial control, so its XOR contract also supports cleanup.
+This does not yet compose Block E's arithmetic scans or prove that reachable states
+supply an in-range prepared boundary.
