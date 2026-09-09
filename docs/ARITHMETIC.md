@@ -2245,3 +2245,14 @@ output with phase1 true, phase2 equal to the comparison sign and sign false.
 Initial arithmetic, packing, capacity and active-window conditions remain
 explicit. The final shift-to-zero bank swap and whole-loop reachability remain
 open.
+
+### Packed interpretation of nonfinal swap steps
+
+`indexedStepUnitary_swap_packed` connects the complete nonfinal A–H swap
+circuit to `swapInteriorMicrostep`: shift decreases by one, sign clears, and
+the phase is selected by the comparison sign. It preserves the interpretation
+of both canonical work banks, every metadata register, parity and the entire
+clean auxiliary bank. The low shift metadata is derived from the complete
+counter encoding. Initial phase/length, capacity and window bounds remain
+explicit; this does not discharge production reachability or the final
+shift-to-zero bank swap.
