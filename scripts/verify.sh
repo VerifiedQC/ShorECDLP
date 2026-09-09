@@ -372,6 +372,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.blockEForward_coefficient_value
 #print axioms ShorECDLP.Paper2607_13816.blockEForward_coefficient_packed
 #print axioms ShorECDLP.Paper2607_13816.blockEForward_workBanks
+#print axioms ShorECDLP.Paper2607_13816.blockEForward_packedCoefficients
 #print axioms ShorECDLP.Paper2607_13816.uniformRippleExpectedWords_add_carry
 #print axioms ShorECDLP.Paper2607_13816.blockD1Forward_contract
 #print axioms ShorECDLP.Paper2607_13816.blockD3Forward_contract
@@ -1265,8 +1266,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1241 ]]; then
-  printf 'expected 1241 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1242 ]]; then
+  printf 'expected 1242 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -1905,3 +1905,14 @@ contracts. `blockEForward_workBanks` reconstructs the entire target bank as its
 original low neighboring bits, the canonical updated coefficient prefix and its
 original high fields. The entire addend bank is unchanged. Certified boundary
 membership remains explicit; reachable packed-state refinement is still open.
+
+### Logical coefficients in the physical windows
+
+`blockEForward_packedCoefficients` now decodes both selected windows from
+the logical coefficients `t` and `tPrime`, including the latter bank's rotation.
+The actual complete Block E circuit updates the canonical selected bits using
+those numeric slices, preserves the entire addend bank and all neighboring
+bits, and gives the sign overflow and clean-scratch guarantees. Coefficient
+fits, selected-field spans and prepared boundary membership remain explicit.
+Unrotating the result into an updated logical coefficient and deriving these
+premises from reachable states remain subsequent work.
