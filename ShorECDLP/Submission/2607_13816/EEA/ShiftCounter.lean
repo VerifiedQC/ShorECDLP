@@ -12,7 +12,8 @@ private theorem counter_increment_decrement (b : Bool) (xs : List Bool) :
   induction xs generalizing b with
   | nil => rfl
   | cons x xs ih => cases x <;> cases b <;> simp [decrementBits, incrementBits, ih]
-private theorem counter_decrement (xs : List Bool) : boolWordToNat (decrementBits true xs) =
+/-- Subtracting one from a Boolean word wraps modulo its width. -/
+theorem boolWordToNat_decrementBits (xs : List Bool) : boolWordToNat (decrementBits true xs) =
     (boolWordToNat xs + 2^xs.length - 1) % 2^xs.length := by
   have hi := boolWordToNat_incrementBits true (decrementBits true xs)
   rw [counter_increment_decrement, counter_decrement_length] at hi
@@ -42,7 +43,7 @@ theorem preShiftUnitary_counter (r : ShiftRegisters) (state : BasisState)
          else (1 + boolWordToNat (wireValues r.lengthS state)) % 2^r.lengthS.length)
       else boolWordToNat (wireValues r.lengthS state) := by
   rw [preShiftUnitary_counter_bits r state hlayout hready]
-  split_ifs <;> simp only [counter_decrement, boolWordToNat_incrementBits,
+  split_ifs <;> simp only [boolWordToNat_decrementBits, boolWordToNat_incrementBits,
     Bool.toNat_true, wireValues, List.length_map]
 
 /-- Numeric counter semantics of the actual post-shift, including modular wrap. -/
@@ -55,7 +56,7 @@ theorem postShiftUnitary_counter (r : ShiftRegisters) (state : BasisState)
          else (1 + boolWordToNat (wireValues r.lengthS state)) % 2^r.lengthS.length)
       else boolWordToNat (wireValues r.lengthS state) := by
   rw [postShiftUnitary_counter_bits r state hlayout hready]
-  split_ifs <;> simp only [counter_decrement, boolWordToNat_incrementBits,
+  split_ifs <;> simp only [boolWordToNat_decrementBits, boolWordToNat_incrementBits,
     Bool.toNat_true, wireValues, List.length_map]
 
 end
