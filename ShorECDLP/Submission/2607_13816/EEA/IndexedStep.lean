@@ -13154,4 +13154,14 @@ theorem blockEForward_words (r : IndexedStepRegisters) (n index : Nat)
         simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using And.intro hcw hmeta'
       exact (hf.2.2.2.2.2 w hfinish).trans ((hqframe w hbefore).trans (hp.2.2.1 w hprep))
 
+/-- With phase 1 clear, the complete actual Block E circuit is the identity.
+No arithmetic-window membership or logical packing premises are needed. -/
+theorem blockEForward_inactive (r : IndexedStepRegisters) (n index : Nat)
+    (window : ActiveWindow) (s : BasisState) (h : IndexedStepLayout r n index)
+    (hw : window = (certifiedActiveWindows n index).coefficient)
+    (hr : IndexedStepReady r s) (hp : s r.phase1 = false) :
+    run (blockEForward r n window) s = s := by
+  exact (blockEForward_correct r n index window s h hw hr).1.trans
+    (terminal_blockE_idle r n index window s h hw hr hp)
+
 end ShorECDLP.Paper2607_13816
