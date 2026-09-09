@@ -221,4 +221,67 @@ theorem blockEForward_canonicalCoefficient (r : IndexedStepRegisters) (n index B
   rw [rotate_splice _ _ _ logical.shift (window.start-1) (B-window.start+1)
     (constantBits_length _ _) (by simpa using hspan2),hc.1]
 
+/-- Complete canonical Block E output using endpoints decoded from logical metadata. -/
+theorem blockEForward_logicalCoefficient (r : IndexedStepRegisters) (n index : Nat)
+    (window : ActiveWindow) (s : BasisState) (logical : EEAState)
+    (h : IndexedStepLayout r n index)
+    (hw : window = (certifiedActiveWindows n index).coefficient)
+    (hr : IndexedStepReady r s)
+    (htmeta : boolWordToNat (wireValues r.lengthT s) = truthMinusOneValue r.lengthT.length logical.lT)
+    (hrmeta : boolWordToNat (wireValues r.lengthRPrime s) = truthMinusOneValue r.lengthT.length logical.lRPrime)
+    (hsmeta : boolWordToNat (wireValues r.tBoundary.lengthSLow s) = truthMinusOneValue r.lengthT.length logical.shift)
+    (hthi : logical.lT+1 < 2^r.lengthT.length)
+    (hlo : logical.lRPrime+logical.shift ≤ n+3)
+    (hhi : n+3-logical.lRPrime-logical.shift < 2^r.lengthT.length)
+    (hv : (if s r.phase2 then n+3-logical.lRPrime-logical.shift else logical.lT+1) ∈ quotientSwapLabels window.start window.stop)
+    (ht : logical.t < 2^logical.lT)
+    (htp : logical.tPrime < 2^(n+3-logical.lRPrime))
+    (hspan1 : window.start-1+((if s r.phase2 then n+3-logical.lRPrime-logical.shift else logical.lT+1)-window.start+1) ≤ logical.lT+1)
+    (hspan2 : logical.shift+(window.start-1)+((if s r.phase2 then n+3-logical.lRPrime-logical.shift else logical.lT+1)-window.start+1) ≤ n+3-logical.lRPrime)
+    (hwork1 : wireValues r.work1 s =
+      constantBits logical.lT logical.t ++ [false] ++
+        (constantBits logical.lQ logical.q).reverse ++
+        (constantBits (n+3-(logical.lT+logical.lQ+1)) logical.r).reverse)
+    (hwork2 : wireValues r.work2 s =
+      (constantBits (n+3-logical.lRPrime) logical.tPrime ++
+        (constantBits logical.lRPrime logical.rPrime).reverse).rotate logical.shift) :
+    let offset := window.start-1
+    let m := (if s r.phase2 then n+3-logical.lRPrime-logical.shift else logical.lT+1)-window.start+1
+    let modulus := 2^m
+    let x := (logical.t/2^offset)%modulus
+    let y := (logical.tPrime/2^(logical.shift+offset))%modulus
+    let subEnable := s r.phase1 && !(!s r.phase2 && s r.sign)
+    let middle := if subEnable then (y+modulus-x)%modulus else y
+    let result := if s r.phase1 then (middle+x)%modulus else middle
+    let pos := logical.shift+offset
+    let updated := logical.tPrime%2^pos + 2^pos*result +
+      2^(pos+m)*(logical.tPrime/2^(pos+m))
+    let final := run (blockEForward r n window) s
+    wireValues r.work2 final =
+      (constantBits (n+3-logical.lRPrime) updated ++
+        (constantBits logical.lRPrime logical.rPrime).reverse).rotate logical.shift ∧
+      updated < 2^(n+3-logical.lRPrime) ∧
+      wireValues r.work1 final = wireValues r.work1 s ∧
+      final r.sign = ((s r.sign ^^ s r.phase1) ^^
+        (s r.phase1 && decide (modulus ≤ middle+x))) ∧
+      IndexedStepReady r final ∧
+      AgreesOutside (r.sign :: (r.coefficient window).work1 ++
+        (r.coefficient window).work2) final s := by
+  have hp := prepareLatestPaperTBoundaryWords_arithmetic (s r.phase2) (wireValues r.lengthT s)
+    (wireValues r.lengthRPrime s) (wireValues r.tBoundary.lengthSLow s)
+    logical.lT logical.lRPrime logical.shift n
+    (by simpa only [wireValues,List.length_map] using h.tBoundary.lengthRP_length.symm)
+    (by simp only [wireValues,List.length_map,TBoundaryRegisters.lengthSLow,List.length_take,
+        Nat.min_eq_left h.tBoundary.lengthS_capacity]; rfl)
+    (by simpa only [wireValues,List.length_map] using h.tBoundary.positive)
+    (by simpa only [wireValues,List.length_map] using htmeta)
+    (by simpa only [wireValues,List.length_map] using hrmeta)
+    (by simpa only [wireValues,List.length_map] using hsmeta)
+    (by simpa only [wireValues,List.length_map] using hthi) hlo
+    (by simpa only [wireValues,List.length_map] using hhi)
+  have hb := congrArg Prod.fst hp
+  simp only [apply_ite Prod.fst] at hb
+  exact blockEForward_canonicalCoefficient r n index _ window s logical h hw hr hb hv
+    ht htp hspan1 hspan2 hwork1 hwork2
+
 end ShorECDLP.Paper2607_13816

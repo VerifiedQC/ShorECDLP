@@ -83,7 +83,8 @@ private theorem preparedRP_value (rp ls : List Bool) (R S n : Nat)
     have hl := boolWordToNat_lt_pow_two (cuccaroSubBits false ls (constMinusBits rp (n+1)))
     simpa only [cuccaroSubBits_length false ls (constMinusBits rp (n+1)) (by simp [hlen]),← hlen] using hl) hhi
 
-private theorem prepared_values (phase : Bool) (t rp ls : List Bool) (T R S n : Nat)
+/-- Prepared endpoint words decode the logical length boundaries, including zero sentinels. -/
+theorem prepareLatestPaperTBoundaryWords_arithmetic (phase : Bool) (t rp ls : List Bool) (T R S n : Nat)
     (htr : t.length = rp.length) (hts : t.length = ls.length) (hw : 0 < t.length)
     (ht : boolWordToNat t = truthMinusOneValue t.length T)
     (hr : boolWordToNat rp = truthMinusOneValue t.length R)
@@ -114,7 +115,7 @@ theorem prepareLatestPaperTBoundary_arithmetic (r : TBoundaryRegisters) (n T R S
       (∀ w, w ∉ r.lengthT → w ∉ r.lengthRP → final w = s w) := by
   have hv := prepareLatestPaperTBoundary_correct r n s h hc
   refine ⟨?_,hv.2⟩
-  have hp := prepared_values (s r.phase2) (wireValues r.lengthT s)
+  have hp := prepareLatestPaperTBoundaryWords_arithmetic (s r.phase2) (wireValues r.lengthT s)
     (wireValues r.lengthRP s) (wireValues r.lengthSLow s) T R S n
     (by simp only [wireValues,List.length_map,h.lengthRP_length]; rfl)
     (by simp only [wireValues,List.length_map,TBoundaryRegisters.lengthSLow,List.length_take,Nat.min_eq_left h.lengthS_capacity]; rfl)
@@ -144,7 +145,7 @@ theorem blockEPrepareForward_arithmetic (r : IndexedStepRegisters) (n index T R 
       Clean r.blockScratch final := by
   have hv := blockEPrepareForward_contract r n index s h hc hz
   refine ⟨?_,hv.2⟩
-  have hp := prepared_values (s r.phase2) (wireValues r.lengthT s)
+  have hp := prepareLatestPaperTBoundaryWords_arithmetic (s r.phase2) (wireValues r.lengthT s)
     (wireValues r.lengthRPrime s) (wireValues r.tBoundary.lengthSLow s) T R S n
     (by simpa only [wireValues,List.length_map] using h.tBoundary.lengthRP_length.symm)
     (by simp only [wireValues,List.length_map,TBoundaryRegisters.lengthSLow,List.length_take,
@@ -181,7 +182,7 @@ theorem blockEForward_arithmetic (r : IndexedStepRegisters) (n index T R S : Nat
       final r.sign = ((s r.sign ^^ s r.phase1) ^^ add.2) ∧
       IndexedStepReady r final ∧
       AgreesOutside (r.sign :: cr.work1 ++ cr.work2) final s := by
-  have hp := prepared_values (s r.phase2) (wireValues r.lengthT s)
+  have hp := prepareLatestPaperTBoundaryWords_arithmetic (s r.phase2) (wireValues r.lengthT s)
     (wireValues r.lengthRPrime s) (wireValues r.tBoundary.lengthSLow s) T R S n
     (by simpa only [wireValues,List.length_map] using h.tBoundary.lengthRP_length.symm)
     (by simp only [wireValues,List.length_map,TBoundaryRegisters.lengthSLow,List.length_take,
