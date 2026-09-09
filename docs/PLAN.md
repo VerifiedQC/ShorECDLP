@@ -1658,3 +1658,14 @@ no numeric endpoint bounds. `blockB1Forward_frame` and `blockBForward_frame`
 propagate this to the actual source blocks, restoring the addend and all metadata.
 This supplies the preserved encoding inputs needed for the combined remainder
 formula; reachable-state bounds remain outstanding.
+
+### Complete Block B active-phase arithmetic
+
+`blockBForward_activeArithmetic` derives the complete source block from its
+initial state with phase one off, sign zero, and a nonterminal divisor. With
+phase two off, the aligned work1 field is unchanged and sign records `x < y`.
+With phase two on, it becomes `if y ≤ x then x - y else x`, and sign records
+successful subtraction. All auxiliaries return clean. Intermediate metadata,
+addend values, sign updates, and conditional addback are derived. Initial
+logical encoding and endpoint bounds remain explicit. Connecting these fields
+to the packed logical remainder and proving reachable-state bounds remain open.
