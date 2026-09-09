@@ -750,51 +750,6 @@ def restoreLatestPaperTBoundaryWords
 
 /-! ## Word-level reversibility -/
 
-/-- Natural interpretation of the inverse Cuccaro recurrence at zero input carry. -/
-private theorem boolWordToNat_cuccaroSubBits_false
-    (addends sums : List Bool) (hlength : addends.length = sums.length) :
-    boolWordToNat (cuccaroSubBits false addends sums) =
-      (boolWordToNat sums + 2 ^ addends.length - boolWordToNat addends) %
-        2 ^ addends.length := by
-  let difference := cuccaroSubBits false addends sums
-  have hdifferenceLength : difference.length = addends.length := by
-    dsimp only [difference]
-    exact cuccaroSubBits_length false addends sums hlength
-  have hinverse := congrArg boolWordToNat
-    (cuccaroAddBits_subBits false addends sums hlength)
-  have haddLength : addends.length = difference.length := hdifferenceLength.symm
-  rw [boolWordToNat_cuccaroAddBits false addends difference haddLength] at hinverse
-  simp only [Bool.toNat_false, Nat.zero_add] at hinverse
-  have haddendBound := boolWordToNat_lt_pow_two addends
-  have hdifferenceBound := boolWordToNat_lt_pow_two difference
-  rw [hdifferenceLength] at hdifferenceBound
-  have hsumBound := boolWordToNat_lt_pow_two sums
-  rw [← hlength] at hsumBound
-  change boolWordToNat difference =
-    (boolWordToNat sums + 2 ^ addends.length - boolWordToNat addends) %
-      2 ^ addends.length
-  by_cases hsmall :
-      boolWordToNat addends + boolWordToNat difference < 2 ^ addends.length
-  · rw [Nat.mod_eq_of_lt hsmall] at hinverse
-    rw [← hinverse]
-    have heq :
-        boolWordToNat addends + boolWordToNat difference + 2 ^ addends.length -
-            boolWordToNat addends =
-          2 ^ addends.length + boolWordToNat difference := by omega
-    rw [heq, Nat.add_mod, Nat.mod_self, Nat.zero_add,
-      Nat.mod_eq_of_lt hdifferenceBound]
-    exact (Nat.mod_eq_of_lt hdifferenceBound).symm
-  · have hlarge : 2 ^ addends.length ≤
-        boolWordToNat addends + boolWordToNat difference := by omega
-    rw [Nat.mod_eq_sub_mod hlarge,
-      Nat.mod_eq_of_lt (by omega)] at hinverse
-    rw [← hinverse]
-    have heq :
-        (boolWordToNat addends + boolWordToNat difference - 2 ^ addends.length) +
-            2 ^ addends.length - boolWordToNat addends =
-          boolWordToNat difference := by omega
-    rw [heq, Nat.mod_eq_of_lt hdifferenceBound]
-
 private theorem modSub_add_modEq
     (modulus subtrahend minuend : Nat)
     (hsub : subtrahend ≤ minuend + modulus) :

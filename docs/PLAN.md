@@ -1400,3 +1400,16 @@ the existing per-lane layouts, global data-register non-aliasing is required.
 This closes the uniform-control ripple core's arithmetic interpretation; the
 interval's changing unary accumulator, endpoint preparation and sign update
 remain to be composed into the remainder-trial theorem.
+
+### Prepared interval endpoint arithmetic
+
+`prepareIntervalEndpoints_arithmetic` binds the literal preparation circuit to
+`left = T + Q + 2 - offset` and `right = n + 3 - shift - offset`. The incoming
+length and shift words use `truthMinusOneValue`, including its zero sentinel.
+Nonnegative, fitting output indices suffice; intermediate modular wraparound
+is allowed. The theorem also preserves the T word, cleans the scratch and carry,
+and restores every wire outside the two endpoint words. The shared inverse
+Cuccaro numeric lemma moves unchanged from TBoundary to WordNat.
+
+Reachable states must still establish the metadata and output-bound premises;
+composing the changing interval control with the ripple arithmetic remains open.
