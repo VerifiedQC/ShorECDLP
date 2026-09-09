@@ -2451,7 +2451,8 @@ private theorem counter_advance (low modulus : Nat) (epoch : Bool)
       Bool.toNat_false, Nat.mul_one, Nat.mul_zero, Nat.add_zero]
     · rw [he, Nat.mod_eq_of_lt (by omega)]
     · rw [show 1 + (low + modulus) = 2 * modulus by omega, Nat.mod_self]
-private theorem counter_all_ones (wires : List Wire) (state : BasisState) :
+/-- Numeric characterization of the equality-to-all-ones test. -/
+theorem wireAnd_eq_numeric_allOnes (wires : List Wire) (state : BasisState) :
     wireAnd wires state = decide (boolWordToNat (wireValues wires state) = 2^wires.length - 1) := by
   induction wires with
   | nil => rfl
@@ -2500,7 +2501,7 @@ theorem terminalPaddingForwardState_counter_nonzero (registers : TerminalPadding
           2^(registers.lengthS.length + 1) ≠ 2^registers.lengthS.length - 1) :
     (wireAnd registers.lengthS (terminalPaddingForwardState registers state) &&
       !(terminalPaddingForwardState registers state) registers.shiftEpoch) = false := by
-  rw [counter_all_ones, counter_zero_decode _ _ _ (Nat.two_pow_pos _),
+  rw [wireAnd_eq_numeric_allOnes, counter_zero_decode _ _ _ (Nat.two_pow_pos _),
     terminal_counter_extended registers state hlayout ht]
   exact decide_eq_false hbound
 
