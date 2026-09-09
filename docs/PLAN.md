@@ -2017,3 +2017,15 @@ three phase/sign bits are updated; the exact state equation preserves all other
 wires, and indexed readiness is retained. The existing numeric all-ones lemma
 is shared with terminal padding. These input encodings still need to be supplied
 by composition and the reachable-state invariant.
+
+### Phase transition after coefficient-bit consumption
+
+`blockDEFGForward_coefficientPhase` composes the actual coefficient-stage
+output with the phase-update circuit. With the initial strict coefficient
+bound, sign is cleared before G and the advanced shift is positive. Thus G
+sets phase2 and sign exactly when `lQ=1` and `lRPrime` is nonzero, while phase1
+stays set. Its exact state equation preserves every other D/E/F output and
+retains indexed readiness. Metadata and the zero epoch are derived from the
+preceding frame and clean auxiliary bank. A representability bound for the
+divisor length remains explicit with the existing initial encoding/routing
+premises; A–C, H and whole-loop induction remain to be composed.
