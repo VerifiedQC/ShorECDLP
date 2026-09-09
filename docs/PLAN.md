@@ -1786,3 +1786,13 @@ the exact bank word, the new quotient value bound, the lengthQ encoding, the
 outside frame and clean auxiliaries. Input packing, quotient/remainder bounds,
 phase conditions and selector bounds remain explicit; reachable-state induction
 and the coefficient Block E composition are subsequent boundaries.
+
+### Inclusive coefficient-prefix scans
+
+The actual increasing and decreasing coefficient traversals now have complete-state
+contracts with a numeric inclusive prefix mask. The prepared boundary is routed to
+its exact label; the increasing pass clears its seeded accumulator just after that
+label, while the decreasing pass restores the accumulator to the external control.
+The proof derives physical lane separation from `CoefficientPrefixLayout`. This
+connects the source pulse order to arithmetic-enabled cells; whole-prefix numeric
+word composition, Block E and reachable-state boundary conditions remain next.
