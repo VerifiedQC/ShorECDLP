@@ -1232,3 +1232,9 @@ two is true, modulo the counter width. The proof composes inactive padding, the
 two complementary shifts, and metadata restoration by the intervening blocks.
 It does not assume the counter value after the prefix. Reachability of these input
 conditions and the active boundary transitions remain open.
+
+`indexedStepShiftPrefix_remainder` now preserves every remainder-length bit
+across the actual A–F prefix from a clean, nonterminal input. The coefficient
+block's stronger internal frame transports boundary words through arithmetic and
+uses the prepare/restore round trip. Epoch preservation, reachable encoding and
+active boundary transitions remain open.
