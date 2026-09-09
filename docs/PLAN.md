@@ -1807,3 +1807,13 @@ the target and accumulator. Reversing coefficient lanes aligns their physical
 little-endian order with the masked word model. Composition around the optional
 sign update and boundary preparation, and the final numeric Block E contract,
 remain subsequent work.
+
+### Complete prepared coefficient-prefix word contract
+
+`run_coefficientPrefixUnitary_words` composes the actual seed, increasing scan,
+optional sign update, decreasing scan and cleanup. It proves the masked arithmetic
+output word, restored addend, sign XOR with the arithmetic carry/borrow, clean
+scratch and outside frame. Routing and scratch conditions are transported across
+the intermediate states from physical layout separation. The boundary range is
+still explicit. Numeric prefix-value specialization, Block E boundary preparation
+and phase controls, and reachable-state invariants remain subsequent work.
