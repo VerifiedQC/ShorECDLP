@@ -1465,3 +1465,15 @@ layout, unique labels, clean path stacks and clean cell scratch; no abstract lea
 simulation premise remains. Decoder controls are selected from the decoder wires,
 while the preserved interface additionally contains scratch. Numeric accumulator
 induction and the arithmetic meaning of the entire scan remain next.
+
+### Inclusive control across the scan
+
+`run_intervalFirstTraversal_inclusiveScan` and its second-pass counterpart
+replace every cell's accumulator-dependent control with the fixed inclusive
+predicate `enabled && decide (L ≤ label ∧ label ≤ R)`. Their complete-state
+fold equalities also establish the outgoing accumulator boundary. The proof
+covers both traversal directions and arbitrary carry/data states, retaining the
+source zero-leaf mask. The actual tree must have the stated consecutive labels;
+the incoming accumulator and numeric interpretation of the effective endpoint
+pulses remain explicit premises. Arithmetic fusion of the two passes and
+establishing these endpoint premises in the enclosing interval block remain next.
