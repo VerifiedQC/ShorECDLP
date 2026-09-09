@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.EndpointNumeric
 import ShorECDLP.Submission.«2607_13816».EEA.IntervalComplete
 import ShorECDLP.Submission.«2607_13816».EEA.IntervalArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.IntervalWordBody

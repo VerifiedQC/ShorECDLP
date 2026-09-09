@@ -1579,3 +1579,12 @@ explicit. Ready scratch supplies zero carry, and physical support proves that
 both endpoint transformations preserve the data banks and control. This is the
 complete interval circuit, while reachable metadata and its relation to the
 packed EEA step remain separate obligations.
+
+### Interval arithmetic in logical length coordinates
+
+`run_intervalAddSubUnitary_logicalValues` reuses the existing endpoint arithmetic
+proof to derive full-circuit modular slice arithmetic with
+`L = T + Q + 2 - k` and `R = n + 3 - shift - k`. Stored words encode the logical
+lengths as truth-minus-one, including wrapped zero encodings. Explicit endpoint
+bounds and order remain required; establishing the encoding and these bounds
+for reachable packed EEA states is the next obligation.
