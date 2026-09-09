@@ -1848,3 +1848,15 @@ their order. Logical zero is included. Nonnegativity and word-capacity bounds
 remain explicit, as does the later obligation that the selected endpoint lies
 inside the active coefficient window. The Block E theorem retains its control,
 frame and scratch conclusions.
+
+### Block E subtraction and control cleanup
+
+`blockESubtractForward` names the actual source prefix through preparation,
+subtraction and the repeated control sandwich. Its word theorem computes the
+selected low-prefix subtraction, preserves the high suffix and addend, preserves
+the sign, and proves that control and temporary flag finish false with block
+scratch clean. Outside the control, sign and coefficient banks, the state agrees
+with the prepared state, retaining its boundary words and phase flags. The cleanup predicate is derived from phase/sign preservation
+across the scan. The prepared input-word boundary must still lie inside the
+certified coefficient window. The following sign flip, addition and boundary
+restoration remain the next composition boundary.
