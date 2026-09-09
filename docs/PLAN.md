@@ -1817,3 +1817,14 @@ scratch and outside frame. Routing and scratch conditions are transported across
 the intermediate states from physical layout separation. The boundary range is
 still explicit. Numeric prefix-value specialization, Block E boundary preparation
 and phase controls, and reachable-state invariants remain subsequent work.
+
+### Prepared coefficient-prefix arithmetic
+
+`run_coefficientPrefixUnitary_prefix` identifies the complete circuit's target word
+as the updated little-endian low prefix followed by the unchanged high suffix.
+It retains the restored addend, optional sign carry/borrow, scratch cleanup and frame.
+`run_coefficientPrefixUnitary_value` derives enabled addition/subtraction modulo
+`2^(boundary-k+1)` on that prefix. The modulus is the selected prefix width, not
+the full bank width. Both results use the same `coefficientPrefixUnitary` term.
+Block E preparation and phase controls, reachable-state invariants and aggregate
+resources remain open; the prepared boundary must still lie in `k..K`.

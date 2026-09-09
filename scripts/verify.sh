@@ -359,6 +359,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixFirstTraversal_words
 #print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixSecondTraversal_words
 #print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixUnitary_words
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixUnitary_prefix
+#print axioms ShorECDLP.Paper2607_13816.run_coefficientPrefixUnitary_value
 #print axioms ShorECDLP.Paper2607_13816.blockD1Forward_contract
 #print axioms ShorECDLP.Paper2607_13816.blockD3Forward_contract
 #print axioms ShorECDLP.Paper2607_13816.blockD1Forward_logicalLength
@@ -1251,8 +1253,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1227 ]]; then
-  printf 'expected 1227 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1229 ]]; then
+  printf 'expected 1229 #print axioms results\n' >&2
   exit 1
 fi
 
