@@ -1744,3 +1744,12 @@ cleanliness and divisor-length preservation from Block B's external frame,
 so its full canonical output contract carries through the appended Block C.
 This bridge applies to every phase and does not assume logical endpoint bounds.
 Reachable-state bounds and Block D counter/selector composition remain open.
+
+### Phase-controlled quotient routing
+
+`blockD2Forward_logical` connects the actual middle component of Block D
+to work1 index `T+Q`. It swaps that bit with sign exactly when phase1 and
+phase2 differ, and restores every other wire, including the prepared control.
+The source Block D now names this unchanged substream explicitly. Its length
+encodings describe the state at the selector boundary; connecting the preceding
+increment and following decrement, and deriving reachable bounds, remain open.
