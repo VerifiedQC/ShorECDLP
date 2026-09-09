@@ -392,6 +392,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.blockDEFForward_coefficientInvariant
 #print axioms ShorECDLP.Paper2607_13816.blockDEFForward_coefficient
 #print axioms ShorECDLP.Paper2607_13816.blockDEForward_coefficient
+#print axioms ShorECDLP.Paper2607_13816.blockEForward_swapComparison
 #print axioms ShorECDLP.Paper2607_13816.blockEForward_coefficientOrdinary
 #print axioms ShorECDLP.Paper2607_13816.blockEForward_inactive
 #print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundaryWords_arithmetic
@@ -1289,8 +1290,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1265 ]]; then
-  printf 'expected 1265 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1266 ]]; then
+  printf 'expected 1266 #print axioms results\n' >&2
   exit 1
 fi
 

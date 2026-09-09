@@ -2186,3 +2186,18 @@ scripts/
 ```
 
 **End of textbook.**
+
+### Swap-phase coefficient comparison with leading-zero extension
+
+`blockEForward_swapComparison` proves that the actual Block E subtract/add
+pair restores both complete work banks and XORs the sign with
+`t * 2^shift ≤ tPrime` when both phase flags are set. Readiness and the external
+frame are preserved. The selected width may exceed `lT + 1`: with an empty
+quotient and `r < 2^lRPrime`, leading zeros in the remainder encoding extend
+the coefficient field. The proof derives the boundary from the original stored
+metadata, then uses an equivalent wider packing for the arithmetic contract.
+
+Positive shift, coefficient/remainder capacity, selected-addend capacity,
+metadata encoding, layout and active-window membership remain explicit. This
+is a local swap-stage contract; subsequent shift/phase/bank-swap composition
+and reachable-state discharge remain open. Circuit definitions are unchanged.
