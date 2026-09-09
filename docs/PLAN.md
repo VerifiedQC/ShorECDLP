@@ -1238,3 +1238,13 @@ across the actual A–F prefix from a clean, nonterminal input. The coefficient
 block's stronger internal frame transports boundary words through arithmetic and
 uses the prepare/restore round trip. Epoch preservation, reachable encoding and
 active boundary transitions remain open.
+
+`indexedStepShiftPrefix_clean` now returns the full auxiliary bank clear from a
+clean, nonterminal input. In particular, the borrowed epoch remains zero because
+the remainder condition disables block C's terminal restoration. Composing this
+with the counter and remainder frames yields `indexedStepUnitary_active_correct`:
+if the next modular counter value is not the sentinel, the actual full step is
+its A–F output followed by the phase update, with readiness and epoch encoding
+restored. All conditions are on the original input; certified route conditions
+remain explicit. Reachable arithmetic encoding and counter-boundary transitions
+are still open.
