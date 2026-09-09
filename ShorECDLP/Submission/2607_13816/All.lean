@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.CoefficientWords
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientScan
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientPacking
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientStep

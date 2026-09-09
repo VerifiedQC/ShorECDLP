@@ -1796,3 +1796,14 @@ label, while the decreasing pass restores the accumulator to the external contro
 The proof derives physical lane separation from `CoefficientPrefixLayout`. This
 connects the source pulse order to arithmetic-enabled cells; whole-prefix numeric
 word composition, Block E and reachable-state boundary conditions remain next.
+
+### Coefficient scan word semantics
+
+Both actual coefficient scans now return the corresponding masked ripple word
+triple (target, addend and carry), deriving word-level physical separation from
+the coefficient layout. The logical pair of prefix folds fuses to the existing
+masked arithmetic result, restoring the addend, carry and every wire outside
+the target and accumulator. Reversing coefficient lanes aligns their physical
+little-endian order with the masked word model. Composition around the optional
+sign update and boundary preparation, and the final numeric Block E contract,
+remain subsequent work.
