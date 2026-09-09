@@ -1993,3 +1993,15 @@ remaining contribution of the physical unweighted quotient prefix, while the
 actual D/E/F circuit supplies the canonical coefficient and shift outputs.
 Initial packing, routing/span bounds, phase and shift encodings remain explicit;
 this is a coefficient-stage invariant, not yet a whole-loop invariant.
+
+### Complete packed coefficient-stage result
+
+`blockDEFForward_completeCoefficient` attaches the remaining quotient `q/2`
+and length `lQ-1` to the actual final work bank and quotient word after post-shift.
+The remainder and addend are preserved, the sign is cleared under the strict
+coefficient bound, and the second bank and shift counter share `shift+1`.
+The theorem retains coefficient/quotient fits, the accumulation invariant,
+weighted conservation, readiness and the full frame outside the two banks,
+quotient/shift words and sign. The post-shift frame is proved from its exact
+state transition, including restoration of its temporary control. Initial
+packing, phase and routing bounds still await whole-loop induction.
