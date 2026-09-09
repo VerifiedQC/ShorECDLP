@@ -92,7 +92,7 @@ theorem eeaPreprocess_firstStep_correct (state : BasisState)
   · exact indexedStepUnitary_active_correct r 256 1
       (endIterationWindowsAt 256 1).k4 (endIterationWindowsAt 256 1).k5
       (by decide) (by decide) after hl ha hr (by intro h; norm_num at h)
-      (by rw [hnext]; decide)
+      (by intro h; norm_num at h)
 
 end
 end ShorECDLP.Paper2607_13816

@@ -11087,7 +11087,8 @@ theorem indexedStepUnitary_active_tail_correct
     (hroutes : T % 4 = 0 → indexedStepEndRoutes registers n T state = (boundary4, boundary5))
     (hrp : wireAnd registers.lengthRPrime (run (indexedStepShiftPrefix registers n T) state) = false)
     (hepoch : run (indexedStepShiftPrefix registers n T) state registers.shiftEpoch = false)
-    (hs : wireAnd registers.lengthS (run (indexedStepShiftPrefix registers n T) state) = false) :
+    (hs : T % 4 = 0 →
+      wireAnd registers.lengthS (run (indexedStepShiftPrefix registers n T) state) = false) :
     run (indexedStepUnitary registers n T) state =
       phaseUpdateEpochState registers.phaseUpdate registers.shiftEpoch
         (run (indexedStepShiftPrefix registers n T) state) ∧
@@ -11107,13 +11108,16 @@ theorem indexedStepUnitary_active_tail_correct
   have heG : afterG registers.shiftEpoch = false := by
     exact (active_phase_frame registers n T afterF hlayout (by
       simp [indexedStepAfterSign, hlayout.shiftEpoch_mem_aux])).trans hepoch
-  have hsG : wireAnd registers.lengthS afterG = false := by
-    rw [← hs]
-    apply wireAnd_congr
-    intro wire hw
-    exact active_phase_frame registers n T afterF hlayout (by simp [indexedStepAfterSign, hw])
-  have hh := terminal_blockH_idle registers n T boundary4 boundary5 afterG hlayout hgReady
-    (by simp only [hsG, Bool.false_and])
+  have hh : blockHForwardState registers n T boundary4 boundary5 afterG = afterG := by
+    by_cases hT : T % 4 = 0
+    · have hsG : wireAnd registers.lengthS afterG = false := by
+        rw [← hs hT]
+        apply wireAnd_congr
+        intro wire hw
+        exact active_phase_frame registers n T afterF hlayout (by simp [indexedStepAfterSign, hw])
+      exact terminal_blockH_idle registers n T boundary4 boundary5 afterG hlayout hgReady
+        (by simp only [hsG, Bool.false_and])
+    · simp only [blockHForwardState, hT, ↓reduceIte]
   have hfull := indexedStepUnitary_correct registers n T boundary4 boundary5 hboundary4 hboundary5
     state hlayout hready hencoded hroutes
   have hout : run (indexedStepUnitary registers n T) state = afterG := by
@@ -11860,8 +11864,9 @@ private theorem active_all_ones (ws : List Wire) (s : BasisState)
     have hp := Nat.two_pow_pos ws.length
     omega
 
-/-- Away from the shift-counter sentinel, the active full step reduces to its
-phase update from conditions on the original input, with no A--F output premise. -/
+/-- The active full step reduces to its phase update from original-input conditions.
+Only every fourth step needs to avoid the shift-counter sentinel, since other
+indices contain no end-iteration block. -/
 theorem indexedStepUnitary_active_correct
     (r : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
     (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
@@ -11871,7 +11876,7 @@ theorem indexedStepUnitary_active_correct
     (state : BasisState) (hlayout : IndexedStepLayout r n T)
     (hclean : Clean r.aux state) (hrp : wireAnd r.lengthRPrime state = false)
     (hroutes : T % 4 = 0 → indexedStepEndRoutes r n T state = (boundary4, boundary5))
-    (hshift : (if state r.phase2 then
+    (hshift : T % 4 = 0 → (if state r.phase2 then
         (boolWordToNat (wireValues r.lengthS state) + 2^r.lengthS.length - 1) % 2^r.lengthS.length
       else (1 + boolWordToNat (wireValues r.lengthS state)) % 2^r.lengthS.length) ≠
         2^r.lengthS.length - 1) :
@@ -11897,13 +11902,14 @@ theorem indexedStepUnitary_active_correct
   have hr : wireAnd r.lengthRPrime (run (indexedStepShiftPrefix r n T) state) = false :=
     (wireAnd_congr _ _ state (indexedStepShiftPrefix_remainder r n T state hlayout hclean hrp)).trans hrp
   have he := indexedStepShiftPrefix_clean r n T state hlayout hclean hrp
-  have hs : wireAnd r.lengthS (run (indexedStepShiftPrefix r n T) state) = false := by
+  have hs : T % 4 = 0 → wireAnd r.lengthS (run (indexedStepShiftPrefix r n T) state) = false := by
+    intro hT
     cases hh : wireAnd r.lengthS (run (indexedStepShiftPrefix r n T) state) with
     | false => rfl
     | true =>
       have hv := active_all_ones r.lengthS (run (indexedStepShiftPrefix r n T) state) hh
       rw [indexedStepShiftPrefix_counter r n T state hlayout hclean hrp] at hv
-      exact (hshift hv).elim
+      exact (hshift hT hv).elim
   exact indexedStepUnitary_active_tail_correct r n T boundary4 boundary5
     hboundary4 hboundary5 state hlayout hready hencoded hroutes hr
     (he _ hlayout.shiftEpoch_mem_aux) hs

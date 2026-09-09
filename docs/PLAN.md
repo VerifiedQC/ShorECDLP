@@ -1255,3 +1255,9 @@ nonterminal, the auxiliary bank is clear, and the first prefix counter is zero.
 The first complete physical step satisfies readiness and epoch encoding without
 additional assumptions about its intermediate states. This bootstraps one step;
 later reachable arithmetic and counter-boundary transitions remain open.
+
+The active-step counter-sentinel exclusion is required only when `T % 4 = 0`.
+At other indices the end-iteration block is absent, so the input-based result
+covers all counter values. This removes an unnecessary restriction from both
+active-step endpoints; the first-step instantiation now uses that absence
+directly. Fourth-step boundary transitions and reachable arithmetic remain open.
