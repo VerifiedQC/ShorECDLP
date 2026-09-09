@@ -1328,3 +1328,11 @@ and the second writes the decoded length of its swapped bank. The theorem handle
 all-zero sentinels and keeps the existing layout, route and readiness premises.
 Proving that reachable packed arithmetic satisfies the old-metadata consistency
 premises remains open; no circuit or resource definition changes.
+
+`swapWorkAndLengthUnaryShared_bitLengths` expresses the actual metadata replacement
+using ordinary binary lengths. The upper range is read little-endian and includes
+its leading window offset; the lower range is read big-endian and includes omitted
+trailing positions. Both zero words encode length zero through the all-ones
+sentinel. The old consistency premise is now arithmetic rather than a first/last
+list-index expression. Connecting these masked ranges to the evolving packed EEA
+values remains open.
