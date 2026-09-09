@@ -2225,3 +2225,23 @@ Q/R metadata and the clean epoch from the E/F frame, while its full S output
 provides the zero test. Initial packing, capacities, selected-window membership
 and clean epoch remain explicit. Full indexed-prefix and final bank-swap
 composition are still open.
+
+### Disabled swap-phase prefix
+
+`indexedStepSwapPrefix_idle` proves that the complete actual A–D prefix is the
+identity when both phase flags are set and auxiliary wires are clean. It needs
+no logical packing, arithmetic bounds or decoded-route assumptions. The shared
+A–C proof now covers either value of phase2 with phase1 set; in particular,
+the temporary restoration marker cancels for arbitrary incoming sign. The
+quotient stage's two phase-controlled XORs cancel, disabling the swap while
+its increment/decrement controls remain off. Existing coefficient-phase
+callers retain their original public theorem. Circuit definitions are unchanged.
+
+`indexedStepUnitary_swapPhase` then proves the complete A–H swap microstep
+while the initial shift is greater than one. The decremented nonzero shift
+disables H; its routing bounds follow from the decoder rather than new
+hypotheses. The complete state equals the established comparison/backward-shift
+output with phase1 true, phase2 equal to the comparison sign and sign false.
+Initial arithmetic, packing, capacity and active-window conditions remain
+explicit. The final shift-to-zero bank swap and whole-loop reachability remain
+open.
