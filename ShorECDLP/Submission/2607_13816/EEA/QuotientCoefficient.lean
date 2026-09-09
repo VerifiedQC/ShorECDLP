@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.ShiftEncoding
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientPacking
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPhases
 namespace ShorECDLP.Paper2607_13816
@@ -91,7 +92,8 @@ theorem blockDEForward_coefficient (r : IndexedStepRegisters) (n index : Nat)
       (true ^^ decide (v.tPrime < v.t*2^v.shift))) ∧
     wireValues r.lengthQ final = constantBits r.lengthQ.length
       (truthMinusOneValue r.lengthQ.length (v.lQ-1)) ∧
-    IndexedStepReady r final := by
+    IndexedStepReady r final ∧
+    AgreesOutside (r.lengthQ ++ (r.sign :: r.work1 ++ r.work2)) final s := by
   let w := (certifiedActiveWindows n index).quotientSwap
   let cw := (certifiedActiveWindows n index).coefficient
   let mid := run (blockDForward r w) s
@@ -160,11 +162,95 @@ theorem blockDEForward_coefficient (r : IndexedStepRegisters) (n index : Nat)
   dsimp only
   simp only [Classical.run_append]
   change wireValues r.work1 (run (blockEForward r n cw) mid) = _ ∧ _
-  refine ⟨he.2.2.1.trans (by simpa only [hremwidth] using hd.1), ?_, ?_, hd.2.1, ?_, heQ.trans hd.2.2.2.1, he.2.2.2.2.1⟩
+  refine ⟨he.2.2.1.trans (by simpa only [hremwidth] using hd.1), ?_, ?_, hd.2.1, ?_, heQ.trans hd.2.2.2.1, he.2.2.2.2.1, ?_⟩
   · simpa only [hp1',hp2',hsign',Bool.not_false,Bool.true_and] using he.1
   · simpa only [hp1',hp2',hsign',Bool.not_false,Bool.true_and] using he.2.1
   · have hs := he.2.2.2.1
     simp only [hp1',hp2',hsign',Bool.not_false,Bool.true_and,ite_true] at hs
     cases hb : v.q.testBit 0 <;> simpa only [hb,Bool.false_eq_true,ite_false,ite_true,Bool.false_xor] using hs
+  · intro wire hn
+    have hde : wire ∉ r.lengthQ ++ (r.sign :: r.work1) := by
+      intro hw
+      apply hn
+      simp only [List.mem_append,List.mem_cons] at hw ⊢
+      rcases hw with hw | hw | hw
+      · exact Or.inl hw
+      · exact Or.inr (Or.inl (Or.inl hw))
+      · exact Or.inr (Or.inl (Or.inr hw))
+    have hee : wire ∉ r.sign :: (r.coefficient cw).work1 ++ (r.coefficient cw).work2 := by
+      intro hw
+      apply hn
+      simp only [List.mem_append,List.mem_cons] at hn ⊢
+      simp only [IndexedStepRegisters.coefficient,List.mem_append,List.mem_cons] at hw
+      rcases hw with (hw | hw) | hw
+      · exact Or.inr (Or.inl (Or.inl hw))
+      · exact Or.inr (Or.inl (Or.inr (List.mem_of_mem_drop (List.mem_of_mem_take hw))))
+      · exact Or.inr (Or.inr (List.mem_of_mem_drop (List.mem_of_mem_take hw)))
+    exact (he.2.2.2.2.2 wire hee).trans (hd.2.2.2.2.1 wire hde)
 
+
+/-- The actual quotient/coefficient/post-shift sequence updates the coefficient
+and advances its bank rotation and encoded shift counter together. -/
+theorem blockDEFForward_coefficient (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (v : EEAState) (h : IndexedStepLayout r n index)
+    (hc : Clean r.aux s) (hp1 : s r.phase1 = true) (hp2 : s r.phase2 = false)
+    (hsign : s r.sign = false) (hQ : 0 < v.lQ)
+    (htmeta : boolWordToNat (wireValues r.lengthT s) = truthMinusOneValue r.lengthT.length v.lT)
+    (hqmeta : boolWordToNat (wireValues r.lengthQ s) = truthMinusOneValue r.lengthQ.length v.lQ)
+    (hrmeta : boolWordToNat (wireValues r.lengthRPrime s) = truthMinusOneValue r.lengthT.length v.lRPrime)
+    (hsmeta : boolWordToNat (wireValues r.tBoundary.lengthSLow s) = truthMinusOneValue r.lengthT.length v.shift)
+    (hqfit : v.lT+v.lQ+1 < 2^r.lengthQ.length)
+    (hqlo : (certifiedActiveWindows n index).quotientSwap.start ≤ v.lT+v.lQ+1)
+    (hqhi : v.lT+v.lQ+1 ≤ (certifiedActiveWindows n index).quotientSwap.stop)
+    (hthi : v.lT+1 < 2^r.lengthT.length)
+    (hlo : v.lRPrime+v.shift ≤ n+3)
+    (hhi : n+3-v.lRPrime-v.shift < 2^r.lengthT.length)
+    (hv : v.lT+1 ∈ quotientSwapLabels 1 (certifiedActiveWindows n index).coefficient.stop)
+    (ht : v.t < 2^v.lT) (htp : v.tPrime < 2^(n+3-v.lRPrime))
+    (hspan : v.shift+(v.lT+1) ≤ n+3-v.lRPrime)
+    (hcoeff : v.tPrime < 2^(v.shift+(v.lT+1)))
+    (hcarry : v.q.testBit 0 = true → v.tPrime/2^v.shift+v.t < 2^(v.lT+1))
+    (hquot : v.q < 2^v.lQ) (hrem : v.r < 2^(n+3-(v.lT+v.lQ+1)))
+    (hwork1 : wireValues r.work1 s = constantBits v.lT v.t ++ [false] ++
+      (constantBits v.lQ v.q).reverse ++ (constantBits (n+3-(v.lT+v.lQ+1)) v.r).reverse)
+    (hwork2 : wireValues r.work2 s = (constantBits (n+3-v.lRPrime) v.tPrime ++
+      (constantBits v.lRPrime v.rPrime).reverse).rotate v.shift)
+    (hsfull : boolWordToNat (wireValues r.lengthS s) = truthMinusOneValue r.lengthS.length v.shift)
+    (hswidth : 0 < r.lengthS.length) (hsinc : v.shift+1 < 2^r.lengthS.length) :
+    let updated := if v.q.testBit 0 then v.tPrime+2^v.shift*v.t else v.tPrime
+    let final := run (blockDForward r (certifiedActiveWindows n index).quotientSwap ++
+      blockEForward r n (certifiedActiveWindows n index).coefficient ++ blockFForward r) s
+    wireValues r.work2 final = (constantBits (n+3-v.lRPrime) updated ++
+      (constantBits v.lRPrime v.rPrime).reverse).rotate (v.shift+1) ∧
+    boolWordToNat (wireValues r.lengthS final) = truthMinusOneValue r.lengthS.length (v.shift+1) ∧
+    updated < 2^(n+3-v.lRPrime) ∧ IndexedStepReady r final := by
+  let circuit := blockDForward r (certifiedActiveWindows n index).quotientSwap ++
+    blockEForward r n (certifiedActiveWindows n index).coefficient
+  let mid := run circuit s
+  have hd := blockDEForward_coefficient r n index s v h hc hp1 hp2 hsign hQ
+    htmeta hqmeta hrmeta hsmeta hqfit hqlo hqhi hthi hlo hhi hv ht htp hspan
+    hcoeff hcarry hquot hrem hwork1 hwork2
+  have hframe : AgreesOutside (r.lengthQ ++ (r.sign :: r.work1 ++ r.work2)) mid s := hd.2.2.2.2.2.2.2
+  have hsep := regroup_disjoint [r.phase1,r.phase2,r.iter] (r.sign :: r.work1 ++ r.work2)
+    r.lengthT r.lengthQ (r.lengthS ++ r.lengthRPrime ++ r.aux)
+    (by simpa only [IndexedStepRegisters.allWires,List.append_assoc,List.cons_append,List.nil_append] using h.physical)
+  have hp1m : mid r.phase1 = true := (hframe _ (List.disjoint_left.mp hsep (by simp))).trans hp1
+  have hp2m : mid r.phase2 = false := (hframe _ (List.disjoint_left.mp hsep (by simp))).trans hp2
+  have hsword : wireValues r.lengthS mid = wireValues r.lengthS s := by
+    apply List.map_congr_left
+    intro wire hw
+    exact hframe _ (List.disjoint_left.mp hsep (by simp [hw]))
+  have hr := blockFForward_readiness r n index mid h hd.2.2.2.2.2.2.1
+  have hf := postShiftUnitary_shiftEncoding r.postShift mid h.postShift hr.1 hp1m
+    (constantBits (n+3-v.lRPrime) (if v.q.testBit 0 then v.tPrime+2^v.shift*v.t else v.tPrime) ++
+      (constantBits v.lRPrime v.rPrime).reverse) v.shift hd.2.1
+    (by simpa only [IndexedStepRegisters.postShift,hsword] using hsfull)
+    (by change 0 < r.work2.length; rw [h.work2_length]; omega)
+    hswidth (show v.shift < 2^r.lengthS.length by omega) (by simpa only [IndexedStepRegisters.postShift,hp2m,Bool.false_eq_true] using (False.elim : False → 0 < v.shift))
+    (fun _ => hsinc)
+  dsimp only at hf ⊢
+  have hp2f : mid r.postShift.phase2 = false := hp2m
+  simp only [hp2f,Bool.false_eq_true,ite_false] at hf
+  have result := And.intro hf.1 (And.intro hf.2.1 (And.intro hd.2.2.1 hr.2))
+  simpa only [blockFForward,mid,circuit,Classical.run_append] using result
 end ShorECDLP.Paper2607_13816

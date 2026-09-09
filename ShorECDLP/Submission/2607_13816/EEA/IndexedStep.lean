@@ -468,7 +468,7 @@ private def blockEInverse
     restoreLatestPaperTBoundary registers.tBoundary n
   }
 
-private def blockFForward (registers : IndexedStepRegisters) : Circuit :=
+def blockFForward (registers : IndexedStepRegisters) : Circuit :=
   postShiftUnitary registers.postShift
 
 private def blockFInverse (registers : IndexedStepRegisters) : Circuit :=
@@ -6360,6 +6360,15 @@ private theorem blockFForward_correct
   constructor
   · simpa only [blockFForward, blockFForwardState] using hrun
   · simpa only [blockFForward] using hglobalAfter
+
+/-- The post-shift can borrow its local scratch from indexed readiness and
+returns the complete indexed scratch clean. -/
+theorem blockFForward_readiness (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n index) (hr : IndexedStepReady r s) :
+    ShiftReady r.postShift s ∧ IndexedStepReady r (run (blockFForward r) s) := by
+  refine ⟨?_, (blockFForward_correct r n index s h hr).2⟩
+  intro wire hw
+  exact hr wire (h.sourceScratch_mem_sharedScratch (h.postShift_scratch_sub_source wire hw))
 
 private theorem blockGForward_correct
     (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
