@@ -262,6 +262,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_wordAction
 #print axioms ShorECDLP.Paper2607_13816.rightLengthWordAction_firstSet
 #print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_firstSet
+#print axioms ShorECDLP.Paper2607_13816.highestPositionWordAction_lastSet
+#print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_lastSet
 #print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_restores
 #print axioms ShorECDLP.Paper2607_13816.rightLengthXorWrite_restores
 #print axioms ShorECDLP.Paper2607_13816.highestPositionXorWrite_preservesOutsideTarget
@@ -1130,8 +1132,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1106 ]]; then
-  printf 'expected 1106 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1108 ]]; then
+  printf 'expected 1108 #print axioms results\n' >&2
   exit 1
 fi
 

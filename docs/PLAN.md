@@ -1312,3 +1312,11 @@ gate theorem; dirty-bank and scratch restoration remain supplied by that theorem
 family. This closes the local lower-writer interpretation. Relating its decoded
 range to reachable packed arithmetic, and the corresponding upper writer, remain
 open; circuits and resource counts are unchanged.
+
+`highestPositionXorWrite_lastSet` gives the actual grouped upper writer the
+matching arithmetic interpretation: it XORs the truth-minus-one encoding of the
+last set label into the arbitrary target, or the all-ones sentinel for an empty
+set of bits. The proof reverses the zero-flag telescope and checks the masked
+subtraction identities at every width, including zero and one. Both local length
+writers now have set-position semantics. Their composition with consistent
+reachable work-bank and metadata encodings remains open.

@@ -147,4 +147,132 @@ theorem rightLengthXorWrite_firstSet
   rw [lowerRangeBits_length, zeroMapLabels_eq_range', List.length_range']
   omega
 
+
+private theorem length_suffix_telescope (f : Nat → Nat) (k : Nat)
+    (source target : List Bool) :
+    constantWriteWord (fun label => f (label + 1) ^^^ f label)
+      (List.range' k source.length).reverse (suffixZeroFlags source).reverse
+      (xorConstantBits target (f (k + source.length))) =
+    xorConstantBits target (f (k + source.length - source.reverse.findIdx id)) := by
+  induction source using List.reverseRecOn generalizing k target with
+  | nil => simp [suffixZeroFlags, constantWriteWord]
+  | append_singleton source b ih =>
+    simp only [List.length_append, List.length_singleton, List.range'_1_concat,
+      List.reverse_append, List.singleton_append,
+      length_suffix_append, suffixZeroFlags, allFalse, Bool.and_true,
+      gateWord, List.reverse_cons, List.reverse_nil,
+      List.nil_append]
+    cases b with
+    | false =>
+      simp only [Bool.not_false, Bool.true_and, List.map_id', constantWriteWord,
+        gatedXorConstantBits_true, Nat.add_assoc]
+      rw [length_xor_combine, ← Nat.xor_assoc, Nat.xor_self, Nat.zero_xor, ih]
+      simp [List.findIdx_cons]
+      congr 2
+      omega
+    | true =>
+      simp only [Bool.not_true, constantWriteWord, gatedXorConstantBits_false]
+      rw [← List.map_reverse]
+      rw [show List.map (fun bit => false && bit) (suffixZeroFlags source).reverse =
+        gateWord false (suffixZeroFlags source).reverse from rfl, length_write_false]
+      simp [List.findIdx_cons]
+
+private theorem length_minus_two (width label : Nat) (hl : 1 ≤ label) :
+    (label + 2^width - 2 % 2^width) % 2^width = truthMinusOneValue width (label - 1) := by
+  change (label + 2^width - 2 % 2^width) % 2^width =
+    (label - 1 + 2^width - 1 % 2^width) % 2^width
+  cases width with
+  | zero => norm_num; omega
+  | succ width =>
+    cases width with
+    | zero =>
+      norm_num
+      congr 1
+      omega
+    | succ width =>
+      have hp : 0 < 2^width := Nat.pow_pos (by decide)
+      have hbig : 2 < 2^(width + 1 + 1) := by
+        simp only [Nat.pow_succ]
+        omega
+      rw [Nat.mod_eq_of_lt hbig, Nat.mod_eq_of_lt (by omega : 1 < 2^(width+1+1))]
+      congr 1
+      omega
+
+
+/-- The enabled highest-position writer XORs the truth-minus-one encoding of the
+last set position. An all-zero decoded range writes the all-ones sentinel. -/
+theorem highestPositionWordAction_lastSet (width k K : Nat) (hkK : k ≤ K)
+    (source target : List Bool) (hlen : source.length = K - k + 1) :
+    highestPositionWordAction width k K true source target =
+      xorConstantBits target (if source.reverse.findIdx id < source.length then
+        truthMinusOneValue width (K - source.reverse.findIdx id) else 2^width - 1) := by
+  let f : Nat → Nat := fun label =>
+    if label = k then 2^width - 1 else truthMinusOneValue width (label - 1)
+  have hlabels : zeroMapLabels k K = List.range' k source.length := by
+    rw [zeroMapLabels_eq_range', hlen]
+    congr 1
+    omega
+  have hdelta : ∀ label ∈ (List.range' k source.length).reverse,
+      highestPositionWriteValue width k label = f (label + 1) ^^^ f label := by
+    intro label hm
+    simp only [List.mem_reverse, List.mem_range'] at hm
+    have hn : label + 1 ≠ k := by omega
+    by_cases he : label = k
+    · subst label
+      simp [highestPositionWriteValue, f]
+    · have hl : 1 ≤ label := by omega
+      rw [highestPositionWriteValue, if_neg he]
+      change truthMinusOneValue width label ^^^
+        ((label + 2^width - 2 % 2^width) % 2^width) = _
+      rw [length_minus_two width label hl]
+      simp [f, he, hn]
+  have hend : k + source.length = K + 1 := by omega
+  have hbase : f (k + source.length) = truthMinusOneValue width K := by
+    rw [hend]
+    simp [f, show K + 1 ≠ k by omega]
+  unfold highestPositionWordAction
+  simp only [gateWord, Bool.true_and, List.map_id', gatedXorConstantBits_true]
+  rw [hlabels, ← hbase, length_write_congr _ _ _ _ _ hdelta, length_suffix_telescope]
+  congr 1
+  have hi : source.reverse.findIdx id ≤ source.length := by
+    simpa using (List.findIdx_le_length (xs := source.reverse) (p := id))
+  by_cases hfind : source.reverse.findIdx id < source.length
+  · have hn : k + source.length - source.reverse.findIdx id ≠ k := by omega
+    have he : k + source.length - source.reverse.findIdx id - 1 =
+        K - source.reverse.findIdx id := by omega
+    simp [f, hfind, hn, he]
+  · have he : k + source.length - source.reverse.findIdx id = k := by omega
+    simp [f, hfind, he]
+
+/-- The actual grouped upper writer XORs the encoded highest set position,
+including the all-zero sentinel case, into an arbitrary target word. -/
+theorem highestPositionXorWrite_lastSet
+    (k K boundary : Nat) (hkK : k ≤ K)
+    (hboundary : k ≤ boundary ∧ boundary ≤ K)
+    (tree : UnaryActionTree)
+    (control rangeAccumulator temporary : Wire) (path : List Wire)
+    (bitAt dirtyAt : Nat → Wire) (targets : List Wire)
+    (state : BasisState)
+    (hlayout : LengthWriterLayout k K tree control rangeAccumulator temporary path
+      bitAt dirtyAt targets)
+    (hlabels : tree.visitLabels .inc = zeroMapLabels k K)
+    (hroute : tree.routeLabel state = boundary)
+    (hcleanPath : Clean path state) (hcleanRange : state rangeAccumulator = false)
+    (hcleanTemporary : state temporary = false) (henabled : state control = true) :
+    let source := upperRangeBits true boundary (zeroMapLabels k K) bitAt state
+    wireValues targets
+        (run (highestPositionXorWrite k K tree control rangeAccumulator temporary path
+          bitAt dirtyAt targets) state) =
+      xorConstantBits (wireValues targets state)
+        (if source.reverse.findIdx id < source.length then
+          truthMinusOneValue targets.length (K - source.reverse.findIdx id)
+        else 2^targets.length - 1) := by
+  dsimp only
+  rw [highestPositionXorWrite_wordAction k K boundary hkK hboundary tree control
+    rangeAccumulator temporary path bitAt dirtyAt targets state hlayout hlabels hroute
+    hcleanPath hcleanRange hcleanTemporary, henabled]
+  apply highestPositionWordAction_lastSet targets.length k K hkK
+  rw [upperRangeBits_length, zeroMapLabels_eq_range', List.length_range']
+  omega
+
 end ShorECDLP.Paper2607_13816
