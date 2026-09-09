@@ -2956,6 +2956,20 @@ theorem postShiftUnitary_ready
     registers.both state hlayout.scratchWorkDisjoint
     hlayout.scratchLengthDisjoint hready
 
+/-- The actual post-shift changes only its work bank and shift counter;
+its phase controls and all scratch are restored. -/
+theorem postShiftUnitary_frame (r : ShiftRegisters) (s : BasisState)
+    (h : ShiftLayout r) (hr : ShiftReady r s) :
+    ∀ wire, wire ∉ r.work ++ r.lengthS → run (postShiftUnitary r) s wire = s wire := by
+  rw [run_postShiftUnitary r s h hr]
+  intro wire hn
+  have hw : wire ∉ r.work := fun hm => hn (List.mem_append_left _ hm)
+  have hs : wire ∉ r.lengthS := fun hm => hn (List.mem_append_right _ hm)
+  by_cases hb : wire = r.both
+  · subst wire
+    exact shiftPayloadState_restoresBoth _ _ _ _ _ _ hw hs
+  · exact shiftPayloadState_preservesOutside _ _ _ _ _ _ hw hs hb
+
 /-- Pre-shift erases its temporary negative-control flag and restores every shared scratch wire. -/
 theorem preShiftUnitary_ready
     (registers : ShiftRegisters) (state : BasisState)
