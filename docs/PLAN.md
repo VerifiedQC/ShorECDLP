@@ -1320,3 +1320,11 @@ set of bits. The proof reverses the zero-flag telescope and checks the masked
 subtraction identities at every width, including zero and one. Both local length
 writers now have set-position semantics. Their composition with consistent
 reachable work-bank and metadata encodings remains open.
+
+`swapWorkAndLengthUnaryShared_lengths` composes both interpreted writers through
+the actual enabled work-swap/length-update circuit. When the old metadata matches
+the decoded lengths of the old work banks, the first XOR clears each old length
+and the second writes the decoded length of its swapped bank. The theorem handles
+all-zero sentinels and keeps the existing layout, route and readiness premises.
+Proving that reachable packed arithmetic satisfies the old-metadata consistency
+premises remains open; no circuit or resource definition changes.
