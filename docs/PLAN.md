@@ -1888,10 +1888,20 @@ ordinary arithmetic on the selected low prefix. It first subtracts modulo the
 prefix width when the subtraction predicate holds, then adds modulo that same
 width when phase1 holds. The final sign is the old sign XOR phase1 XOR the
 explicit addition-overflow predicate. High bits, the addend, metadata and shared
-scratch are retained. Boundary membership remains explicit; packed coefficient
-reconstruction and reachable-state induction remain subsequent work.
+scratch are retained. Boundary membership remains explicit; interpretation of the neighboring packed
+fields and reachable-state induction remain subsequent work.
 
 `blockEForward_coefficient_packed` reconstructs the exact output as the canonical
 little-endian coefficient prefix followed by the original high fields. It derives
 that packing from the numeric result and fixed physical word length, preserving
 the same sign, addend, readiness and metadata guarantees.
+
+### Complete physical coefficient banks
+
+The complete Block E frame now excludes only the local coefficient windows and
+sign; it explicitly preserves every work bit outside those windows. The stronger
+frame propagates through the logical-length, numeric and canonical-prefix
+contracts. `blockEForward_workBanks` reconstructs the entire target bank as its
+original low neighboring bits, the canonical updated coefficient prefix and its
+original high fields. The entire addend bank is unchanged. Certified boundary
+membership remains explicit; reachable packed-state refinement is still open.

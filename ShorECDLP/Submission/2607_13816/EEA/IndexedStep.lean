@@ -13054,7 +13054,7 @@ theorem blockEForward_words (r : IndexedStepRegisters) (n index : Nat)
       wireValues cr.work1 final = wireValues cr.work1 s ∧
       final r.sign = ((s r.sign ^^ s r.phase1) ^^ add.2) ∧
       IndexedStepReady r final ∧
-      AgreesOutside (r.sign :: r.work1 ++ r.work2) final s := by
+      AgreesOutside (r.sign :: cr.work1 ++ cr.work2) final s := by
   have hc : Clean r.blockScratch s := fun w hm => hr w (h.blockScratch_mem_sharedScratch hm)
   have ht : s r.terminal = false := hr r.terminal (by
     have hs : r.terminal ∈ r.sourceScratch := by rw [← h.scratch_view]; simp
@@ -13117,18 +13117,41 @@ theorem blockEForward_words (r : IndexedStepRegisters) (n index : Nat)
   · simpa only [hbound,hq1,hqsign,hsw,hsadd] using hf.2.2.1
   · simpa only [hrun] using he.2
   · intro w hn
-    rw [← hrun,he.1]
+    have hns : w ≠ r.sign ∧ w ∉ cr.work1 ∧ w ∉ cr.work2 := by
+      simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using hn
     by_cases hcw : w = r.control
     · subst w
       have hfctrl := he.2 r.control (by simp [IndexedStepRegisters.sharedScratch])
-      rw [he.1] at hfctrl
+      rw [hrun] at hfctrl
       exact hfctrl.trans hctrl.symm
-    by_cases htw : w = r.terminal
-    · subst w
-      have hsour : r.terminal ∈ r.sourceScratch := by rw [← h.scratch_view]; simp
-      have hfterm := he.2 r.terminal (by simp [IndexedStepRegisters.sharedScratch,hsour])
-      rw [he.1] at hfterm
-      exact hfterm.trans ht.symm
-    exact active_E_frame r n index window s h hw hc hn hcw htw
+    by_cases hmeta : w ∈ r.lengthT ++ r.lengthRPrime
+    · have hnwhole : w ∉ r.sign :: r.work1 ++ r.work2 := by
+        have hb : w ∉ r.work1 ++ r.work2 := by
+          intro hm
+          have hh := coefficient_bank_separation r n index h hm
+          rcases List.mem_append.mp hmeta with ht | ht
+          · exact hh.2.1 ht
+          · exact hh.2.2 ht
+        simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using
+          And.intro hns.1 (show w ∉ r.work1 ∧ w ∉ r.work2 by simpa only [List.mem_append,not_or] using hb)
+      have htw : w ≠ r.terminal := by
+        intro heq
+        have hh := h.coefficientFixed_not_words r.terminal (by simp)
+        subst w
+        rcases List.mem_append.mp hmeta with ht | ht
+        · exact hh.1 ht
+        · exact hh.2 ht
+      rw [← hrun,he.1]
+      exact active_E_frame r n index window s h hw hc hnwhole hcw htw
+    · have hmeta' : w ∉ r.lengthT ∧ w ∉ r.lengthRPrime := by
+        simpa only [List.mem_append,not_or] using hmeta
+      have hbefore : w ∉ r.control :: r.sign :: cr.work1 ++ cr.work2 := by
+        simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using And.intro hcw hns
+      have hfinish : w ∉ r.control :: r.sign :: cr.work1 ++ cr.work2 ++ r.lengthT ++ r.lengthRPrime := by
+        simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using
+          And.intro hcw (And.intro hns.1 (And.intro hns.2.1 (And.intro hns.2.2 hmeta')))
+      have hprep : w ∉ r.control :: r.lengthT ++ r.lengthRPrime := by
+        simpa only [List.mem_cons,List.mem_append,not_or,and_assoc] using And.intro hcw hmeta'
+      exact (hf.2.2.2.2.2 w hfinish).trans ((hqframe w hbefore).trans (hp.2.2.1 w hprep))
 
 end ShorECDLP.Paper2607_13816
