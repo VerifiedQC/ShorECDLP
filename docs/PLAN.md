@@ -1268,3 +1268,11 @@ boundaries. The end-iteration block preserves the borrowed epoch by restoring
 its temporary complements; the remaining scratch follows the existing step
 correctness theorem. Certified routes remain required. This cleanliness result
 does not assert the next terminal encoding or logical arithmetic transition.
+
+`indexedStepShiftPrefix_quotient_counter` now derives the actual prefix quotient
+counter from the original phase bits: `(false,true)` increments, `(true,false)`
+decrements, and equal bits preserve the word, modulo its physical width. The
+proof tracks both counter wrappers and the intervening quotient swap, with all
+other blocks framing the word. Input auxiliaries are clean and the input remainder
+is nonterminal. Reachable quotient-length relations and terminal encoding remain
+open; no circuit definitions or resource counts change.
