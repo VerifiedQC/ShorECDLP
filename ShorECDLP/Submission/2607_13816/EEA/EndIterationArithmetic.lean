@@ -495,4 +495,134 @@ theorem lowerLengthOfBits_packed_zero (n width k K B R : Nat) (pre : List Bool)
   change lowerLengthOfBits n width k bits = _
   simp only [lowerLengthOfBits, hf, Nat.lt_irrefl, if_false]
 
+private theorem endpoint_mod_sub (width a b : Nat) (hb : b ≤ a) :
+    (a+2^width-b%2^width)%2^width = (a-b)%2^width := by
+  have hp : 0 < 2^width := Nat.two_pow_pos _
+  have ha : Nat.ModEq (2^width) (a+2^width) a := by simp [Nat.ModEq]
+  have hm : Nat.ModEq (2^width) (b%2^width) b := by simp [Nat.ModEq]
+  exact Nat.ModEq.sub (by have := Nat.mod_lt b hp; omega) hb ha hm
+
+private theorem rightLengthValue_bitLength (n width size : Nat) (hs : 0 < size) (hb : size ≤ n+3) :
+    rightLengthValue n width (n+4-size) = truthMinusOneValue width size := by
+  change (n+3+2^width-(n+4-size)%2^width)%2^width = (size+2^width-1%2^width)%2^width
+  rw [endpoint_mod_sub _ _ _ (by omega), endpoint_mod_sub _ _ _ (by omega)]
+  congr 1
+  omega
+
+private theorem endpoint_truth_zero (width : Nat) : truthMinusOneValue width 0 = 2^width-1 := by
+  change (0+2^width-1%2^width)%2^width = 2^width-1
+  have hp : 0 < 2^width := Nat.two_pow_pos _
+  by_cases h : 2^width = 1
+  · simp [h]
+  · have hh : 1 < 2^width := by omega
+    rw [Nat.mod_eq_of_lt hh]
+    simp only [zero_add]
+    rw [Nat.mod_eq_of_lt (by omega)]
+
+private theorem endpoint_packed_lower_length (n width k K B R value : Nat) (pre : List Bool)
+    (hk : 0 < k) (hkK : k ≤ K) (hbank : pre.length+R = n+3) (hK : K ≤ n+3)
+    (hB : pre.length < B) (hfit : value < 2^R)
+    (hcover : value ≠ 0 → k ≤ n+4-value.size ∧ n+4-value.size ≤ K ∧ B ≤ n+4-value.size) :
+    lowerLengthOfBits n width k (endIterationLowerRangeBits true B (zeroMapLabels k K)
+      (pre ++ (constantBits R value).reverse)) = truthMinusOneValue width value.size := by
+  by_cases hz : value = 0
+  · subst value
+    rw [lowerLengthOfBits_packed_zero n width k K B R pre hk hkK (by omega) hB,
+      Nat.size_zero, endpoint_truth_zero]
+  · obtain ⟨hstart,hstop,hmask⟩ := hcover hz
+    rw [lowerLengthOfBits_packed_remainder n width k K B R value pre hk hbank hK hB hfit
+      (by omega) hstart hstop hmask]
+    exact rightLengthValue_bitLength n width value.size (Nat.size_pos.mpr (by omega))
+      (by have hs := Nat.size_le.mpr hfit; omega)
+
+/-- The actual enabled endpoint circuit replaces canonical old coefficient and
+remainder lengths by the lengths of the exchanged fields. Scan consistency is
+derived from packed bank views; field capacity, geometry and routing stay explicit. -/
+theorem swapWorkAndLengthUnaryShared_canonical_lengths
+    (r : EndIterationRegisters) (n : Nat)
+    (windows : EndIterationWindows)
+    (boundary4 boundary5 : Nat)
+    (hboundary4 : windows.k4 ≤ boundary4 ∧ boundary4 ≤ windows.K4)
+    (hboundary5 : windows.k5 ≤ boundary5 ∧
+      boundary5 ≤ windows.K5Decode n)
+    (state : BasisState)
+    (hlayout : EndIterationLayout r n windows)
+    (hroute4 : (r.upperTree windows).routeLabel
+      (run (constMinus r.lengthRP r.constants r.carry (n + 2))
+        (run (controlledWorkSwap r.control r.work1 r.work2)
+          state)) = boundary4)
+    (hroute5 : (r.lowerTree n windows).routeLabel
+      (run (addConstant r.lengthT r.constants r.carry 3)
+        (run
+          (lenUpdateLtUnary n windows.k4 windows.K4 (r.upperTree windows) r.control
+            (r.rangeAccumulator windows.k4 windows.K4)
+            (r.temporary windows.k4 windows.K4) r.carry
+            (r.path windows.k4 windows.K4)
+            r.work1At r.work2At
+            r.lengthT r.lengthRP r.constants)
+          (run (controlledWorkSwap r.control r.work1 r.work2)
+            state))) = boundary5)
+    (hready : EndIterationReady r state)
+    (henabled : state r.control = true)
+    (t tPrime remainder rPrime R RPrime : Nat) (tail1 tail2 pre1 pre2 : List Bool)
+    (hw1u : wireValues r.work1 state = constantBits boundary4 t ++ tail1)
+    (hw2u : wireValues r.work2 state = constantBits boundary4 tPrime ++ tail2)
+    (hw1l : wireValues r.work1 state = pre1 ++ (constantBits R remainder).reverse)
+    (hw2l : wireValues r.work2 state = pre2 ++ (constantBits RPrime rPrime).reverse)
+    (ht : t < 2^boundary4) (htp : tPrime < 2^boundary4)
+    (hr : remainder < 2^R) (hrp : rPrime < 2^RPrime)
+    (htWindow : windows.k4 ≤ t.size ∧ t.size ≤ windows.K4)
+    (htpWindow : windows.k4 ≤ tPrime.size ∧ tPrime.size ≤ windows.K4)
+    (hp1 : pre1.length < boundary5) (hp2 : pre2.length < boundary5)
+    (hrWindow : remainder ≠ 0 → windows.k5 ≤ n+4-remainder.size ∧
+      n+4-remainder.size ≤ windows.K5Decode n ∧ boundary5 ≤ n+4-remainder.size)
+    (hrpWindow : rPrime ≠ 0 → windows.k5 ≤ n+4-rPrime.size ∧
+      n+4-rPrime.size ≤ windows.K5Decode n ∧ boundary5 ≤ n+4-rPrime.size)
+    (hT : wireValues r.lengthT state = constantBits r.lengthT.length
+      (truthMinusOneValue r.lengthT.length t.size))
+    (hRP : wireValues r.lengthRP state = constantBits r.lengthRP.length
+      (truthMinusOneValue r.lengthRP.length rPrime.size)) :
+    (wireValues r.lengthT (run (swapWorkAndLengthUnaryShared r n windows) state),
+      wireValues r.lengthRP (run (swapWorkAndLengthUnaryShared r n windows) state)) =
+      (constantBits r.lengthT.length (truthMinusOneValue r.lengthT.length tPrime.size),
+       constantBits r.lengthRP.length (truthMinusOneValue r.lengthRP.length remainder.size)) := by
+  have hb1 : pre1.length+R = n+3 := by
+    have hh := congrArg List.length hw1l
+    simpa only [wireValues, List.length_map, hlayout.work1_length,
+      List.length_append, List.length_reverse, constantBits_length] using hh.symm
+  have hb2 : pre2.length+RPrime = n+3 := by
+    have hh := congrArg List.length hw2l
+    simpa only [wireValues, List.length_map, hlayout.work2_length,
+      List.length_append, List.length_reverse, constantBits_length] using hh.symm
+  have hK : windows.K5Decode n ≤ n+3 := Nat.min_le_right _ _
+  have hu1 : upperLengthOfBits r.lengthT.length windows.K4
+      (endIterationUpperRangeBits true boundary4 (zeroMapLabels windows.k4 windows.K4)
+        (wireValues r.work1 state)) = truthMinusOneValue r.lengthT.length t.size := by
+    rw [hw1u]
+    exact upperLengthOfBits_packed_coefficient _ _ _ _ _ _ hlayout.k4_positive
+      htWindow.1 htWindow.2 ht
+  have hu2 : upperLengthOfBits r.lengthT.length windows.K4
+      (endIterationUpperRangeBits true boundary4 (zeroMapLabels windows.k4 windows.K4)
+        (wireValues r.work2 state)) = truthMinusOneValue r.lengthT.length tPrime.size := by
+    rw [hw2u]
+    exact upperLengthOfBits_packed_coefficient _ _ _ _ _ _ hlayout.k4_positive
+      htpWindow.1 htpWindow.2 htp
+  have hl1 : lowerLengthOfBits n r.lengthRP.length windows.k5
+      (endIterationLowerRangeBits true boundary5 (zeroMapLabels windows.k5 (windows.K5Decode n))
+        (wireValues r.work1 state)) = truthMinusOneValue r.lengthRP.length remainder.size := by
+    rw [hw1l]
+    exact endpoint_packed_lower_length _ _ _ _ _ _ _ _ hlayout.k5_positive
+      hlayout.k5_le_decode hb1 hK hp1 hr hrWindow
+  have hl2 : lowerLengthOfBits n r.lengthRP.length windows.k5
+      (endIterationLowerRangeBits true boundary5 (zeroMapLabels windows.k5 (windows.K5Decode n))
+        (wireValues r.work2 state)) = truthMinusOneValue r.lengthRP.length rPrime.size := by
+    rw [hw2l]
+    exact endpoint_packed_lower_length _ _ _ _ _ _ _ _ hlayout.k5_positive
+      hlayout.k5_le_decode hb2 hK hp2 hrp hrpWindow
+  have result := swapWorkAndLengthUnaryShared_lengths r n windows boundary4 boundary5
+    hboundary4 hboundary5 state hlayout hroute4 hroute5 hready henabled
+    (by rw [hu1]; exact hT) (by rw [hl2]; exact hRP)
+  rw [hu2, hl1] at result
+  exact result
+
 end ShorECDLP.Paper2607_13816
