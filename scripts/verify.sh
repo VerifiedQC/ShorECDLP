@@ -21,6 +21,11 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.HornerInputValid
+#print axioms ShorECDLP.Paper2607_13816.hornerMul_coherent
+#print axioms ShorECDLP.Paper2607_13816.hornerClearOutput
+#print axioms ShorECDLP.Paper2607_13816.hornerMulInverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.hornerMul_forward_inverse_coherent
 #print axioms ShorECDLP.Gate.relabel
 #print axioms ShorECDLP.Quantum.relabelBasis
 #print axioms ShorECDLP.Quantum.relabelState
@@ -1514,8 +1519,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1490 ]]; then
-  printf 'expected 1490 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1495 ]]; then
+  printf 'expected 1495 #print axioms results\n' >&2
   exit 1
 fi
 
