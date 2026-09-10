@@ -1715,11 +1715,35 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAdd_coherent
 #print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd_coherent
+#print axioms ShorECDLP.Paper2607_13816.nonzeroInputPrepare_run
+#print axioms ShorECDLP.Paper2607_13816.nonzeroInputPrepareState_correct
+#print axioms ShorECDLP.Paper2607_13816.fig15ZeroPrepare_run
+#print axioms ShorECDLP.Paper2607_13816.fig15ZeroPrepareState_ready
+#print axioms ShorECDLP.Paper2607_13816.nonzeroInputRestore_inverse
+#print axioms ShorECDLP.Paper2607_13816.fig15ZeroRestore_frame
+#print axioms ShorECDLP.Paper2607_13816.zeroAllowedDivisionOutputState_frame
+#print axioms ShorECDLP.Paper2607_13816.zeroAllowedMultiplicationOutputState_frame
+#print axioms ShorECDLP.Paper2607_13816.zeroAllowedDivisionOutputState_word
+#print axioms ShorECDLP.Paper2607_13816.zeroAllowedMultiplicationOutputState_word
+#print axioms ShorECDLP.Paper2607_13816.fig15ZeroPrepare_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.fig15ZeroRestore_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_coherent
+#print axioms ShorECDLP.Paper2607_13816.zeroAllowedDivisionOutputState_zero
+#print axioms ShorECDLP.Paper2607_13816.zeroAllowedMultiplicationOutputState_zero
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_resources
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_resources
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1694 ]]; then
-  printf 'expected 1694 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1718 ]]; then
+  printf 'expected 1718 #print axioms results\n' >&2
   exit 1
 fi
 
