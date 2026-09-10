@@ -1009,6 +1009,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_production_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseUnitary_production_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseAdaptive_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptive_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_wires_subset
@@ -1644,8 +1648,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1620 ]]; then
-  printf 'expected 1620 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1624 ]]; then
+  printf 'expected 1624 #print axioms results\n' >&2
   exit 1
 fi
 
