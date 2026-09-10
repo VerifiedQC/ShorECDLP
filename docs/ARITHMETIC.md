@@ -2447,3 +2447,7 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Division and coefficient composition
 
 `indexedScheduleUnitary_quotient_coefficient_packed` connects the complete actual division and coefficient schedules. The original smaller coefficient supplies the coefficient-entry bound; division derives the quotient bit length and reduced remainder needed by that phase. The output enters swap with the exact updated coefficient `tPrime + t * (r / rPrime)` and its tight alignment interval. All intermediate packing and arithmetic bounds are derived; original physical layouts and numerical windows remain explicit.
+
+### Division through the canonical swap boundary
+
+`indexedScheduleUnitary_quotient_coefficient_swap_packed` composes the actual division, coefficient and swap schedules. Original arithmetic and true input lengths derive every intermediate state and end in canonical packing with a strictly smaller second remainder. Layout, numerical window coverage and final scheduled-endpoint alignment remain explicit. The remainder-alignment phase and production reachability remain subsequent work.
