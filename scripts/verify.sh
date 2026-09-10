@@ -21,6 +21,22 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_tCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_tCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseAdaptive_tCount
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1StepMeasurements
+#print axioms ShorECDLP.Paper2607_13816.secp256k1StepMeasurements_eq
+#print axioms ShorECDLP.Paper2607_13816.secp256k1StepMeasurements_sum
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptive_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptiveTFormula
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptive_tCount
 #print axioms ShorECDLP.Paper2607_13816.fig15WorkProductState
 #print axioms ShorECDLP.Paper2607_13816.fig15DataProductState
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_coherent
@@ -1575,8 +1591,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1551 ]]; then
-  printf 'expected 1551 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1567 ]]; then
+  printf 'expected 1567 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -14253,4 +14253,51 @@ theorem indexedStepInverseAdaptiveInput_after_forward
   · rw [hRshape2]
     simpa only [Classical.run_append,hH,hGi,hFi,hEi,hDi,hCi,afterB] using hr.2
 
+/-- The reverse adaptive step measures the same five subroutine trees as the forward step. -/
+theorem indexedStepInverseAdaptive_measurementCount
+    (registers : IndexedStepRegisters) (n T : Nat)
+    (hlayout : IndexedStepLayout registers n T) :
+    (indexedStepInverseAdaptive registers n T).measurementCount =
+      indexedStepAdaptiveMeasurementFormula registers n T := by
+  simp only [indexedStepInverseAdaptive, indexedStepAdaptive_measurementCount_seq,adaptiveUnitary,Quantum.AdaptiveCircuit.measurementCount]
+  rw [intervalAddSubInverse_measurementCount _ _ _ _ .add false .work1 hlayout.remainder,
+    intervalAddSubInverse_measurementCount _ _ _ _ .sub true .work1 hlayout.remainder,
+    coefficientPrefixInverseAdaptive_measurementCount _ .add true .work2 hlayout.coefficient,
+    coefficientPrefixInverseAdaptive_measurementCount _ .sub false .work2 hlayout.coefficient,
+    phaseUpdateEpochInverseAdaptive_measurementCount _ _ hlayout.phaseUpdate]
+  simp only [indexedStepAdaptiveMeasurementFormula]
+  omega
+
+/-- Scalar T formula for the literal reverse adaptive step. -/
+def indexedStepInverseAdaptiveTFormula (r : IndexedStepRegisters) (n T : Nat) : Nat :=
+  let w := certifiedActiveWindows n T
+  ShorECDLP.tCount (blockHInverse r n T) +
+    7 * (2 * (mcxVChainAdaptiveToffoliCost r.phaseUpdate.lengthQ.length +
+      mcxVChainAdaptiveToffoliCost r.phaseUpdate.lengthRPrime.length +
+      mcxVChainAdaptiveToffoliCost (r.phaseUpdate.lengthS.length+1)) + 4) +
+    ShorECDLP.tCount (inverseCoefficientEntry r n) +
+    (35 * (coefficientPrefixTree (r.coefficient w.coefficient) w.coefficient.start w.coefficient.stop).leaves +
+      14 * (coefficientPrefixTree (r.coefficient w.coefficient) w.coefficient.start w.coefficient.stop).internalNodes) +
+    ShorECDLP.tCount (inverseCoefficientMiddle r) +
+    (35 * (coefficientPrefixTree (r.coefficient w.coefficient) w.coefficient.start w.coefficient.stop).leaves +
+      14 * (coefficientPrefixTree (r.coefficient w.coefficient) w.coefficient.start w.coefficient.stop).internalNodes) +
+    ShorECDLP.tCount (inverseRemainderEntry r n w.quotientSwap) +
+    intervalAdaptiveTFormula (r.remainder w.remainder) w.remainder.start w.remainder.stop .add +
+    ShorECDLP.tCount (inverseRemainderMiddle r) +
+    intervalAdaptiveTFormula (r.remainder w.remainder) w.remainder.start w.remainder.stop .sub +
+    ShorECDLP.tCount (inverseStepFinish r)
+
+/-- Counts the actual reverse circuit, including every measurement-dependent branch. -/
+theorem indexedStepInverseAdaptive_tCount (r : IndexedStepRegisters) (n T : Nat)
+    (hlayout : IndexedStepLayout r n T) :
+    (indexedStepInverseAdaptive r n T).tCount = indexedStepInverseAdaptiveTFormula r n T := by
+  simp only [indexedStepInverseAdaptive,indexedStepAdaptive_tCount_seq,adaptiveUnitary,
+    Quantum.AdaptiveCircuit.tCount,Nat.add_zero]
+  rw [intervalAddSubInverse_tCount _ _ _ _ .add false .work1 hlayout.remainder,
+    intervalAddSubInverse_tCount _ _ _ _ .sub true .work1 hlayout.remainder,
+    coefficientPrefixInverseAdaptive_tCount _ .add true .work2 hlayout.coefficient,
+    coefficientPrefixInverseAdaptive_tCount _ .sub false .work2 hlayout.coefficient,
+    phaseUpdateEpochInverseAdaptive_tCount _ _ hlayout.phaseUpdate]
+  rfl
+
 end ShorECDLP.Paper2607_13816
