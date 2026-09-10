@@ -38,7 +38,7 @@ private def fieldNegateX {F : Type*} [Field F] : (F × F) ≃ (F × F) where
 
 /-- A field-coordinate permutation for the enabled Figure 14 stages. Both
 potentially zero factors are explicitly replaced by one before inversion or multiplication. -/
-noncomputable def fig14CoordinateEquiv (x₂ y₂ : ZMod ShorECDLP.p) :
+def fig14CoordinateEquiv (x₂ y₂ : ZMod ShorECDLP.p) :
     (ZMod ShorECDLP.p × ZMod ShorECDLP.p) ≃ (ZMod ShorECDLP.p × ZMod ShorECDLP.p) :=
   ((((((((fieldShiftX (-x₂)).trans (fieldShiftY (-y₂))).trans fieldDivide).trans
     fieldSquareSubtract).trans (fieldShiftX (3*x₂))).trans fieldDivide.symm).trans

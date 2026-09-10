@@ -4,7 +4,7 @@ namespace ShorECDLP.Paper2607_13816
 open Classical
 local instance : Fact (Nat.Prime ShorECDLP.p) := ⟨ShorECDLP.Secp256k1.p_prime⟩
 /-- Physical correction generated from the finite exceptional-point swaps. -/
-noncomputable def pointCorrectionCircuit {x₂ y₂ : ShorECDLP.Fp}
+def pointCorrectionCircuit {x₂ y₂ : ShorECDLP.Fp}
     (hC : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular x₂ y₂) : Circuit :=
   pointWordProgram (pointCorrectionWordEdges hC)
 
