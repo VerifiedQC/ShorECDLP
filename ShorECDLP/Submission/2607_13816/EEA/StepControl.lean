@@ -2505,4 +2505,30 @@ theorem terminalPaddingForwardState_counter_nonzero (registers : TerminalPadding
     terminal_counter_extended registers state hlayout ht]
   exact decide_eq_false hbound
 
+/-- Terminal padding rotates the complete second work bank by exactly one position. -/
+theorem terminalPaddingForwardState_work2 (r : TerminalPaddingRegisters)
+    (s : BasisState) (h : TerminalPaddingLayout r) (ht : s r.terminal=true) :
+    wireValues r.work2 (terminalPaddingForwardState r s) = rotateLeftOne (wireValues r.work2 s) := by
+  have hnd := (List.nodup_cons.mp h.nodup).2
+  have heWork : r.shiftEpoch∉r.work2 := by
+    intro hm
+    exact (List.nodup_cons.mp hnd).1 (by simp [TerminalPaddingRegisters.usedWires,hm])
+  have hrest := (List.nodup_cons.mp hnd).2
+  have hc : (r.work2++(r.lengthS++r.scratch)).Nodup := by
+    simpa [TerminalPaddingRegisters.usedWires,List.append_assoc] using hrest
+  have hcross : ∀ w∈r.work2,w∉r.lengthS := by
+    intro w hw hs
+    exact (List.nodup_append.mp hc).2.2 w hw w (by simp [hs]) rfl
+  let rotated := writeReg r.work2 (boolWordToNat (rotateLeftOne (wireValues r.work2 s))) s
+  have hout : wireValues r.work2 (terminalPaddingForwardState r s)=wireValues r.work2 rotated := by
+    apply List.map_congr_left
+    intro w hw
+    unfold terminalPaddingForwardState
+    rw [upd_other _ _ _ (by intro he; subst w; exact heWork hw)]
+    simp only [ht,if_true]
+    exact stepControl_writeReg_preservesOutside _ _ _ (hcross w hw)
+  rw [hout]
+  exact stepControl_wireValues_writeReg_boolWord _ _ _ (List.nodup_append.mp hc).1
+    (by simp only [stepControl_rotateLeftOne_length,wireValues,List.length_map])
+
 end ShorECDLP.Paper2607_13816
