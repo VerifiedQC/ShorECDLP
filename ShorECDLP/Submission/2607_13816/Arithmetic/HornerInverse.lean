@@ -43,7 +43,7 @@ theorem hornerMulInverse_wellFormed (controls input : List Wire) (a : Wire) (res
             (horner_double_layout (q :: qs) input (a :: rest) c r t f hnd))
           (ih (horner_tail_layout q qs input (a :: rest) c r t f hnd))
 
-private theorem inverseSub_branch (input acc : List Wire) (correction modulus : List Bool)
+theorem modularSub_branch_after_add (input acc : List Wire) (correction modulus : List Bool)
     (p : Nat) (q c r t f : Wire) (s : BasisState)
     (hlen : input.length = acc.length) (hne : 0 < acc.length)
     (hk : acc.length = correction.length) (hm : acc.length = modulus.length)
@@ -69,7 +69,7 @@ private theorem inverseSub_branch (input acc : List Wire) (correction modulus : 
     hlen hk hm hnd hc hf hp hx hy hconstant hmodulus
   rw [hb'.1,hb'.2,hi]
 
-private theorem inverseHalve_branch (a : Wire) (rest dirty : List Wire)
+theorem modularHalve_branch_after_double (a : Wire) (rest dirty : List Wire)
     (correction modulus : List Bool) (p : Nat) (c r t f : Wire) (s : BasisState)
     (hk : (a :: rest).length = correction.length) (hm : (a :: rest).length = modulus.length)
     (hd : (a :: rest).length = dirty.length) (hnd : ([c,r,t,f] ++ (a :: rest) ++ dirty).Nodup)
@@ -121,7 +121,7 @@ theorem hornerMulInverse_after_forward (controls input : List Wire) (a : Wire) (
     have haLayout := horner_add_layout q qs input (a :: rest) c r t f hnd
     by_cases hqs : qs = []
     · subst qs
-      have hsub := inverseSub_branch input (a :: rest) correction modulus p q c r t f s
+      have hsub := modularSub_branch_after_add input (a :: rest) correction modulus p q c r t f s
         hlen (by simp) hk hm haLayout hc hr ht hf hp hx (by omega) hconstant hmodulus
       apply horner_seq_branch _ .done _ s s hsub ?_ branch hb
       intro b hb
@@ -146,11 +146,11 @@ theorem hornerMulInverse_after_forward (controls input : List Wire) (a : Wire) (
         rw [hd.1]; exact Nat.mod_lt _ hp0
       have hdinput : wireValues input doubled = wireValues input s :=
         List.map_congr_left (fun w hw => hdframe w (by simp [hw]))
-      have hsub := inverseSub_branch input (a :: rest) correction modulus p q c r t f doubled
+      have hsub := modularSub_branch_after_add input (a :: rest) correction modulus p q c r t f doubled
         hlen (by simp) hk hm haLayout ((hdframe c (by simp)).trans hc)
         ((hdframe r (by simp)).trans hr) ((hdframe t (by simp)).trans ht)
         ((hdframe f (by simp)).trans hf) hp (by rw [hdinput]; exact hx) hdvalue hconstant hmodulus
-      have hhalve := inverseHalve_branch a rest input correction modulus p f r t c before
+      have hhalve := modularHalve_branch_after_double a rest input correction modulus p f r t c before
         hk hm hlen.symm hdLayout ((hframe f (by simp)).trans hf)
         ((hframe r (by simp)).trans hr) ((hframe t (by simp)).trans ht)
         ((hframe c (by simp)).trans hc) hp hvalue hodd hconstant hmodulus
@@ -205,7 +205,7 @@ private theorem inverseConstantAdd_wires (q c r t w : Wire) :
   exact controlledGidneyAddConst_wires 4 260 q c r t (List.range' 5 255) (List.range' 261 254)
     ((List.range' 1 255).map (Nat.testBit (2 ^ 256 - 2 ^ 32 - 977))) (by simp) (by simp) w
 
-private theorem inverseSub_wires (q c r t f w : Wire) :
+theorem modularSub256_wires_iff (q c r t f w : Wire) :
     w ∈ (controlledModularSub (List.range' 260 256) (List.range' 4 256)
       secp256k1ModulusBits (2 ^ 256 - (2 ^ 32 + 977)) q c r t f).wires ↔
       w ∈ [q,c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256 := by
@@ -233,7 +233,7 @@ private theorem inverseSub_wires (q c r t f w : Wire) :
   · simp only [hmem,or_false]
     omega
 
-private theorem inverseHalve_wires (c r t f w : Wire) :
+theorem modularHalve256_wires_iff (c r t f w : Wire) :
     w ∈ (modularHalve (List.range' 4 256) (List.range' 260 256)
       secp256k1ModulusBits (2 ^ 256 - (2 ^ 32 + 977)) c r t f).wires ↔
       w ∈ [c,r,t,f] ++ List.range' 4 256 ++ List.range' 260 256 := by
@@ -268,14 +268,14 @@ private theorem inverseHorner_wires (controls : List Wire) (c r t f w : Wire) :
   induction controls with
   | nil => simp [hornerMulInverse,Quantum.AdaptiveCircuit.wires]
   | cons q qs ih =>
-    rw [hornerMulInverse,modularWires_seq,inverseSub_wires]
+    rw [hornerMulInverse,modularWires_seq,modularSub256_wires_iff]
     by_cases hz : qs = []
     · rw [if_pos hz]
       subst qs
       simp only [Quantum.AdaptiveCircuit.wires,List.mem_cons,List.not_mem_nil,List.mem_append,
         or_false,List.cons_ne_nil,ne_eq,not_false_eq_true,true_and]
       tauto
-    · rw [if_neg hz,modularWires_seq,inverseHalve_wires,ih]
+    · rw [if_neg hz,modularWires_seq,modularHalve256_wires_iff,ih]
       simp only [hz,not_false_eq_true,true_and,List.mem_cons,List.mem_append,List.not_mem_nil,or_false,
         List.cons_ne_nil,ne_eq]
       tauto
