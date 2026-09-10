@@ -1003,6 +1003,22 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_toffoliCount
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.unaryAction_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveAction_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveAction_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCellAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCellAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeafAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSub_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse_tCount
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse_measurementCount
 #print axioms ShorECDLP.Paper2607_13816.run_intervalAddSubInverseUnitary_after_forward
@@ -1616,8 +1632,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1592 ]]; then
-  printf 'expected 1592 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1608 ]]; then
+  printf 'expected 1608 #print axioms results\n' >&2
   exit 1
 fi
 
