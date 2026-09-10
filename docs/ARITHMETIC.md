@@ -2443,3 +2443,7 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Complete quotient phase
 
 `indexedScheduleUnitary_quotient_complete` proves that the actual multi-step schedule computes Euclidean division and remainder, leaves the quotient with its true bit length, and enters the coefficient phase. It starts from an empty quotient and a tightly aligned positive divisor. Weighted conservation, intermediate bounds, packing, and phase transitions are derived by induction. Physical layout and numerical window coverage at each index remain explicit; their production reachability is subsequent work.
+
+### Division and coefficient composition
+
+`indexedScheduleUnitary_quotient_coefficient_packed` connects the complete actual division and coefficient schedules. The original smaller coefficient supplies the coefficient-entry bound; division derives the quotient bit length and reduced remainder needed by that phase. The output enters swap with the exact updated coefficient `tPrime + t * (r / rPrime)` and its tight alignment interval. All intermediate packing and arithmetic bounds are derived; original physical layouts and numerical windows remain explicit.

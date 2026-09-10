@@ -1,5 +1,6 @@
 import ShorECDLP.Submission.«2607_13816».EEA.QuotientMicrostep
 import ShorECDLP.Submission.«2607_13816».EEA.Schedule
+import ShorECDLP.Submission.«2607_13816».EEA.CoefficientIteration
 namespace ShorECDLP.Paper2607_13816
 open Classical
 /-- A quotient digit preserves the accumulated division identity at the new alignment. -/
@@ -174,5 +175,94 @@ theorem indexedScheduleUnitary_quotient_complete (r : IndexedStepRegisters) (n s
     have hu : w.q.size≤v.shift := Nat.size_le.mpr ha.2.1
     omega
   exact ⟨hpacked,hph,hS,hQ,hdiv.symm,hmod.symm,hsize⟩
+
+/-- The actual division and coefficient schedules compose from the original input. -/
+theorem indexedScheduleUnitary_quotient_coefficient_packed (r : IndexedStepRegisters) (n start : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (hphase : v.phase=.quotient) (hsign : v.sign=false)
+    (hpositive : 0<v.shift)
+    (hlayout : ∀ offset<v.shift, IndexedStepLayout r n (start+offset))
+    (hwindows : ∀ offset<v.shift,
+      (certifiedActiveWindows n (start+offset)).remainder.start≤v.lT+(v.lQ+offset)+2 ∧
+      v.lT+(v.lQ+offset)+2-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthQ.length ∧
+      v.shift-offset-1+(certifiedActiveWindows n (start+offset)).remainder.start≤n+3 ∧
+      n+3-(v.shift-offset-1)-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthS.length ∧
+      (certifiedActiveWindows n (start+offset)).quotientSwap.start≤v.lT+(v.lQ+offset)+2 ∧
+      v.lT+(v.lQ+offset)+2≤(certifiedActiveWindows n (start+offset)).quotientSwap.stop)
+    (hcapacity : v.lT+v.lQ+v.shift+1<2^r.lengthQ.length)
+    (hspan : v.lT+v.lQ+1+v.shift+v.lRPrime≤n+3)
+    (htp : v.tPrime<2^(v.lT+v.lQ+v.shift))
+    (hR : 0<v.lRPrime) (hRfit : v.lRPrime<2^r.lengthRPrime.length)
+    (hwidth : 0<r.lengthS.length) (hSfit : v.shift<2^r.lengthS.length)
+    (hrp : v.rPrime<2^v.lRPrime) (hr : v.r<v.rPrime*2^v.shift) (hqzero : v.q=0) (hQzero : v.lQ=0)
+    (hlower : v.rPrime*2^(v.shift-1)≤v.r)
+    (hcoeffLayout : ∀ offset<v.shift, IndexedStepLayout r n (start+v.shift+offset))
+    (hcoeffWindows : ∀ offset<v.shift,
+      (certifiedActiveWindows n (start+v.shift+offset)).quotientSwap.start ≤ v.lT+(v.shift-offset)+1 ∧
+      v.lT+(v.shift-offset)+1 ≤ (certifiedActiveWindows n (start+v.shift+offset)).quotientSwap.stop ∧
+      v.lT+1 ∈ quotientSwapLabels 1 (certifiedActiveWindows n (start+v.shift+offset)).coefficient.stop)
+    (htmeta : v.lT+1<2^r.lengthT.length)
+    (hupper : n+3-v.lRPrime<2^r.lengthT.length)
+    (ht : v.t<2^v.lT) (htpSmall : v.tPrime<v.t) :
+
+    let w := quotientMicrostep^[v.shift] v
+    let next := coefficientMicrostep^[v.shift] w
+    IndexedPackedState r n (run (indexedScheduleUnitary r n start (v.shift+v.shift)) s) next ∧
+      next.phase=.swap ∧ next.sign=true ∧ next.q=0 ∧ next.lQ=0 ∧ next.shift=v.shift ∧
+      next.tPrime=v.tPrime+v.t*(v.r/v.rPrime) ∧
+      2^(next.shift-1)*next.t≤next.tPrime ∧ next.tPrime<2^next.shift*next.t := by
+  have hquot := indexedScheduleUnitary_quotient_complete r n start s v hp hphase hsign
+    hpositive hlayout hwindows hcapacity hspan htp hR hRfit hwidth hSfit hrp hr hqzero hQzero hlower
+  obtain ⟨hpack,hphaseW,hSW,hQW,hqW,hrW,hsizeW⟩ := hquot
+  obtain ⟨htt,hTT,htpW,hrpW,hRR,hii,_,_,hsignW,_⟩ :=
+    quotient_coordinates v v.shift hphase hsign hpositive (by omega)
+  let w := quotientMicrostep^[v.shift] v
+  let mid := run (indexedScheduleUnitary r n start v.shift) s
+  have hrpos : 0<v.rPrime := by
+    by_contra hn
+    have hz : v.rPrime=0 := by omega
+    simp [hz] at hr
+  have hrem : w.r<2^(n+3-(w.lT+w.lQ+1)) := by
+    change (quotientMicrostep^[v.shift] v).r<_
+    rw [hrW,hTT,hQW]
+    exact (Nat.mod_lt _ hrpos).trans (hrp.trans_le
+      (Nat.pow_le_pow_right (by decide) (by omega)))
+  have htpFit : w.tPrime<2^(n+3-w.lRPrime) := by
+    change (quotientMicrostep^[v.shift] v).tPrime<_
+    rw [htpW,hRR]
+    exact htpSmall.trans (ht.trans_le (Nat.pow_le_pow_right (by decide) (by omega)))
+  have hc := indexedScheduleUnitary_coefficient_complete r n (start+v.shift) mid w hpack
+    hphaseW hsignW
+    (by simpa only [w,hQW] using hcoeffLayout)
+    (by simpa only [w,hQW,hTT] using hcoeffWindows)
+    (by change (quotientMicrostep^[v.shift] v).lT+_+1<_; rw [hTT,hQW]; omega)
+    (by simpa only [w,hTT] using htmeta)
+    (by change (quotientMicrostep^[v.shift] v).lRPrime≤_; rw [hRR]; omega)
+    (by simpa only [w,hRR,hSW,Nat.sub_zero] using hupper)
+    (by change (quotientMicrostep^[v.shift] v).shift+_+_≤_; rw [hSW,hQW,hTT,hRR]; omega)
+    (by simpa only [w,htt,hTT] using ht) htpFit
+    (by change (quotientMicrostep^[v.shift] v).tPrime<_; rw [htpW,hSW,htt]; simpa using htpSmall)
+    (by change (quotientMicrostep^[v.shift] v).q<_; rw [hQW]; exact Nat.size_le.mp (by omega))
+    hrem hwidth
+    (by simpa only [w,hSW,hQW,Nat.zero_add] using hSfit)
+    (by simpa only [w,hRR] using hRfit)
+    (by simpa only [w,hQW] using hpositive)
+    (by change (quotientMicrostep^[v.shift] v).lQ=_; rw [hQW,hsizeW])
+    (by simpa only [w,hRR] using hR)
+  obtain ⟨hpnext,hph,hsg,hq,hQ,hS,htpNext,hlo,hhi,_⟩ := hc
+  dsimp only at hpnext hph hsg hq hQ hS htpNext hlo hhi ⊢
+  have hSfinal : (coefficientMicrostep^[v.shift] w).shift=v.shift := by
+    simpa only [w,hQW,hSW,Nat.zero_add] using hS
+  have htpFinal : (coefficientMicrostep^[v.shift] w).tPrime=v.tPrime+v.t*(v.r/v.rPrime) := by
+    simpa only [w,hQW,htpW,hSW,htt,hqW,Nat.pow_zero,Nat.one_mul] using htpNext
+  rw [indexedScheduleUnitary_append,Classical.run_append]
+  refine ⟨?_,?_,?_,?_,?_,hSfinal,htpFinal,?_,?_⟩
+  · simpa only [w,mid,hQW] using hpnext
+  · simpa only [w,mid,hQW] using hph
+  · simpa only [w,mid,hQW] using hsg
+  · simpa only [w,mid,hQW] using hq
+  · simpa only [w,mid,hQW] using hQ
+  · simpa only [w,mid,hQW] using hlo
+  · simpa only [w,mid,hQW] using hhi
 
 end ShorECDLP.Paper2607_13816
