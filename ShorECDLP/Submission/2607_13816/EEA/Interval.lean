@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.AdaptiveSupport
 import ShorECDLP.Submission.«2607_13816».EEA.Endpoint
 import ShorECDLP.Submission.«2607_13816».EEA.IntervalCleanup
 import Mathlib.Data.Nat.Bitwise
@@ -4935,5 +4936,46 @@ theorem intervalAddSubUnitary_preservesOutsideTarget (r : IntervalRegisters) (n 
   · exact (hrestore.run_congrOn afterBody prepared hbodySupport wire hw).trans (congrFun hid wire)
   · rw [hrestore.preservesOutside afterBody hw,hout wire hn]
     exact hprepare.preservesOutside state hw
+
+private theorem interval_top_first_wires (r : IntervalRegisters) (k K : Nat)
+    (mode : RippleMode) (target : IntervalTarget) :
+    (intervalTopFirstAdaptive r k K mode target).wires ⊆ circuitWires (intervalTopFirst r k K mode target) := by
+  unfold intervalTopFirstAdaptive intervalTopFirst
+  split
+  · exact topSpecialFirstLeafAdaptive_wires_subset _ _ _ _ _ _ _ _ _ _ _ _ _
+  · simp [Quantum.AdaptiveCircuit.wires]
+private theorem interval_top_second_wires (r : IntervalRegisters) (k K : Nat)
+    (mode : RippleMode) (target : IntervalTarget) :
+    (intervalTopSecondAdaptive r k K mode target).wires ⊆ circuitWires (intervalTopSecond r k K mode target) := by
+  unfold intervalTopSecondAdaptive intervalTopSecond
+  split
+  · exact topSpecialSecondLeafAdaptive_wires_subset _ _ _ _ _ _ _ _ _ _ _ _ _
+  · simp [Quantum.AdaptiveCircuit.wires]
+/-- All physical labels of the adaptive interval already occur in its coherent reference. -/
+theorem intervalAddSub_wires_subset (r : IntervalRegisters) (n k K : Nat)
+    (mode : RippleMode) (signUpdate : Bool) (target : IntervalTarget) :
+    (intervalAddSub r n k K mode signUpdate target).wires ⊆
+      circuitWires (intervalAddSubUnitary r n k K mode signUpdate target) := by
+  have ht1 := interval_top_first_wires r k K mode target
+  have ht2 := interval_top_second_wires r k K mode target
+  have hf := intervalFirstTraversalAdaptive_wires_subset mode (intervalHasTopSpecial k K)
+    (r.rightTop k K) (r.leftTop k K) (r.accumulator k K) (r.carry k K) (r.cellScratch k K)
+    (r.targetAt target) (r.addendAt target) (intervalTree r k K) r.control r.control
+    (r.rightPaths k K) (r.leftPaths k K)
+  have hs := intervalSecondTraversalAdaptive_wires_subset mode (intervalHasTopSpecial k K)
+    (r.rightTop k K) (r.leftTop k K) (r.accumulator k K) (r.carry k K) (r.cellScratch k K)
+    (r.targetAt target) (r.addendAt target) (intervalTree r k K) r.control r.control
+    (r.rightPaths k K) (r.leftPaths k K)
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at ht1 ht2 hf hs
+  intro w hw
+  simp only [intervalAddSub,intervalAddSubUnitary,modularWires_seq,Quantum.AdaptiveCircuit.wires,
+    circuitWires,List.flatMap_append,List.mem_append,List.not_mem_nil,or_false] at hw ⊢
+  aesop
+/-- The source inverse is the same wrapper instantiated with the inverse ripple mode. -/
+theorem intervalAddSubInverse_wires_subset (r : IntervalRegisters) (n k K : Nat)
+    (mode : RippleMode) (signUpdate : Bool) (target : IntervalTarget) :
+    (intervalAddSubInverse r n k K mode signUpdate target).wires ⊆
+      circuitWires (intervalAddSubInverseUnitary r n k K mode signUpdate target) :=
+  intervalAddSub_wires_subset r n k K mode.inverse signUpdate target
 
 end ShorECDLP.Paper2607_13816
