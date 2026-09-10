@@ -1848,11 +1848,23 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointAddProgram_coherent
 #print axioms ShorECDLP.Paper2607_13816.fig14ExceptionalList_mem
 #print axioms ShorECDLP.Paper2607_13816.fig14ExceptionalList_length
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_tCount_nonzero
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_T
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_T
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_T
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_T
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAdd256_counts
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd256_counts
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegate256_counts
+#print axioms ShorECDLP.Paper2607_13816.fig14ConstantX_counts
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantX_counts
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantY_counts
+#print axioms ShorECDLP.Paper2607_13816.fig14Negate_counts
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1827 ]]; then
-  printf 'expected 1827 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1839 ]]; then
+  printf 'expected 1839 #print axioms results\n' >&2
   exit 1
 fi
 
