@@ -502,6 +502,152 @@ theorem fig15SwapOutput_run (s : BasisState) :
       else if w ∈ List.range' 580 256 then s (w-573) else s w := by
   simpa only [swapPrefix,fig15SwapOutput,List.mem_range'_1] using swapPrefix_run 256 (by omega) s
 
+/-- State after multiplication has accumulated its product and borrowed Y for inversion. -/
+def fig15MultiplicationInvertedState (s : BasisState) : BasisState :=
+  relabelBasis eeaWorkspaceExchange (secp256k1EEAOutputIdealState
+    (relabelBasis eeaWorkspaceExchange.symm
+      (clearRegister (List.range' 580 256) (fig15WorkProductState s))))
+private theorem multiplication_reset_input (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    Secp256k1EEAInputValid (relabelBasis eeaWorkspaceExchange.symm
+      (clearRegister (List.range' 580 256) (fig15WorkProductState s))) := by
+  have hm := fig15WorkProductState_correct s (fig15_initial_horner s hs)
+  have hframe (w : Wire) (hw : w ∉ List.range' 7 256) (hy : w ∉ List.range' 580 256) :
+      relabelBasis eeaWorkspaceExchange.symm
+        (clearRegister (List.range' 580 256) (fig15WorkProductState s)) w = s w := by
+    simp only [relabelBasis,Equiv.symm_symm,eeaWorkspaceExchange_frame w (by simpa using hw) (by simpa using hy)]
+    rw [clear_outside _ _ w hy,hm.2 w hw]
+  have hx : wireValues (List.range' 263 256)
+      (relabelBasis eeaWorkspaceExchange.symm
+        (clearRegister (List.range' 580 256) (fig15WorkProductState s))) =
+      wireValues (List.range' 263 256) s := by
+    apply List.map_congr_left
+    intro w hw
+    exact hframe w (by simp at hw ⊢; omega) (by simp at hw ⊢; omega)
+  refine ⟨?_,?_,?_⟩
+  · intro w hw
+    by_cases ha : w ∈ List.range' 7 256
+    · have hh : w = 7+(w-7) := by simp at ha; dsimp only [Wire] at *; omega
+      have hi : w-7 <256 := by simp at ha; dsimp only [Wire] at *; omega
+      simp only [relabelBasis,Equiv.symm_symm]
+      have he : eeaWorkspaceExchange w = 580+(w-7) := by
+        calc
+          eeaWorkspaceExchange w = eeaWorkspaceExchange (7+(w-7)) := congrArg _ hh
+          _ = _ := eeaWorkspaceExchange_work _ hi
+      rw [he]
+      exact clearRegister_clean (List.range' 580 256) _ (580+(w-7)) (by simp only [List.mem_range'_1]; dsimp only [Wire] at *; omega)
+    · rw [hframe w ha (by simp at hw ⊢; dsimp only [Wire] at *; omega)]
+      exact hs.1.1 w hw
+  · rw [hx]; exact hs.1.2.1
+  · rw [hx]; exact hs.1.2.2
+private theorem multiplication_inverted_A (s : BasisState) (w : Wire)
+    (hw : w ∈ List.range' 7 256) :
+    fig15MultiplicationInvertedState s w = fig15WorkProductState s w := by
+  have hi : w-7 <256 := by simp at hw; dsimp only [Wire] at *; omega
+  have he : eeaWorkspaceExchange w = 580+(w-7) := by
+    calc
+      eeaWorkspaceExchange w = eeaWorkspaceExchange (7+(w-7)) := congrArg _ (by simp at hw; dsimp only [Wire] at *; omega)
+      _ = _ := eeaWorkspaceExchange_work _ hi
+  have hee : eeaWorkspaceExchange (eeaWorkspaceExchange w) = w := by
+    rw [← exchange_symm]; exact eeaWorkspaceExchange.symm_apply_apply w
+  simp only [fig15MultiplicationInvertedState,relabelBasis,exchange_symm]
+  rw [secp256k1EEAOutputIdealState_preservesOutside _ _ (by rw [he]; dsimp only [Wire]; omega)]
+  simp only [relabelBasis,Equiv.symm_symm,hee]
+  exact clear_outside _ _ w (by simp at hw ⊢; omega)
+private theorem multiplication_reset_X (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    wireValues (List.range' 263 256)
+      (relabelBasis eeaWorkspaceExchange.symm
+        (clearRegister (List.range' 580 256) (fig15WorkProductState s))) =
+      wireValues (List.range' 263 256) s := by
+  apply List.map_congr_left
+  intro w hw
+  have ha : w ∉ List.range' 7 256 := by simp at hw ⊢; omega
+  have hy : w ∉ List.range' 580 256 := by simp at hw ⊢; omega
+  simp only [relabelBasis,Equiv.symm_symm,eeaWorkspaceExchange_frame w (by simpa using ha) (by simpa using hy)]
+  rw [clear_outside _ _ w hy]
+  exact (fig15WorkProductState_correct s (fig15_initial_horner s hs)).2 w ha
+private theorem multiplication_inverted_X (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    boolWordToNat (wireValues (List.range' 263 256) (fig15MultiplicationInvertedState s)) =
+      paperInverse ShorECDLP.p (boolWordToNat (wireValues (List.range' 263 256) s)) := by
+  have hv := multiplication_reset_input s hs
+  have he := secp256k1EEAOutputIdealState_correct _ hv.1 hv.2.1 hv.2.2
+  have hx : wireValues (List.range' 263 256) (fig15MultiplicationInvertedState s) =
+      wireValues (List.range' 263 256) (secp256k1EEAOutputIdealState
+        (relabelBasis eeaWorkspaceExchange.symm
+          (clearRegister (List.range' 580 256) (fig15WorkProductState s)))) := by
+    apply List.map_congr_left
+    intro w hw
+    simp only [fig15MultiplicationInvertedState,relabelBasis,exchange_symm]
+    rw [eeaWorkspaceExchange_frame w (by simp at hw ⊢; dsimp only [Wire] at *; omega) (by simp at hw ⊢; dsimp only [Wire] at *; omega)]
+  rw [hx,he.1,multiplication_reset_X s hs]
+private theorem multiplication_inverted_horner (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    HornerInputValid (List.range' 7 256) (List.range' 580 256) ShorECDLP.p 558 560 561 559
+      (fig15MultiplicationInvertedState s) := by
+  have hv := multiplication_reset_input s hs
+  have he := secp256k1EEAOutputIdealState_correct _ hv.1 hv.2.1 hv.2.2
+  refine ⟨?_,?_,?_,?_,?_,?_⟩
+  · intro w hw
+    have hi : w-580 <256 := by simp at hw; dsimp only [Wire] at *; omega
+    have hew : eeaWorkspaceExchange w = 7+(w-580) := by
+      calc
+        eeaWorkspaceExchange w = eeaWorkspaceExchange (580+(w-580)) := congrArg _ (by simp at hw; dsimp only [Wire] at *; omega)
+        _ = _ := eeaWorkspaceExchange_data _ hi
+    simp only [fig15MultiplicationInvertedState,relabelBasis,exchange_symm,hew]
+    exact he.2.2.1 _ (by simp only [List.mem_range'_1]; dsimp only [Wire] at *; omega)
+  · simpa only [fig15MultiplicationInvertedState,relabelBasis,exchange_symm,
+      eeaWorkspaceExchange_frame 558 (by decide) (by decide)] using he.2.2.2.2 558 (by decide +kernel)
+  · simpa only [fig15MultiplicationInvertedState,relabelBasis,exchange_symm,
+      eeaWorkspaceExchange_frame 560 (by decide) (by decide)] using he.2.2.2.2 560 (by decide +kernel)
+  · simpa only [fig15MultiplicationInvertedState,relabelBasis,exchange_symm,
+      eeaWorkspaceExchange_frame 561 (by decide) (by decide)] using he.2.2.2.2 561 (by decide +kernel)
+  · simpa only [fig15MultiplicationInvertedState,relabelBasis,exchange_symm,
+      eeaWorkspaceExchange_frame 559 (by decide) (by decide)] using he.2.2.2.1
+  · have ha : wireValues (List.range' 7 256) (fig15MultiplicationInvertedState s) =
+        wireValues (List.range' 7 256) (fig15WorkProductState s) := by
+      apply List.map_congr_left
+      intro w hw
+      exact multiplication_inverted_A s w hw
+    rw [ha,(fig15WorkProductState_correct s (fig15_initial_horner s hs)).1]
+    exact Nat.mod_lt _ ShorECDLP.Secp256k1.p_prime.pos
+/-- The product multiplied by the borrowed-bank inverse recovers the measured Y exactly. -/
+theorem fig15MultiplicationRecompute_word (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    boolWordToNat (wireValues (List.range' 580 256)
+      (fig15DataProductState (fig15MultiplicationInvertedState s))) =
+      boolWordToNat (wireValues (List.range' 580 256) s) := by
+  have hv := multiplication_reset_input s hs
+  have he := secp256k1EEAOutputIdealState_correct _ hv.1 hv.2.1 hv.2.2
+  have hinv : (boolWordToNat (wireValues (List.range' 263 256) s) *
+      paperInverse ShorECDLP.p (boolWordToNat (wireValues (List.range' 263 256) s))) % ShorECDLP.p = 1 := by
+    have h := he.2.1
+    rw [he.1,multiplication_reset_X s hs] at h
+    have hh := congrArg ZMod.val h
+    have hm : (paperInverse ShorECDLP.p (boolWordToNat (wireValues (List.range' 263 256) s)) *
+        boolWordToNat (wireValues (List.range' 263 256) s)) % ShorECDLP.p = 1 := by
+      simpa only [← Nat.cast_mul,ZMod.val_natCast,ZMod.val_one] using hh
+    rwa [Nat.mul_comm] at hm
+  have ha : wireValues (List.range' 7 256) (fig15MultiplicationInvertedState s) =
+      wireValues (List.range' 7 256) (fig15WorkProductState s) := by
+    apply List.map_congr_left
+    intro w hw
+    exact multiplication_inverted_A s w hw
+  rw [(fig15DataProductState_correct _ (multiplication_inverted_horner s hs)).1,
+    ha,(fig15WorkProductState_correct s (fig15_initial_horner s hs)).1,multiplication_inverted_X s hs,
+    Nat.mod_mul_mod,Nat.mul_assoc,Nat.mul_mod _ (_*_) _,hinv,Nat.mul_one,Nat.mod_mod]
+  exact Nat.mod_eq_of_lt hs.2
+/-- Exact word reconstruction yields equality of every measured bit. -/
+theorem fig15MultiplicationRecompute_bits (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    wireValues (List.range' 580 256) (fig15DataProductState (fig15MultiplicationInvertedState s)) =
+      wireValues (List.range' 580 256) s :=
+  boolWordToNat_injective_of_length (by simp only [wireValues,List.length_map])
+    (fig15MultiplicationRecompute_word s hs)
+/-- The actual correction produces the original measurement sign on every transcript. -/
+theorem fig15MultiplicationRecompute_phase (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    Quantum.run (registerZCorrection (List.range' 580 256) outcomes)
+      (ket (fig15DataProductState (fig15MultiplicationInvertedState s))) =
+      registerXPhase (List.range' 580 256) outcomes s •
+        ket (fig15DataProductState (fig15MultiplicationInvertedState s)) := by
+  rw [run_registerZCorrection_ket,phase_congr _ outcomes _ s (fig15MultiplicationRecompute_bits s hs)]
+
 private def divisionResetValid (t : BasisState) : Prop :=
   ∃ s, Secp256k1InPlaceInputValid s ∧
     t = clearRegister (List.range' 580 256) (fig15WorkProductState (secp256k1EEAOutputIdealState s))
@@ -704,6 +850,192 @@ theorem fig15DivisionOutputState_word (s : BasisState) (hs : Secp256k1InPlaceInp
     intro w hw
     exact secp256k1EEAOutputIdealState_preservesOutside s w (by simp at hw; dsimp only [Wire] at *; omega)
   rw [hY,(secp256k1EEAOutputIdealState_correct s hs.1.1 hs.1.2.1 hs.1.2.2).1]
+
+private def multiplicationResetValid (t : BasisState) : Prop :=
+  ∃ s, Secp256k1InPlaceInputValid s ∧ t = clearRegister (List.range' 580 256) (fig15WorkProductState s)
+private def multiplicationInvertMap : State →ₗ[ℂ] State :=
+  (relabelState eeaWorkspaceExchange).comp
+    ((Finsupp.lmapDomain ℂ ℂ secp256k1EEAOutputIdealState).comp (relabelState eeaWorkspaceExchange.symm))
+private def multiplicationRecomputeMap : State →ₗ[ℂ] State :=
+  (Finsupp.lmapDomain ℂ ℂ fig15DataProductState).comp multiplicationInvertMap
+private def multiplicationCorrectMap (outcomes : List Bool) : State →ₗ[ℂ] State :=
+  (Quantum.run (registerZCorrection (List.range' 580 256) outcomes)).comp multiplicationRecomputeMap
+private def multiplicationUncomputeMap (outcomes : List Bool) : State →ₗ[ℂ] State :=
+  (Finsupp.lmapDomain ℂ ℂ (hornerClearOutput (List.range' 580 256))).comp (multiplicationCorrectMap outcomes)
+private def multiplicationRestoreMap (outcomes : List Bool) : State →ₗ[ℂ] State :=
+  divisionRestoreMap.comp (multiplicationUncomputeMap outcomes)
+private theorem multiplication_invert_ket (s : BasisState) :
+    multiplicationInvertMap (ket (clearRegister (List.range' 580 256) (fig15WorkProductState s))) =
+      ket (fig15MultiplicationInvertedState s) := by
+  simp only [multiplicationInvertMap,LinearMap.comp_apply,relabelState_ket,basis_lift_ket,
+    fig15MultiplicationInvertedState]
+private theorem multiplication_recompute_ket (s : BasisState) :
+    multiplicationRecomputeMap (ket (clearRegister (List.range' 580 256) (fig15WorkProductState s))) =
+      ket (fig15DataProductState (fig15MultiplicationInvertedState s)) := by
+  simp only [multiplicationRecomputeMap,LinearMap.comp_apply,multiplication_invert_ket,basis_lift_ket]
+private theorem multiplication_correct_ket (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    multiplicationCorrectMap outcomes (ket (clearRegister (List.range' 580 256) (fig15WorkProductState s))) =
+      registerXPhase (List.range' 580 256) outcomes s •
+        ket (fig15DataProductState (fig15MultiplicationInvertedState s)) := by
+  simp only [multiplicationCorrectMap,LinearMap.comp_apply,multiplication_recompute_ket,
+    fig15MultiplicationRecompute_phase s hs]
+private theorem multiplication_uncompute_state (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    hornerClearOutput (List.range' 580 256)
+      (fig15DataProductState (fig15MultiplicationInvertedState s)) = fig15MultiplicationInvertedState s := by
+  funext w
+  by_cases hw : w ∈ List.range' 580 256
+  · simp only [hornerClearOutput,if_pos hw]
+    exact ((multiplication_inverted_horner s hs).1 w hw).symm
+  · simp only [hornerClearOutput,if_neg hw]
+    exact (fig15DataProductState_correct _ (multiplication_inverted_horner s hs)).2 w hw
+private theorem multiplication_uncompute_ket (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    multiplicationUncomputeMap outcomes (ket (clearRegister (List.range' 580 256) (fig15WorkProductState s))) =
+      registerXPhase (List.range' 580 256) outcomes s • ket (fig15MultiplicationInvertedState s) := by
+  simp only [multiplicationUncomputeMap,LinearMap.comp_apply,multiplication_correct_ket s hs,
+    map_smul,basis_lift_ket,multiplication_uncompute_state s hs]
+private theorem bank_relabel_cancel (e : Wire ≃ Wire) (s : BasisState) :
+    relabelBasis e.symm (relabelBasis e s) = s := by
+  funext w
+  simp only [relabelBasis,Equiv.symm_symm,Equiv.symm_apply_apply]
+private theorem multiplication_inverse_ready (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    Secp256k1EEAForwardLocalImage (relabelBasis eeaWorkspaceExchange.symm (fig15MultiplicationInvertedState s)) := by
+  rw [fig15MultiplicationInvertedState,bank_relabel_cancel]
+  exact ⟨_,multiplication_reset_input s hs,fun _ _ => rfl⟩
+private theorem multiplication_inverse_ket (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    divisionRestoreMap (ket (fig15MultiplicationInvertedState s)) =
+      ket (clearRegister (List.range' 580 256) (fig15WorkProductState s)) := by
+  simp only [divisionRestoreMap,LinearMap.comp_apply,relabelState_ket,basis_lift_ket]
+  rw [fig15MultiplicationInvertedState,bank_relabel_cancel,
+    secp256k1EEAReverseWrapper_output _ (multiplication_reset_input s hs)]
+  have hc := bank_relabel_cancel eeaWorkspaceExchange.symm
+    (clearRegister (List.range' 580 256) (fig15WorkProductState s))
+  simpa only [Equiv.symm_symm] using congrArg ket hc
+private theorem multiplication_restore_ket (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    multiplicationRestoreMap outcomes (ket (clearRegister (List.range' 580 256) (fig15WorkProductState s))) =
+      registerXPhase (List.range' 580 256) outcomes s •
+        ket (clearRegister (List.range' 580 256) (fig15WorkProductState s)) := by
+  simp only [multiplicationRestoreMap,LinearMap.comp_apply,multiplication_uncompute_ket s hs,
+    map_smul,multiplication_inverse_ket s hs]
+private theorem multiplication_continuation_coherent (outcomes : List Bool) :
+    CoherentlyImplementsOn (fig15MultiplicationAfterReset outcomes)
+      ((Quantum.run fig15SwapOutput).comp (multiplicationRestoreMap outcomes)) multiplicationResetValid := by
+  have hf : CoherentlyImplementsOn secp256k1EEAForwardInDataBank multiplicationInvertMap multiplicationResetValid := by
+    apply coherent_strengthen secp256k1EEAForwardInDataBank_coherent
+    rintro t ⟨s,hs,rfl⟩
+    exact multiplication_reset_input s hs
+  have hm := hf.seq fig15MultiplyToData_coherent (by
+    rintro t ⟨s,hs,rfl⟩
+    rw [multiplication_invert_ket]
+    exact supportedOn_ket _ _ (multiplication_inverted_horner s hs))
+  have hz := hm.seq (CoherentlyImplementsOn.unitary
+    (registerZCorrection (List.range' 580 256) outcomes) (fun _ => True)) (by
+      intro t ht u hu; trivial)
+  have hi := hz.seq fig15MultiplyToDataInverse_coherent (by
+    rintro t ⟨s,hs,rfl⟩
+    change SupportedOn _ (multiplicationCorrectMap outcomes _)
+    rw [multiplication_correct_ket s hs]
+    exact supported_phase _ _ ⟨fig15MultiplicationInvertedState s,multiplication_inverted_horner s hs,rfl⟩)
+  have hr := hi.seq secp256k1EEAReverseInDataBank_coherent_localImage (by
+    rintro t ⟨s,hs,rfl⟩
+    change SupportedOn _ (multiplicationUncomputeMap outcomes _)
+    rw [multiplication_uncompute_ket s hs]
+    exact supported_phase _ _ (multiplication_inverse_ready s hs))
+  exact hr.seq (CoherentlyImplementsOn.unitary fig15SwapOutput (fun _ => True))
+    (by intro t ht u hu; trivial)
+private def multiplicationPreparedValid (t : BasisState) : Prop :=
+  ∃ s, Secp256k1InPlaceInputValid s ∧ t = fig15WorkProductState s
+private def multiplicationPreparedOutput (t : BasisState) : BasisState :=
+  Classical.run fig15SwapOutput (clearRegister (List.range' 580 256) t)
+private theorem multiplication_prepared_phase (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    registerXPhase (List.range' 580 256) outcomes (fig15WorkProductState s) =
+      registerXPhase (List.range' 580 256) outcomes s := by
+  apply phase_congr
+  apply List.map_congr_left
+  intro w hw
+  exact (fig15WorkProductState_correct s (fig15_initial_horner s hs)).2 w (by simp at hw ⊢; omega)
+attribute [local irreducible] fig15MultiplicationAfterReset multiplicationPreparedOutput
+private theorem multiplication_final_ket (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    ((Quantum.run fig15SwapOutput).comp (multiplicationRestoreMap outcomes))
+      (ket (clearRegister (List.range' 580 256) (fig15WorkProductState s))) =
+      registerXPhase (List.range' 580 256) outcomes s •
+        ket (multiplicationPreparedOutput (fig15WorkProductState s)) := by
+  rw [LinearMap.comp_apply,multiplication_restore_ket s hs,map_smul,
+    run_ket_agrees_classical _ _ division_swap_hp,multiplicationPreparedOutput]
+private theorem multiplication_reset_correct (outcomes : List Bool) (t : BasisState)
+    (ht : multiplicationPreparedValid t) :
+    multiplicationResetValid (clearRegister (List.range' 580 256) t) ∧
+    ((Quantum.run fig15SwapOutput).comp (multiplicationRestoreMap outcomes))
+      (ket (clearRegister (List.range' 580 256) t)) =
+      registerXPhase (List.range' 580 256) outcomes t • ket (multiplicationPreparedOutput t) := by
+  obtain ⟨s,hs,rfl⟩ := ht
+  refine ⟨⟨s,hs,rfl⟩,?_⟩
+  rw [multiplication_prepared_phase s hs]
+  exact multiplication_final_ket s hs outcomes
+private theorem multiplication_reset_coherent :
+    CoherentlyImplementsOn (measureResetThen (List.range' 580 256) fig15MultiplicationAfterReset)
+      (Finsupp.lmapDomain ℂ ℂ multiplicationPreparedOutput) multiplicationPreparedValid :=
+  measureResetThen_coherent (List.range' 580 256) fig15MultiplicationAfterReset
+    (fun outcomes => (Quantum.run fig15SwapOutput).comp (multiplicationRestoreMap outcomes))
+    (fun _ => multiplicationResetValid) multiplicationPreparedValid multiplicationPreparedOutput List.nodup_range'
+    (fun outcomes _ => multiplication_continuation_wellFormed outcomes)
+    multiplication_continuation_coherent (fun outcomes _ t ht => multiplication_reset_correct outcomes t ht)
+    (fig15WorkProductState divisionWitness) ⟨divisionWitness,divisionWitness_valid,rfl⟩
+/-- Complete ideal output of the literal Figure 15 multiplication. -/
+def fig15MultiplicationOutputState (s : BasisState) : BasisState :=
+  multiplicationPreparedOutput (fig15WorkProductState s)
+/-- All actual multiplication transcripts implement the same linear output map
+with normalized coefficients independent of the valid input. -/
+theorem secp256k1InPlaceMultiplication_coherent :
+    CoherentlyImplementsOn secp256k1InPlaceMultiplication
+      (Finsupp.lmapDomain ℂ ℂ fig15MultiplicationOutputState) Secp256k1InPlaceInputValid := by
+  have h := fig15MultiplicationPrefix_coherent.seq multiplication_reset_coherent (by
+    intro s hs
+    rw [basis_lift_ket]
+    exact supportedOn_ket _ _ ⟨s,hs,rfl⟩)
+  apply h.congrIdeal
+  intro s hs
+  simp only [LinearMap.comp_apply,basis_lift_ket]
+  rfl
+/-- Multiplication changes only Y; all work and the original X are restored. -/
+theorem fig15MultiplicationOutputState_eq (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    fig15MultiplicationOutputState s = fun w =>
+      if w ∈ List.range' 580 256 then fig15WorkProductState s (w-573) else s w := by
+  funext w
+  rw [fig15MultiplicationOutputState,multiplicationPreparedOutput,fig15SwapOutput_run]
+  have hm := fig15WorkProductState_correct s (fig15_initial_horner s hs)
+  by_cases ha : w ∈ List.range' 7 256
+  · have hy : w ∉ List.range' 580 256 := by simp at ha ⊢; omega
+    have hy' : w+573 ∈ List.range' 580 256 := by simp at ha ⊢; dsimp only [Wire] at *; omega
+    simp only [if_pos ha,if_neg hy]
+    rw [clearRegister_clean _ _ _ hy']
+    exact (hs.1.1 w (by simp at ha ⊢; omega)).symm
+  · by_cases hy : w ∈ List.range' 580 256
+    · have hn : w-573 ∉ List.range' 580 256 := by simp at hy ⊢; dsimp only [Wire] at *; omega
+      simp only [if_neg ha,if_pos hy]
+      exact clear_outside _ _ _ hn
+    · simp only [if_neg ha,if_neg hy]
+      rw [clear_outside _ _ _ hy]
+      exact hm.2 w ha
+/-- The actual multiplication output contains the canonical product in Y. -/
+theorem fig15MultiplicationOutputState_word (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    boolWordToNat (wireValues (List.range' 580 256) (fig15MultiplicationOutputState s)) =
+      (boolWordToNat (wireValues (List.range' 580 256) s) *
+        boolWordToNat (wireValues (List.range' 263 256) s)) % ShorECDLP.p := by
+  have hbits : wireValues (List.range' 580 256) (fig15MultiplicationOutputState s) =
+      wireValues (List.range' 7 256) (fig15WorkProductState s) := by
+    have hmap : List.map (fun w : Nat => w-573) (List.range' 580 256) = List.range' 7 256 :=
+      List.map_sub_range' (by omega) 256
+    simp only [wireValues]
+    rw [← hmap,List.map_map]
+    apply List.map_congr_left
+    intro w hw
+    simp only [fig15MultiplicationOutputState_eq s hs,if_pos hw,Function.comp_apply]
+  rw [hbits,(fig15WorkProductState_correct s (fig15_initial_horner s hs)).1]
 
 end
 end ShorECDLP.Paper2607_13816
