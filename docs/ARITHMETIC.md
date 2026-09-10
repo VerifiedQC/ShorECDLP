@@ -2495,3 +2495,7 @@ The active-boundary theorem `indexedScheduleUnitary_active_paperStep` also deriv
 ### Production parity correction
 
 `secp256k1EEAParityCorrection` complements Iter, invokes the source measurement-assisted constant-minus primitive on the low 256 coefficient bits with 255 borrowed Work1 wires, and restores Iter. Every measurement branch has the proved positive amplitude and realizes the complete ideal state. `secp256k1EEAParity_inverse` composes its arithmetic with the full EEA/canonicalization/epoch prefix under the original input assumptions: the coefficient equals `paperInverse` and multiplies the original input to one modulo secp256k1's prime. The epoch and shared scratch remain clear. Known terminal Work1 clearing and the complete adaptive wrapper composition remain subsequent work.
+
+### Terminal Work1 clearing
+
+The terminal packing is derived from the complete arithmetic prefix as `(p,1)`, independent of the input. `terminalWork1Clear` follows the source's 251 X gates, clears all 259 Work1 wires, and preserves every other wire. The completed arithmetic state theorem retains the proved modular inverse while clearing Work1, the borrowed epoch, and shared scratch. Other EEA metadata remains for reversal; this is not a claim that all 580 roles are clean. Complete adaptive wrapper composition and Figure 15 remain subsequent work.
