@@ -14025,4 +14025,232 @@ theorem indexedStepInverseAdaptive_coherent (registers : IndexedStepRegisters) (
   have h10 := indexedStep_coherent_seq_circuits h9 (Quantum.CoherentlyImplementsOn.unitary (inverseStepFinish registers) (fun _ => True)) hf9
     (fun _ _ => trivial)
   simpa only [indexedStepInverseAdaptive,inverseAdaptive_source_split] using h10
+
+attribute [local irreducible] coefficientPrefixUnitary
+
+private theorem inverse_coefficient_prefixes_ready (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hs : IndexedStepReady r s) :
+    let w := (certifiedActiveWindows n T).coefficient
+    let first := prepareLatestPaperTBoundary r.tBoundary n ++ coefficientAddControl r
+    CoefficientPrefixReady (r.coefficient w) (run first s) ∧
+    CoefficientPrefixReady (r.coefficient w)
+      (run (first ++ coefficientPrefixInverseUnitary (r.coefficient w)
+        w.start w.stop .add true .work2 ++ inverseCoefficientMiddle r) s) := by
+  let w := (certifiedActiveWindows n T).coefficient
+  have hb : Clean r.blockScratch s := fun wire hw => hs wire (h.blockScratch_mem_sharedScratch hw)
+  have hcompute (controls : List Wire) (value : Nat) (target : Wire)
+      (hl : ComputeControlLayout controls target r.blockScratch) (s' : BasisState)
+      (hc : Clean r.blockScratch s') :
+      Clean r.blockScratch (run (computeControl controls value target r.blockScratch) s') := by
+    have he := run_computeControl_state controls value target r.blockScratch s' hl hc
+    rw [he.1]
+    exact he.2
+  let prepared := run (prepareLatestPaperTBoundary r.tBoundary n) s
+  have hp : Clean r.blockScratch prepared := by
+    have he := run_tBoundaryPrepareState r n T s h hb
+    exact he.2
+  let first := prepareLatestPaperTBoundary r.tBoundary n ++ coefficientAddControl r
+  have hf : Clean r.blockScratch (run first s) := by
+    simpa only [first,coefficientAddControl,Classical.run_append,prepared] using
+      hcompute [r.phase1] 1 r.control h.coefficientAdd prepared hp
+  have hcoef : CoefficientPrefixReady (r.coefficient w) (run first s) := by
+    intro wire hw
+    exact hf wire (h.coefficient_scratch_sub_block w wire hw)
+  let afterAdd := run (coefficientPrefixInverseUnitary (r.coefficient w)
+    w.start w.stop .add true .work2) (run first s)
+  have ha : Clean r.blockScratch afterAdd := by
+    simpa only [afterAdd,coefficientPrefixInverseUnitary,RippleMode.inverse] using
+      coefficientPrefix_preservesBlockScratch r n T w .sub true (run first s) h rfl hf
+  let afterControl := run (coefficientAddControl r) afterAdd
+  have hac : Clean r.blockScratch afterControl := hcompute [r.phase1] 1 r.control h.coefficientAdd afterAdd ha
+  have hsign : r.sign ∉ r.blockScratch := by
+    intro hm
+    exact (h.sign_ne_after (by simp [indexedStepAfterSign,h.blockScratch_mem_aux hm])) rfl
+  let afterSign := run ([.CX r.phase1 r.sign] : Circuit) afterControl
+  have has : Clean r.blockScratch afterSign := by
+    rw [show afterSign = xorWireState r.phase1 r.sign afterControl from run_xorWireState _ _ _]
+    exact clean_upd_not_mem hac hsign
+  have hend : Clean r.blockScratch (run (coefficientSubWrapper r) afterSign) := by
+    have he := run_coefficientSubWrapper_state r n T afterSign h has
+    exact he.2
+  refine ⟨hcoef, ?_⟩
+  intro wire hw
+  have hout := hend wire (h.coefficient_scratch_sub_block w wire hw)
+  simpa only [first,afterAdd,afterControl,afterSign,inverseCoefficientMiddle,
+    coefficientSubWrapper,Classical.run_append] using hout
+
+
+private theorem inverse_remainder_prefixes_ready (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hs : IndexedStepBorrowedReady r s) :
+    let w := (certifiedActiveWindows n T).remainder
+    let after := run (blockBForward r n w) s
+    IntervalReady (r.remainder w) (run (remainderRestoreControl r) after) ∧
+    IntervalReady (r.remainder w) (run (remainderSubControl r)
+      (run (blockB2 r) (run (blockB3Inverse r n w) after))) := by
+  let w := (certifiedActiveWindows n T).remainder
+  have hfirst := blockB1Forward_correct r n T w s h rfl hs
+  have hsecond := blockB2_correct r n T (run (blockB1Forward r n w) s) h hfirst.2
+  have hfull := blockBForward_correct r n T w s h rfl hs
+  refine ⟨remainderRestoreControl_intervalReady r n T w _ h rfl hfull.2, ?_⟩
+  have he : run (blockB2 r) (run (blockB3Inverse r n w)
+      (run (blockBForward r n w) s)) = run (blockB1Forward r n w) s := by
+    simp only [blockBForward, Classical.run_append]
+    rw [blockB3Inverse_after_forward r n T w _ h rfl hsecond.2]
+    exact run_selfAdjoint_twice (blockB2 r) _ (blockB2_selfAdjoint r)
+      (blockB2_wellFormed r n T h)
+  rw [he]
+  exact remainderSubControl_intervalReady r n T w _ h rfl hfirst.2
+
+/-- Each actual inverse prefix is ready after a valid forward step. -/
+theorem indexedStepInverseAdaptiveInput_after_forward
+    (registers : IndexedStepRegisters) (n T boundary4 boundary5 : Nat)
+    (hboundary4 : (endIterationWindowsAt n T).k4 ≤ boundary4 ∧
+      boundary4 ≤ (endIterationWindowsAt n T).K4)
+    (hboundary5 : (endIterationWindowsAt n T).k5 ≤ boundary5 ∧
+      boundary5 ≤ (endIterationWindowsAt n T).K5Decode n)
+    (state : BasisState)
+    (hlayout : IndexedStepLayout registers n T)
+    (hready : IndexedStepReady registers state)
+    (hencoded : IndexedStepEpochEncoded registers state)
+    (hroutes : T % 4 = 0 →
+      indexedStepEndRoutes registers n T state = (boundary4, boundary5)) :
+    IndexedStepInverseAdaptiveInput registers n T
+      (run (indexedStepUnitary registers n T) state) := by
+  let windows := certifiedActiveWindows n T
+  let afterA := run (blockAForward registers) state
+  let afterB := run (blockBForward registers n windows.remainder) afterA
+  let afterC := run (blockCForward registers) afterB
+  let afterD := run (blockDForward registers windows.quotientSwap) afterC
+  let afterE := run (blockEForward registers n windows.coefficient) afterD
+  let afterF := run (blockFForward registers) afterE
+  let beforeEnd := run (blockGForward registers) afterF
+  have hA := blockAForward_correct registers n T state hlayout hready
+  have hABorrowed : IndexedStepBorrowedReady registers afterA := by
+    simpa only [afterA] using
+      blockAForward_borrowedReady registers n T state hlayout hready hencoded
+  have hB := blockBForward_correct registers n T windows.remainder afterA
+    hlayout rfl hABorrowed
+  have hBBorrowed : IndexedStepBorrowedReady registers afterB := by
+    simpa only [afterB] using hB.2
+  have hC := blockCForward_correct registers n T afterB hlayout hBBorrowed
+  have hCReady : IndexedStepReady registers afterC := by
+    simpa only [afterC] using hC.2
+  have hD := blockDForward_correct registers n T windows.quotientSwap afterC
+    hlayout rfl hCReady
+  have hDReady : IndexedStepReady registers afterD := by
+    simpa only [afterD] using hD.2
+  have hE := blockEForward_correct registers n T windows.coefficient afterD
+    hlayout rfl hDReady
+  have hEReady : IndexedStepReady registers afterE := by
+    simpa only [afterE] using hE.2
+  have hF := blockFForward_correct registers n T afterE hlayout hEReady
+  have hFReady : IndexedStepReady registers afterF := by
+    simpa only [afterF] using hF.2
+  have hG := blockGForward_correct registers n T afterF hlayout hFReady
+  have hGReady : IndexedStepReady registers beforeEnd := by
+    simpa only [beforeEnd] using hG.2
+  have hbeforeEnd :
+      beforeEnd = indexedStepBeforeEndState registers n T state := by
+    simp only [beforeEnd]
+    rw [hG.1]
+    simp only [afterF]
+    rw [hF.1]
+    simp only [afterE]
+    rw [hE.1]
+    simp only [afterD]
+    rw [hD.1]
+    simp only [afterC]
+    rw [hC.1]
+    simp only [afterB]
+    rw [hB.1]
+    simp only [afterA]
+    rw [hA.1]
+    rfl
+  have hroute4 : T % 4 = 0 →
+      ((registers.endIteration n T).upperTree
+        (endIterationWindowsAt n T)).routeLabel
+        (run (constMinus (registers.endIteration n T).lengthRP
+            (registers.endIteration n T).constants
+            (registers.endIteration n T).carry (n + 2))
+          (run (controlledWorkSwap (registers.endIteration n T).control
+            (registers.endIteration n T).work1
+            (registers.endIteration n T).work2)
+            (blockHEndInputState registers beforeEnd))) = boundary4 := by
+    intro hstep
+    rw [hbeforeEnd]
+    have hr := congrArg Prod.fst (hroutes hstep)
+    simpa only [indexedStepEndRoutes] using hr
+  have hroute5 : T % 4 = 0 →
+      ((registers.endIteration n T).lowerTree n
+        (endIterationWindowsAt n T)).routeLabel
+        (run (addConstant (registers.endIteration n T).lengthT
+            (registers.endIteration n T).constants
+            (registers.endIteration n T).carry 3)
+          (run (lenUpdateLtUnary n (endIterationWindowsAt n T).k4
+            (endIterationWindowsAt n T).K4
+            ((registers.endIteration n T).upperTree (endIterationWindowsAt n T))
+            (registers.endIteration n T).control
+            ((registers.endIteration n T).rangeAccumulator
+              (endIterationWindowsAt n T).k4 (endIterationWindowsAt n T).K4)
+            ((registers.endIteration n T).temporary
+              (endIterationWindowsAt n T).k4 (endIterationWindowsAt n T).K4)
+            (registers.endIteration n T).carry
+            ((registers.endIteration n T).path
+              (endIterationWindowsAt n T).k4 (endIterationWindowsAt n T).K4)
+            (registers.endIteration n T).work1At
+            (registers.endIteration n T).work2At
+            (registers.endIteration n T).lengthT
+            (registers.endIteration n T).lengthRP
+            (registers.endIteration n T).constants)
+          (run (controlledWorkSwap (registers.endIteration n T).control
+            (registers.endIteration n T).work1
+            (registers.endIteration n T).work2)
+            (blockHEndInputState registers beforeEnd)))) = boundary5 := by
+    intro hstep
+    rw [hbeforeEnd]
+    have hr := congrArg Prod.snd (hroutes hstep)
+    simpa only [indexedStepEndRoutes] using hr
+  have hH : run (blockHInverse registers n T)
+      (run (indexedStepUnitary registers n T) state) = beforeEnd := by
+    have he : run (indexedStepUnitary registers n T) state =
+        run (blockHForward registers n T) beforeEnd := by
+      simp only [indexedStepUnitary, beforeEnd, afterF, afterE, afterD, afterC,
+        afterB, afterA, windows, Classical.run_append]
+    rw [he]
+    exact blockHInverse_after_forward registers n T boundary4 boundary5
+      hboundary4 hboundary5 beforeEnd hlayout hroute4 hroute5 hGReady
+  have hGi : run (blockGInverse registers) beforeEnd = afterF :=
+    blockGInverse_after_forward registers n T afterF hlayout
+  have hFi : run (blockFInverse registers) afterF = afterE :=
+    blockFInverse_after_forward registers n T afterE hlayout
+  have hEi : run (blockEInverse registers n windows.coefficient) afterE = afterD :=
+    blockEInverse_after_forward registers n T windows.coefficient afterD hlayout rfl hDReady
+  have hDi : run (blockDInverse registers windows.quotientSwap) afterD = afterC :=
+    blockDInverse_after_forward registers n T windows.quotientSwap afterC hlayout rfl hCReady
+  have hCi : run (blockCInverse registers) afterC = afterB :=
+    blockCInverse_after_forward registers n T afterB hlayout
+  have hc := inverse_coefficient_prefixes_ready registers n T afterE hlayout hEReady
+  have hr := inverse_remainder_prefixes_ready registers n T afterA hlayout hABorrowed
+  dsimp only at hc hr
+  have hRshape : (blockHInverse registers n T) ++ (blockGInverse registers) ++ (inverseCoefficientEntry registers n) ++ (coefficientPrefixInverseUnitary (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .add true .work2) ++ (inverseCoefficientMiddle registers) ++ (coefficientPrefixInverseUnitary (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .sub false .work2) ++ (inverseRemainderEntry registers n (certifiedActiveWindows n T).quotientSwap) =
+      (blockHInverse registers n T) ++ (blockGInverse registers) ++ (blockFInverse registers) ++ (blockEInverse registers n windows.coefficient) ++ (blockDInverse registers windows.quotientSwap) ++ (blockCInverse registers) ++ remainderRestoreControl registers := by
+    simp only [inverseCoefficientEntry,inverseCoefficientMiddle,inverseRemainderEntry,
+      blockEInverse,windows,List.append_assoc]
+  have hRshape2 : (blockHInverse registers n T) ++ (blockGInverse registers) ++ (inverseCoefficientEntry registers n) ++ (coefficientPrefixInverseUnitary (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .add true .work2) ++ (inverseCoefficientMiddle registers) ++ (coefficientPrefixInverseUnitary (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .sub false .work2) ++ (inverseRemainderEntry registers n (certifiedActiveWindows n T).quotientSwap) ++ (intervalAddSubInverseUnitary (registers.remainder (certifiedActiveWindows n T).remainder) n (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .add false .work1) ++ (inverseRemainderMiddle registers) =
+      (blockHInverse registers n T) ++ (blockGInverse registers) ++ (blockFInverse registers) ++ (blockEInverse registers n windows.coefficient) ++ (blockDInverse registers windows.quotientSwap) ++ (blockCInverse registers) ++ blockB3Inverse registers n windows.remainder ++ blockB2 registers ++
+        remainderSubControl registers := by
+    simp only [inverseCoefficientEntry,inverseCoefficientMiddle,inverseRemainderEntry,
+      inverseRemainderMiddle,blockEInverse,blockB3Inverse,windows,List.append_assoc]
+  constructor
+  · rw [hH]
+    intro wire hw
+    exact hGReady wire (hlayout.sourceScratch_mem_sharedScratch
+      (hlayout.phaseUpdate_scratch_sub_source wire hw))
+  · simpa only [inverseCoefficientEntry,Classical.run_append,hH,hGi,hFi] using hc.1
+  · simpa only [inverseCoefficientEntry,Classical.run_append,hH,hGi,hFi] using hc.2
+  · rw [hRshape]
+    simpa only [Classical.run_append,hH,hGi,hFi,hEi,hDi,hCi,afterB] using hr.1
+  · rw [hRshape2]
+    simpa only [Classical.run_append,hH,hGi,hFi,hEi,hDi,hCi,afterB] using hr.2
+
 end ShorECDLP.Paper2607_13816

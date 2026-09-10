@@ -2101,3 +2101,15 @@ and coherent on the actual image of preprocessing, and preprocessing followed
 by its explicit reverse preserves every valid superposition. This closes
 inverse preprocessing; deriving inverse EEA readiness from reachable forward
 endpoints remains open before joining the complete inverse wrapper.
+
+
+The complete adaptive EEA reverse now applies to every valid actual forward
+output. All five per-step inverse readiness conditions are derived at their
+actual prefixes from the forward state, and induction supplies them across all
+1,620 descending steps. The literal reverse wrapper composes postprocessing
+undo, this adaptive schedule, and inverse preprocessing. It restores every
+original wire, and the actual forward/reverse pair coherently implements the
+identity on all valid input superpositions with uniform normalized branch
+coefficients. This closes the inverse-wrapper and reachable inverse-readiness
+boundaries described above. Phase 8 still requires Figure 15 in-place arithmetic
+composition and its resource certificates; Phases 9–12 remain open.
