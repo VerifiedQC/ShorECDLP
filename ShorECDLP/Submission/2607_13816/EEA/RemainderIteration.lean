@@ -669,4 +669,90 @@ theorem indexedScheduleUnitary_reachable_paperStep (r : IndexedStepRegisters) (n
     hcapacityT hT hRP hswapLayout hswapWindows hstep hboundary4 hboundary5
     htWindow htpWindow hrWindow hrpWindow
 
+/-- All active iteration arithmetic and scan windows follow from reachability. -/
+theorem indexedScheduleUnitary_active_paperStep (r : IndexedStepRegisters) (n start steps : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (p x spent : Nat) (hreach : PaperBoundaryReachable p x spent v)
+    (hprime : p.Prime) (hx : 1≤x) (hxp : x<p) (hlower : 2^(n-1)<p) (hbits : p<2^n)
+    (hactive : v.rPrime≠0) (hstart : start=4*spent+1)
+    (hcapacityQ : n+3<2^r.lengthQ.length)
+    (hcapacityS : n+3<2^r.lengthS.length)
+    (hcapacityR : n+3<2^r.lengthRPrime.length)
+    (hsteps : steps=(v.r/v.rPrime).size)
+    (halignLayout : ∀ offset<steps, IndexedStepLayout r n (start+offset))
+    (hlayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+offset))
+    (hcoeffLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+offset))
+    (hcapacityT : n+3<2^r.lengthT.length)
+    (hswapLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+steps+offset)) :
+    IndexedPackedState r n
+      (run (indexedScheduleUnitary r n start (steps+(steps+(steps+steps)))) s) (paperStep v) := by
+  have hi := hreach.invariant hprime hx hxp
+  obtain ⟨_,hQ,_,_,_,hT,hR⟩ := hi.canonical
+  have hrpos : 0<v.rPrime := Nat.pos_of_ne_zero hactive
+  have hqpos : 0<v.r/v.rPrime := Nat.div_pos hi.remainder_decreases.le hrpos
+  have hspos : 0<steps := by rw [hsteps]; exact Nat.size_pos.mpr hqpos
+  have hspan := hreach.alignment_span hprime hx hxp hbits hactive
+  change v.lT+v.lQ+1+(v.r/v.rPrime).size+v.lRPrime≤n+3 at hspan
+  rw [←hsteps] at hspan
+  let nextT := v.tPrime+v.t*(v.r/v.rPrime)
+  have htBound : nextT<2^(v.lT+steps) := by
+    have ht : v.t<2^v.lT := by rw [hT]; exact Nat.lt_size_self _
+    have hq : v.r/v.rPrime<2^steps := by rw [hsteps]; exact Nat.lt_size_self _
+    calc
+      nextT < v.t+v.t*(v.r/v.rPrime) := Nat.add_lt_add_right hi.coefficient_increases _
+      _ = v.t*(v.r/v.rPrime+1) := by ring
+      _ ≤ v.t*2^steps := Nat.mul_le_mul_left _ (by omega)
+      _ < 2^v.lT*2^steps := Nat.mul_lt_mul_of_pos_right ht (by positivity)
+      _ = 2^(v.lT+steps) := by rw [Nat.pow_add]
+  have htSize : nextT.size≤v.lT+steps := Nat.size_le.mpr htBound
+  have htLe : v.t≤nextT := by dsimp [nextT]; nlinarith
+  have htSizeLe := Nat.size_le_size htLe
+  have hRpos : 0<v.rPrime.size := Nat.size_pos.mpr hrpos
+  have hremSize : (v.r%v.rPrime).size≤v.rPrime.size :=
+    Nat.size_le_size (Nat.mod_lt _ hrpos).le
+  have hclock : start+steps+steps+steps+(steps-1)=4*spent+4*steps := by rw [hstart]; omega
+  let frame : PaperActiveFrame p x (4*spent+4*steps) := {
+    spent := spent
+    boundary := v
+    reachable := hreach
+    nonterminal := hactive
+    within := 4*steps
+    within_pos := by omega
+    within_le := by change 4*steps≤4*(v.r/v.rPrime).size; omega
+    time_eq := rfl }
+  have hwT := frame.lengthTWindow_covers hprime hx hxp hlower hbits
+    (by change 4*steps=4*(v.r/v.rPrime).size; omega)
+  have hwR := frame.lengthRPrimeWindow_covers hprime hx hxp hbits
+    (by change 4*steps=4*(v.r/v.rPrime).size; omega)
+  have hnext : (paperStep v).t=nextT := by
+    rw [(paperStep_coefficients hactive).1]
+    dsimp [nextT,paperQuotient]
+    ring
+  simp only [ActiveWindow.Covers,PaperActiveFrame.lengthTRight,frame] at hwT
+  simp only [ActiveWindow.Covers,PaperActiveFrame.lengthRPrimeLeft,frame,hnext] at hwR
+  have hdecode : (endIterationWindowsAt n (4*spent+4*steps)).K5Decode n=n+3 := by
+    simp only [endIterationWindowsAt,certifiedActiveWindows,EndIterationWindows.K5Decode]
+    omega
+  apply indexedScheduleUnitary_reachable_paperStep r n start steps s v hp
+    p x spent hreach hprime hx hxp hlower hbits hactive hstart hcapacityQ hcapacityS hcapacityR
+    hsteps halignLayout hlayout hcoeffLayout hcapacityT hswapLayout
+  all_goals rw [hclock]
+  · simp only [endIterationWindowsAt,certifiedActiveWindows]
+    rw [hR]
+    omega
+  · rw [hdecode]
+    change (lengthRPrimeWindow n (4*spent+4*steps)).start≤nextT.size+2 ∧ nextT.size+2≤n+3
+    omega
+  · simpa only [endIterationWindowsAt,certifiedActiveWindows] using And.intro hwT.1 (by omega : v.t.size≤(lengthTWindow n (4*spent+4*steps)).stop)
+  · change (lengthTWindow n (4*spent+4*steps)).start≤nextT.size ∧ nextT.size≤(lengthTWindow n (4*spent+4*steps)).stop
+    omega
+  · intro hn
+    have hpos : 0<(v.r%v.rPrime).size := Nat.size_pos.mpr (Nat.pos_of_ne_zero hn)
+    rw [hdecode]
+    change (lengthRPrimeWindow n (4*spent+4*steps)).start≤n+4-(v.r%v.rPrime).size ∧ n+4-(v.r%v.rPrime).size≤n+3
+    omega
+  · rw [hdecode]
+    change (lengthRPrimeWindow n (4*spent+4*steps)).start≤n+4-v.rPrime.size ∧ n+4-v.rPrime.size≤n+3
+    omega
+
 end ShorECDLP.Paper2607_13816
