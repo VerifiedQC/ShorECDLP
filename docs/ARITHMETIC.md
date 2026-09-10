@@ -2463,3 +2463,7 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### One complete four-phase EEA iteration
 
 `indexedScheduleUnitary_full_iteration_packed` composes actual alignment, division, coefficient and swap schedules from a zero-shift remainder-phase input. Its step count is four times the quotient bit length. Every intermediate arithmetic bound, phase and packed state is derived; the output is canonical with a strictly smaller second remainder. Original numerical windows, capacities, true input lengths and final endpoint scheduling remain explicit. Reachable production windows and iteration to termination remain subsequent work.
+
+### Refinement of the mathematical Euclidean step
+
+`indexedScheduleUnitary_paperStep_packed` identifies the complete actual four-phase output with `paperStep` on the original state. Division gives the exact remainder, coefficient accumulation gives the exact updated coefficient, and field-preservation lemmas connect the swap payload and iteration parity. Canonical metadata yields equality of the entire logical state. Original physical windows, capacities and endpoint scheduling remain explicit; production reachability and iteration to termination remain subsequent work.
