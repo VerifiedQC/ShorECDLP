@@ -2270,3 +2270,7 @@ and aggregate Phase 9 resources remain open. No new physical-width claim is made
 ### Phase 9 physical correction edge
 
 `TwoRegisterFlip` composes three equality selectors with shared scratch and proves the complete-state controlled bit flip. `PointEdge` instantiates it on the 513-bit point encoding, excluding the target from the two comparison groups and reusing 255 existing work wires. Each edge restores both flags and scratch, has exact ket semantics, uses at most 21,553 T gates, and stays below wire 839 with a direct qubit-count bound. Decomposing the exceptional transpositions into these edges and composing the total point circuit remain open.
+
+### Phase 9 Gray-path correction words
+
+`WordGray` constructively decomposes equal-width endpoint transpositions into at most twice the width many single-bit adjacent swaps, proving their action on every word. `PointWordCorrection` supplies the injective 513-bit X/Y/infinity encoding and expands the exceptional correction into at most 4,104 adjacent edges. Their ordered word action equals total addition by every finite constant after the coordinate permutation. Connecting those words to the physical selector and the complete point circuit remains open.

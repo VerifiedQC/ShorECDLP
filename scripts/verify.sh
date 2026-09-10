@@ -1792,11 +1792,19 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_ket
+#print axioms ShorECDLP.Paper2607_13816.wordGraySwaps_correct
+#print axioms ShorECDLP.Paper2607_13816.wordGraySwaps_edges
+#print axioms ShorECDLP.Paper2607_13816.wordGraySwaps_length
+#print axioms ShorECDLP.Paper2607_13816.pointCoordinateWord_length
+#print axioms ShorECDLP.Paper2607_13816.pointCoordinateWord_injective
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_correct
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_length
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_adjacent
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1771 ]]; then
-  printf 'expected 1771 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1779 ]]; then
+  printf 'expected 1779 #print axioms results\n' >&2
   exit 1
 fi
 
