@@ -318,4 +318,82 @@ theorem eeaPreprocess_unpreprocess_coherent :
   rw [basisLift_ket,basisLift_ket,
     eeaUnpreprocessIdealState_after_preprocess s hs.1 hs.2.1 hs.2.2]
 
+/-- Literal source reverse: undo postprocessing, all 1,620 adaptive inverse steps,
+then undo preprocessing and restore the original input arrangement. -/
+def secp256k1EEAReverseWrapper : AdaptiveCircuit :=
+  (secp256k1EEAReversePostprocessing.seq
+    (secp256k1EEAReverseAdaptive indexedStepProductionRegisters)).seq eeaUnpreprocess
+
+/-- Complete deterministic state of the source reverse wrapper. -/
+def secp256k1EEAReverseWrapperIdealState (s : BasisState) : BasisState :=
+  eeaUnpreprocessIdealState (Classical.run
+    (secp256k1EEAReverseUnitary indexedStepProductionRegisters)
+    (secp256k1EEAReversePostprocessingIdealState s))
+
+attribute [local irreducible] secp256k1EEAOutputIdealState secp256k1EEAReverseWrapperIdealState
+  secp256k1EEAReverseAdaptive secp256k1EEAReverseUnitary
+
+/-- Every physical gate and measurement of the complete source reverse is well formed. -/
+theorem secp256k1EEAReverseWrapper_wellFormed : secp256k1EEAReverseWrapper.WellFormed := by
+  exact (secp256k1EEAReversePostprocessing_wellFormed.seq
+    (secp256k1EEAReverseAdaptive_wellFormed indexedStepProductionRegisters
+      secp256k1ScheduleLayout_production)).seq eeaUnpreprocess_wellFormed
+
+/-- One normalized expansion implements the reverse on every actual valid forward output. -/
+theorem secp256k1EEAReverseWrapper_coherent :
+    CoherentlyImplementsOn secp256k1EEAReverseWrapper
+      (Finsupp.lmapDomain ℂ ℂ secp256k1EEAReverseWrapperIdealState)
+      (fun s => ∃ original, Secp256k1EEAInputValid original ∧ s = secp256k1EEAOutputIdealState original) := by
+  have hp := coherent_basis_strengthen secp256k1EEAReversePostprocessing_coherent
+    (Stronger := fun s => ∃ original, Secp256k1EEAInputValid original ∧
+      s = secp256k1EEAOutputIdealState original) (by
+        intro s hs
+        obtain ⟨original,ho,rfl⟩ := hs
+        have h := (secp256k1EEAOutputIdealState_correct original ho.1 ho.2.1 ho.2.2).2.2.2.2
+        exact ⟨h 560 (by decide),h 561 (by decide),h 562 (by decide)⟩)
+  have hfree : HPFree (secp256k1EEAReverseUnitary indexedStepProductionRegisters) := by
+    unfold secp256k1EEAReverseUnitary
+    exact indexedScheduleInverseUnitary_HPFree indexedStepProductionRegisters 256 1 secp256k1ScheduleLength
+  have hi := secp256k1EEAReverseAdaptive_coherent_forward_image.congrIdeal
+    (secondIdeal := Finsupp.lmapDomain ℂ ℂ (fun s => Classical.run
+      (secp256k1EEAReverseUnitary indexedStepProductionRegisters) s)) (by
+        intro s hs
+        rw [basisLift_ket,Quantum.run_ket_agrees_classical
+          (secp256k1EEAReverseUnitary indexedStepProductionRegisters) s
+          hfree])
+  have hpi := coherent_basis_seq hp hi (by
+    intro s hs
+    obtain ⟨original,ho,rfl⟩ := hs
+    exact ⟨original,ho.1,ho.2.1,ho.2.2,secp256k1EEAReversePostprocessing_output original ho⟩)
+  have hall := coherent_basis_seq hpi eeaUnpreprocess_coherent (by
+    intro s hs
+    obtain ⟨original,ho,rfl⟩ := hs
+    refine ⟨original,ho,?_⟩
+    rw [secp256k1EEAReversePostprocessing_output original ho]
+    exact secp256k1EEAReverseUnitary_after_forward_preprocessed original ho.1 ho.2.1 ho.2.2)
+  apply hall.congrIdeal
+  intro s hs
+  simp only [basisLift_ket]
+  simp only [secp256k1EEAReverseWrapperIdealState]
+
+/-- The complete source reverse restores every wire of a valid original input. -/
+theorem secp256k1EEAReverseWrapper_output (s : BasisState) (hs : Secp256k1EEAInputValid s) :
+    secp256k1EEAReverseWrapperIdealState (secp256k1EEAOutputIdealState s) = s := by
+  unfold secp256k1EEAReverseWrapperIdealState
+  rw [secp256k1EEAReversePostprocessing_output s hs,
+    secp256k1EEAReverseUnitary_after_forward_preprocessed s hs.1 hs.2.1 hs.2.2]
+  exact eeaUnpreprocessIdealState_after_preprocess s hs.1 hs.2.1 hs.2.2
+
+/-- The actual adaptive forward/reverse pair preserves every valid input superposition,
+including clean work and reversal metadata, with a uniform normalized coefficient list. -/
+theorem secp256k1EEAForwardReverse_coherent :
+    CoherentlyImplementsOn (secp256k1EEAForwardWrapper.seq secp256k1EEAReverseWrapper)
+      (Finsupp.lmapDomain ℂ ℂ (fun s : BasisState => s)) Secp256k1EEAInputValid := by
+  have hall := coherent_basis_seq secp256k1EEAForwardWrapper_coherent
+    secp256k1EEAReverseWrapper_coherent (fun s hs => ⟨s,hs,rfl⟩)
+  apply hall.congrIdeal
+  intro s hs
+  simp only [basisLift_ket]
+  exact congrArg ket (secp256k1EEAReverseWrapper_output s hs)
+
 end ShorECDLP.Paper2607_13816
