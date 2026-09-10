@@ -785,4 +785,170 @@ theorem indexedScheduleUnitary_active_paperStep (r : IndexedStepRegisters) (n st
     change (lengthRPrimeWindow n (4*spent+4*steps)).start≤n+4-v.rPrime.size ∧ n+4-v.rPrime.size≤n+3
     omega
 
+/-- All four active phase intervals satisfy cleanup readiness on the actual execution. -/
+theorem indexedScheduleAdaptive_iteration_input (r : IndexedStepRegisters) (n start steps : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (hphase : v.phase=.remainder) (hsign : v.sign=false)
+    (hsteps : steps=(v.r/v.rPrime).size) (hzero : v.shift=0)
+    (hrpos : 0<v.rPrime) (hrlower : v.rPrime≤v.r)
+    (halignLayout : ∀ offset<steps, IndexedStepLayout r n (start+offset))
+    (halignWindows : ∀ offset<steps,
+      (certifiedActiveWindows n (start+offset)).remainder.start≤v.lT+v.lQ+2 ∧
+      v.lT+v.lQ+2-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthQ.length ∧
+      offset+1+(certifiedActiveWindows n (start+offset)).remainder.start≤n+3 ∧
+      n+3-(offset+1)-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthS.length)
+    (hlayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+offset))
+    (hwindows : ∀ offset<steps,
+      (certifiedActiveWindows n (start+steps+offset)).remainder.start≤v.lT+(v.lQ+offset)+2 ∧
+      v.lT+(v.lQ+offset)+2-(certifiedActiveWindows n (start+steps+offset)).remainder.start<2^r.lengthQ.length ∧
+      steps-offset-1+(certifiedActiveWindows n (start+steps+offset)).remainder.start≤n+3 ∧
+      n+3-(steps-offset-1)-(certifiedActiveWindows n (start+steps+offset)).remainder.start<2^r.lengthS.length ∧
+      (certifiedActiveWindows n (start+steps+offset)).quotientSwap.start≤v.lT+(v.lQ+offset)+2 ∧
+      v.lT+(v.lQ+offset)+2≤(certifiedActiveWindows n (start+steps+offset)).quotientSwap.stop)
+    (hcapacity : v.lT+v.lQ+steps+1<2^r.lengthQ.length)
+    (hspan : v.lT+v.lQ+1+steps+v.lRPrime≤n+3)
+    (hR : 0<v.lRPrime) (hRfit : v.lRPrime<2^r.lengthRPrime.length)
+    (hwidth : 0<r.lengthS.length) (hSfit : steps<2^r.lengthS.length)
+    (hrp : v.rPrime<2^v.lRPrime) (hqzero : v.q=0) (hQzero : v.lQ=0)
+    (hcoeffLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+offset))
+    (hcoeffWindows : ∀ offset<steps,
+      (certifiedActiveWindows n (start+steps+steps+offset)).quotientSwap.start ≤ v.lT+(steps-offset)+1 ∧
+      v.lT+(steps-offset)+1 ≤ (certifiedActiveWindows n (start+steps+steps+offset)).quotientSwap.stop ∧
+      v.lT+1 ∈ quotientSwapLabels 1 (certifiedActiveWindows n (start+steps+steps+offset)).coefficient.stop)
+    (htmeta : v.lT+1<2^r.lengthT.length)
+    (hupperT : n+3-v.lRPrime<2^r.lengthT.length)
+    (ht : v.t<2^v.lT) (htpSmall : v.tPrime<v.t)
+    (hcapacityT : n+3<2^r.lengthT.length)
+    (hRP : v.lRPrime=v.rPrime.size)
+    (hswapLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+steps+offset))
+    (hswapWindows : ∀ offset<steps, n+3-v.lRPrime-(steps-offset) ∈
+      quotientSwapLabels 1 (certifiedActiveWindows n (start+steps+steps+steps+offset)).coefficient.stop)
+ :
+    IndexedScheduleAdaptiveInput r n start (steps+(steps+(steps+steps))) s := by
+  obtain ⟨hpositive,hlower,hupper⟩ := division_alignment_interval v.r v.rPrime hrpos hrlower
+  rw [← hsteps] at hpositive hlower hupper
+  have hrem : v.r<2^(n+3-(v.lT+v.lQ+1)) := by
+    have hb : v.rPrime*2^steps≤2^(v.lRPrime+steps) := by
+      rw [Nat.pow_add]
+      exact Nat.mul_le_mul_right _ (Nat.le_of_lt hrp)
+    exact (hupper.trans_le hb).trans_le (Nat.pow_le_pow_right (by decide) (by omega))
+  have htpAlign : v.tPrime<2^(v.lT+v.lQ+1+(v.shift+1)) :=
+    htpSmall.trans (ht.trans_le (Nat.pow_le_pow_right (by decide) (by omega)))
+  have hpacked := indexedScheduleUnitary_remainder_packed r n start steps steps s v hp
+    hphase hsign hpositive (by omega) halignLayout
+    (by simpa only [hzero,Nat.zero_add] using halignWindows) hQzero hR hRfit hwidth
+    (by simpa only [hzero,Nat.zero_add] using hSfit)
+    (by simpa only [hzero,Nat.zero_add] using hspan) htpAlign hrp hrem
+    (by simpa only [hzero,Nat.zero_add] using hlower)
+    (by simpa only [hzero,Nat.zero_add] using hupper)
+  obtain ⟨htt,hTT,htpW,hrpW,hRR,hi,hqW,hrW,hQW,hSW,hsgW,hphW⟩ :=
+    remainder_coordinates v steps steps hphase hsign hpositive (by omega)
+      (by simpa only [hzero,Nat.zero_add] using hlower)
+      (by simpa only [hzero,Nat.zero_add] using hupper)
+  simp only [hzero,Nat.zero_add,if_true] at hSW hphW
+  let aligned := remainderAlignmentMicrostep^[steps] v
+  let mid := run (indexedScheduleUnitary r n start steps) s
+  have hc := indexedScheduleAdaptive_quotient_coefficient_swap_input r n (start+steps) mid aligned
+    hpacked hphW hsgW
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hpositive)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hlayout)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hwindows)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hcapacity)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hspan)
+    (by change (remainderAlignmentMicrostep^[steps] v).tPrime<_; rw [htpW,hTT,hQW,hSW]
+        exact htpSmall.trans (ht.trans_le (Nat.pow_le_pow_right (by decide) (by omega))))
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hR)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hRfit)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hwidth)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hSfit)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hrp)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hupper)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hqzero)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hQzero)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hlower)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hcoeffLayout)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hcoeffWindows)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using htmeta)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hupperT)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using ht)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using htpSmall)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hcapacityT)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hRP)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hswapLayout)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hswapWindows)
+  have hfirst := indexedScheduleAdaptive_remainder_input r n start steps steps s v hp
+    hphase hsign hpositive (by omega) halignLayout
+    (by simpa only [hzero,Nat.zero_add] using halignWindows) hQzero hR hRfit hwidth
+    (by simpa only [hzero,Nat.zero_add] using hSfit)
+    (by simpa only [hzero,Nat.zero_add] using hspan) htpAlign hrp hrem
+    (by simpa only [hzero,Nat.zero_add] using hlower)
+    (by simpa only [hzero,Nat.zero_add] using hupper)
+  apply (indexedScheduleAdaptiveInput_append r n start steps (steps+(steps+steps)) s).mpr
+  refine ⟨hfirst, ?_⟩
+  simpa only [aligned,mid,hSW] using hc
+
+/-- Reachability supplies cleanup readiness for the complete actual active iteration. -/
+theorem indexedScheduleAdaptive_reachable_iteration_input (r : IndexedStepRegisters) (n start steps : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (p x spent : Nat) (hreach : PaperBoundaryReachable p x spent v)
+    (hprime : p.Prime) (hx : 1≤x) (hxp : x<p) (hlower : 2^(n-1)<p) (hbits : p<2^n)
+    (hactive : v.rPrime≠0) (hstart : start=4*spent+1)
+    (hcapacityQ : n+3<2^r.lengthQ.length)
+    (hcapacityS : n+3<2^r.lengthS.length)
+    (hcapacityR : n+3<2^r.lengthRPrime.length)
+    (hsteps : steps=(v.r/v.rPrime).size)
+    (halignLayout : ∀ offset<steps, IndexedStepLayout r n (start+offset))
+    (hlayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+offset))
+    (hcoeffLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+offset))
+    (hcapacityT : n+3<2^r.lengthT.length)
+    (hswapLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+steps+offset)) :
+    IndexedScheduleAdaptiveInput r n start (steps+(steps+(steps+steps))) s := by
+  have hi := hreach.invariant hprime hx hxp
+  obtain ⟨hqzero,hQzero,hzero,hphase,hsign,hT,hRP⟩ := hi.canonical
+  have hrpos : 0<v.rPrime := Nat.pos_of_ne_zero hactive
+  have hrlower := hi.remainder_decreases.le
+  have hspan := hreach.alignment_span hprime hx hxp hbits hactive
+  change v.lT+v.lQ+1+(v.r/v.rPrime).size+v.lRPrime≤n+3 at hspan
+  rw [← hsteps] at hspan
+  have hR : 0<v.lRPrime := by rw [hRP]; exact Nat.size_pos.mpr hrpos
+  have hrp : v.rPrime<2^v.lRPrime := by rw [hRP]; exact Nat.lt_size_self _
+  have ht : v.t<2^v.lT := by rw [hT]; exact Nat.lt_size_self _
+  have hwidth : 0<r.lengthS.length := by
+    by_contra hh
+    have hz : r.lengthS.length=0 := by omega
+    simp only [hz,pow_zero] at hcapacityS
+    omega
+  have hstepsQ : steps=(paperQuotient v).size := hsteps
+  have halignWindows := fun offset (ho : offset<steps) => by
+    have hw := alignment_windows hreach hprime hx hxp hbits hactive offset (by omega)
+    rw [← hstart] at hw
+    exact And.intro hw.1 (And.intro
+      (show v.lT+v.lQ+2-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthQ.length by omega)
+      (And.intro hw.2
+      (show n+3-(offset+1)-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthS.length by omega)))
+  have hwindows := fun offset (ho : offset<steps) => by
+    have hw := division_windows hreach hprime hx hxp hbits hactive offset (by omega)
+    dsimp only at hw
+    rw [← hstart,← hstepsQ] at hw
+    exact And.intro hw.1 (And.intro
+      (show v.lT+(v.lQ+offset)+2-(certifiedActiveWindows n (start+steps+offset)).remainder.start<2^r.lengthQ.length by omega)
+      (And.intro hw.2.1 (And.intro
+      (show n+3-(steps-offset-1)-(certifiedActiveWindows n (start+steps+offset)).remainder.start<2^r.lengthS.length by omega)
+      hw.2.2)))
+  have hcoeffWindows := fun offset (ho : offset<steps) => by
+    have hw := coefficient_windows hreach hprime hx hxp hlower hbits hactive offset (by omega)
+    dsimp only at hw
+    rw [← hstart,← hstepsQ] at hw
+    exact hw
+  have hswapWindows := fun offset (ho : offset<steps) => by
+    have hw := swap_windows hreach hprime hx hxp hlower hbits hactive offset (by omega)
+    dsimp only at hw
+    rw [← hstart,← hstepsQ] at hw
+    exact hw
+  exact indexedScheduleAdaptive_iteration_input r n start steps s v hp hphase hsign
+    hsteps hzero hrpos hrlower halignLayout halignWindows hlayout hwindows
+    (by omega) hspan hR (by omega) hwidth (by omega) hrp hqzero hQzero
+    hcoeffLayout hcoeffWindows (by omega) (by omega) ht hi.coefficient_increases
+    hcapacityT hRP hswapLayout hswapWindows
+
 end ShorECDLP.Paper2607_13816

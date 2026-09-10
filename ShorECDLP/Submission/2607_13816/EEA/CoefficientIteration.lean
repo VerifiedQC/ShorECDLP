@@ -310,4 +310,68 @@ theorem indexedScheduleUnitary_coefficient_swap_packed (r : IndexedStepRegisters
   rw [indexedScheduleUnitary_append,Classical.run_append]
   simpa only [u,mid,hSS,hrpr] using hs
 
+/-- Coefficient and swap cleanup conditions compose across their actual shared boundary. -/
+theorem indexedScheduleAdaptive_coefficient_swap_input (r : IndexedStepRegisters) (n start : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (hphase : v.phase=.coefficient) (hsign : v.sign=false)
+    (hlayout : ∀ offset<v.lQ, IndexedStepLayout r n (start+offset))
+    (hwindows : ∀ offset<v.lQ,
+      (certifiedActiveWindows n (start+offset)).quotientSwap.start ≤ v.lT+(v.lQ-offset)+1 ∧
+      v.lT+(v.lQ-offset)+1 ≤ (certifiedActiveWindows n (start+offset)).quotientSwap.stop ∧
+      v.lT+1 ∈ quotientSwapLabels 1 (certifiedActiveWindows n (start+offset)).coefficient.stop)
+    (hqmeta : v.lT+v.lQ+1 < 2^r.lengthQ.length)
+    (htmeta : v.lT+1 < 2^r.lengthT.length)
+    (hR : v.lRPrime≤n+3)
+    (hupper : n+3-v.lRPrime-v.shift < 2^r.lengthT.length)
+    (hspan : v.shift+v.lQ+v.lT+1 ≤ n+3-v.lRPrime)
+    (ht : v.t<2^v.lT) (htp : v.tPrime<2^(n+3-v.lRPrime))
+    (hbound : v.tPrime<2^v.shift*v.t) (hq : v.q<2^v.lQ)
+    (hr : v.r<2^(n+3-(v.lT+v.lQ+1)))
+    (hswidth : 0<r.lengthS.length) (hscap : v.shift+v.lQ<2^r.lengthS.length)
+    (hrcap : v.lRPrime<2^r.lengthRPrime.length)
+    (hpositive : 0<v.lQ) (hcanonical : v.lQ=v.q.size) (hRpositive : 0<v.lRPrime)
+    (hcapacity : n+3<2^r.lengthT.length)
+    (hRP : v.lRPrime=v.rPrime.size) (hsmaller : v.r<v.rPrime)
+    (hswapLayout : ∀ offset<v.shift+v.lQ, IndexedStepLayout r n (start+v.lQ+offset))
+    (hswapWindows : ∀ offset<v.shift+v.lQ, n+3-v.lRPrime-(v.shift+v.lQ-offset) ∈
+      quotientSwapLabels 1 (certifiedActiveWindows n (start+v.lQ+offset)).coefficient.stop)
+ :
+    IndexedScheduleAdaptiveInput r n start (v.lQ+(v.shift+v.lQ)) s := by
+  let u := coefficientMicrostep^[v.lQ] v
+  let mid := run (indexedScheduleUnitary r n start v.lQ) s
+  have hc := indexedScheduleUnitary_coefficient_complete r n start s v hp hphase hsign
+    hlayout hwindows hqmeta htmeta hR hupper (by omega) ht htp hbound hq hr
+    hswidth hscap hrcap hpositive hcanonical hRpositive
+  obtain ⟨hpack,hphaseU,hsignU,hqU,hQU,hSU,htpU,hlowerU,hupperU,hsizeU⟩ := hc
+  obtain ⟨htt,hTT,hrr,hrpr,hRR,hii,hQQ,hSS,hqq⟩ := coefficient_coordinates v v.lQ
+  have hguardU : u.tPrime.size+1+u.lRPrime≤n+3 := by
+    change (coefficientMicrostep^[v.lQ] v).tPrime.size+1+_≤_
+    rw [hRR]
+    omega
+  have htBU : u.t<2^(n+3-u.lRPrime-u.shift) := by
+    change (coefficientMicrostep^[v.lQ] v).t<_
+    rw [htt,hRR,hSS]
+    exact ht.trans_le (Nat.pow_le_pow_right (by decide) (by omega))
+  have htpFit : u.tPrime<2^(n+3-u.lRPrime) := by
+    exact (Nat.lt_size_self _).trans_le (Nat.pow_le_pow_right (by decide) (by omega))
+  have hrFit : u.r<2^u.lRPrime := by
+    change (coefficientMicrostep^[v.lQ] v).r<_
+    rw [hrr,hRR,hRP]
+    exact hsmaller.trans (Nat.lt_size_self _)
+  have hs := indexedScheduleAdaptive_swap_input r n (start+v.lQ) u.shift mid u hpack hphaseU hsignU
+    (by omega)
+    (by simpa only [u,hSS] using hswapLayout)
+    (by simpa only [u,hRR,hSS] using hswapWindows) hcapacity
+    (by change (coefficientMicrostep^[v.lQ] v).lT+1+_≤_; rw [hTT,hRR]; omega)
+    (by change (coefficientMicrostep^[v.lQ] v).lRPrime+_≤_; rw [hRR,hSS]; omega)
+    (by simpa only [u,htt,hTT] using ht) htBU htpFit hrFit hswidth
+    (by simpa only [u,hSS] using hscap) (by simpa only [u,hRR] using hRpositive)
+    (by simpa only [u,hRR] using hrcap) hQU hupperU hlowerU
+  have hfirst := indexedScheduleAdaptive_coefficient_input r n start v.lQ s v hp
+    hphase hsign (by omega) hlayout hwindows hqmeta htmeta hR hupper (by omega)
+    ht htp hbound hq hr hswidth hscap hrcap hRpositive
+  apply (indexedScheduleAdaptiveInput_append r n start v.lQ (v.shift+v.lQ) s).mpr
+  refine ⟨hfirst, ?_⟩
+  simpa only [u, mid, hSS] using hs
+
 end ShorECDLP.Paper2607_13816

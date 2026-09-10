@@ -152,4 +152,66 @@ theorem secp256k1EEAForward_payload (s : BasisState)
   simp only [Nat.sub_zero,List.rotate_zero]
   rw [show constantBits 0 (paperRun initial).rPrime=[] from rfl,List.reverse_nil,List.append_nil]
 
+/-- Original clean canonical inputs establish cleanup readiness for all 1,620 actual steps. -/
+theorem secp256k1EEAForward_adaptiveInput (s : BasisState)
+    (hclean : Clean (List.range' 0 263 ++ List.range' 519 61) s)
+    (hx : 0 < boolWordToNat (wireValues (List.range' 263 256) s))
+    (hxp : boolWordToNat (wireValues (List.range' 263 256) s) < ShorECDLP.p) :
+    IndexedScheduleAdaptiveInput indexedStepProductionRegisters 256 1 1620
+      (eeaPreprocessIdealState s) := by
+  let x := boolWordToNat (wireValues (List.range' 263 256) s)
+  let initial := paperInitial ShorECDLP.p x
+  let active := paperMicrosteps initial
+  let padding := paperPadding initial
+  let after := run (indexedScheduleUnitary indexedStepProductionRegisters 256 1 active)
+    (eeaPreprocessIdealState s)
+  have hp := eeaPreprocess_active_paperRun s hclean hx hxp
+  have hcanonical := (paperRun_preservesInvariant
+    (paperInitial_invariant ShorECDLP.Secp256k1.p_prime hx hxp)).canonical
+  have hterminal := secp256k1TerminalState_of_packed hcanonical (paperRun_zero_remainder _) hp
+  change Secp256k1TerminalState 0 after at hterminal
+  have hbound := secp256k1_paperMicrosteps_le_1620 hx hxp
+  change active≤1620 at hbound
+  have hweight : paperQuotientWeight initial≤405 := by
+    change 4*paperQuotientWeight initial≤1620 at hbound
+    omega
+  have hclock : active+padding=1620 := paperMicrosteps_add_padding hweight
+  have hpad : padding≤596 := secp256k1_paperPadding_le_596 hx hxp
+  have hsuffix := secp256k1TerminalScheduleInvariant (active+1) padding 0 after
+    (by omega) (by omega) (by omega) hterminal
+  have hl := schedule_layout_drop secp256k1ScheduleLayout_production active hbound
+  have hremain : secp256k1ScheduleLength-active=padding := by
+    change 1620-active=padding
+    omega
+  rw [hremain,Nat.add_comm 1 active] at hl
+  have hactive := secp256k1EEA_active_adaptiveInput hx hxp .initial _
+    (eeaPreprocess_initial_packed s hclean hx hxp)
+  change IndexedScheduleAdaptiveInput indexedStepProductionRegisters 256 1 1620
+    (eeaPreprocessIdealState s)
+  rw [← hclock, indexedScheduleAdaptiveInput_append]
+  refine ⟨hactive, ?_⟩
+  rw [Nat.add_comm 1 active]
+  exact hsuffix.1.adaptiveInput hl
+
+/-- The complete adaptive EEA schedule coherently implements its unitary reference on the
+states produced by preprocessing clean, nonzero canonical inputs. -/
+theorem secp256k1EEAForwardAdaptive_coherent_preprocessed :
+    Quantum.CoherentlyImplementsOn (secp256k1EEAForwardAdaptive indexedStepProductionRegisters)
+      (Quantum.run (secp256k1EEAForwardUnitary indexedStepProductionRegisters))
+      (fun state => ∃ s : BasisState,
+        Clean (List.range' 0 263 ++ List.range' 519 61) s ∧
+        0 < boolWordToNat (wireValues (List.range' 263 256) s) ∧
+        boolWordToNat (wireValues (List.range' 263 256) s) < ShorECDLP.p ∧
+        state = eeaPreprocessIdealState s) := by
+  have h := indexedScheduleAdaptive_coherent_actual indexedStepProductionRegisters 256 1
+    secp256k1ScheduleLength secp256k1ScheduleLayout_production
+  obtain ⟨coefficients, aligned, mass⟩ := h
+  refine ⟨coefficients, ?_, mass⟩
+  apply aligned.imp
+  intro branch coefficient hb state hs
+  obtain ⟨s, hc, hx, hxp, he⟩ := hs
+  apply hb
+  rw [he]
+  exact secp256k1EEAForward_adaptiveInput s hc hx hxp
+
 end ShorECDLP.Paper2607_13816
