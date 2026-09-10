@@ -2471,3 +2471,5 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 The reachable-boundary theorem `indexedScheduleUnitary_reachable_paperStep` derives the canonical input, arithmetic bounds, alignment span, all four phases’ active windows, and endpoint timing from `PaperBoundaryReachable`. It requires only physical layouts, register-width capacities, and endpoint scan-window bounds; those remaining physical premises are explicit.
 
 The active-boundary theorem `indexedScheduleUnitary_active_paperStep` also derives all endpoint scan bounds, including zero-remainder endpoints. Only physical layout and metadata-width capacities remain as circuit premises.
+
+`secp256k1EEA_iteration_paperStep` instantiates the fixed 580-role production layout, removing all physical premises except the input packed state. `secp256k1EEA_active_paperRun` iterates that actual circuit to the mathematical terminal state at the exact active clock. Initial preprocessing and the remaining fixed-horizon padding suffix are separate boundaries.
