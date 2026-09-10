@@ -2266,3 +2266,7 @@ and aggregate Phase 9 resources remain open. No new physical-width claim is made
 ### Phase 9 finite exception correction
 
 `PointExceptions`, `FiniteCorrection`, and `PointCorrection` prove that infinity, C, -C and -2C cover the two exceptional factors. A constructive matching supplies at most four ordered transpositions, and its composition with the encoded coordinate permutation equals total addition by every finite constant on every curve point. Duplicate exceptions are removed without point-order assumptions. This is a mathematical permutation certificate; lowering the transpositions to gates, the infinity-constant case, and aggregate physical resources remain open.
+
+### Phase 9 physical correction edge
+
+`TwoRegisterFlip` composes three equality selectors with shared scratch and proves the complete-state controlled bit flip. `PointEdge` instantiates it on the 513-bit point encoding, excluding the target from the two comparison groups and reusing 255 existing work wires. Each edge restores both flags and scratch, has exact ket semantics, uses at most 21,553 T gates, and stays below wire 839 with a direct qubit-count bound. Decomposing the exceptional transpositions into these edges and composing the total point circuit remain open.
