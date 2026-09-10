@@ -2421,3 +2421,7 @@ It requires a positive encoded divisor length, numerical packing/capacity bounds
 a coefficient confined to the prefix and remainder-window coverage. These
 hypotheses determine the scan values; no physical slice values are assumed. The
 full A–H remainder/quotient microstep and its reachable-state bounds remain open.
+
+### Packed quotient insertion
+
+`blockDForward_quotient_packed` derives the complete packed state after the actual quotient insertion circuit. The old sign becomes the appended quotient bit, the quotient length increments, and the sign and auxiliary wires are cleared. A numeric remainder bound provides the zero high bit reused by the quotient, while other fields are preserved. Numeric capacities, phase and active-window coverage remain explicit.
