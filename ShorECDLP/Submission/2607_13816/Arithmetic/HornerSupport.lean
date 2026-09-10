@@ -1,4 +1,5 @@
 import ShorECDLP.Submission.«2607_13816».Arithmetic.HornerInverse
+import ShorECDLP.Submission.«2607_13816».Arithmetic.SquareSubtract
 
 /-!
 # Physical support of width-256 Horner arithmetic
@@ -220,4 +221,102 @@ theorem hornerMulInverse256_wires_subset (controls input acc : List Wire) (bits 
       · have h := hhalf hw; tauto
       · have h := ih hw; tauto
 
+
+private theorem squareAdd256_support (input acc : List Wire) (bits : List Bool) (p : Nat)
+    (q copied c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (squareAdd input acc (true::bits) p q copied c r t f).wires ⊆ [q,copied,c,r,t,f]++input++acc := by
+  have hh := modularAdd256_support input acc bits p copied c r t f hi ha hb hp0 hp
+  intro w hw
+  simp only [squareAdd,AdaptiveCircuit.wires,modularWires_seq,circuitWires,List.flatMap_cons,
+    List.flatMap_nil,List.append_nil,gateWires,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hw
+  simp only [List.subset_def,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hh
+  simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+  rcases hw with (hw | hw) | hw | hw | hw
+  · tauto
+  · tauto
+  · have h := hh hw; tauto
+  · tauto
+  · tauto
+private theorem squareSub256_support (input acc : List Wire) (bits : List Bool) (p : Nat)
+    (q copied c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (squareSub input acc (true::bits) p q copied c r t f).wires ⊆ [q,copied,c,r,t,f]++input++acc := by
+  have hh := modularSub256_support input acc bits p copied c r t f hi ha hb hp0 hp
+  intro w hw
+  simp only [squareSub,AdaptiveCircuit.wires,modularWires_seq,circuitWires,List.flatMap_cons,
+    List.flatMap_nil,List.append_nil,gateWires,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hw
+  simp only [List.subset_def,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hh
+  simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+  rcases hw with (hw | hw) | hw | hw | hw
+  · tauto
+  · tauto
+  · have h := hh hw; tauto
+  · tauto
+  · tauto
+
+theorem squareLoop256_wires_subset (controls input acc : List Wire) (bits : List Bool) (p : Nat)
+    (copied c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (squareLoop controls input acc (true::bits) p copied c r t f).wires ⊆ [copied,c,r,t,f]++controls++input++acc := by
+  induction controls with
+  | nil => simp [squareLoop,AdaptiveCircuit.wires]
+  | cons q qs ih =>
+    have hadd := squareAdd256_support input acc bits p q copied c r t f hi ha hb hp0 hp
+    have hdbl := double256_support acc input bits p f r t c ha hi hb hp0 hp
+    simp only [List.subset_def,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at ih hadd hdbl
+    intro w hw
+    by_cases hqs : qs=[]
+    · simp only [squareLoop,modularWires_seq,hqs,if_pos] at hw
+      simp only [AdaptiveCircuit.wires,List.not_mem_nil,false_or] at hw
+      simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+      have h := hadd hw
+      tauto
+    · simp only [squareLoop,modularWires_seq,hqs,if_false] at hw
+      simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+      rcases hw with hw | hw | hw
+      · have h := ih hw; tauto
+      · have h := hdbl hw; tauto
+      · have h := hadd hw; tauto
+
+theorem squareLoopInverse256_wires_subset (controls input acc : List Wire) (bits : List Bool) (p : Nat)
+    (copied c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (squareLoopInverse controls input acc (true::bits) p copied c r t f).wires ⊆ [copied,c,r,t,f]++controls++input++acc := by
+  induction controls with
+  | nil => simp [squareLoopInverse,AdaptiveCircuit.wires]
+  | cons q qs ih =>
+    have hsub := squareSub256_support input acc bits p q copied c r t f hi ha hb hp0 hp
+    have hhalf := halve256_support acc input bits p f r t c ha hi hb hp0 hp
+    simp only [List.subset_def,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at ih hsub hhalf
+    intro w hw
+    by_cases hqs : qs=[]
+    · simp only [squareLoopInverse,modularWires_seq,hqs,if_pos,AdaptiveCircuit.wires,List.not_mem_nil,or_false] at hw
+      simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+      have h := hsub hw
+      tauto
+    · simp only [squareLoopInverse,modularWires_seq,hqs,if_false] at hw
+      simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+      rcases hw with hw | hw | hw
+      · have h := hsub hw; tauto
+      · have h := hhalf hw; tauto
+      · have h := ih hw; tauto
+
+/-- Complete square/subtract/uncompute support on arbitrary width-256 banks. -/
+theorem squareSubtract256_wires_subset (x y acc : List Wire) (correction modulus : List Bool) (p : Nat)
+    (q copied c r t f : Wire) (hx : x.length=256) (hy : y.length=256) (ha : acc.length=256)
+    (hc : correction.length=255) (hm : modulus.length=255) (hp0 : 0<p) (hp : p<2^256) :
+    (squareSubtract x y acc (true::correction) (true::modulus) p q copied c r t f).wires ⊆
+      [q,copied,c,r,t,f]++x++y++acc := by
+  have hf := squareLoop256_wires_subset y y acc correction p copied c r t f hy ha hc hp0 hp
+  have hr := squareLoopInverse256_wires_subset y y acc modulus p copied c r t f hy ha hm hp0 hp
+  have hmid := modularSub256_support acc x modulus p q copied f r c ha hx hm hp0 hp
+  simp only [List.subset_def,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hf hr hmid
+  intro w hw
+  simp only [squareSubtract,modularWires_seq] at hw
+  simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+  rcases hw with hw | hw | hw
+  · have h := hf hw; tauto
+  · have h := hmid hw; tauto
+  · have h := hr hw; tauto
 end ShorECDLP.Paper2607_13816

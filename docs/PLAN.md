@@ -2300,3 +2300,7 @@ The correction now enumerates `[infinity, C, -C, -(C+C)]` in a fixed order and d
 ### Phase 9 aggregate point T and measurement counts
 
 `SquareResourceCounts` proves the generic width-256 square/subtract/inverse schedule costs 15,567,153 T and 522,753 measurements, independently of register labels. `PointResourceCounts` composes all nine coordinate stages and the complete exceptional correction on the actual `pointAddProgram`. The exact executable formulas include all five constant stages and the correction's target-bank counts; an infinity constant costs zero. The fixed coordinate contribution is 554,814,253 T and 23,211,445 measurements before the five constant stages. The full point physical support certificate and remaining resource-vector components still require closure; Phase 9 is not complete.
+
+### Phase 9 shared total-point physical layout
+
+`PointSupport` proves every gate and measurement branch of the complete `pointAddProgram C` uses only labels 0–838. The resulting same-program certificate combines total group semantics, coherent execution, exact executable T/measurement counts and a conservative 839-wire bound, four above the source target of 835. The proof includes arbitrary constant patterns, removes the unconditional adder's virtual control, and reuses one bank throughout square/subtract/uncompute and all exceptional corrections. The other resource-vector components required by §3.3 remain open; this is not Phase 9 completion.

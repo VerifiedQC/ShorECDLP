@@ -6,7 +6,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 LEAN_CHECK = r"""
-import ShorECDLP.Submission.«2607_13816».Arithmetic.PointTotal
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointSupport
 open ShorECDLP ShorECDLP.Paper2607_13816
 
 /-- Reproducible executable-constructor check; no evaluation is used as a proof. -/
@@ -24,6 +24,9 @@ def main : IO Unit := do
       throw (IO.userError "generator correction replay failed")
   unless (pointAddProgram (0 : Secp256k1.Point)).tCount == 0 do
     throw (IO.userError "infinity addition is not empty")
+  unless pointAddT C == 593145546 && pointAddMeasurements C == 23217835 do
+    throw (IO.userError "unexpected generator total resource counts")
+  IO.println s!"total generator addition: T {pointAddT C}, measurements {pointAddMeasurements C}; proved support within labels 0-838"
   IO.println s!"generator: {(fig14ExceptionalList C).length} exceptions, {pairs.length} swaps, {edges.length} adjacent edges; six group cases passed"
   for i in [0,edges.length/2,edges.length-1] do
     let (a,b) := edges[i]!

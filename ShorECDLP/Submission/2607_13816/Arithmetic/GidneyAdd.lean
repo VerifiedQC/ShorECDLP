@@ -1442,6 +1442,40 @@ theorem controlledGidneyAddConst_wires (a d q c r t : Wire) (input dirty : List 
     · apply Or.inr; apply hl
       simp only [allowed,List.mem_append,List.mem_cons,List.not_mem_nil] at h hcell ⊢; tauto
 
+/-- Every constant pattern uses only the supplied registers and helper wires. -/
+theorem controlledGidneyAddConst_wires_subset (a d q c r t : Wire) (input dirty : List Wire)
+    (k : Bool) (constant : List Bool) :
+    (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t).wires ⊆
+      [q,c,r,t]++(a::input)++d::dirty := by
+  intro w hw
+  by_cases hz : (k::constant).all (fun b => !b)=true
+  · simp [controlledGidneyAddConst,hz,Quantum.AdaptiveCircuit.wires] at hw
+  · let allowed := [q,c,r,t] ++ (a :: input) ++ d :: dirty
+    let callback := fun outcomes => Quantum.registerZCorrection (d :: dirty) outcomes ++
+      gidneyAddCleanup (a :: input) (d :: dirty) (k :: constant) q c ++
+      Quantum.registerZCorrection (d :: dirty) outcomes
+    have hcallback : ∀ outcomes x, x ∈ circuitWires (callback outcomes) → x ∈ allowed := by
+      intro outcomes x hx
+      have hz := gidneyZ_usesOnly (d :: dirty) outcomes x
+      have hc := gidneyCleanup_usesOnly (a :: input) (d :: dirty) (k :: constant) q c x
+      simp only [callback,circuitWires,List.flatMap_append,List.mem_append] at hx
+      change (x ∈ circuitWires (Quantum.registerZCorrection (d :: dirty) outcomes) ∨
+        x ∈ circuitWires (gidneyAddCleanup (a :: input) (d :: dirty) (k :: constant) q c)) ∨
+        x ∈ circuitWires (Quantum.registerZCorrection (d :: dirty) outcomes) at hx
+      have : x ∈ (d :: dirty) ∨ x ∈ q :: c :: (a :: input) ++ d :: dirty := by tauto
+      simp only [allowed,List.mem_append,List.mem_cons,List.not_mem_nil] at this ⊢; tauto
+    have hroles : ∀ x ∈ [q,r,c,t] ++ input ++ dirty, x ∈ allowed := by
+      intro x hx; simp only [allowed,List.mem_append,List.mem_cons,List.not_mem_nil] at hx ⊢; tauto
+    have ht := gidneyTail_usesOnly allowed input dirty constant q r c t callback (List.nil : List Bool) hroles hcallback w
+    simp only [controlledGidneyAddConst,if_neg hz,Quantum.AdaptiveCircuit.wires,List.mem_append] at hw
+    change w ∈ circuitWires (gidneyAddCarryCell q c r t a d k) ∨
+      w ∈ (gidneyAddTail q r c t callback (List.nil : List Bool) input dirty constant).wires at hw
+    rcases hw with hw | hw
+    · have hh := gidneyCell_wires q c r t a d w k hw
+      simp only [allowed,List.mem_append,List.mem_cons,List.not_mem_nil] at hh ⊢
+      tauto
+    · exact ht hw
+
 /-- Exact physical support; measurements reuse labels without subtracting live wires. -/
 theorem controlledGidneyAddConst_qubitCount (a d q c r t : Wire) (input dirty : List Wire)
     (constant : List Bool) (hk : input.length = constant.length) (hd : input.length = dirty.length + 1)

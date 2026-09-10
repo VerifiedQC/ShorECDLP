@@ -53,4 +53,26 @@ theorem gidneyAddConst_virtualControl_absent (input dirty : List Wire) (constant
   have hh := (constantControlProgram_wires _ _
     (controlledGidneyAddConst_controlSafe input dirty constant _ c r t (addVirtual_fresh input dirty c r t)) _).1 h
   exact hh.2 rfl
+
+/-- The virtual constant control is absent from every physical branch. -/
+theorem gidneyAddConst256_wires_subset (input dirty : List Wire) (constant : List Bool) (c r t : Wire)
+    (hi : input.length=256) (hd : dirty.length=255) (hk : constant.length=256) :
+    (gidneyAddConst input dirty constant c r t).wires ⊆ [c,r,t]++input++dirty := by
+  let q := gidneyAddVirtualControl input dirty c r t
+  have hq : q ∉ [c,r,t]++input++dirty := addVirtual_fresh input dirty c r t
+  intro w hw
+  obtain ⟨hw,hne⟩ := (constantControlProgram_wires q _
+    (controlledGidneyAddConst_controlSafe input dirty constant q c r t hq) w).mp hw
+  cases input with
+  | nil => simp at hi
+  | cons a as =>
+    cases dirty with
+    | nil => simp at hd
+    | cons d ds =>
+      cases constant with
+      | nil => simp at hk
+      | cons k ks =>
+        have hh := controlledGidneyAddConst_wires_subset a d q c r t as ds k ks hw
+        simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hh ⊢
+        tauto
 end ShorECDLP.Paper2607_13816
