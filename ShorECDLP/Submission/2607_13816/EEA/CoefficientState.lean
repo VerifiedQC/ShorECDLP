@@ -375,6 +375,31 @@ private theorem packed_endpoint_zero (ws : List Wire) (s : BasisState)
       rw [Nat.mod_eq_of_lt (by omega)]
   simp only [hz, decide_true]
 
+private theorem packed_endpoint_ready (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (v : EEAState) (h : IndexedStepLayout r n index)
+    (hp : IndexedPackedState r n s v) (hQ : v.lQ = 0) (hS : v.shift = 0) :
+    IndexedStepReady r s ∧ s r.shiftEpoch = false ∧
+    wireAnd r.lengthQ s = true ∧ wireAnd r.lengthS s = true := by
+  have ready : IndexedStepReady r s := by
+    intro wire hw
+    apply hp.clean wire
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | hw | hw
+    · subst wire
+      change r.aux.getD 0 0 ∈ r.aux
+      rw [List.getD_eq_getElem _ _ (by rw [h.aux_length]; decide)]
+      exact List.getElem_mem _
+    · exact List.mem_of_mem_take (List.mem_of_mem_drop hw)
+    · exact List.mem_of_mem_drop hw
+  have hepoch : s r.shiftEpoch = false := by
+    apply hp.clean
+    change r.aux.getD 1 0 ∈ r.aux
+    rw [List.getD_eq_getElem _ _ (by rw [h.aux_length]; decide)]
+    exact List.getElem_mem _
+  have hq := packed_endpoint_zero r.lengthQ s (by simpa only [hQ] using hp.lengthQ)
+  have hs := packed_endpoint_zero r.lengthS s (by simpa only [hS] using hp.lengthS)
+  exact ⟨ready, hepoch, hq, hs⟩
+
 /-- At a scheduled zero-Q/zero-shift endpoint, the logical packed state determines
 both output length words. Physical scan views and decoder routes are derived. -/
 theorem blockHForward_packed_lengths (r : IndexedStepRegisters) (n index : Nat)
@@ -414,24 +439,7 @@ theorem blockHForward_packed_lengths (r : IndexedStepRegisters) (n index : Nat)
   have hw2 : wireValues r.work2 s = constantBits (n+3-v.lRPrime) v.tPrime ++
       (constantBits v.lRPrime v.rPrime).reverse := by
     simpa only [hS, List.rotate_zero] using hp.work2
-  have ready : IndexedStepReady r s := by
-    intro wire hw
-    apply hp.clean wire
-    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
-    rcases hw with he | hw | hw
-    · subst wire
-      change r.aux.getD 0 0 ∈ r.aux
-      rw [List.getD_eq_getElem _ _ (by rw [h.aux_length]; decide)]
-      exact List.getElem_mem _
-    · exact List.mem_of_mem_take (List.mem_of_mem_drop hw)
-    · exact List.mem_of_mem_drop hw
-  have hepoch : s r.shiftEpoch = false := by
-    apply hp.clean
-    change r.aux.getD 1 0 ∈ r.aux
-    rw [List.getD_eq_getElem _ _ (by rw [h.aux_length]; decide)]
-    exact List.getElem_mem _
-  have hq := packed_endpoint_zero r.lengthQ s (by simpa only [hQ] using hp.lengthQ)
-  have hs := packed_endpoint_zero r.lengthS s (by simpa only [hS] using hp.lengthS)
+  obtain ⟨ready, hepoch, hq, hs⟩ := packed_endpoint_ready r n index s v h hp hQ hS
   have hmT := packed_endpoint_word r.lengthT s v.lT hp.lengthT
   have hmRP := packed_endpoint_word r.lengthRPrime s v.lRPrime hp.lengthRP
   have hwide : v.lRPrime ≤ n+3-(v.tPrime.size+1) := by omega
@@ -467,5 +475,120 @@ theorem blockHForward_packed_lengths (r : IndexedStepRegisters) (n index : Nat)
     exact ⟨hrpWindow.1, hrpWindow.2, by omega⟩
   · simpa only [hT] using hmT
   · simpa only [hRP] using hmRP
+
+private theorem endpoint_regroup_disjoint (a b c d e f : List Wire)
+    (h : (a++(b++(c++(d++(e++f))))).Nodup) :
+    List.Disjoint (a++c++e) (b++d++f) := by
+  obtain ⟨_,hr,ha⟩ := List.nodup_append.mp h
+  obtain ⟨_,hr,hb⟩ := List.nodup_append.mp hr
+  obtain ⟨_,hr,hc⟩ := List.nodup_append.mp hr
+  obtain ⟨_,hr,hd⟩ := List.nodup_append.mp hr
+  obtain ⟨_,_,he⟩ := List.nodup_append.mp hr
+  apply List.disjoint_left.mpr
+  intro w hw hn
+  simp only [List.mem_append] at hw hn
+  rcases hw with (hw | hw) | hw <;> rcases hn with (hn | hn) | hn
+  · exact ha w hw w (by simp only [List.mem_append]; exact Or.inl hn) rfl
+  · exact ha w hw w (by simp only [List.mem_append]; exact Or.inr (Or.inr (Or.inl hn))) rfl
+  · exact ha w hw w (by simp only [List.mem_append]; exact Or.inr (Or.inr (Or.inr (Or.inr hn)))) rfl
+  · exact hb w hn w (List.mem_append_left _ hw) rfl
+  · exact hc w hw w (List.mem_append_left _ hn) rfl
+  · exact hc w hw w (List.mem_append_right _ (List.mem_append_right _ hn)) rfl
+  · exact hb w hn w (List.mem_append_right _ (List.mem_append_right _ (List.mem_append_left _ hw))) rfl
+  · exact hd w hn w (List.mem_append_left _ hw) rfl
+  · exact he w hw w hn rfl
+
+/-- Logical bank exchange at the zero-quotient, zero-shift endpoint. -/
+def endpointMicrostep (v : EEAState) : EEAState :=
+  { v with
+    t := v.tPrime, tPrime := v.t, r := v.rPrime, rPrime := v.r,
+    lT := v.tPrime.size, lRPrime := v.r.size, q := 0, lQ := 0,
+    shift := 0, iter := !v.iter}
+
+/-- The actual scheduled H block preserves the complete packed-state interpretation. -/
+theorem blockHForward_packed (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (v : EEAState) (h : IndexedStepLayout r n index)
+    (hp : IndexedPackedState r n s v) (hstep : index % 4 = 0)
+    (hQ : v.lQ = 0) (hS : v.shift = 0)
+    (hT : v.lT = v.t.size) (hRP : v.lRPrime = v.rPrime.size)
+    (hrem : v.r < v.rPrime) (hmono : v.lT ≤ v.tPrime.size)
+    (hspan : v.tPrime.size+1+v.lRPrime ≤ n+3)
+    (hcapacity : n+3 < 2^r.lengthT.length)
+    (hboundary4 : (endIterationWindowsAt n index).k4 ≤ n+3-v.lRPrime ∧
+      n+3-v.lRPrime ≤ (endIterationWindowsAt n index).K4)
+    (hboundary5 : (endIterationWindowsAt n index).k5 ≤ v.tPrime.size+2 ∧
+      v.tPrime.size+2 ≤ (endIterationWindowsAt n index).K5Decode n)
+    (htWindow : (endIterationWindowsAt n index).k4 ≤ v.t.size ∧
+      v.t.size ≤ (endIterationWindowsAt n index).K4)
+    (htpWindow : (endIterationWindowsAt n index).k4 ≤ v.tPrime.size ∧
+      v.tPrime.size ≤ (endIterationWindowsAt n index).K4)
+    (hrWindow : v.r ≠ 0 → (endIterationWindowsAt n index).k5 ≤ n+4-v.r.size ∧
+      n+4-v.r.size ≤ (endIterationWindowsAt n index).K5Decode n)
+    (hrpWindow : (endIterationWindowsAt n index).k5 ≤ n+4-v.rPrime.size ∧
+      n+4-v.rPrime.size ≤ (endIterationWindowsAt n index).K5Decode n) :
+    IndexedPackedState r n (run (blockHForward r n index) s) (endpointMicrostep v) := by
+  obtain ⟨ready, hepoch, hq, hs⟩ := packed_endpoint_ready r n index s v h hp hQ hS
+  have hm := blockHForward_packed_lengths r n index s v h hp hstep hQ hS hT hRP
+    hrem hmono hspan hcapacity hboundary4 hboundary5 htWindow htpWindow hrWindow hrpWindow
+  have hb := blockHForward_endpoint_banks r n index s h ready hstep hq hs hepoch
+  have hf := blockHForward_endpoint_frame r n index s h ready hstep hq hs hepoch
+  have hsep := endpoint_regroup_disjoint ([r.phase1,r.phase2]) ([r.iter]) ([r.sign])
+    (r.work1++r.work2++r.lengthT) (r.lengthQ++r.lengthS) (r.lengthRPrime++r.aux)
+    (by simpa only [IndexedStepRegisters.allWires,List.append_assoc,List.cons_append,List.nil_append]
+      using h.physical)
+  have hstable (wire : Wire)
+      (hw : wire ∈ [r.phase1,r.phase2]++[r.sign]++(r.lengthQ++r.lengthS)) :
+      run (blockHForward r n index) s wire = s wire := by
+    apply hf.2 wire
+    intro hn
+    apply List.disjoint_left.mp hsep hw
+    simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hn ⊢
+    tauto
+  have hword (ws : List Wire) (hw : ∀ w ∈ ws,
+      w ∈ [r.phase1,r.phase2]++[r.sign]++(r.lengthQ++r.lengthS)) :
+      wireValues ws (run (blockHForward r n index) s) = wireValues ws s := by
+    apply List.map_congr_left
+    intro w hm
+    exact hstable w (hw w hm)
+  have hrpfit : v.rPrime < 2^v.lRPrime := by rw [hRP]; exact Nat.lt_size_self _
+  have hrfit := Nat.lt_size_self v.r
+  have hsize : v.r.size ≤ v.lRPrime := Nat.size_le.mpr (hrem.trans hrpfit)
+  have htfit : v.t < 2^v.lT := by rw [hT]; exact Nat.lt_size_self _
+  have hw1 : wireValues r.work1 s = constantBits v.lT v.t ++ [false] ++
+      (constantBits (n+3-(v.lT+1)) v.r).reverse := by
+    simpa only [hQ, constantBits, List.replicate_zero, xorConstantBits,
+      List.reverse_nil, List.append_nil, Nat.add_zero] using hp.work1
+  have hw2 : wireValues r.work2 s = constantBits (n+3-v.lRPrime) v.tPrime ++
+      (constantBits v.lRPrime v.rPrime).reverse := by
+    simpa only [hS,List.rotate_zero] using hp.work2
+  constructor
+  · simp only [endpointMicrostep,constantBits,List.replicate_zero,xorConstantBits,List.reverse_nil,List.append_nil,Nat.add_zero]
+    rw [hb.1,hw2]
+    exact (endpoint_packed_repartition (n+3) v.tPrime.size v.lRPrime v.tPrime v.rPrime
+      hspan (Nat.lt_size_self _) hrpfit).symm
+  · simp only [endpointMicrostep,List.rotate_zero]
+    rw [hb.2.1,hw1]
+    exact endpoint_packed_repartition (n+3) v.lT v.r.size v.t v.r
+      (by omega) htfit hrfit
+  · change boolWordToNat _ = truthMinusOneValue _ v.tPrime.size
+    have he := congrArg Prod.fst hm
+    dsimp only at he
+    rw [he,boolWordToNat_constantBits]
+    exact Nat.mod_mod _ _
+  · change boolWordToNat _ = truthMinusOneValue _ 0
+    rw [hword r.lengthQ (by intro w hw; simp [hw]),hp.lengthQ,hQ]
+  · change boolWordToNat _ = truthMinusOneValue _ v.r.size
+    have he := congrArg Prod.snd hm
+    dsimp only at he
+    rw [he,boolWordToNat_constantBits]
+    exact Nat.mod_mod _ _
+  · change boolWordToNat _ = truthMinusOneValue _ 0
+    rw [hword r.lengthS (by intro w hw; simp [hw]),hp.lengthS,hS]
+  · exact (hstable _ (by simp)).trans hp.phase1
+  · exact (hstable _ (by simp)).trans hp.phase2
+  · exact (hstable _ (by simp)).trans hp.sign
+  · change _ = !v.iter
+    rw [hb.2.2.1,hp.iter]
+  · exact hf.1
 
 end ShorECDLP.Paper2607_13816

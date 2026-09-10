@@ -13682,4 +13682,90 @@ theorem blockHForward_canonical_endpoint
     hword r.lengthRPrime (fun _ hw => List.mem_append_right _ hw)]
   exact hm
 
+private theorem endpoint_input_outside_aux (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) {wire : Wire}
+    (hw : wire ∉ r.aux) : blockHEndInputState r s wire = s wire := by
+  have hqmem : r.sourceScratch.getD 0 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hsmem : r.sourceScratch.getD 1 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hq : wire ≠ r.sourceScratch.getD 0 0 := fun heq => hw (heq.symm ▸ h.sourceScratch_mem_aux hqmem)
+  have hs : wire ≠ r.sourceScratch.getD 1 0 := fun heq => hw (heq.symm ▸ h.sourceScratch_mem_aux hsmem)
+  have hc : wire ≠ r.control := fun heq => hw (heq.symm ▸ h.control_mem_aux)
+  have he : wire ≠ r.shiftEpoch := fun heq => hw (heq.symm ▸ h.shiftEpoch_mem_aux)
+  simp only [blockHEndInputState, blockHZeroSState, blockHBeforeSState,
+    blockHZeroQState, andXorWireState, andListXorState, upd, hq, hs, hc, he, if_false]
+
+private theorem endpoint_H_outside_aux (r : IndexedStepRegisters) (n T b4 b5 : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hstep : T % 4 = 0)
+    {wire : Wire} (hw : wire ∉ r.aux) :
+    blockHForwardState r n T b4 b5 s wire =
+      (xorWireState r.control r.iter
+        (endIterationForwardState r n T b4 b5 (blockHEndInputState r s))) wire := by
+  have hqmem : r.sourceScratch.getD 0 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hsmem : r.sourceScratch.getD 1 0 ∈ r.sourceScratch :=
+    indexedStep_getD_mem _ _ _ (by rw [h.sourceScratch_length]; decide)
+  have hq : wire ≠ r.sourceScratch.getD 0 0 := fun heq => hw (heq.symm ▸ h.sourceScratch_mem_aux hqmem)
+  have hs : wire ≠ r.sourceScratch.getD 1 0 := fun heq => hw (heq.symm ▸ h.sourceScratch_mem_aux hsmem)
+  have hc : wire ≠ r.control := fun heq => hw (heq.symm ▸ h.control_mem_aux)
+  have he : wire ≠ r.shiftEpoch := fun heq => hw (heq.symm ▸ h.shiftEpoch_mem_aux)
+  simp only [blockHForwardState, hstep, if_true, andListXorState, andXorWireState,
+    upd, hq, hs, hc, he, if_false]
+
+private theorem endpoint_aux_clean (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hr : IndexedStepReady r s)
+    (hepoch : s r.shiftEpoch = false) : Clean r.aux s := by
+  intro wire hw
+  rw [← h.aux_view] at hw
+  simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hw
+  rcases hw with (hw | hw) | hw | hw
+  · subst wire; exact hr _ (by simp [IndexedStepRegisters.sharedScratch])
+  · subst wire; exact hepoch
+  · exact hr _ (h.sourceScratch_mem_sharedScratch hw)
+  · exact hr _ (h.remainderRepairScratch_mem_sharedScratch hw)
+
+/-- An enabled scheduled H endpoint restores all auxiliary wires and preserves
+all state outside the two work banks, two updated length words and parity flag. -/
+theorem blockHForward_endpoint_frame (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hr : IndexedStepReady r s)
+    (hstep : T % 4 = 0) (hQ : wireAnd r.lengthQ s = true)
+    (hS : wireAnd r.lengthS s = true) (hepoch : s r.shiftEpoch = false) :
+    Clean r.aux (run (blockHForward r n T) s) ∧
+      ∀ wire, wire ∉ r.iter :: r.work1 ++ r.work2 ++ r.lengthT ++ r.lengthRPrime →
+        run (blockHForward r n T) s wire = s wire := by
+  let e := r.endIteration n T
+  let w := endIterationWindowsAt n T
+  let swapped := run (controlledWorkSwap e.control e.work1 e.work2) (blockHEndInputState r s)
+  let upper := run (constMinus e.lengthRP e.constants e.carry (n+2)) swapped
+  let lower := run (addConstant e.lengthT e.constants e.carry 3)
+    (run (lenUpdateLtUnary n w.k4 w.K4 (e.upperTree w) e.control
+      (e.rangeAccumulator w.k4 w.K4) (e.temporary w.k4 w.K4) e.carry
+      (e.path w.k4 w.K4) e.work1At e.work2At e.lengthT e.lengthRP e.constants) swapped)
+  let b4 := (e.upperTree w).routeLabel upper
+  let b5 := (e.lowerTree n w).routeLabel lower
+  have he := h.endIteration hstep
+  have hb4 : w.k4 ≤ b4 ∧ b4 ≤ w.K4 := by
+    apply (mem_zeroMapLabels he.k4_le_K4).mp
+    rw [← e.upperTree_visitLabels w he.k4_le_K4, UnaryActionTree.visitLabels_inc]
+    exact UnaryActionTree.routeLabel_mem_labels _ _
+  have hb5 : w.k5 ≤ b5 ∧ b5 ≤ w.K5Decode n := by
+    apply (mem_zeroMapLabels he.k5_le_decode).mp
+    rw [← e.lowerTree_visitLabels n w he.k5_le_decode, UnaryActionTree.visitLabels_inc]
+    exact UnaryActionTree.routeLabel_mem_labels _ _
+  have hb := blockHForward_endpoint_banks r n T s h hr hstep hQ hS hepoch
+  have hc0 := endpoint_aux_clean r n T s h hr hepoch
+  have hc1 := endpoint_aux_clean r n T _ h hb.2.2.2.2 hb.2.2.2.1
+  have hstate := blockHForward_correct r n T b4 b5 hb4 hb5 s h (fun _ => rfl) (fun _ => rfl) hr
+  refine ⟨hc1, ?_⟩
+  intro wire hw
+  have hi : wire ≠ r.iter := fun heq => hw (List.mem_cons.mpr (Or.inl heq))
+  have hm : wire ∉ endIterationMutableWires r := fun hm => hw (List.mem_cons_of_mem _ hm)
+  by_cases ha : wire ∈ r.aux
+  · exact (hc1 wire ha).trans (hc0 wire ha).symm
+  · rw [hstate.1, endpoint_H_outside_aux r n T b4 b5 s h hstep ha,
+      xorWireState_preserves _ _ _ hi,
+      endIterationForwardState_preservesOutside r n T b4 b5 _ hm,
+      endpoint_input_outside_aux r n T s h ha]
+
 end ShorECDLP.Paper2607_13816

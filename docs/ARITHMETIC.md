@@ -2334,3 +2334,21 @@ Readiness, epoch cleanliness and zero-counter controls follow from the packed
 state. The actual H metadata theorem therefore needs no physical-view or route
 premises at this level. These arithmetic bounds, bit-length coherence and
 active-window coverage still require the reachable-state invariant.
+
+### Complete packed endpoint state
+
+`blockHForward_packed` proves that the actual scheduled H block takes
+`IndexedPackedState r n s v` to the complete interpretation of
+`endpointMicrostep v`. The logical endpoint exchanges the coefficient and
+remainder pairs, updates their stored bit lengths, clears the zero-width quotient,
+and flips iteration parity. Phase and sign remain unchanged. The proof composes
+the bank and metadata results with `blockHForward_endpoint_frame`, which proves
+that all auxiliary wires finish clean and every wire outside the two banks,
+updated lengths, and iteration flag is preserved. Repartitioning each exchanged
+bank establishes the output packing, including a zero new remainder.
+
+The prior numerical hypotheses remain explicit: zero quotient length and shift,
+coherent input lengths, a strictly smaller remainder, coefficient-length
+monotonicity, guard space, metadata capacity, and active-window coverage. This is
+a complete H-block preservation theorem, not yet a reachable-state proof of
+those hypotheses or the preceding E/F/G composition.
