@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.InverseCanonicalRotation
 import ShorECDLP.Submission.«2607_13816».EEA.CanonicalRotation
 import ShorECDLP.Submission.«2607_13816».EEA.TerminalEntry
 namespace ShorECDLP.Paper2607_13816
@@ -363,6 +364,251 @@ theorem canonicalWork2Rotation_wellFormed : CircuitWellFormed canonicalWork2Rota
 /-- Canonicalization uses only classical reversible gates. -/
 theorem canonicalWork2Rotation_HPFree : HPFree canonicalWork2Rotation :=
   canonical_quantum_conditions.2
+
+private def inverseCounterRotationChain (bits : List (Fin 10)) : Circuit :=
+  bits.flatMap fun bit => canonicalWork2InverseRotationBit (counterControl bit) bit
+private theorem inverseCounterRotationChain_correct (bits : List (Fin 10)) (s : BasisState) :
+    let out := run (inverseCounterRotationChain bits) s
+    wireValues (List.range' 263 259) out =
+      (wireValues (List.range' 263 259) s).rotate (counterRotationAmount bits s) ∧
+    ∀ w∉List.range' 263 259,out w=s w := by
+  induction bits generalizing s with
+  | nil => simp [inverseCounterRotationChain,counterRotationAmount,run]
+  | cons bit bits ih =>
+    let first := run (canonicalWork2InverseRotationBit (counterControl bit) bit) s
+    have hh := canonicalWork2InverseRotationBit_correct (counterControl bit) bit (counterControl_outside bit) s
+    have ht := ih first
+    have hamount : counterRotationAmount bits first=counterRotationAmount bits s :=
+      counterAmount_congr bits first s (fun b => hh.2 _ (counterControl_outside b))
+    dsimp only at hh ht ⊢
+    rw [hamount] at ht
+    change _ ∧ _
+    simp only [inverseCounterRotationChain,List.flatMap_cons,run_append]
+    refine ⟨?_,?_⟩
+    · change wireValues _ (run (inverseCounterRotationChain bits) first)=_
+      rw [ht.1,hh.1]
+      simp only [counterRotationAmount,List.map_cons,List.sum_cons]
+      cases hb : s (counterControl bit) with
+      | false => simp
+      | true =>
+        simp only [Bool.toNat_true,Nat.one_mul,ite_true]
+        rw [show (wireValues (List.range' 263 259) s).rotate (2^bit.val%259)=
+          (wireValues (List.range' 263 259) s).rotate (2^bit.val) from by
+            simpa only [wireValues,List.length_map,List.length_range'] using List.rotate_mod (wireValues (List.range' 263 259) s) (2^bit.val)]
+        rw [List.rotate_rotate]
+    · intro w hw
+      exact (ht.2 w hw).trans (hh.2 w hw)
+/-- The source counter preparation, ten controlled rotations, and exact counter restoration. -/
+def canonicalWork2InverseRotation : Circuit :=
+  canonicalCounterPrepare ++ inverseCounterRotationChain (List.finRange 10).reverse ++ canonicalCounterRestore
+/-- Inverse canonicalization rotates Work2 by the terminal padding and restores every external wire. -/
+theorem canonicalWork2InverseRotation_correct (padding : Nat) (hp : padding≤596)
+    (s : BasisState) (ht : Secp256k1TerminalState padding s)
+    :
+    let out := run canonicalWork2InverseRotation s
+    wireValues (List.range' 263 259) out=(wireValues (List.range' 263 259) s).rotate padding ∧
+    ∀ w∉List.range' 263 259,out w=s w := by
+  let prepared := run canonicalCounterPrepare s
+  let rotated := run (inverseCounterRotationChain (List.finRange 10).reverse) prepared
+  have hprep := canonicalCounterPrepare_correct padding hp s ht
+  have hchain := inverseCounterRotationChain_correct (List.finRange 10).reverse prepared
+  have hamount : counterRotationAmount (List.finRange 10).reverse prepared=padding :=
+    by
+      calc
+        _ = counterRotationAmount (List.finRange 10) prepared := by simp [counterRotationAmount]
+        _ = _ := counterRotationAmount_full prepared
+        _ = padding := hprep.1
+  have hcounter : ∀ w∈canonicalCounterWires,w∉List.range' 263 259 := by
+    intro w hw
+    exact canonicalSupport_outside w (by simp [canonicalRestoreSupport,hw])
+  have hprebank : wireValues (List.range' 263 259) prepared=wireValues (List.range' 263 259) s := by
+    apply List.map_congr_left
+    intro w hw
+    exact hprep.2.2 w (by intro h; exact hcounter w h hw)
+  have hrotbank : wireValues (List.range' 263 259) rotated=
+      (wireValues (List.range' 263 259) s).rotate padding := by
+    simpa only [hamount,hprebank] using hchain.1
+  have hrestore : ∀ w∉List.range' 263 259,
+      run canonicalCounterRestore rotated w=run canonicalCounterRestore prepared w := by
+    intro w hw
+    by_cases hs : w∈canonicalRestoreSupport
+    · apply canonicalRestore_support.run_congrOn rotated prepared _ w hs
+      intro v hv
+      exact hchain.2 v (canonicalSupport_outside v hv)
+    · rw [canonicalRestore_support.preservesOutside rotated hs,
+        canonicalRestore_support.preservesOutside prepared hs]
+      exact hchain.2 w hw
+  change _ ∧ _
+  rw [show run canonicalWork2InverseRotation s=run canonicalCounterRestore rotated from by
+    rw [canonicalWork2InverseRotation,run_append,run_append]]
+  constructor
+  · calc
+      wireValues (List.range' 263 259) (run canonicalCounterRestore rotated)=
+          wireValues (List.range' 263 259) rotated := by
+        apply List.map_congr_left
+        intro w hw
+        exact canonicalRestore_support.preservesOutside rotated (by
+          intro hs; exact canonicalSupport_outside w hs hw)
+      _ = (wireValues (List.range' 263 259) s).rotate padding := hrotbank
+  · intro w hw
+    rw [hrestore w hw,canonicalRestore_prepare s]
+private theorem inverseCounterRotationChain_counts (bits : List (Fin 10)) :
+    eeaToffoliCount (inverseCounterRotationChain bits)=258*bits.length ∧
+    eeaCnotCount (inverseCounterRotationChain bits)=516*bits.length ∧
+    eeaXCount (inverseCounterRotationChain bits)=0 ∧
+    tCount (inverseCounterRotationChain bits)=1806*bits.length := by
+  induction bits with
+  | nil => simp [inverseCounterRotationChain,eeaToffoliCount,eeaCnotCount,eeaXCount,tCount]
+  | cons bit bits ih =>
+    have hb := canonicalWork2InverseRotationBit_resources (counterControl bit) bit
+    simp only [inverseCounterRotationChain,List.flatMap_cons,eeaToffoliCount_append,
+      eeaCnotCount_append,eeaXCount_append,tCount_append,List.length_cons]
+    change eeaToffoliCount (canonicalWork2InverseRotationBit _ bit)+eeaToffoliCount (inverseCounterRotationChain bits)=_ ∧
+      eeaCnotCount (canonicalWork2InverseRotationBit _ bit)+eeaCnotCount (inverseCounterRotationChain bits)=_ ∧
+      eeaXCount (canonicalWork2InverseRotationBit _ bit)+eeaXCount (inverseCounterRotationChain bits)=_ ∧
+      tCount (canonicalWork2InverseRotationBit _ bit)+tCount (inverseCounterRotationChain bits)=_
+    rw [hb.1,hb.2.1,hb.2.2.1,hb.2.2.2.1,ih.1,ih.2.1,ih.2.2.1,ih.2.2.2]
+    omega
+private theorem inverseCanonicalRotation_support : PaperCircuitUsesOnly canonicalRotationSupport canonicalWork2InverseRotation := by
+  have hsub : canonicalRestoreSupport⊆canonicalRotationSupport := by
+    intro w hw; exact List.mem_append_right _ hw
+  have hprep : PaperCircuitUsesOnly canonicalRestoreSupport canonicalCounterPrepare := by
+    apply PaperCircuitUsesOnly.append
+    · intro gate hg w hw
+      simp only [List.mem_cons,List.not_mem_nil,or_false] at hg
+      subst gate
+      simp only [gateWires,List.mem_cons,List.not_mem_nil,or_false] at hw
+      subst w
+      simp [canonicalRestoreSupport,canonicalCounterWires]
+    · exact addConstant_usesOnly _ _ _ _
+  have hchain : ∀ bits,PaperCircuitUsesOnly canonicalRotationSupport (inverseCounterRotationChain bits) := by
+    intro bits
+    induction bits with
+    | nil => simp [inverseCounterRotationChain,PaperCircuitUsesOnly]
+    | cons bit bits ih =>
+      apply PaperCircuitUsesOnly.append
+      · apply (canonicalWork2InverseRotationBit_resources (counterControl bit) bit).2.2.2.2.1.mono
+        intro w hw
+        rcases List.mem_cons.mp hw with rfl | hw
+        · apply hsub
+          simp only [canonicalRestoreSupport,List.mem_append,List.mem_cons,List.not_mem_nil,or_false]
+          exact Or.inl (Or.inr (counterControl_mem bit))
+        · exact List.mem_append_left _ hw
+      · exact ih
+  exact ((hprep.mono hsub).append (hchain _)).append (canonicalRestore_support.mono hsub)
+private theorem inverse_canonical_rotation_qubits : qubitCount canonicalWork2InverseRotation≤280 := by
+  have hsub : (circuitWires canonicalWork2InverseRotation).toFinset ⊆ canonicalRotationSupport.toFinset := by
+    intro w hw
+    simp only [List.mem_toFinset] at hw ⊢
+    obtain ⟨gate,hg,hw⟩ := List.mem_flatMap.mp hw
+    exact inverseCanonicalRotation_support gate hg w hw
+  have hc := (Finset.card_le_card hsub).trans (List.toFinset_card_le canonicalRotationSupport)
+  rw [qubitCount,←List.toFinset_card_of_nodup (List.nodup_dedup _)]
+  have he : (circuitWires canonicalWork2InverseRotation).dedup.toFinset=(circuitWires canonicalWork2InverseRotation).toFinset := by
+    ext w; simp
+  rw [he]
+  simpa [canonicalRotationSupport,canonicalRestoreSupport,canonicalCounterWires] using hc
+/-- Gate counts and physical support bound for the same complete canonicalization circuit. -/
+theorem canonicalWork2InverseRotation_resources :
+    eeaToffoliCount canonicalWork2InverseRotation=2620 ∧ eeaCnotCount canonicalWork2InverseRotation=5240 ∧
+    eeaXCount canonicalWork2InverseRotation=6 ∧ tCount canonicalWork2InverseRotation=18340 ∧
+    qubitCount canonicalWork2InverseRotation≤280 := by
+  have hp : eeaToffoliCount canonicalCounterPrepare=20 ∧ eeaCnotCount canonicalCounterPrepare=40 ∧
+      eeaXCount canonicalCounterPrepare=3 ∧ tCount canonicalCounterPrepare=140 := by decide +kernel
+  have hr : eeaToffoliCount canonicalCounterRestore=20 ∧ eeaCnotCount canonicalCounterRestore=40 ∧
+      eeaXCount canonicalCounterRestore=3 ∧ tCount canonicalCounterRestore=140 := by decide +kernel
+  have hc := inverseCounterRotationChain_counts (List.finRange 10).reverse
+  simp only [List.length_reverse,List.length_finRange] at hc
+  refine ⟨?_,?_,?_,?_,inverse_canonical_rotation_qubits⟩ <;>
+    simp only [canonicalWork2InverseRotation,eeaToffoliCount_append,eeaCnotCount_append,
+      eeaXCount_append,tCount_append,hp.1,hp.2.1,hp.2.2.1,hp.2.2.2,
+      hr.1,hr.2.1,hr.2.2.1,hr.2.2.2,hc.1,hc.2.1,hc.2.2.1,hc.2.2.2]
+
+private theorem inverse_canonical_quantum_conditions :
+    CircuitWellFormed canonicalWork2InverseRotation ∧ HPFree canonicalWork2InverseRotation := by
+  have hl : ConstantLayout canonicalCounterWires (List.range' 560 10) 570 := by
+    change (570 :: List.range' 560 10 ++ (List.range' 540 9 ++ [559])).Nodup
+    decide
+  have hlen : (List.range' 560 10).length=canonicalCounterWires.length := by decide
+  have hp : CircuitWellFormed canonicalCounterPrepare ∧ HPFree canonicalCounterPrepare := by
+    constructor
+    · rw [canonicalCounterPrepare,circuitWellFormed_append]
+      exact ⟨by simp [CircuitWellFormed,Gate.WellFormed],addConstant_wellFormed _ _ _ _ hlen hl⟩
+    · simp [canonicalCounterPrepare,addConstant_HPFree]
+  have hr : CircuitWellFormed canonicalCounterRestore ∧ HPFree canonicalCounterRestore := by
+    constructor
+    · rw [canonicalCounterRestore,circuitWellFormed_append]
+      exact ⟨subConstant_wellFormed _ _ _ _ hlen hl,by simp [CircuitWellFormed,Gate.WellFormed]⟩
+    · simp [canonicalCounterRestore,subConstant_HPFree]
+  have hc (bits : List (Fin 10)) :
+      CircuitWellFormed (inverseCounterRotationChain bits) ∧ HPFree (inverseCounterRotationChain bits) := by
+    induction bits with
+    | nil => simp [inverseCounterRotationChain,CircuitWellFormed]
+    | cons bit bits ih =>
+        simp only [inverseCounterRotationChain,List.flatMap_cons,circuitWellFormed_append,hpFree_append]
+        exact ⟨⟨canonicalWork2InverseRotationBit_wellFormed _ bit (counterControl_outside bit),ih.1⟩,
+          ⟨canonicalWork2InverseRotationBit_HPFree _ bit,ih.2⟩⟩
+  have hchain := hc (List.finRange 10).reverse
+  simp only [canonicalWork2InverseRotation,circuitWellFormed_append,hpFree_append]
+  exact ⟨⟨⟨hp.1,hchain.1⟩,hr.1⟩,⟨⟨hp.2,hchain.2⟩,hr.2⟩⟩
+/-- The canonicalization wrapper has distinct physical operands at every gate. -/
+theorem canonicalWork2InverseRotation_wellFormed : CircuitWellFormed canonicalWork2InverseRotation :=
+  inverse_canonical_quantum_conditions.1
+/-- Canonicalization uses only classical reversible gates. -/
+theorem canonicalWork2InverseRotation_HPFree : HPFree canonicalWork2InverseRotation :=
+  inverse_canonical_quantum_conditions.2
+private theorem inverseRotationBit_after_forward (control : Wire) (bit : Fin 10)
+    (hc : control∉List.range' 263 259) (s : BasisState) :
+    run (canonicalWork2InverseRotationBit control bit)
+      (run (canonicalWork2RotationBit control bit) s)=s := by
+  have hf := canonicalWork2RotationBit_correct control bit hc s
+  have hi := canonicalWork2InverseRotationBit_correct control bit hc
+    (run (canonicalWork2RotationBit control bit) s)
+  have hb : wireValues (List.range' 263 259)
+      (run (canonicalWork2InverseRotationBit control bit) (run (canonicalWork2RotationBit control bit) s))=
+      wireValues (List.range' 263 259) s := by
+    rw [hi.1,hf.2 control hc,hf.1]
+    cases hs : s control with
+    | false => simp
+    | true =>
+      simp only [ite_true]
+      rw [List.rotate_rotate]
+      have hn : 259-2^bit.val%259+2^bit.val%259=259 := by omega
+      rw [hn]
+      simpa only [wireValues,List.length_map,List.length_range'] using
+        List.rotate_length (wireValues (List.range' 263 259) s)
+  funext w
+  by_cases hw : w∈List.range' 263 259
+  · exact List.map_inj_left.mp hb w hw
+  · exact (hi.2 w hw).trans (hf.2 w hw)
+private theorem inverseCounterRotationChain_after_forward (bits : List (Fin 10)) (s : BasisState) :
+    run (inverseCounterRotationChain bits.reverse) (run (counterRotationChain bits) s)=s := by
+  induction bits generalizing s with
+  | nil => rfl
+  | cons bit bits ih =>
+    simp only [List.reverse_cons,inverseCounterRotationChain,List.flatMap_append,
+      List.flatMap_cons,List.flatMap_nil,List.append_nil,counterRotationChain,run_append]
+    change run (canonicalWork2InverseRotationBit (counterControl bit) bit)
+      (run (inverseCounterRotationChain bits.reverse)
+        (run (counterRotationChain bits) (run (canonicalWork2RotationBit (counterControl bit) bit) s)))=s
+    rw [ih]
+    exact inverseRotationBit_after_forward _ bit (counterControl_outside bit) s
+private theorem canonicalPrepare_restore (s : BasisState) :
+    run canonicalCounterPrepare (run canonicalCounterRestore s)=s := by
+  have hw : CircuitWellFormed canonicalCounterRestore := by
+    rw [canonicalCounterRestore,circuitWellFormed_append]
+    exact ⟨subConstant_wellFormed _ _ _ _ (by decide)
+      (by change (570 :: List.range' 560 10 ++ (List.range' 540 9 ++ [559])).Nodup;decide),
+      by simp [CircuitWellFormed,Gate.WellFormed]⟩
+  have hi : Function.Injective (run canonicalCounterRestore) :=
+    Function.LeftInverse.injective (run_adjoint_run_classical canonicalCounterRestore hw)
+  apply hi
+  rw [canonicalRestore_prepare]
+/-- The literal inverse canonicalizer cancels the complete forward wrapper on every basis state. -/
+theorem canonicalWork2InverseRotation_after_forward (s : BasisState) :
+    run canonicalWork2InverseRotation (run canonicalWork2Rotation s)=s := by
+  simp only [canonicalWork2InverseRotation,canonicalWork2Rotation,run_append]
+  rw [canonicalPrepare_restore,inverseCounterRotationChain_after_forward,canonicalRestore_prepare]
 
 end
 end ShorECDLP.Paper2607_13816
