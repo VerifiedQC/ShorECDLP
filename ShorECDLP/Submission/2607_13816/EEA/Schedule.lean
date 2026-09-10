@@ -307,6 +307,89 @@ theorem indexedScheduleAdaptive_coherent
               exact htail)
       simpa only [indexedScheduleAdaptive, indexedScheduleUnitary] using hall
 
+/-- Conditions needed for measurement cleanup, evaluated along the actual unitary prefix. -/
+def IndexedScheduleAdaptiveInput (r : IndexedStepRegisters) (n start : Nat) :
+    Nat → BasisState → Prop
+  | 0, _ => True
+  | count + 1, s => IndexedStepReady r s ∧ IndexedStepEpochEncoded r s ∧
+      IndexedScheduleAdaptiveInput r n (start + 1) count
+        (Classical.run (indexedStepUnitary r n start) s)
+
+/-- Actual-prefix readiness suffices for coherent measurement cleanup; decoded arithmetic
+routes are not an additional quantum refinement premise. -/
+theorem indexedScheduleAdaptive_coherent_actual
+    (r : IndexedStepRegisters) (n start count : Nat)
+    (hlayout : IndexedScheduleLayout r n start count) :
+    CoherentlyImplementsOn (indexedScheduleAdaptive r n start count)
+      (Quantum.run (indexedScheduleUnitary r n start count))
+      (IndexedScheduleAdaptiveInput r n start count) := by
+  induction hlayout with
+  | done start =>
+      simpa [indexedScheduleAdaptive, indexedScheduleUnitary] using
+        (CoherentlyImplementsOn.unitary ([] : Circuit)
+          (IndexedScheduleAdaptiveInput r n start 0))
+  | @step start count head tail ih =>
+      have hhead := indexedSchedule_coherent_strengthen
+        (indexedStepAdaptive_coherent r n start head)
+        (Stronger := IndexedScheduleAdaptiveInput r n start (count + 1))
+        (fun _ h => ⟨h.1, h.2.1⟩)
+      have hall := indexedSchedule_coherent_seq_circuits hhead ih
+        (indexedStepUnitary_HPFree r n start) (fun _ h => h.2.2)
+      simpa only [indexedScheduleAdaptive, indexedScheduleUnitary] using hall
+
+/-- The actual-prefix condition composes across adjacent schedule intervals. -/
+theorem indexedScheduleAdaptiveInput_append (r : IndexedStepRegisters)
+    (n start first second : Nat) (s : BasisState) :
+    IndexedScheduleAdaptiveInput r n start (first + second) s ↔
+      IndexedScheduleAdaptiveInput r n start first s ∧
+      IndexedScheduleAdaptiveInput r n (start + first) second
+        (Classical.run (indexedScheduleUnitary r n start first) s) := by
+  induction first generalizing start s with
+  | zero => simp [IndexedScheduleAdaptiveInput, indexedScheduleUnitary]
+  | succ first ih =>
+      simp only [Nat.succ_add, IndexedScheduleAdaptiveInput,
+        indexedScheduleUnitary, Classical.run_append, ih]
+      simp only [Nat.succ_eq_add_one, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm]
+      tauto
+
+/-- Existing routed arithmetic invariants also discharge actual-prefix cleanup conditions. -/
+theorem IndexedScheduleInvariant.adaptiveInput
+    {r : IndexedStepRegisters} {n start count : Nat} {s : BasisState}
+    (h : IndexedScheduleInvariant r n start count s)
+    (hlayout : IndexedScheduleLayout r n start count) :
+    IndexedScheduleAdaptiveInput r n start count s := by
+  induction h with
+  | done => trivial
+  | @step start count s ready encoded routes tail ih =>
+      cases hlayout with
+      | step head rest =>
+          refine ⟨ready, encoded, ?_⟩
+          rw [(indexedStepUnitary_correct_routed r n start s head ready encoded routes).1]
+          exact ih rest
+
+/-- Readiness may be supplied separately for every proper actual prefix. -/
+theorem indexedScheduleAdaptiveInput_iff_prefix (r : IndexedStepRegisters)
+    (n start count : Nat) (s : BasisState) :
+    IndexedScheduleAdaptiveInput r n start count s ↔
+      ∀ k < count,
+        IndexedStepReady r (Classical.run (indexedScheduleUnitary r n start k) s) ∧
+        IndexedStepEpochEncoded r (Classical.run (indexedScheduleUnitary r n start k) s) := by
+  induction count generalizing start s with
+  | zero => simp [IndexedScheduleAdaptiveInput]
+  | succ count ih =>
+      rw [IndexedScheduleAdaptiveInput, ih]
+      constructor
+      · rintro ⟨hr, he, ht⟩ k hk
+        cases k with
+        | zero => exact ⟨hr, he⟩
+        | succ k =>
+          simpa only [indexedScheduleUnitary, Classical.run_append] using ht k (by omega)
+      · intro h
+        have hh := h 0 (by omega)
+        refine ⟨hh.1, hh.2, ?_⟩
+        intro k hk
+        simpa only [indexedScheduleUnitary, Classical.run_append] using h (k+1) (by omega)
+
 /-! ## Exact secp256k1 horizon -/
 
 /-- Fixed number of one-based microsteps in the secp256k1 paper schedule. -/

@@ -126,6 +126,37 @@ theorem indexedScheduleUnitary_quotient_packed (r : IndexedStepRegisters) (n sta
     rw [indexedScheduleUnitary_snoc,Classical.run_append,Function.iterate_succ_apply']
     exact hstep.1
 
+/-- Every proper phase prefix satisfies the adaptive cleanup preconditions. -/
+theorem indexedScheduleAdaptive_quotient_input (r : IndexedStepRegisters) (n start count : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (hphase : v.phase=.quotient) (hsign : v.sign=false)
+    (hpositive : 0<v.shift) (hcount : count≤v.shift)
+    (hlayout : ∀ offset<count, IndexedStepLayout r n (start+offset))
+    (hwindows : ∀ offset<count,
+      (certifiedActiveWindows n (start+offset)).remainder.start≤v.lT+(v.lQ+offset)+2 ∧
+      v.lT+(v.lQ+offset)+2-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthQ.length ∧
+      v.shift-offset-1+(certifiedActiveWindows n (start+offset)).remainder.start≤n+3 ∧
+      n+3-(v.shift-offset-1)-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthS.length ∧
+      (certifiedActiveWindows n (start+offset)).quotientSwap.start≤v.lT+(v.lQ+offset)+2 ∧
+      v.lT+(v.lQ+offset)+2≤(certifiedActiveWindows n (start+offset)).quotientSwap.stop)
+    (hcapacity : v.lT+v.lQ+v.shift+1<2^r.lengthQ.length)
+    (hspan : v.lT+v.lQ+1+v.shift+v.lRPrime≤n+3)
+    (htp : v.tPrime<2^(v.lT+v.lQ+v.shift))
+    (hR : 0<v.lRPrime) (hRfit : v.lRPrime<2^r.lengthRPrime.length)
+    (hwidth : 0<r.lengthS.length) (hSfit : v.shift<2^r.lengthS.length)
+    (hrp : v.rPrime<2^v.lRPrime) (hr : v.r<v.rPrime*2^v.shift) (hq : v.q<2^v.lQ) :
+    IndexedScheduleAdaptiveInput r n start count s := by
+  rw [indexedScheduleAdaptiveInput_iff_prefix]
+  intro k hk
+  have hpk := indexedScheduleUnitary_quotient_packed r n start k s v hp
+    hphase hsign hpositive (by omega)
+    (fun offset ho => hlayout offset (by omega))
+    (fun offset ho => hwindows offset (by omega))
+    hcapacity hspan htp hR hRfit hwidth hSfit hrp hr hq
+  have hsame := (quotient_coordinates v k hphase hsign hpositive (by omega)).2.2.2.2.1
+  exact hpk.cleanupInput (hlayout k hk) (by rw [hsame]; exact hR)
+    (by rw [hsame]; exact hRfit)
+
 /-- The complete actual quotient phase computes Euclidean division and enters the
 coefficient phase with the true quotient bit length. -/
 theorem indexedScheduleUnitary_quotient_complete (r : IndexedStepRegisters) (n start : Nat)

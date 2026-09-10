@@ -75,6 +75,36 @@ theorem indexedScheduleUnitary_remainder_packed (r : IndexedStepRegisters) (n st
     rw [indexedScheduleUnitary_snoc,Classical.run_append,Function.iterate_succ_apply']
     exact hstep
 
+/-- Every proper alignment prefix satisfies the adaptive cleanup preconditions. -/
+theorem indexedScheduleAdaptive_remainder_input (r : IndexedStepRegisters) (n start steps count : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (hphase : v.phase=.remainder) (hsign : v.sign=false) (hpositive : 0<steps) (hcount : count≤steps)
+    (hlayout : ∀ offset<count, IndexedStepLayout r n (start+offset))
+    (hwindows : ∀ offset<count,
+      (certifiedActiveWindows n (start+offset)).remainder.start≤v.lT+v.lQ+2 ∧
+      v.lT+v.lQ+2-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthQ.length ∧
+      v.shift+offset+1+(certifiedActiveWindows n (start+offset)).remainder.start≤n+3 ∧
+      n+3-(v.shift+offset+1)-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthS.length)
+    (hQ : v.lQ=0) (hR : 0<v.lRPrime) (hRfit : v.lRPrime<2^r.lengthRPrime.length)
+    (hwidth : 0<r.lengthS.length) (hSfit : v.shift+steps<2^r.lengthS.length)
+    (hspan : v.lT+v.lQ+1+(v.shift+steps)+v.lRPrime≤n+3)
+    (htp : v.tPrime<2^(v.lT+v.lQ+1+(v.shift+1)))
+    (hrp : v.rPrime<2^v.lRPrime) (hrem : v.r<2^(n+3-(v.lT+v.lQ+1)))
+    (hlower : v.rPrime*2^(v.shift+steps-1)≤v.r)
+    (hupper : v.r<v.rPrime*2^(v.shift+steps)) :
+    IndexedScheduleAdaptiveInput r n start count s := by
+  rw [indexedScheduleAdaptiveInput_iff_prefix]
+  intro k hk
+  have hpk := indexedScheduleUnitary_remainder_packed r n start steps k s v hp
+    hphase hsign hpositive (by omega)
+    (fun offset ho => hlayout offset (by omega))
+    (fun offset ho => hwindows offset (by omega))
+    hQ hR hRfit hwidth hSfit hspan htp hrp hrem hlower hupper
+  have hsame : (remainderAlignmentMicrostep^[k] v).lRPrime = v.lRPrime := by
+    exact (remainder_coordinates v steps k hphase hsign hpositive (by omega) hlower hupper).2.2.2.2.1
+  exact hpk.cleanupInput (hlayout k hk) (by rw [hsame]; exact hR)
+    (by rw [hsame]; exact hRfit)
+
 /-- The quotient bit length gives the first divisor alignment above the remainder. -/
 theorem division_alignment_interval (a b : Nat) (hb : 0<b) (hab : b≤a) :
     0<(a/b).size ∧ b*2^((a/b).size-1)≤a ∧ a<b*2^(a/b).size := by
