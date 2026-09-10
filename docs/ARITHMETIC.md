@@ -2455,3 +2455,7 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Complete remainder-alignment microstep
 
 `indexedStepUnitary_remainder_packed` connects all eight actual blocks. Alignment increments the shift, comparison preserves both remainders, and the final phase update selects quotient entry exactly when the aligned divisor exceeds the remainder. The sign clears and the positive shift disables H at every index. Full packing and clean auxiliary wires are derived from the original input; arithmetic capacity and numerical windows remain explicit. Iterating alignment and proving production reachability remain subsequent work.
+
+### Complete remainder-alignment phase
+
+`indexedScheduleUnitary_remainder_complete` proves the actual alignment schedule reaches quotient entry after exactly the bit length of `r / rPrime` steps. Positive divisor, ordered remainders and zero initial shift derive the stopping interval; induction derives every intermediate comparison, phase and packed state. Layout, original capacities and numerical windows remain explicit. Full iteration composition and production reachability remain subsequent work.
