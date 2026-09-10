@@ -97,4 +97,59 @@ theorem secp256k1EEAForward_terminalState (s : BasisState)
   rw [Nat.add_comm 1 active,hrun.1]
   simpa only [Nat.zero_add] using hsuffix.2
 
+/-- The full fixed-horizon schedule retains the terminal arithmetic payload, with Work2 rotated by padding. -/
+theorem secp256k1EEAForward_payload (s : BasisState)
+    (hclean : Clean (List.range' 0 263 ++ List.range' 519 61) s)
+    (hx : 0 < boolWordToNat (wireValues (List.range' 263 256) s))
+    (hxp : boolWordToNat (wireValues (List.range' 263 256) s) < ShorECDLP.p) :
+    let initial := paperInitial ShorECDLP.p (boolWordToNat (wireValues (List.range' 263 256) s))
+    let final := paperRun initial
+    let out := run (secp256k1EEAForwardUnitary indexedStepProductionRegisters) (eeaPreprocessIdealState s)
+    wireValues indexedStepProductionRegisters.work1 out = constantBits final.lT final.t ++ [false] ++
+      (constantBits final.lQ final.q).reverse ++ (constantBits (259-(final.lT+final.lQ+1)) final.r).reverse ∧
+    wireValues indexedStepProductionRegisters.work2 out = (constantBits 259 final.tPrime).rotate (paperPadding initial) ∧
+    out indexedStepProductionRegisters.iter=final.iter ∧
+    boolWordToNat (wireValues indexedStepProductionRegisters.lengthT out)=truthMinusOneValue 9 final.lT := by
+  let initial := paperInitial ShorECDLP.p (boolWordToNat (wireValues (List.range' 263 256) s))
+  let active := paperMicrosteps initial
+  let padding := paperPadding initial
+  let after := run (indexedScheduleUnitary indexedStepProductionRegisters 256 1 active)
+    (eeaPreprocessIdealState s)
+  have hp := eeaPreprocess_active_paperRun s hclean hx hxp
+  change IndexedPackedState _ _ after (paperRun initial) at hp
+  have hcanonical := (paperRun_preservesInvariant
+    (paperInitial_invariant ShorECDLP.Secp256k1.p_prime hx hxp)).canonical
+  have hz := paperRun_zero_remainder initial
+  have hterminal := secp256k1TerminalState_of_packed hcanonical hz hp
+  have hbound := secp256k1_paperMicrosteps_le_1620 hx hxp
+  change active≤1620 at hbound
+  have hweight : paperQuotientWeight initial≤405 := by
+    change 4*paperQuotientWeight initial≤1620 at hbound
+    omega
+  have hclock : active+padding=1620 := paperMicrosteps_add_padding hweight
+  have hpad : padding≤596 := secp256k1_paperPadding_le_596 hx hxp
+  have hsuffix := secp256k1TerminalScheduleInvariant (active+1) padding 0 after
+    (by omega) (by omega) (by omega) hterminal
+  have hd := secp256k1TerminalSchedule_payload (active+1) padding 0 after
+    (by omega) (by omega) (by omega) hterminal
+  have hl := schedule_layout_drop secp256k1ScheduleLayout_production active hbound
+  have hremain : secp256k1ScheduleLength-active=padding := by
+    change 1620-active=padding
+    omega
+  rw [hremain,Nat.add_comm 1 active] at hl
+  have hrun := indexedScheduleUnitary_correct indexedStepProductionRegisters 256 (active+1)
+    padding after hl hsuffix.1
+  have hout : run (secp256k1EEAForwardUnitary indexedStepProductionRegisters) (eeaPreprocessIdealState s)=
+      indexedScheduleState indexedStepProductionRegisters 256 (active+1) padding after := by
+    change run (indexedScheduleUnitary indexedStepProductionRegisters 256 1 1620) _ = _
+    rw [←hclock,indexedScheduleUnitary_append,Classical.run_append]
+    simpa only [Nat.add_comm 1 active] using hrun.1
+  dsimp only at hd ⊢
+  rw [hout,hd.1,hd.2.1,hd.2.2.1,hd.2.2.2]
+  refine ⟨hp.work1,?_,hp.iter,hp.lengthT⟩
+  have hR0 : (paperRun initial).lRPrime=0 := by rw [hcanonical.2.2.2.2.2.2,hz]; rfl
+  rw [hp.work2,hR0,hcanonical.2.2.1]
+  simp only [Nat.sub_zero,List.rotate_zero]
+  rw [show constantBits 0 (paperRun initial).rPrime=[] from rfl,List.reverse_nil,List.append_nil]
+
 end ShorECDLP.Paper2607_13816

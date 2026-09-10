@@ -196,5 +196,130 @@ theorem secp256k1TerminalScheduleInvariant (start count padding : Nat) (state : 
       (secp256k1IndexedStepRoutesValid start hstart (by omega) state) htail.1, ?_⟩
     simpa [indexedScheduleState, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using htail.2
 
+private theorem terminal_routed_eq {padding T : Nat} {state : BasisState}
+    (hstate : Secp256k1TerminalState padding state) (hp : padding<596)
+    (hT : 1≤T) (hmax : T≤1620) :
+    indexedStepRoutedState R 256 T state=terminalPadded state := by
+  have hlayout := production_layout T hT hmax
+  have hroutes := secp256k1IndexedStepRoutesValid T hT hmax state
+  let routes := indexedStepEndRoutes R 256 T state
+  have hbounds : (endIterationWindowsAt 256 T).k4 ≤ routes.1 ∧
+      routes.1 ≤ (endIterationWindowsAt 256 T).K4 ∧
+      (endIterationWindowsAt 256 T).k5 ≤ routes.2 ∧
+      routes.2 ≤ (endIterationWindowsAt 256 T).K5Decode 256 := hroutes
+  have hbound : (1 + (boolWordToNat (wireValues (R).lengthS state) +
+        2^(R).lengthS.length * (state (R).shiftEpoch).toNat)) %
+      2^((R).lengthS.length + 1) ≠ 2^(R).lengthS.length - 1 := by
+    change (1 + (boolWordToNat (wireValues (R).lengthS state) +
+      512 * (state (R).shiftEpoch).toNat)) % 1024 ≠ 511
+    rw [hstate.low, hstate.epoch, terminal_source_raw padding (by omega)]
+    exact counter_horizon 512 padding (by decide) (by omega)
+  have hfull := indexedStepUnitary_terminal_counter_correct R 256 T routes.1 routes.2
+    ⟨hbounds.1, hbounds.2.1⟩ ⟨hbounds.2.2.1, hbounds.2.2.2⟩
+    state hlayout hstate.ready hstate.epochEncoded (fun _ ↦ rfl)
+    hstate.phase1 hstate.phase2 hstate.remainder hbound
+  have hrun := indexedStepUnitary_correct_routed R 256 T state hlayout
+    hstate.ready hstate.epochEncoded hroutes
+  have hpadded : indexedStepRoutedState R 256 T state = terminalPadded state :=
+    hrun.1.symm.trans hfull.1
+  exact hpadded
+
+private theorem terminal_payload_frame (state : BasisState) {w : Wire}
+    (hw : w∈(R).work1++[(R).iter]++(R).lengthT) : terminalPadded state w=state w := by
+  have hg : ∀ w∈(R).work1++[(R).iter]++(R).lengthT,
+      w≠(R).terminal ∧ w∉(R).work2 ∧ w∉(R).lengthS ∧ w≠(R).shiftEpoch := by
+    intro w hw
+    change w∈List.range' 4 259 ++ [2] ++ List.range' 522 9 at hw
+    change w≠560 ∧ w∉List.range' 263 259 ∧ w∉List.range' 540 9 ∧ w≠559
+    simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false,List.mem_range',Nat.one_mul] at hw
+    have hb : (4≤w ∧ w<263) ∨ w=2 ∨ (522≤w ∧ w<531) := by
+      rcases hw with (h | h) | h
+      · obtain ⟨i,hi,he⟩ := h
+        exact Or.inl ⟨by dsimp only [Wire] at *; omega,by dsimp only [Wire] at *; omega⟩
+      · exact Or.inr (Or.inl h)
+      · obtain ⟨i,hi,he⟩ := h
+        exact Or.inr (Or.inr ⟨by dsimp only [Wire] at *; omega,by dsimp only [Wire] at *; omega⟩)
+    refine ⟨?_,?_,?_,?_⟩
+    · intro he
+      dsimp only [Wire] at *
+      omega
+    · intro hm
+      obtain ⟨i,hi,he⟩ := List.mem_range'.mp hm
+      dsimp only [Wire] at *
+      omega
+    · intro hm
+      obtain ⟨i,hi,he⟩ := List.mem_range'.mp hm
+      dsimp only [Wire] at *
+      omega
+    · intro he
+      dsimp only [Wire] at *
+      omega
+  obtain ⟨ht,hw2,hs,he⟩ := hg w hw
+  unfold terminalPadded
+  rw [upd_other _ _ _ ht,terminalPaddingForwardState_preserves _ _ hw2 hs he,
+    upd_other _ _ _ ht]
+
+/-- One terminal microstep preserves the arithmetic payload, rotating only Work2. -/
+theorem Secp256k1TerminalState.step_payload {padding T : Nat} {state : BasisState}
+    (hstate : Secp256k1TerminalState padding state) (hp : padding<596)
+    (hT : 1≤T) (hmax : T≤1620) :
+    let out := indexedStepRoutedState R 256 T state
+    wireValues (R).work1 out=wireValues (R).work1 state ∧
+    wireValues (R).work2 out=(wireValues (R).work2 state).rotate 1 ∧
+    out (R).iter=state (R).iter ∧
+    wireValues (R).lengthT out=wireValues (R).lengthT state := by
+  dsimp only
+  rw [terminal_routed_eq hstate hp hT hmax]
+  refine ⟨?_,?_,?_,?_⟩
+  · apply List.map_congr_left
+    intro w hw
+    exact terminal_payload_frame state (by simp [hw])
+  · have hl := (production_layout T hT hmax).terminalPadding
+    have hrot := terminalPaddingForwardState_work2 (R).terminalPadding
+      state[(R).terminal ↦ true] hl (by rfl)
+    have htn : (R).terminal∉(R).work2 := by decide
+    have hframe : ∀ st b, wireValues (R).work2 st[(R).terminal ↦ b]=wireValues (R).work2 st := by
+      intro st b
+      apply List.map_congr_left
+      intro w hw
+      exact upd_other _ _ _ (by intro he; subst w; exact htn hw)
+    unfold terminalPadded
+    rw [hframe]
+    change wireValues (R).terminalPadding.work2 _ = _
+    rw [hrot]
+    change rotateLeftOne (wireValues (R).work2 state[(R).terminal ↦ true]) = _
+    rw [hframe]
+    generalize wireValues (R).work2 state=bits
+    cases bits with
+    | nil => rfl
+    | cons b bs => rw [List.rotate_eq_drop_append_take (by simp)]; rfl
+  · exact terminal_payload_frame state (by simp)
+  · apply List.map_congr_left
+    intro w hw
+    exact terminal_payload_frame state (by simp [hw])
+
+/-- The entire terminal suffix preserves the coefficient payload and accumulates exactly its rotations. -/
+theorem secp256k1TerminalSchedule_payload (start count padding : Nat) (state : BasisState)
+    (hstart : 1≤start) (hstop : start+count≤1621) (hp : padding+count≤596)
+    (hstate : Secp256k1TerminalState padding state) :
+    let out := indexedScheduleState R 256 start count state
+    wireValues (R).work1 out=wireValues (R).work1 state ∧
+    wireValues (R).work2 out=(wireValues (R).work2 state).rotate count ∧
+    out (R).iter=state (R).iter ∧
+    wireValues (R).lengthT out=wireValues (R).lengthT state := by
+  induction count generalizing start padding state with
+  | zero => simp [indexedScheduleState]
+  | succ count ih =>
+    have hnext := hstate.step (by omega) hstart (by omega)
+    have hdata := hstate.step_payload (by omega) hstart (by omega)
+    have ht := ih (start+1) (padding+1) _ (by omega) (by omega) (by omega) hnext
+    dsimp only at hdata ht ⊢
+    change _ ∧ _ ∧ _ ∧ _
+    simp only [indexedScheduleState]
+    rw [ht.1,ht.2.1,ht.2.2.1,ht.2.2.2,hdata.1,hdata.2.1,hdata.2.2.1,hdata.2.2.2,
+      List.rotate_rotate]
+    simp [Nat.add_comm]
+
 end
+
 end ShorECDLP.Paper2607_13816
