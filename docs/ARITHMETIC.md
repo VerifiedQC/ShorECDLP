@@ -2487,3 +2487,7 @@ The active-boundary theorem `indexedScheduleUnitary_active_paperStep` also deriv
 ### Complete coefficient canonicalization
 
 `canonicalWork2Rotation` implements the source wrapper's counter preparation, ten controlled rotations, and counter restoration. Its correctness theorem restores the 259-bit coefficient from terminal padding and preserves every other wire, including the original counter and scratch state. The same circuit has 2,620 CCX, 5,240 CX, 6 X, 18,340 T, and at most 280 wires. `secp256k1EEAForward_canonical_coefficient` composes it with all 1,620 production steps under the original clean-input and nonzero canonical-input hypotheses. It retains Work1, parity, and coefficient length. Epoch compression, parity correction, and terminal Work1 clearing remain subsequent wrapper stages.
+
+### Returning the borrowed terminal epoch
+
+`terminalEpochCompression` implements the source's reversible three-bit transposition using 15 CCX and 10 X gates (105 T, exactly five wires). The numeric theorem identifies `compressBorrowedEpoch` on the counter and restores every other wire. Padding is divisible by four, so the composed production theorem clears the borrowed epoch after canonicalization, retains the 259-bit terminal coefficient, and restores shared scratch. Parity correction and known Work1 clearing remain the next stages.
