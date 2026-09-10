@@ -453,6 +453,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.Secp256k1TerminalState.step_payload
 #print axioms ShorECDLP.Paper2607_13816.secp256k1TerminalSchedule_payload
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForward_payload
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_coefficient_swap_input
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_quotient_coefficient_swap_input
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_iteration_input
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_reachable_iteration_input
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEA_iteration_adaptiveInput
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEA_active_adaptiveInput
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForward_adaptiveInput
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardAdaptive_coherent_preprocessed
 #print axioms ShorECDLP.Paper2607_13816.IndexedScheduleAdaptiveInput
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_coherent_actual
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptiveInput_append
@@ -1408,8 +1416,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1384 ]]; then
-  printf 'expected 1384 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1392 ]]; then
+  printf 'expected 1392 #print axioms results\n' >&2
   exit 1
 fi
 
