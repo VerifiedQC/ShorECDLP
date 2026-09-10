@@ -497,4 +497,68 @@ theorem indexedScheduleUnitary_append (r : IndexedStepRegisters) (n start first 
         indexedScheduleUnitary r n (start+(k+1)) second
     rw [ih,List.append_assoc,show start+1+k=start+(k+1) by omega]
 
+/-- Explicit measurement-uncomputed inverse schedule in descending source index order. -/
+def indexedScheduleInverseAdaptive (r : IndexedStepRegisters) (n start : Nat) :
+    Nat → AdaptiveCircuit
+  | 0 => .unitary [] .done
+  | count+1 => (indexedScheduleInverseAdaptive r n (start+1) count).seq
+      (indexedStepInverseAdaptive r n start)
+/-- The five inverse cleanup conditions hold at each actual descending schedule prefix. -/
+def IndexedScheduleInverseAdaptiveInput (r : IndexedStepRegisters) (n start : Nat) :
+    Nat → BasisState → Prop
+  | 0, _ => True
+  | count+1, s => IndexedScheduleInverseAdaptiveInput r n (start+1) count s ∧
+      IndexedStepInverseAdaptiveInput r n start
+        (Classical.run (indexedScheduleInverseUnitary r n (start+1) count) s)
+/-- Physical validity of every gate and measurement follows from the same per-index layout. -/
+theorem indexedScheduleInverseAdaptive_wellFormed (r : IndexedStepRegisters) (n start count : Nat)
+    (hl : IndexedScheduleLayout r n start count) :
+    (indexedScheduleInverseAdaptive r n start count).WellFormed := by
+  induction hl with
+  | done start => simp [indexedScheduleInverseAdaptive,AdaptiveCircuit.WellFormed,CircuitWellFormed]
+  | @step start count head tail ih =>
+      exact ih.seq (indexedStepInverseAdaptive_wellFormed r n start head)
+/-- Actual descending-prefix readiness suffices for coherent refinement of the literal inverse. -/
+theorem indexedScheduleInverseAdaptive_coherent (r : IndexedStepRegisters) (n start count : Nat)
+    (hl : IndexedScheduleLayout r n start count) :
+    CoherentlyImplementsOn (indexedScheduleInverseAdaptive r n start count)
+      (Quantum.run (indexedScheduleInverseUnitary r n start count))
+      (IndexedScheduleInverseAdaptiveInput r n start count) := by
+  induction hl with
+  | done start =>
+      simpa [indexedScheduleInverseAdaptive,indexedScheduleInverseUnitary] using
+        (CoherentlyImplementsOn.unitary ([] : Circuit)
+          (IndexedScheduleInverseAdaptiveInput r n start 0))
+  | @step start count head tail ih =>
+      have ht := indexedSchedule_coherent_strengthen ih
+        (Stronger := IndexedScheduleInverseAdaptiveInput r n start (count+1))
+        (fun _ h => h.1)
+      have hh := indexedStepInverseAdaptive_coherent r n start head
+      have hall := indexedSchedule_coherent_seq_circuits ht hh
+        (indexedScheduleInverseUnitary_HPFree r n (start+1) count) (fun _ h => h.2)
+      simpa only [indexedScheduleInverseAdaptive,indexedScheduleInverseUnitary] using hall
+
+attribute [local irreducible] indexedScheduleInverseAdaptive
+
+/-- The pinned adaptive reverse runs indices 1,620 down to 1. -/
+def secp256k1EEAReverseAdaptive (registers : IndexedStepRegisters) : AdaptiveCircuit :=
+  indexedScheduleInverseAdaptive registers 256 1 secp256k1ScheduleLength
+
+/-- Physical validity of the complete adaptive reverse schedule. -/
+theorem secp256k1EEAReverseAdaptive_wellFormed (registers : IndexedStepRegisters)
+    (hlayout : Secp256k1ScheduleLayout registers) :
+    (secp256k1EEAReverseAdaptive registers).WellFormed := by
+  unfold secp256k1EEAReverseAdaptive
+  exact indexedScheduleInverseAdaptive_wellFormed registers 256 1
+    secp256k1ScheduleLength hlayout
+
+/-- Coherence of all 1,620 inverse steps under their actual-prefix readiness conditions. -/
+theorem secp256k1EEAReverseAdaptive_coherent (registers : IndexedStepRegisters)
+    (hlayout : Secp256k1ScheduleLayout registers) :
+    CoherentlyImplementsOn (secp256k1EEAReverseAdaptive registers)
+      (Quantum.run (secp256k1EEAReverseUnitary registers))
+      (IndexedScheduleInverseAdaptiveInput registers 256 1 secp256k1ScheduleLength) := by
+  exact indexedScheduleInverseAdaptive_coherent registers 256 1
+    secp256k1ScheduleLength hlayout
+
 end ShorECDLP.Paper2607_13816
