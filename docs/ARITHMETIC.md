@@ -2425,3 +2425,7 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Packed quotient insertion
 
 `blockDForward_quotient_packed` derives the complete packed state after the actual quotient insertion circuit. The old sign becomes the appended quotient bit, the quotient length increments, and the sign and auxiliary wires are cleared. A numeric remainder bound provides the zero high bit reused by the quotient, while other fields are preserved. Numeric capacities, phase and active-window coverage remain explicit.
+
+### Consecutive quotient reduction
+
+`blockBCDForward_quotient_packed` composes the actual subtraction, terminal restoration and quotient insertion blocks. An input remainder below twice the shifted divisor yields an output below that divisor and the exact division-digit identity. The remaining space for insertion follows from this arithmetic bound and the original bank capacity; no intermediate packed state, zero high bit or restoration identity is assumed. Original metadata, phase, coefficient packing and active-window conditions remain explicit.

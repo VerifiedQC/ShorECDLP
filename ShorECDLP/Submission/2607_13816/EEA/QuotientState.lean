@@ -87,4 +87,65 @@ theorem blockDForward_quotient_packed (r : IndexedStepRegisters) (n index : Nat)
     · exact (hstable _ (by simp)).trans hp.iter
     · exact hd.2.2.2.2.2
   · simpa only [quotientPushMicrostep,hp.sign] using hd.2.1
+/-- One quotient digit reduces the remainder below its aligned divisor. -/
+theorem remainderMicrostep_quotient_bound (v : EEAState) (hp : v.phase=.quotient)
+    (hb : v.r<2*(v.rPrime*2^v.shift)) :
+    (remainderMicrostep v).r<v.rPrime*2^v.shift ∧
+    v.r=(if (remainderMicrostep v).sign then v.rPrime*2^v.shift else 0)+(remainderMicrostep v).r := by
+  by_cases hle : v.rPrime*2^v.shift≤v.r
+  · simp [remainderMicrostep,hp,EEAPhase.bits,hle,Nat.not_lt.mpr hle]
+    omega
+  · simp [remainderMicrostep,hp,EEAPhase.bits,hle,Nat.lt_of_not_ge hle]
+
+/-- Consecutive actual B/C/D blocks compute one division digit. The input division
+bound supplies the zero high remainder bit needed for quotient insertion. -/
+theorem blockBCDForward_quotient_packed (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (v : EEAState) (h : IndexedStepLayout r n index)
+    (hp : IndexedPackedState r n s v) (hphase : v.phase=.quotient) (hsign : v.sign=false)
+    (hR : 0<v.lRPrime) (hRfit : v.lRPrime<2^r.lengthRPrime.length)
+    (hspan : v.lT+v.lQ+2+v.shift+v.lRPrime≤n+3)
+    (htp : v.tPrime<2^(v.lT+v.lQ+1+v.shift))
+    (hrp : v.rPrime<2^v.lRPrime) (hdouble : v.r<2*(v.rPrime*2^v.shift))
+    (hleftLow : (certifiedActiveWindows n index).remainder.start≤v.lT+v.lQ+2)
+    (hleftHigh : v.lT+v.lQ+2-(certifiedActiveWindows n index).remainder.start<2^r.lengthQ.length)
+    (hrightLow : v.shift+(certifiedActiveWindows n index).remainder.start≤n+3)
+    (hrightHigh : n+3-v.shift-(certifiedActiveWindows n index).remainder.start<2^r.lengthS.length)
+    (hfit : v.lT+v.lQ+2<2^r.lengthQ.length)
+    (hlo : (certifiedActiveWindows n index).quotientSwap.start≤v.lT+v.lQ+2)
+    (hhi : v.lT+v.lQ+2≤(certifiedActiveWindows n index).quotientSwap.stop)
+    (hq : v.q<2^v.lQ) :
+    let next := quotientPushMicrostep (remainderMicrostep v)
+    IndexedPackedState r n
+      (run (blockBForward r n (certifiedActiveWindows n index).remainder ++ blockCForward r ++
+        blockDForward r (certifiedActiveWindows n index).quotientSwap) s) next ∧
+    next.r<v.rPrime*2^v.shift ∧ next.q<2^next.lQ ∧
+    v.r=(if (remainderMicrostep v).sign then v.rPrime*2^v.shift else 0)+next.r := by
+  let w := n+3-(v.lT+v.lQ+2)
+  have hdiv : v.rPrime*2^v.shift<2^w := by
+    have he := Nat.mul_lt_mul_of_pos_right hrp (Nat.two_pow_pos v.shift)
+    rw [← Nat.pow_add] at he
+    exact he.trans_le (Nat.pow_le_pow_right (by decide) (by dsimp only [w]; omega))
+  have hrem : v.r<2^(n+3-(v.lT+v.lQ+1)) := by
+    have he : n+3-(v.lT+v.lQ+1)=w+1 := by dsimp only [w]; omega
+    rw [he,Nat.pow_succ]
+    omega
+  let mid := remainderMicrostep v
+  let b := run (blockBForward r n (certifiedActiveWindows n index).remainder) s
+  have hb : IndexedPackedState r n b mid := blockBForward_packed r n index s v h hp
+    (by simp [hphase,EEAPhase.bits]) hsign hR hRfit (by omega) htp hrp hrem
+    hleftLow hleftHigh hrightLow hrightHigh
+  have hbound := remainderMicrostep_quotient_bound v hphase hdouble
+  have hrz : wireAnd r.lengthRPrime b=false := by
+    rw [wireAnd_encoded_zero r.lengthRPrime b mid.lRPrime hb.lengthRP hRfit]
+    exact decide_eq_false (by change ¬ v.lRPrime=0; omega)
+  have hc := blockCForward_nonterminal r n index b h hb.clean hrz
+  have hd := blockDForward_quotient_packed r n index b mid h hb hphase (by dsimp only [mid,remainderMicrostep]; omega)
+    hfit hlo hhi hq (hbound.1.trans hdiv)
+  dsimp only
+  rw [Classical.run_append,Classical.run_append]
+  change IndexedPackedState r n (run (blockDForward r (certifiedActiveWindows n index).quotientSwap)
+    (run (blockCForward r) b)) _ ∧ _
+  rw [hc]
+  exact ⟨hd.1,hbound.1,hd.2,hbound.2⟩
+
 end ShorECDLP.Paper2607_13816
