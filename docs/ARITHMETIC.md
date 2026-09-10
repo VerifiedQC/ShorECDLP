@@ -2479,3 +2479,7 @@ The active-boundary theorem `indexedScheduleUnitary_active_paperStep` also deriv
 `secp256k1EEAForward_terminalState` connects the actual active run to the terminal-padding invariant across all 1,620 production steps, starting from the preprocessing output. It establishes the final phase, clean scratch, zero-remainder sentinel and padding-counter encoding; retaining the arithmetic work-bank payload through the rotating padding suffix is a separate proof boundary.
 
 `secp256k1EEAForward_payload` also identifies the arithmetic payload after all 1,620 actual steps: Work1 retains the terminal canonical packing, Work2 contains the terminal coefficient rotated by exactly the padding count, and parity and coefficient length are preserved. The wrapper must still canonicalize this rotation, compress the epoch and apply the parity correction before exposing the inverse. No circuit definitions change in this payload refinement.
+
+### Canonical coefficient rotation stages
+
+`canonicalWork2RotationBit` implements each of the ten controlled right rotations in the pinned wrapper, using its exact greedy source-to-target swap order on the 259-wire Work2 bank. Its complete-state contract covers arbitrary data, restores the control and every outside wire, and derives the right-rotation direction from kernel-checked permutation certificates. Each same-circuit resource certificate gives 258 CCX, 516 CX, zero X, 1,806 T and at most 260 wires. Preparing the ten-bit shift counter and composing these stages into complete canonicalization remain the next boundary.
