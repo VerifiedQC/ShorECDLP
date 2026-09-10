@@ -1,5 +1,6 @@
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointCorrectionResources
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointConstantResources
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointResourceCounts
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointStateEncoding
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointTotalCircuit
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointTotal

@@ -130,4 +130,62 @@ theorem controlledModularNegate256_counts (A D : List Wire) (q c r t f : Wire)
     AdaptiveCircuit.measurementCount,hc,h1.1,h1.2,h2.1,h2.2,h3.1,h3.2]
   constructor <;> trivial
 
+
+private theorem compareWord256_T (A B : List Wire) (q c f : Wire)
+    (hA : A.length=256) (hB : B.length=256) :
+    ShorECDLP.tCount (controlledCompareLT A B q c f)=3591 := by
+  cases A with
+  | nil => simp at hA
+  | cons a as =>
+    have hh := (controlledCompareLT_counts a as B q c f (hA.trans hB.symm)).2.2.2
+    have hl : as.length=255 := by simpa using hA
+    simpa only [hl] using hh
+
+theorem modularArithmetic256_counts (A B : List Wire) (K : List Bool) (q c r t f : Wire)
+    (hA : A.length=256) (hB : B.length=256) (hK : K.length=256) (hk : boolWordToNat K≠0) :
+    ((controlledModularAdd B A K ShorECDLP.p q c r t f).tCount=19691 ∧
+      (controlledModularAdd B A K ShorECDLP.p q c r t f).measurementCount=511) ∧
+    ((controlledModularSub B A K ShorECDLP.p q c r t f).tCount=19691 ∧
+      (controlledModularSub B A K ShorECDLP.p q c r t f).measurementCount=511) := by
+  have hd : (B.take (A.length-1)).length=255 := by simp [hA,hB]
+  have ha := constant256_counts A _ K f c r t hA hd hK
+  simp only [if_neg hk] at ha
+  have hg := comparison256_counts A B ShorECDLP.p c r t f hA hB ShorECDLP.Secp256k1.p_prime.pos (by decide +kernel)
+  have ht := controlledAddCarry_tCount B A q c f (hB.trans hA.symm)
+  rw [hB] at ht
+  have hl := compareWord256_T A B q c f hA hB
+  have hsub : ShorECDLP.tCount (controlledSubCarry B A q c f)=5383 := by
+    simpa only [controlledSubCarry,tCount_adjoint] using ht
+  constructor
+  · have hh := (doublingFour_counts (controlledAddCarry B A q c f) (controlledCompareLT A B q c f)
+      (gidneyCompareGE A B ShorECDLP.p c r t f) (controlledGidneyAddConst A (B.take (A.length-1)) K f c r t)).2.2
+    simpa only [controlledModularAdd,ht,hl,hg.1,hg.2,ha.1,ha.2] using hh
+  · have hh := (doublingFour_counts (controlledCompareLT A B q c f) (controlledSubCarry B A q c f)
+      (controlledGidneyAddConst A (B.take (A.length-1)) K f c r t) (gidneyCompareGE A B ShorECDLP.p c r t f)).2.2
+    simpa only [controlledModularSub,hsub,hl,hg.1,hg.2,ha.1,ha.2] using hh
+
+theorem modularScaling256_counts (A B : List Wire) (K : List Bool) (c r t f : Wire)
+    (hA : A.length=256) (hB : B.length=256) (hK : K.length=256) (hk : boolWordToNat K≠0) :
+    ((modularDouble A B K ShorECDLP.p c r t f).tCount=10717 ∧
+      (modularDouble A B K ShorECDLP.p c r t f).measurementCount=511) ∧
+    ((modularHalve A B K ShorECDLP.p c r t f).tCount=10717 ∧
+      (modularHalve A B K ShorECDLP.p c r t f).measurementCount=511) := by
+  cases A with
+  | nil => simp at hA
+  | cons a as =>
+    have hd : (B.take as.length).length=255 := by simp only [List.length_cons] at hA; simp [hB]; omega
+    have ha := constant256_counts (a::as) _ K f c r t hA hd hK
+    simp only [if_neg hk] at ha
+    have hg := comparison256_counts (a::as) B ShorECDLP.p c r t f hA hB ShorECDLP.Secp256k1.p_prime.pos (by decide +kernel)
+    have hs := (doublingShift_counts a f as).2.2
+    have hx : ShorECDLP.tCount [.CX a f]=0 := rfl
+    constructor
+    · have hh := (doublingFour_counts (doublingShift (a::as) f) ([.CX a f] : Circuit)
+        (gidneyCompareGE (a::as) B ShorECDLP.p c r t f) (controlledGidneyAddConst (a::as) (B.take as.length) K f c r t)).2.2
+      simpa only [modularDouble,hs,hx,hg.1,hg.2,ha.1,ha.2] using hh
+    · have hh := (doublingFour_counts ([.CX a f] : Circuit) (doublingShift (a::as) f).adjoint
+        (controlledGidneyAddConst (a::as) (B.take as.length) K f c r t) (gidneyCompareGE (a::as) B ShorECDLP.p c r t f)).2.2
+      simpa only [modularHalve,tCount_adjoint,hs,hx,hg.1,hg.2,ha.1,ha.2] using hh
+
+
 end ShorECDLP.Paper2607_13816
