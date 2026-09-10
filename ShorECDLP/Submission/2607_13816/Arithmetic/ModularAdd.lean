@@ -326,23 +326,6 @@ theorem controlledModularAdd_branch_correct (input acc : List Wire) (correction 
     rw [hadd.2,map_smul,map_smul,Quantum.run_ket_agrees_classical _ _ (controlledCompareLT_HPFree acc input q c f),hlast]
     simp only [smul_smul,Quantum.registerXResetMagnitude,← pow_add]
 
-theorem modularGateCount_seq (cost : Gate → Nat) (a b : Quantum.AdaptiveCircuit) :
-    gidneyGateCount cost (a.seq b) = gidneyGateCount cost a + gidneyGateCount cost b := by
-  induction a with
-  | done => simp [Quantum.AdaptiveCircuit.seq,gidneyGateCount]
-  | unitary gates next ih => simp [Quantum.AdaptiveCircuit.seq,gidneyGateCount,ih,Nat.add_assoc]
-  | xMeasureReset w l r ihl ihr =>
-      simp [Quantum.AdaptiveCircuit.seq,gidneyGateCount,ihl,ihr,max_add_add_right]
-
-theorem modularMeasurements_seq (a b : Quantum.AdaptiveCircuit) :
-    (a.seq b).measurementCount = a.measurementCount + b.measurementCount := by
-  induction a with
-  | done => simp [Quantum.AdaptiveCircuit.seq,Quantum.AdaptiveCircuit.measurementCount]
-  | unitary gates next ih => exact ih
-  | xMeasureReset w l r ihl ihr =>
-      simp [Quantum.AdaptiveCircuit.seq,Quantum.AdaptiveCircuit.measurementCount,ihl,ihr,
-        max_add_add_right,Nat.add_assoc]
-
 theorem modularWires_seq (a b : Quantum.AdaptiveCircuit) (w : Wire) :
     w ∈ (a.seq b).wires ↔ w ∈ a.wires ∨ w ∈ b.wires := by
   induction a with

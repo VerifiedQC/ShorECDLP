@@ -41,6 +41,37 @@ def controlledConstCarryXor (input dirty : List Wire) (constant : List Bool)
         carryConstCCX control carry a d k k ++ carryXorForward control d as ds ks
   | _, _, _ => []
 
+/-- The borrowed-carry stream consists only of CNOT and Toffoli gates. -/
+theorem controlledConstCarryXor_cost_zero (cost : Gate → Nat)
+    (hcx : ∀ a b, cost (.CX a b) = 0) (hccx : ∀ a b c, cost (.CCX a b c) = 0)
+    (input dirty : List Wire) (constant : List Bool) (q c : Wire) :
+    ((controlledConstCarryXor input dirty constant q c).map cost).sum = 0 := by
+  have cell (a b d : Wire) (ka kb : Bool) :
+      ((carryConstCCX q a b d ka kb).map cost).sum = 0 := by
+    cases ka <;> cases kb <;> simp [carryConstCCX,hcx,hccx]
+  have back (as ds : List Wire) (ks : List Bool) (p : Wire) :
+      ((carryXorBackward q p as ds ks).map cost).sum = 0 := by
+    induction as generalizing ds ks p with
+    | nil => rfl
+    | cons a as ih =>
+      cases ds <;> cases ks <;> simp [carryXorBackward,List.map_append,List.sum_append,cell,ih]
+  have forward (as ds : List Wire) (ks : List Bool) (p : Wire) :
+      ((carryXorForward q p as ds ks).map cost).sum = 0 := by
+    induction as generalizing ds ks p with
+    | nil => rfl
+    | cons a as ih =>
+      cases ds <;> cases ks <;> simp [carryXorForward,List.map_append,List.sum_append,cell,ih]
+  have constants (ds : List Wire) (ks : List Bool) :
+      ((carryXorConstants q ds ks).map cost).sum = 0 := by
+    induction ds generalizing ks with
+    | nil => rfl
+    | cons d ds ih =>
+      cases ks with
+      | nil => rfl
+      | cons k ks => cases k <;> simp [carryXorConstants,hcx,ih]
+  cases input <;> cases dirty <;> cases constant <;>
+    simp [controlledConstCarryXor,List.map_append,List.sum_append,back,forward,constants,cell]
+
 /-- Ordinary carry-out bits of adding two little-endian words. -/
 def constantCarryBits (incoming : Bool) : List Bool → List Bool → List Bool
   | a :: as, k :: ks =>

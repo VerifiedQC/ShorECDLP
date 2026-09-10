@@ -1881,11 +1881,20 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointAddProgram_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.pointAddProgram_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.pointAddProgram_certificate
+#print axioms ShorECDLP.Paper2607_13816.primitivePhaseCost_of_HPFree
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_seq
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_branch
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_T_le
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_T_of_no_phase
+#print axioms ShorECDLP.Paper2607_13816.controlledConstCarryXor_cost_zero
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_phase_zero
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_XH_le
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_toffoli_nonzero
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1860 ]]; then
-  printf 'expected 1860 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1869 ]]; then
+  printf 'expected 1869 #print axioms results\n' >&2
   exit 1
 fi
 
