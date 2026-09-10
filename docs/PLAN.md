@@ -2234,3 +2234,18 @@ group law. A direct coordinate formula, exceptional-point correction, and aggreg
 resources remain open. Phases 10–12 remain open.
 
 The fixed constant-add and negation stages follow the pinned `S[:4]` order exactly: flag 558 and clean helpers 559, 560, 561. The square stage retains its distinct source role ordering on the shared bank.
+
+
+### Figure 14 coordinate arithmetic and disabled control
+
+The shared-layout program now has a direct nine-stage coordinate-value formula. With the
+point control disabled, the whole basis state is restored, including zero intermediate
+multipliers; the same actual program coherently implements the identity on that supported
+subspace. With the control enabled, the actual output coordinates agree with the existing
+elliptic-curve affine addition formula whenever the input X differs from the constant X and
+the resulting X also differs from the constant X. The second condition records the source's
+second potentially zero multiplication factor; it is not silently assumed away.
+
+Total exceptional-point correction and aggregate Phase 9 resources remain open. These
+coordinate formulas do not yet handle infinity, doubling, inverse pairs or the additional
+second-factor exceptional input as a total group-law circuit. Phases 10–12 remain open.
