@@ -1655,13 +1655,24 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPTotalGateCount_correct
 #print axioms ShorECDLP.Paper2607_13816.hornerMul256_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.hornerMulInverse256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBank_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBank_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_certificate
 #print axioms ShorECDLP.qubitCount
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPTrial_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1636 ]]; then
-  printf 'expected 1636 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1647 ]]; then
+  printf 'expected 1647 #print axioms results\n' >&2
   exit 1
 fi
 
