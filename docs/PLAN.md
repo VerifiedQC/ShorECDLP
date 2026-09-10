@@ -685,6 +685,8 @@ independent review and hosted CI.
 
 ### Phase 8 — in-place division and multiplication
 
+**Current closure:** both literal Figure 15 programs have coherent arithmetic and complete cleanup on the canonical/nonzero input domain. Their combined certificates give 269,605,707 T gates, 11,343,835 measurements and at most 836 physical wires. This is an honest upper bound, one wire above the paper target; the historical prerequisite notes below describe the construction. Total point-addition exceptional cases belong to Phase 9.
+
 Module: `Submission/2607_13816/Arithmetic/InPlace.lean`.
 
 Implement Figure 15: forward EEA; compute `y/x`; X-measure/reset old `Y`; reverse EEA using released
@@ -2200,3 +2202,5 @@ The explicit reverse EEA now also has a direct 580-wire adaptive certificate. It
 Both complete adaptive EEA wrappers now have direct 580-wire certificates, including centering, length setup/undo, work-register preparation/restoration, canonical rotations, epoch compression, parity correction and all 1,620 forward/reverse steps. Every measurement branch is included before deduplicating labels. The remaining Phase 8 physical boundary is the complete Figure 15 composition with its borrowed Y bank and Horner arithmetic.
 
 Both width-256 Horner directions now have generic physical-support certificates for arbitrary control, input and accumulator bank labels. Their actual modular add/subtract and double/halve programs include all measurement corrections and borrow work only from the stated banks. Specialization and composition into the complete Figure 15 allocation remain open.
+
+The complete Figure 15 division and multiplication now have direct physical bounds of 836 wires on the same terms as their coherent contracts and resource totals. The proof includes all Horner calls, both EEA directions, the relabeled borrowed-Y bank, every measurement/reset continuation, transcript-selected Z corrections and final three-CX swaps. Combined public certificates collect coherence, 269,605,707 T gates, 11,343,835 measurements and the 836-wire upper bound. Phase 9 total controlled point addition is the next boundary.
