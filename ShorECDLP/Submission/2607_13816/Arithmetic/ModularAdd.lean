@@ -530,6 +530,13 @@ private theorem modularProduction_wires (w : Wire) :
       dsimp only [Wire] at *
       omega
 
+/-- State-independent resource counts for composition into larger circuits. -/
+theorem secp256k1ModularAdd_counts :
+    gidneyToffoliCount secp256k1ModularAdd = 2813 ∧
+    gidneyCnotCount secp256k1ModularAdd = 4929 ∧
+    secp256k1ModularAdd.tCount = 19691 ∧
+    secp256k1ModularAdd.measurementCount = 511 := modularProduction_counts
+
 private theorem modularProduction_qubits : secp256k1ModularAdd.qubitCount = 517 := by
   have heq : secp256k1ModularAdd.wires.dedup.toFinset = (List.range' 0 517).toFinset := by
     ext w; simpa only [List.mem_toFinset,List.mem_dedup] using modularProduction_wires w

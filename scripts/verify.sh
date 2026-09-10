@@ -1666,13 +1666,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_certificate
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ModularAdd_counts
+#print axioms ShorECDLP.Paper2607_13816.copiedModularAddIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.copiedModularAdd_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.copiedModularAdd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1CopiedModularAdd_certificate
 #print axioms ShorECDLP.qubitCount
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPTrial_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1647 ]]; then
-  printf 'expected 1647 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1652 ]]; then
+  printf 'expected 1652 #print axioms results\n' >&2
   exit 1
 fi
 
