@@ -4,10 +4,10 @@ open Classical Quantum
 local instance : Fact (Nat.Prime ShorECDLP.p) := ⟨ShorECDLP.Secp256k1.p_prime⟩
 attribute [local irreducible] fig14CoordinateState
 /-- Complete coordinate program followed by physical exceptional correction. -/
-noncomputable def totalPointProgram {x₂ y₂ : ShorECDLP.Fp}
+def totalPointProgram {x₂ y₂ : ShorECDLP.Fp}
     (hC : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular x₂ y₂) : AdaptiveCircuit :=
   (fig14CoordinateProgram x₂.val y₂.val).seq (.unitary (pointCorrectionCircuit hC) .done)
-noncomputable def totalPointState {x₂ y₂ : ShorECDLP.Fp}
+def totalPointState {x₂ y₂ : ShorECDLP.Fp}
     (hC : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular x₂ y₂) (s : BasisState) : BasisState :=
   Classical.run (pointCorrectionCircuit hC) (fig14CoordinateState x₂.val y₂.val s)
 

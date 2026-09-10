@@ -2286,3 +2286,7 @@ and aggregate Phase 9 resources remain open. No new physical-width claim is made
 ### Phase 9 total controlled group addition
 
 `PointStateEncoding`, `PointTotalCircuit`, and `PointTotal` compose the nine actual coordinate stages with the physical exceptional correction. The same adaptive program has normalized coherent refinement and a complete-state theorem for controlled addition of every curve point by every constant curve point; an infinity constant compiles to the empty program. Infinity inputs, doubling, inverse pairs and the second zero-factor case are covered. All external wires are restored. Executable constant instantiation and aggregate total-point resources remain open; this does not claim Phase 9 completion.
+
+### Phase 9 executable exception generation
+
+The correction now enumerates `[infinity, C, -C, -(C+C)]` in a fixed order and deduplicates by canonical coordinates. Coverage and the four-point bound are preserved, and all coordinate, correction and total-point constructors compile without `noncomputable`. The complete-state and coherent theorems are rechecked on these deterministic circuits. `artifacts/check-point-correction.py` evaluates the standard generator correction, replays six group cases, checks empty infinity addition, and reports selected actual gate counts. Aggregate total-point resources remain open.

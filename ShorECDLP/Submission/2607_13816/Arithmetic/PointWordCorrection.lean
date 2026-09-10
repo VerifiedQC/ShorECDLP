@@ -46,7 +46,7 @@ private theorem run_expanded_swaps (pairs : List (List Bool × List Bool))
     rw [show List.foldl (fun y p => Equiv.swap p.1 p.2 y) x (wordGraySwaps a b)=Equiv.swap a b x from he]
     exact ht
 /-- Explicit adjacent-word swaps for the finite exceptional-point correction. -/
-noncomputable def pointCorrectionWordEdges {x₂ y₂ : ShorECDLP.Fp}
+def pointCorrectionWordEdges {x₂ y₂ : ShorECDLP.Fp}
     (hC : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular x₂ y₂) : List (List Bool × List Bool) :=
   ((fig14CorrectionSwaps hC).map (fun p => (pointCoordinateWord p.1,pointCoordinateWord p.2))).flatMap
     (fun p => wordGraySwaps p.1 p.2)

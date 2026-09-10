@@ -34,10 +34,10 @@ theorem totalPointState_correct {x₂ y₂ : ShorECDLP.Fp}
     exact word_frame_ext _ s _ (totalPointState_word hC P s hs hq hP) (totalPointState_frame hC s hs)
 
 /-- Addition by infinity is a static empty program. -/
-noncomputable def pointAddProgram : ShorECDLP.Secp256k1.Point → AdaptiveCircuit
+def pointAddProgram : ShorECDLP.Secp256k1.Point → AdaptiveCircuit
   | .zero => .done
   | .some hC => totalPointProgram hC
-noncomputable def pointAddState : ShorECDLP.Secp256k1.Point → BasisState → BasisState
+def pointAddState : ShorECDLP.Secp256k1.Point → BasisState → BasisState
   | .zero => id
   | .some hC => totalPointState hC
 

@@ -1846,11 +1846,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.totalPointState_correct
 #print axioms ShorECDLP.Paper2607_13816.pointAddState_correct
 #print axioms ShorECDLP.Paper2607_13816.pointAddProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14ExceptionalList_mem
+#print axioms ShorECDLP.Paper2607_13816.fig14ExceptionalList_length
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1825 ]]; then
-  printf 'expected 1825 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1827 ]]; then
+  printf 'expected 1827 #print axioms results\n' >&2
   exit 1
 fi
 
