@@ -2084,3 +2084,10 @@ remainder inverses. Its well-formedness and coherent equivalence hold on
 actual preceding unitary prefixes. No reachable-state claim is hidden in these
 conditions. Deriving them from the forward endpoint, composing the reverse
 schedule, and undoing preprocessing remain open.
+
+The explicit adaptive inverse schedule is now composed in descending index order,
+including the 1,620-step secp256k1 instance. Physical well-formedness follows from
+the per-index layout. Coherent equivalence with the existing reverse unitary
+uses the actual-prefix inverse readiness predicate at every descending step;
+this predicate still needs a reachable-state derivation before the adaptive
+reverse can be applied unconditionally to the forward endpoint.
