@@ -2282,3 +2282,7 @@ and aggregate Phase 9 resources remain open. No new physical-width claim is made
 ### Phase 9 complete physical exception correction
 
 `PointWordProgram` compiles an ordered adjacent-word sequence and preserves cleanup and external frame throughout. `PointCorrectionCircuit` applies it to the exceptional-point correction: on every encoded curve point after the coordinate permutation, the actual gate sequence produces the encoded group sum, with full disabled identity. The same complete correction has bounds of 88,453,512 T and 839 wires, with well-formed, HP-free ket semantics. The endpoint list remains mathematically generated; composing the coordinate and correction circuits, executable constant instantiation, and aggregate total-point resources remain open.
+
+### Phase 9 total controlled group addition
+
+`PointStateEncoding`, `PointTotalCircuit`, and `PointTotal` compose the nine actual coordinate stages with the physical exceptional correction. The same adaptive program has normalized coherent refinement and a complete-state theorem for controlled addition of every curve point by every constant curve point; an infinity constant compiles to the empty program. Infinity inputs, doubling, inverse pairs and the second zero-factor case are covered. All external wires are restored. Executable constant instantiation and aggregate total-point resources remain open; this does not claim Phase 9 completion.
