@@ -2406,3 +2406,18 @@ combined circuit returns a canonical packed state with a strictly smaller second
 remainder. The quotient's true bit length, initial numerical bounds, layouts,
 window coverage and final H alignment remain explicit; their production
 reachability is not claimed.
+
+### Packed remainder subtraction
+
+`blockBForward_packed` establishes the complete packed logical effect of Block B
+from an `IndexedPackedState`. The rotated second-bank slice is proved to contain
+the divisor, while the first-bank slice decodes the high remainder bits. The
+result preserves the coefficient/quotient fields and all metadata, conditionally
+subtracts the aligned divisor, sets the comparison sign and cleans auxiliaries.
+The low shift bits are included in the whole remainder, not discarded.
+
+The theorem covers both remainder and quotient phases with a clear entry sign.
+It requires a positive encoded divisor length, numerical packing/capacity bounds,
+a coefficient confined to the prefix and remainder-window coverage. These
+hypotheses determine the scan values; no physical slice values are assumed. The
+full A–H remainder/quotient microstep and its reachable-state bounds remain open.

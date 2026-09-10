@@ -334,4 +334,36 @@ theorem endpoint_canonical_bank_views (bank oldT newT RP old new rem rp : Nat)
     (endpoint_packed_repartition bank newT RP new rp hspan hnew hrp).symm⟩
 
 
+private theorem rotate_remainder_slice (bits : List Bool) (shift start : Nat)
+    (h : shift+start≤bits.length) :
+    ((bits.rotate shift).drop start).take (bits.length-shift-start) = bits.drop (shift+start) := by
+  rw [List.rotate_eq_drop_append_take (by omega),List.drop_append]
+  have hz : start-(bits.drop shift).length=0 := by simp only [List.length_drop]; omega
+  rw [hz,List.drop_zero,List.drop_drop]
+  have he : (bits.drop (shift+start)).length=bits.length-shift-start := by
+    simp only [List.length_drop]
+    omega
+  rw [← he,List.take_left]
+
+/-- The active big-endian remainder slice of rotated Work2 contains precisely
+the divisor; the coefficient is confined to the preceding prefix. -/
+theorem packed_remainder_divisor (bank start shift R tp rp : Nat)
+    (hspan : start+shift+R≤bank) (ht : tp<2^(start+shift)) (hrp : rp<2^R) :
+    ((((constantBits (bank-R) tp ++ (constantBits R rp).reverse).rotate shift).drop start).take
+      (bank-shift-start)) = (constantBits (bank-shift-start) rp).reverse := by
+  have hlen : (constantBits (bank-R) tp ++ (constantBits R rp).reverse).length=bank := by
+    simp only [List.length_append,constantBits_length,List.length_reverse]
+    omega
+  have hr := rotate_remainder_slice
+    (constantBits (bank-R) tp ++ (constantBits R rp).reverse) shift start (by rw [hlen]; omega)
+  rw [hlen] at hr
+  rw [hr,show shift+start=start+shift by omega,
+    coefficient_zero_extend (start+shift) (bank-R) tp (by omega) ht,List.append_assoc]
+  rw [List.drop_left' (l₂ := List.replicate (bank-R-(start+shift)) false ++ (constantBits R rp).reverse)
+    (by simp only [constantBits_length])]
+  rw [coefficient_zero_extend R (bank-shift-start) rp (by omega) hrp,
+    List.reverse_append,List.reverse_replicate]
+  congr 2
+  omega
+
 end ShorECDLP.Paper2607_13816
