@@ -38,6 +38,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig15DivisionRecompute_bits
 #print axioms ShorECDLP.Paper2607_13816.fig15DivisionRecompute_phase
 #print axioms ShorECDLP.Paper2607_13816.fig15SwapOutput_run
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionOutputState
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionOutputState_eq
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionOutputState_word
 #print axioms ShorECDLP.Paper2607_13816.Secp256k1EEAForwardLocalImage
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_coherent_localImage
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_output_localImage
@@ -1563,8 +1567,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1539 ]]; then
-  printf 'expected 1539 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1543 ]]; then
+  printf 'expected 1543 #print axioms results\n' >&2
   exit 1
 fi
 

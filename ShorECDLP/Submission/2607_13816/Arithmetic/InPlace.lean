@@ -502,5 +502,208 @@ theorem fig15SwapOutput_run (s : BasisState) :
       else if w ∈ List.range' 580 256 then s (w-573) else s w := by
   simpa only [swapPrefix,fig15SwapOutput,List.mem_range'_1] using swapPrefix_run 256 (by omega) s
 
+private def divisionResetValid (t : BasisState) : Prop :=
+  ∃ s, Secp256k1InPlaceInputValid s ∧
+    t = clearRegister (List.range' 580 256) (fig15WorkProductState (secp256k1EEAOutputIdealState s))
+private def divisionRestoreMap : State →ₗ[ℂ] State :=
+  (relabelState eeaWorkspaceExchange).comp
+    ((Finsupp.lmapDomain ℂ ℂ secp256k1EEAReverseWrapperIdealState).comp
+      (relabelState eeaWorkspaceExchange.symm))
+private def divisionRecomputeMap : State →ₗ[ℂ] State :=
+  (Finsupp.lmapDomain ℂ ℂ fig15DataProductState).comp divisionRestoreMap
+private def divisionCorrectMap (outcomes : List Bool) : State →ₗ[ℂ] State :=
+  (Quantum.run (registerZCorrection (List.range' 580 256) outcomes)).comp divisionRecomputeMap
+private def divisionUncomputeMap (outcomes : List Bool) : State →ₗ[ℂ] State :=
+  (Finsupp.lmapDomain ℂ ℂ (hornerClearOutput (List.range' 580 256))).comp (divisionCorrectMap outcomes)
+private theorem division_restore_ket (s : BasisState) :
+    divisionRestoreMap (ket (clearRegister (List.range' 580 256)
+      (fig15WorkProductState (secp256k1EEAOutputIdealState s)))) =
+      ket (fig15DivisionRestoredState s) := by
+  simp only [divisionRestoreMap,LinearMap.comp_apply,relabelState_ket,basis_lift_ket,
+    fig15DivisionRestoredState]
+private theorem division_recompute_ket (s : BasisState) :
+    divisionRecomputeMap (ket (clearRegister (List.range' 580 256)
+      (fig15WorkProductState (secp256k1EEAOutputIdealState s)))) =
+      ket (fig15DataProductState (fig15DivisionRestoredState s)) := by
+  simp only [divisionRecomputeMap,LinearMap.comp_apply,division_restore_ket,basis_lift_ket]
+private theorem division_correct_ket (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    divisionCorrectMap outcomes (ket (clearRegister (List.range' 580 256)
+      (fig15WorkProductState (secp256k1EEAOutputIdealState s)))) =
+      registerXPhase (List.range' 580 256) outcomes s •
+        ket (fig15DataProductState (fig15DivisionRestoredState s)) := by
+  simp only [divisionCorrectMap,LinearMap.comp_apply,division_recompute_ket,
+    fig15DivisionRecompute_phase s hs]
+private theorem supported_phase {Valid : BasisState → Prop} (s : BasisState)
+    (c : ℂ) (hs : Valid s) : SupportedOn Valid (c • ket s) := by
+  intro t ht
+  have hts : s=t := by
+    by_contra h
+    apply ht
+    simp only [Finsupp.smul_apply,ket_ne h,smul_zero]
+  subst t
+  exact hs
+private theorem division_uncompute_state (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    hornerClearOutput (List.range' 580 256)
+      (fig15DataProductState (fig15DivisionRestoredState s)) = fig15DivisionRestoredState s := by
+  funext w
+  by_cases hw : w ∈ List.range' 580 256
+  · simp only [hornerClearOutput,if_pos hw]
+    exact ((restored_horner s hs).1 w hw).symm
+  · simp only [hornerClearOutput,if_neg hw]
+    exact (fig15DataProductState_correct _ (restored_horner s hs)).2 w hw
+private theorem division_uncompute_ket (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    divisionUncomputeMap outcomes (ket (clearRegister (List.range' 580 256)
+      (fig15WorkProductState (secp256k1EEAOutputIdealState s)))) =
+      registerXPhase (List.range' 580 256) outcomes s • ket (fig15DivisionRestoredState s) := by
+  simp only [divisionUncomputeMap,LinearMap.comp_apply,division_correct_ket s hs,
+    map_smul,basis_lift_ket,division_uncompute_state s hs]
+private theorem division_continuation_coherent (outcomes : List Bool) :
+    CoherentlyImplementsOn (fig15DivisionAfterReset outcomes)
+      ((Quantum.run fig15SwapOutput).comp (divisionUncomputeMap outcomes)) divisionResetValid := by
+  have hr : CoherentlyImplementsOn secp256k1EEAReverseInDataBank divisionRestoreMap divisionResetValid := by
+    apply coherent_strengthen secp256k1EEAReverseInDataBank_coherent_localImage
+    rintro t ⟨s,hs,rfl⟩
+    exact fig15DivisionReset_inverseReady s hs
+  have hm := hr.seq fig15MultiplyToData_coherent (by
+    rintro t ⟨s,hs,rfl⟩
+    rw [division_restore_ket]
+    exact supportedOn_ket _ _ (restored_horner s hs))
+  have hz := hm.seq (CoherentlyImplementsOn.unitary
+    (registerZCorrection (List.range' 580 256) outcomes) (fun _ => True)) (by
+      intro t ht u hu; trivial)
+  have hi := hz.seq fig15MultiplyToDataInverse_coherent (by
+    rintro t ⟨s,hs,rfl⟩
+    change SupportedOn _ (divisionCorrectMap outcomes _)
+    rw [division_correct_ket s hs]
+    exact supported_phase _ _ ⟨fig15DivisionRestoredState s,restored_horner s hs,rfl⟩)
+  exact hi.seq (CoherentlyImplementsOn.unitary fig15SwapOutput (fun _ => True))
+    (by intro t ht u hu; trivial)
+private def divisionPreparedValid (t : BasisState) : Prop :=
+  ∃ s, Secp256k1InPlaceInputValid s ∧ t = fig15WorkProductState (secp256k1EEAOutputIdealState s)
+private def divisionPreparedOutput (t : BasisState) : BasisState :=
+  Classical.run fig15SwapOutput (relabelBasis eeaWorkspaceExchange
+    (secp256k1EEAReverseWrapperIdealState (relabelBasis eeaWorkspaceExchange.symm
+      (clearRegister (List.range' 580 256) t))))
+private theorem division_prepared_phase (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    registerXPhase (List.range' 580 256) outcomes
+      (fig15WorkProductState (secp256k1EEAOutputIdealState s)) =
+      registerXPhase (List.range' 580 256) outcomes s := by
+  apply phase_congr
+  apply List.map_congr_left
+  intro w hw
+  rw [(fig15WorkProductState_correct _ (fig15_after_eea_horner s hs)).2 w (by simp at hw ⊢; omega)]
+  exact secp256k1EEAOutputIdealState_preservesOutside s w (by simp at hw; dsimp only [Wire] at *; omega)
+private def divisionWitness : BasisState := fun w => decide (w = 263)
+private theorem divisionWitness_valid : Secp256k1InPlaceInputValid divisionWitness := by
+  refine ⟨⟨?_,?_,?_⟩,?_⟩
+  · intro w hw
+    simp only [List.mem_append,List.mem_range'_1] at hw
+    simp only [divisionWitness, decide_eq_false_iff_not]
+    dsimp only [Wire] at *
+    omega
+  · decide +kernel
+  · decide +kernel
+  · decide +kernel
+private theorem division_swap_hp : Classical.HPFree fig15SwapOutput := by
+  intro g hg
+  simp only [fig15SwapOutput,List.mem_flatMap] at hg
+  obtain ⟨i,hi,hg⟩ := hg
+  simp only [List.mem_cons,List.not_mem_nil,or_false] at hg
+  rcases hg with rfl | rfl | rfl <;> trivial
+attribute [local irreducible] Classical.run Quantum.run relabelBasis measureResetThen fig15DivisionAfterReset
+  divisionPreparedOutput divisionUncomputeMap
+private theorem division_prepared_output (s : BasisState) :
+    divisionPreparedOutput (fig15WorkProductState (secp256k1EEAOutputIdealState s)) =
+      Classical.run fig15SwapOutput (fig15DivisionRestoredState s) := by
+  delta divisionPreparedOutput fig15DivisionRestoredState
+  exact Eq.refl _
+private theorem division_final_ket (s : BasisState) (hs : Secp256k1InPlaceInputValid s)
+    (outcomes : List Bool) :
+    ((Quantum.run fig15SwapOutput).comp (divisionUncomputeMap outcomes))
+      (ket (clearRegister (List.range' 580 256) (fig15WorkProductState (secp256k1EEAOutputIdealState s)))) =
+      registerXPhase (List.range' 580 256) outcomes s •
+        ket (divisionPreparedOutput (fig15WorkProductState (secp256k1EEAOutputIdealState s))) := by
+  rw [LinearMap.comp_apply,division_uncompute_ket s hs,map_smul,
+    run_ket_agrees_classical _ _ division_swap_hp,division_prepared_output]
+private theorem division_reset_correct (outcomes : List Bool) (t : BasisState)
+    (ht : divisionPreparedValid t) :
+    divisionResetValid (clearRegister (List.range' 580 256) t) ∧
+    ((Quantum.run fig15SwapOutput).comp (divisionUncomputeMap outcomes))
+      (ket (clearRegister (List.range' 580 256) t)) =
+      registerXPhase (List.range' 580 256) outcomes t • ket (divisionPreparedOutput t) := by
+  obtain ⟨s,hs,rfl⟩ := ht
+  refine ⟨⟨s,hs,rfl⟩,?_⟩
+  rw [division_prepared_phase s hs]
+  exact division_final_ket s hs outcomes
+private theorem division_reset_coherent :
+    CoherentlyImplementsOn (measureResetThen (List.range' 580 256) fig15DivisionAfterReset)
+      (Finsupp.lmapDomain ℂ ℂ divisionPreparedOutput) divisionPreparedValid :=
+  measureResetThen_coherent (List.range' 580 256) fig15DivisionAfterReset
+    (fun outcomes => (Quantum.run fig15SwapOutput).comp (divisionUncomputeMap outcomes))
+    (fun _ => divisionResetValid) divisionPreparedValid divisionPreparedOutput List.nodup_range'
+    (fun outcomes _ => division_continuation_wellFormed outcomes)
+    division_continuation_coherent (fun outcomes _ t ht => division_reset_correct outcomes t ht)
+    (fig15WorkProductState (secp256k1EEAOutputIdealState divisionWitness))
+    ⟨divisionWitness,divisionWitness_valid,rfl⟩
+/-- Complete ideal output of the literal Figure 15 division, including its final bank swap. -/
+def fig15DivisionOutputState (s : BasisState) : BasisState :=
+  Classical.run fig15SwapOutput (fig15DivisionRestoredState s)
+/-- Every transcript of the actual full division implements one common linear map,
+with normalized coefficients independent of the valid input. -/
+theorem secp256k1InPlaceDivision_coherent :
+    CoherentlyImplementsOn secp256k1InPlaceDivision
+      (Finsupp.lmapDomain ℂ ℂ fig15DivisionOutputState) Secp256k1InPlaceInputValid := by
+  have h := fig15DivisionPrefix_coherent.seq division_reset_coherent (by
+    intro s hs
+    rw [basis_lift_ket]
+    exact supportedOn_ket _ _ ⟨s,hs,rfl⟩)
+  apply h.congrIdeal
+  intro s hs
+  simp only [LinearMap.comp_apply,basis_lift_ket]
+  delta divisionPreparedOutput fig15DivisionOutputState fig15DivisionRestoredState
+  rfl
+/-- Division changes only Y: the work bank is restored to its original clean value. -/
+theorem fig15DivisionOutputState_eq (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    fig15DivisionOutputState s = fun w =>
+      if w ∈ List.range' 580 256 then
+        fig15WorkProductState (secp256k1EEAOutputIdealState s) (w-573)
+      else s w := by
+  funext w
+  rw [fig15DivisionOutputState,fig15SwapOutput_run]
+  by_cases ha : w ∈ List.range' 7 256
+  · have hy : w ∉ List.range' 580 256 := by simp at ha ⊢; omega
+    have hy' : w+573 ∈ List.range' 580 256 := by simp at ha ⊢; dsimp only [Wire] at *; omega
+    have ha' : w+573 ∉ List.range' 7 256 := by simp
+    simp only [if_pos ha,if_neg hy,fig15DivisionRestoredState_eq s hs,if_neg ha',if_pos hy']
+    exact (hs.1.1 w (by simp at ha ⊢; omega)).symm
+  · by_cases hy : w ∈ List.range' 580 256
+    · have ha' : w-573 ∈ List.range' 7 256 := by simp at hy ⊢; dsimp only [Wire] at *; omega
+      simp only [if_neg ha,if_pos hy,fig15DivisionRestoredState_eq s hs,if_pos ha']
+    · simp only [if_neg ha,if_neg hy,fig15DivisionRestoredState_eq s hs]
+/-- The concrete output register contains Y/X modulo the secp256k1 prime. -/
+theorem fig15DivisionOutputState_word (s : BasisState) (hs : Secp256k1InPlaceInputValid s) :
+    boolWordToNat (wireValues (List.range' 580 256) (fig15DivisionOutputState s)) =
+      (boolWordToNat (wireValues (List.range' 580 256) s) *
+        paperInverse ShorECDLP.p (boolWordToNat (wireValues (List.range' 263 256) s))) % ShorECDLP.p := by
+  have hbits : wireValues (List.range' 580 256) (fig15DivisionOutputState s) =
+      wireValues (List.range' 7 256) (fig15WorkProductState (secp256k1EEAOutputIdealState s)) := by
+    have hmap : List.map (fun w : Nat => w-573) (List.range' 580 256) = List.range' 7 256 :=
+      List.map_sub_range' (by omega) 256
+    simp only [wireValues]
+    rw [← hmap,List.map_map]
+    apply List.map_congr_left
+    intro w hw
+    simp only [fig15DivisionOutputState_eq s hs,if_pos hw,Function.comp_apply]
+  rw [hbits,(fig15WorkProductState_correct _ (fig15_after_eea_horner s hs)).1]
+  have hY : wireValues (List.range' 580 256) (secp256k1EEAOutputIdealState s) =
+      wireValues (List.range' 580 256) s := by
+    apply List.map_congr_left
+    intro w hw
+    exact secp256k1EEAOutputIdealState_preservesOutside s w (by simp at hw; dsimp only [Wire] at *; omega)
+  rw [hY,(secp256k1EEAOutputIdealState_correct s hs.1.1 hs.1.2.1 hs.1.2.2).1]
+
 end
 end ShorECDLP.Paper2607_13816

@@ -2178,3 +2178,5 @@ selected Z correction produces exactly its measurement sign for every outcome.
 The actual final three-CX swap stream exchanges A and Y with a complete frame
 proof. The full continuation/measurement coherent composition and multiplication
 reconstruction remain open, followed by aggregate resources.
+
+The literal Figure 15 division now coherently implements one common linear map on all canonical Y and nonzero canonical X inputs with clean EEA work. The proof composes the actual adaptive inverse, recomputation, transcript-selected Z correction, inverse multiplication and final swaps with the 256-bit measurement/reset schedule. Its normalized branch coefficients are input-independent. The same output state puts Y/X modulo p in Y and restores every other wire, including the clean A bank. Multiplication reconstruction and aggregate resources remain open.
