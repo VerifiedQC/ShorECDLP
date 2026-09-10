@@ -117,6 +117,38 @@ private theorem coefficient_lower_interval (S Q t q tp : Nat) (hQ : 0<Q)
     _ ≤ (2^S*t)*q := Nat.mul_le_mul_left _ hlow
     _ ≤ tp+2^S*t*q := Nat.le_add_left _ _
 
+/-- Every proper phase prefix satisfies the adaptive cleanup preconditions. -/
+theorem indexedScheduleAdaptive_coefficient_input (r : IndexedStepRegisters) (n start count : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (hphase : v.phase=.coefficient) (hsign : v.sign=false) (hcount : count≤v.lQ)
+    (hlayout : ∀ offset<count, IndexedStepLayout r n (start+offset))
+    (hwindows : ∀ offset<count,
+      (certifiedActiveWindows n (start+offset)).quotientSwap.start ≤ v.lT+(v.lQ-offset)+1 ∧
+      v.lT+(v.lQ-offset)+1 ≤ (certifiedActiveWindows n (start+offset)).quotientSwap.stop ∧
+      v.lT+1 ∈ quotientSwapLabels 1 (certifiedActiveWindows n (start+offset)).coefficient.stop)
+    (hqmeta : v.lT+v.lQ+1 < 2^r.lengthQ.length)
+    (htmeta : v.lT+1 < 2^r.lengthT.length)
+    (hR : v.lRPrime≤n+3)
+    (hupper : n+3-v.lRPrime-v.shift < 2^r.lengthT.length)
+    (hspan : v.shift+count+v.lT ≤ n+3-v.lRPrime)
+    (ht : v.t<2^v.lT) (htp : v.tPrime<2^(n+3-v.lRPrime))
+    (hbound : v.tPrime<2^v.shift*v.t) (hq : v.q<2^v.lQ)
+    (hr : v.r<2^(n+3-(v.lT+v.lQ+1)))
+    (hswidth : 0<r.lengthS.length) (hscap : v.shift+count<2^r.lengthS.length)
+    (hrcap : v.lRPrime<2^r.lengthRPrime.length)
+    (hrpos : 0 < v.lRPrime) :
+    IndexedScheduleAdaptiveInput r n start count s := by
+  rw [indexedScheduleAdaptiveInput_iff_prefix]
+  intro k hk
+  have hpk := (indexedScheduleUnitary_coefficient_packed r n start k s v hp
+    hphase hsign (by omega)
+    (fun offset ho => hlayout offset (by omega))
+    (fun offset ho => hwindows offset (by omega))
+    hqmeta htmeta hR hupper (by omega) ht htp hbound hq hr hswidth (by omega) hrcap).1
+  have hsame := (coefficient_coordinates v k).2.2.2.2.1
+  exact hpk.cleanupInput (hlayout k hk) (by rw [hsame]; exact hrpos)
+    (by rw [hsame]; exact hrcap)
+
 /-- A complete coefficient phase enters swap with a tight coefficient interval.
 The quotient's true bit length derives the lower bound; no intermediate states
 or final phase decisions are assumed. -/

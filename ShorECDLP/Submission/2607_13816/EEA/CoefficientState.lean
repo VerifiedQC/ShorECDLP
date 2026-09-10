@@ -62,6 +62,25 @@ structure IndexedPackedState (r : IndexedStepRegisters) (n : Nat) (s : BasisStat
   iter : s r.iter = v.iter
   clean : Clean r.aux s
 
+/-- A packed active state supplies scratch readiness and the borrowed-epoch encoding. -/
+theorem IndexedPackedState.cleanupInput {r : IndexedStepRegisters} {n index : Nat}
+    {s : BasisState} {v : EEAState} (hp : IndexedPackedState r n s v)
+    (h : IndexedStepLayout r n index) (hpos : 0 < v.lRPrime)
+    (hfit : v.lRPrime < 2^r.lengthRPrime.length) :
+    IndexedStepReady r s ∧ IndexedStepEpochEncoded r s := by
+  apply indexedStep_active_cleanupInput r n index s h hp.clean
+  rw [wireAnd_eq_numeric_allOnes, hp.lengthRP]
+  have hpow : 1 < 2^r.lengthRPrime.length := by omega
+  have hv : truthMinusOneValue r.lengthRPrime.length v.lRPrime = v.lRPrime-1 := by
+    change (v.lRPrime+2^r.lengthRPrime.length-1%2^r.lengthRPrime.length)%
+      2^r.lengthRPrime.length = v.lRPrime-1
+    rw [Nat.mod_eq_of_lt hpow]
+    have he : v.lRPrime+2^r.lengthRPrime.length-1 =
+        (v.lRPrime-1)+2^r.lengthRPrime.length := by omega
+    rw [he, Nat.add_mod_right, Nat.mod_eq_of_lt (by omega)]
+  rw [hv]
+  exact decide_eq_false (by omega)
+
 /-- One coefficient microstep on the unweighted quotient prefix carried by Work1. -/
 def coefficientMicrostep (v : EEAState) : EEAState :=
   let switch := decide (v.lQ=1) && !decide (v.lRPrime=0)

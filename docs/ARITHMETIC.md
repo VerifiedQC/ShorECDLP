@@ -2499,3 +2499,7 @@ The active-boundary theorem `indexedScheduleUnitary_active_paperStep` also deriv
 ### Terminal Work1 clearing
 
 The terminal packing is derived from the complete arithmetic prefix as `(p,1)`, independent of the input. `terminalWork1Clear` follows the source's 251 X gates, clears all 259 Work1 wires, and preserves every other wire. The completed arithmetic state theorem retains the proved modular inverse while clearing Work1, the borrowed epoch, and shared scratch. Other EEA metadata remains for reversal; this is not a claim that all 580 roles are clean. Complete adaptive wrapper composition and Figure 15 remain subsequent work.
+
+### Adaptive cleanup along actual prefixes
+
+`IndexedScheduleAdaptiveInput` requires clean shared scratch and valid borrowed-epoch encoding at each proper actual unitary prefix. These conditions suffice for coherent refinement of the same adaptive schedule, without decoder-route assumptions. The condition composes over intervals, and the existing routed invariant implies it. Packed active states discharge the single-step conditions; all proper prefixes of alignment, quotient, coefficient and swap phases inherit them from the existing packed-state proofs. The swap interval includes the input to its final endpoint. Full reachable-iteration and terminal-suffix composition remains the next boundary. No circuits or resource counts change.

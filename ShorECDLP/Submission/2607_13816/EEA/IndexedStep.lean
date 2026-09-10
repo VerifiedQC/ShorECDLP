@@ -13872,4 +13872,23 @@ theorem blockHForward_nonzeroShift (r : IndexedStepRegisters) (n T : Nat)
     (hz : wireAnd r.lengthS s=false) : run (blockHForward r n T) s=s := by
   exact coefficient_blockH_idle r n T s h hr (by simp [hz])
 
+/-- Clean active frames meet the two hypotheses needed by measurement cleanup. -/
+theorem indexedStep_active_cleanupInput (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n index)
+    (hc : Clean r.aux s) (hrp : wireAnd r.lengthRPrime s = false) :
+    IndexedStepReady r s ∧ IndexedStepEpochEncoded r s := by
+  constructor
+  · intro w hw
+    apply hc
+    simp only [IndexedStepRegisters.sharedScratch, List.mem_cons, List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst w; exact h.control_mem_aux
+    · exact h.sourceScratch_mem_aux he
+    · exact h.remainderRepairScratch_mem_aux he
+  · have hn : registerMatches (terminalConditionWires r) (terminalConditionValue r) s = false := by
+      rw [terminalConditionWires, terminalConditionValue, terminal_detection, hrp]
+      simp
+    simp only [IndexedStepEpochEncoded, hn, Bool.false_eq_true, if_false]
+    exact hc _ h.shiftEpoch_mem_aux
+
 end ShorECDLP.Paper2607_13816

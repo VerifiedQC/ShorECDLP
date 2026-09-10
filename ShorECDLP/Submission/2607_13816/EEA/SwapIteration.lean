@@ -112,6 +112,34 @@ theorem indexedScheduleUnitary_swap_prefix_packed (r : IndexedStepRegisters)
     rw [heq] at hstep
     exact hstep
 
+/-- Every proper phase prefix satisfies the adaptive cleanup preconditions. -/
+theorem indexedScheduleAdaptive_swap_input (r : IndexedStepRegisters)
+    (n start count : Nat) (s : BasisState) (v : EEAState)
+    (hp : IndexedPackedState r n s v) (hphase : v.phase=.swap) (hsign : v.sign=true)
+    (hcount : count≤v.shift)
+    (hlayout : ∀ offset<count, IndexedStepLayout r n (start+offset))
+    (hwindows : ∀ offset<count, n+3-v.lRPrime-(v.shift-offset) ∈
+      quotientSwapLabels 1 (certifiedActiveWindows n (start+offset)).coefficient.stop)
+    (hcapacity : n+3<2^r.lengthT.length) (hspan : v.lT+1+v.lRPrime≤n+3)
+    (hlo : v.lRPrime+v.shift≤n+3)
+    (ht : v.t<2^v.lT) (htB : v.t<2^(n+3-v.lRPrime-v.shift))
+    (htp : v.tPrime<2^(n+3-v.lRPrime)) (hrem : v.r<2^v.lRPrime)
+    (hswidth : 0<r.lengthS.length) (hsfit : v.shift<2^r.lengthS.length)
+    (hR : 0<v.lRPrime) (hrfit : v.lRPrime<2^r.lengthRPrime.length)
+    (hQ : v.lQ=0) (hupper : v.tPrime<2^v.shift*v.t)
+    (hlower : 2^(v.shift-1)*v.t≤v.tPrime) :
+    IndexedScheduleAdaptiveInput r n start count s := by
+  rw [indexedScheduleAdaptiveInput_iff_prefix]
+  intro k hk
+  have hpk := indexedScheduleUnitary_swap_prefix_packed r n start k s v hp
+    hphase hsign (by omega)
+    (fun offset ho => hlayout offset (by omega))
+    (fun offset ho => hwindows offset (by omega))
+    hcapacity hspan hlo ht htB htp hrem hswidth hsfit hR hrfit hQ hupper hlower
+  have hsame := (swap_coordinates v k).2.2.2.2.2.2.2.1
+  exact hpk.cleanupInput (hlayout k hk) (by rw [hsame]; exact hR)
+    (by rw [hsame]; exact hrfit)
+
 /-- The complete swap phase returns the actual scheduled circuit to a canonical
 packed boundary with a strictly smaller second remainder. -/
 theorem indexedScheduleUnitary_swap_packed (r : IndexedStepRegisters)
