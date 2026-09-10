@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.EpochCompression
 import ShorECDLP.Submission.«2607_13816».EEA.Canonicalize
 import ShorECDLP.Submission.«2607_13816».EEA.CanonicalRotation
 import ShorECDLP.Submission.«2607_13816».EEA.TerminalEntry
