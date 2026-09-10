@@ -401,4 +401,179 @@ theorem eeaLengthSetup_usesOnly : PaperCircuitUsesOnly (List.range 580) eeaLengt
   simpa only [eeaLengthSetup] using (hq.append hs).append hl
 
 end
+/-- Source reverse initialization: divisor length first, then the two all-one words. -/
+def eeaLengthUndo : Circuit :=
+  lengthInitialize (List.range' 266 256) (List.range' 549 9) 558
+    ((List.range' 7 256).reverse.take 254) (2 ^ 256 - 2 ^ 32 - 977) ++
+  xorConstant (List.range' 531 9) 511 ++ xorConstant (List.range' 540 9) 511
+
+/-- The source reverse clears the length setup while preserving every other wire. -/
+theorem eeaLengthUndo_after_setup (state : BasisState)
+    (hknown : wireValues ((List.range' 7 256).reverse.take 254) state =
+      constantBits 254 (2 ^ 256 - 2 ^ 32 - 977))
+    (hflag : state 558 = false) :
+    run eeaLengthUndo (run eeaLengthSetup state) = state := by
+  let qs := xorConstant (List.range' 531 9) 511 ++ xorConstant (List.range' 540 9) 511
+  have hqs : qs = xorConstant (List.range' 531 18) (2^18-1) := by decide +kernel
+  have hframe : ∀ w ∉ List.range' 531 18, run qs state w = state w := by
+    rw [hqs]
+    intro w hw
+    exact (xorConstant_usesOnly _ _).preservesOutside state hw
+  have hknown' : wireValues ((List.range' 7 256).reverse.take 254) (run qs state) =
+      constantBits ((List.range' 7 256).reverse.take 254).length (2 ^ 256 - 2 ^ 32 - 977) := by
+    have he : wireValues ((List.range' 7 256).reverse.take 254) (run qs state) =
+        wireValues ((List.range' 7 256).reverse.take 254) state := by
+      apply List.map_congr_left
+      intro w hw
+      exact hframe w (by have hb := preprocessScratch_bounds w hw; dsimp only [Wire] at *; simp; omega)
+    simpa only [List.length_take, List.length_reverse, List.length_range', Nat.min_eq_left (by omega : 254 ≤ 256)] using he.trans hknown
+  have hf : run qs state 558 = false := (hframe 558 (by simp)).trans hflag
+  have hl := lengthInitialize_twice (List.range' 266 256) (List.range' 549 9) 558
+    ((List.range' 7 256).reverse.take 254) (2 ^ 256 - 2 ^ 32 - 977) (run qs state)
+    List.nodup_range' preprocessLength_layout preprocessLength_targets hknown' hf
+  have hcancel : run qs (run qs state) = state := by
+    rw [hqs]
+    exact run_xorConstant_twice _ _ state List.nodup_range'
+  simp only [qs, Classical.run_append] at hl hcancel
+  simp only [eeaLengthUndo, eeaLengthSetup, Classical.run_append]
+  rw [hl]
+  exact hcancel
+
+/-- Algorithm 1's source reverse preprocessing after all inverse EEA steps. -/
+def eeaUnpreprocess : AdaptiveCircuit :=
+  .unitary eeaLengthUndo
+    ((eeaUncenter (List.range' 266 256).reverse (List.range' 4 256)
+      (constantBits 256 (2 ^ 256 - 2 ^ 32 - 977)) (2 ^ 256 - 2 ^ 32 - 977)
+      560 561 562 2).seq (.unitary workRegistersRestore .done))
+
+/-- Complete state of the literal reverse preprocessing program. -/
+def eeaUnpreprocessIdealState (state : BasisState) : BasisState :=
+  run workRegistersRestore (eeaUncenterIdealState (List.range' 266 256).reverse
+    (constantBits 256 (2 ^ 256 - 2 ^ 32 - 977)) (2 ^ 256 - 2 ^ 32 - 977) 2
+    (run eeaLengthUndo state))
+
+private theorem lengthUndo_HPFree : HPFree eeaLengthUndo := by
+  simp only [eeaLengthUndo, hpFree_append]
+  exact ⟨⟨lengthInitialize_HPFree _ _ _ _ _, xorConstant_HPFree _ _⟩,
+    xorConstant_HPFree _ _⟩
+
+/-- Every gate and measurement in the source reverse preprocessing is well formed. -/
+theorem eeaUnpreprocess_wellFormed : eeaUnpreprocess.WellFormed := by
+  have hl : CircuitWellFormed eeaLengthUndo := by
+    simp only [eeaLengthUndo, circuitWellFormed_append]
+    exact ⟨⟨lengthInitialize_wellFormed _ _ _ _ _ preprocessLength_layout
+      (fun w hw => Ne.symm (preprocessLength_targets w hw).2.1),
+      xorConstant_wellFormed _ _⟩, xorConstant_wellFormed _ _⟩
+  have hc := (eeaCenter_wellFormed (List.range' 266 256).reverse (List.range' 4 256)
+    (constantBits 256 (2 ^ 256 - 2 ^ 32 - 977)) (2 ^ 256 - 2 ^ 32 - 977)
+    560 561 562 2 (by simp) (by simp) (by simp) preprocessCenter_layout).2
+  exact ⟨hl, hc.seq ⟨workRegistersRestore_resources.1, trivial⟩⟩
+
+private theorem unpreprocess_centered_data (state : BasisState)
+    (hclean : Clean (List.range' 0 263 ++ List.range' 519 61) state)
+    (hx : 0 < boolWordToNat (wireValues (List.range' 263 256) state))
+    (hxp : boolWordToNat (wireValues (List.range' 263 256) state) < 2 ^ 256 - 2 ^ 32 - 977) :
+    let centered := eeaCenterIdealState (List.range' 266 256).reverse
+      (constantBits 256 (2 ^ 256 - 2 ^ 32 - 977)) (2 ^ 256 - 2 ^ 32 - 977) 2
+      (run workRegistersPrepare state)
+    run eeaLengthUndo (eeaPreprocessIdealState state) = centered ∧
+    centered 560 = false ∧ centered 561 = false ∧ centered 562 = false ∧
+    boolWordToNat (wireValues (List.range' 266 256).reverse centered) ≤ 2 ^ 256 - 2 ^ 32 - 977 := by
+  let prepared := run workRegistersPrepare state
+  let centered := eeaCenterIdealState (List.range' 266 256).reverse
+    (constantBits 256 (2 ^ 256 - 2 ^ 32 - 977)) (2 ^ 256 - 2 ^ 32 - 977) 2 prepared
+  have hw1 : Clean (List.range' 4 259) state := by
+    intro w hw; exact hclean w (by simp at hw ⊢; omega)
+  have htail : Clean (List.range' 519 3) state := by
+    intro w hw; exact hclean w (by simp at hw ⊢; omega)
+  have hw := workRegistersPrepare_input_word state hw1 htail
+  have hc := eeaCenterIdealState_correct (List.range' 266 256).reverse (List.range' 4 256)
+    (constantBits 256 (2 ^ 256 - 2 ^ 32 - 977)) (2 ^ 256 - 2 ^ 32 - 977) 560 561 562 2
+    prepared (by simp) (by simp) preprocessCenter_layout (by simp)
+    (by rw [boolWordToNat_constantBits]; exact Nat.mod_eq_of_lt (by decide))
+    (by change 0 < boolWordToNat (wireValues _ (run workRegistersPrepare state)); rw [hw]; exact hx)
+    (by change boolWordToNat (wireValues _ (run workRegistersPrepare state)) < _; rw [hw]; exact hxp)
+    (preprocessCenter_clean state hclean 2 (by simp))
+  have hcf : ∀ w, w ∉ List.range' 266 256 → w ≠ 2 → centered w = prepared w := by
+    intro w hw hn; exact hc.2.2.2.2 w (by simpa using hw) hn
+  have hknown : wireValues ((List.range' 7 256).reverse.take 254) centered =
+      constantBits 254 (2 ^ 256 - 2 ^ 32 - 977) := by
+    rw [preprocessWord_congr _ centered prepared (by
+      intro w hw
+      have hb := preprocessScratch_bounds w hw
+      apply hcf w
+      · intro hm; simp at hm
+        exact Nat.not_lt_of_ge (Nat.le_trans (by decide : 263 ≤ 266) hm.1) hb.2
+      · exact Nat.ne_of_gt (Nat.lt_of_lt_of_le (by decide : 2 < 7) hb.1))]
+    exact workRegistersPrepare_known_scratch state hw1 htail
+  have hflag : centered 558 = false := (hcf 558 (by decide) (by decide)).trans
+    (preprocessCenter_clean state hclean 558 (by simp))
+  refine ⟨?_, ?_, ?_, ?_, le_trans hc.2.2.1 (Nat.div_le_self _ _)⟩
+  · exact eeaLengthUndo_after_setup centered hknown hflag
+  · exact (hcf 560 (by decide) (by decide)).trans (preprocessCenter_clean state hclean 560 (by simp))
+  · exact (hcf 561 (by decide) (by decide)).trans (preprocessCenter_clean state hclean 561 (by simp))
+  · exact (hcf 562 (by decide) (by decide)).trans (preprocessCenter_clean state hclean 562 (by simp))
+
+/-- Literal reverse preprocessing restores the complete original valid input state. -/
+theorem eeaUnpreprocessIdealState_after_preprocess (state : BasisState)
+    (hclean : Clean (List.range' 0 263 ++ List.range' 519 61) state)
+    (hx : 0 < boolWordToNat (wireValues (List.range' 263 256) state))
+    (hxp : boolWordToNat (wireValues (List.range' 263 256) state) < 2 ^ 256 - 2 ^ 32 - 977) :
+    eeaUnpreprocessIdealState (eeaPreprocessIdealState state) = state := by
+  have hc := unpreprocess_centered_data state hclean hx hxp
+  have hw1 : Clean (List.range' 4 259) state := by
+    intro w hw; exact hclean w (by simp at hw ⊢; omega)
+  have htail : Clean (List.range' 519 3) state := by
+    intro w hw; exact hclean w (by simp at hw ⊢; omega)
+  unfold eeaUnpreprocessIdealState
+  rw [hc.1, eeaUncenterIdealState_after_center (List.range' 266 256).reverse (List.range' 4 256)
+    (constantBits 256 (2 ^ 256 - 2 ^ 32 - 977)) (2 ^ 256 - 2 ^ 32 - 977) 560 561 562 2
+    (run workRegistersPrepare state) (by simp) (by simp) preprocessCenter_layout (by simp)
+    (by rw [boolWordToNat_constantBits]; exact Nat.mod_eq_of_lt (by decide))
+    (by rw [workRegistersPrepare_input_word state hw1 htail]; exact Nat.le_of_lt hxp)]
+  exact workRegistersRestore_after_prepare state
+
+/-- The explicit inverse preprocessing has one positive coefficient for every branch. -/
+theorem eeaUnpreprocess_branch_correct (state : BasisState)
+    (hc : run eeaLengthUndo state 560 = false)
+    (hr : run eeaLengthUndo state 561 = false)
+    (ht : run eeaLengthUndo state 562 = false)
+    (hx : boolWordToNat (wireValues (List.range' 266 256).reverse
+      (run eeaLengthUndo state)) ≤ 2 ^ 256 - 2 ^ 32 - 977)
+    (branch : InstrumentBranch) (hb : branch ∈ eeaUnpreprocess.run) :
+    branch.kraus (ket state) = registerXResetMagnitude branch.history.length •
+      ket (eeaUnpreprocessIdealState state) := by
+  obtain ⟨rest, hr', hh, hk⟩ := gidneyUnitaryBranch _ _ branch hb
+  rw [hk, Quantum.run_ket_agrees_classical _ _ lengthUndo_HPFree, hh]
+  apply horner_seq_branch _ _ (run eeaLengthUndo state)
+    (eeaUncenterIdealState (List.range' 266 256).reverse
+      (constantBits 256 (2 ^ 256 - 2 ^ 32 - 977)) (2 ^ 256 - 2 ^ 32 - 977) 2
+      (run eeaLengthUndo state)) (eeaUnpreprocessIdealState state) _ _ rest hr'
+  · intro b hb
+    exact eeaUncenter_branch_correct _ _ _ _ _ _ _ _ _ (by simp) (by simp) (by simp)
+      preprocessCenter_layout hc hr ht (by simp)
+      (by rw [boolWordToNat_constantBits]; exact Nat.mod_eq_of_lt (by decide)) hx b hb
+  · intro b hb
+    obtain ⟨last, hl, hhistory, hrun⟩ := gidneyUnitaryBranch _ _ b hb
+    have hd := gidneyDoneBranch last hl
+    rw [hrun, hd.2, Quantum.run_ket_agrees_classical _ _ workRegistersRestore_resources.2.1,
+      hhistory, hd.1]
+    simp only [List.length_nil, registerXResetMagnitude, pow_zero, one_smul]
+    rfl
+
+/-- Every reverse branch restores the entire preprocessed valid input with its uniform amplitude. -/
+theorem eeaUnpreprocess_after_preprocess (state : BasisState)
+    (hclean : Clean (List.range' 0 263 ++ List.range' 519 61) state)
+    (hx : 0 < boolWordToNat (wireValues (List.range' 263 256) state))
+    (hxp : boolWordToNat (wireValues (List.range' 263 256) state) < 2 ^ 256 - 2 ^ 32 - 977)
+    (branch : InstrumentBranch) (hb : branch ∈ eeaUnpreprocess.run) :
+    branch.kraus (ket (eeaPreprocessIdealState state)) =
+      registerXResetMagnitude branch.history.length • ket state := by
+  have hd := unpreprocess_centered_data state hclean hx hxp
+  have h := eeaUnpreprocess_branch_correct (eeaPreprocessIdealState state)
+    (by rw [hd.1]; exact hd.2.1) (by rw [hd.1]; exact hd.2.2.1)
+    (by rw [hd.1]; exact hd.2.2.2.1) (by rw [hd.1]; exact hd.2.2.2.2) branch hb
+  rw [eeaUnpreprocessIdealState_after_preprocess state hclean hx hxp] at h
+  exact h
+
 end ShorECDLP.Paper2607_13816
