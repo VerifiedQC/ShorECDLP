@@ -4022,4 +4022,24 @@ theorem preShiftUnitary_work_bits (r : ShiftRegisters) (state : BasisState)
   simp only [marked, upd_same, upd_other _ _ _ h2]
 
 
+/-- Pre-shift changes only its work bank and shift counter; controls and temporary
+negative-control scratch are restored. -/
+theorem preShiftUnitary_frame (r : ShiftRegisters) (s : BasisState)
+    (h : ShiftLayout r) (hr : ShiftReady r s) :
+    ∀ wire, wire ∉ r.work ++ r.lengthS → run (preShiftUnitary r) s wire = s wire := by
+  intro wire hn
+  by_cases hz : wire=r.phase1IsZero
+  · subst wire
+    exact (preShiftUnitary_ready r s h hr _ (by simp [ShiftRegisters.scratch])).trans
+      (hr _ (by simp [ShiftRegisters.scratch])).symm
+  have hw : wire ∉ r.work := fun hm => hn (List.mem_append_left _ hm)
+  have hs : wire ∉ r.lengthS := fun hm => hn (List.mem_append_right _ hm)
+  rw [run_preShiftUnitary r s h hr]
+  unfold preShiftState
+  rw [upd_other _ _ _ hz]
+  by_cases hb : wire=r.both
+  · subst wire
+    rw [shiftPayloadState_restoresBoth _ _ _ _ _ _ hw hs,upd_other _ _ _ hz]
+  · rw [shiftPayloadState_preservesOutside _ _ _ _ _ _ hw hs hb,upd_other _ _ _ hz]
+
 end ShorECDLP.Paper2607_13816

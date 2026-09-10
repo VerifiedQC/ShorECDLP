@@ -2429,3 +2429,9 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Consecutive quotient reduction
 
 `blockBCDForward_quotient_packed` composes the actual subtraction, terminal restoration and quotient insertion blocks. An input remainder below twice the shifted divisor yields an output below that divisor and the exact division-digit identity. The remaining space for insertion follows from this arithmetic bound and the original bank capacity; no intermediate packed state, zero high bit or restoration identity is assumed. Original metadata, phase, coefficient packing and active-window conditions remain explicit.
+
+### Packed initial shift
+
+`blockAForward_packed` connects the actual initial shift to the complete logical packed state in the remainder and quotient phases. The second-bank rotation and truth-minus-one counter advance or retreat together; all other fields and auxiliary wires are preserved. Positive encoded remainder length establishes that terminal padding is inactive. Shift bounds are explicit, including positivity for decrement and capacity for increment.
+
+`blockABCDForward_quotient_packed` then composes the initial shift with subtraction, terminal restoration and quotient insertion. The original bound `r < rPrime * 2^shift` supplies the doubled-divisor bound after decrement. Its output has a smaller aligned remainder, the exact extracted-digit identity, and complete packing from the original input. The existing A circuit is now public so these consumers name that same circuit directly.

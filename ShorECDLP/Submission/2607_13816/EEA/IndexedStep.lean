@@ -239,7 +239,7 @@ private def toggleRControl
   rControlNonterminal conditions value registers.control registers.lengthRPrime
     zeroRPrime scratch
 
-private def blockAForward
+def blockAForward
     (registers : IndexedStepRegisters) : Circuit :=
   circuit! {
     toggleTerminal registers;
@@ -13767,5 +13767,23 @@ theorem blockHForward_endpoint_frame (r : IndexedStepRegisters) (n T : Nat)
       xorWireState_preserves _ _ _ hi,
       endIterationForwardState_preservesOutside r n T b4 b5 _ hm,
       endpoint_input_outside_aux r n T s h ha]
+
+/-- On a clean nonterminal input, Block A is exactly the source pre-shift. -/
+theorem blockAForward_nonterminal (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n index)
+    (hc : Clean r.aux s) (hrp : wireAnd r.lengthRPrime s=false) :
+    run (blockAForward r) s=run (preShiftUnitary r.preShift) s := by
+  have hm : registerMatches (terminalConditionWires r) (terminalConditionValue r) s=false := by
+    rw [terminalConditionWires,terminalConditionValue,terminal_detection,hrp]
+    simp
+  have hr : IndexedStepReady r s := by
+    intro wire hw
+    apply hc wire
+    simp only [IndexedStepRegisters.sharedScratch,List.mem_cons,List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst wire; exact h.control_mem_aux
+    · exact h.sourceScratch_mem_aux he
+    · exact h.remainderRepairScratch_mem_aux he
+  exact (blockAForward_correct r n index s h hr).1.trans (active_A_shift r n index s h hc hm)
 
 end ShorECDLP.Paper2607_13816
