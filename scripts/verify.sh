@@ -1800,11 +1800,28 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_correct
 #print axioms ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_length
 #print axioms ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_adjacent
+#print axioms ShorECDLP.Paper2607_13816.registerMatches_pattern
+#print axioms ShorECDLP.Paper2607_13816.maskedBitFlip_word_swap
+#print axioms ShorECDLP.Paper2607_13816.wordPattern_read
+#print axioms ShorECDLP.Paper2607_13816.adjacent_word_patterns
+#print axioms ShorECDLP.Paper2607_13816.pointLogicalWires_nodup
+#print axioms ShorECDLP.Paper2607_13816.pointLogicalWires_length
+#print axioms ShorECDLP.Paper2607_13816.pointPatternEdge_word
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_correct
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_frame
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_clean
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_control
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_disabled
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_tCount
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_HPFree
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_wellFormed
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1779 ]]; then
-  printf 'expected 1779 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1796 ]]; then
+  printf 'expected 1796 #print axioms results\n' >&2
   exit 1
 fi
 

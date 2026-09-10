@@ -2274,3 +2274,7 @@ and aggregate Phase 9 resources remain open. No new physical-width claim is made
 ### Phase 9 Gray-path correction words
 
 `WordGray` constructively decomposes equal-width endpoint transpositions into at most twice the width many single-bit adjacent swaps, proving their action on every word. `PointWordCorrection` supplies the injective 513-bit X/Y/infinity encoding and expands the exceptional correction into at most 4,104 adjacent edges. Their ordered word action equals total addition by every finite constant after the coordinate permutation. Connecting those words to the physical selector and the complete point circuit remains open.
+
+### Phase 9 physical word-edge compiler
+
+`BitTransposition`, `WordPattern`, and `PointWordEdge` connect each adjacent 513-bit word pair to the physical selector. The compiler finds the differing bit, deletes that wire before extracting each equality constant, and proves the resulting circuit swaps precisely the endpoint words. Work and external control are restored, disabled execution is full-state identity, and the same ≤21,553 T / ≤839-wire bounds apply. Composing the complete correction and total point circuit remains open.
