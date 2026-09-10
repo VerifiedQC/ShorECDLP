@@ -1,3 +1,5 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointWordProgram
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointCorrectionCircuit
 import ShorECDLP.Submission.«2607_13816».Arithmetic.BitTransposition
 import ShorECDLP.Submission.«2607_13816».Arithmetic.WordPattern
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointWordEdge

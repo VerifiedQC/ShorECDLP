@@ -2278,3 +2278,7 @@ and aggregate Phase 9 resources remain open. No new physical-width claim is made
 ### Phase 9 physical word-edge compiler
 
 `BitTransposition`, `WordPattern`, and `PointWordEdge` connect each adjacent 513-bit word pair to the physical selector. The compiler finds the differing bit, deletes that wire before extracting each equality constant, and proves the resulting circuit swaps precisely the endpoint words. Work and external control are restored, disabled execution is full-state identity, and the same ≤21,553 T / ≤839-wire bounds apply. Composing the complete correction and total point circuit remains open.
+
+### Phase 9 complete physical exception correction
+
+`PointWordProgram` compiles an ordered adjacent-word sequence and preserves cleanup and external frame throughout. `PointCorrectionCircuit` applies it to the exceptional-point correction: on every encoded curve point after the coordinate permutation, the actual gate sequence produces the encoded group sum, with full disabled identity. The same complete correction has bounds of 88,453,512 T and 839 wires, with well-formed, HP-free ket semantics. The endpoint list remains mathematically generated; composing the coordinate and correction circuits, executable constant instantiation, and aggregate total-point resources remain open.

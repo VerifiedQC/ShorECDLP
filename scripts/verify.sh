@@ -1817,11 +1817,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointWordEdge_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.pointWordEdge_HPFree
 #print axioms ShorECDLP.Paper2607_13816.pointWordEdge_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_clean
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_frame
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_correct
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_disabled
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_tCount
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_HPFree
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_correct
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_clean
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_frame
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_disabled
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_tCount
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_HPFree
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_ket
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1796 ]]; then
-  printf 'expected 1796 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1815 ]]; then
+  printf 'expected 1815 #print axioms results\n' >&2
   exit 1
 fi
 
