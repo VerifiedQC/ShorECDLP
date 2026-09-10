@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.CoefficientSupport
 import ShorECDLP.Submission.«2607_13816».EEA.EndIterationArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrefixInverse
@@ -14449,5 +14450,58 @@ theorem indexedStepInverseAdaptiveTFormula_components (T : Nat)
   have hps9 : indexedStepProductionRegisters.phaseUpdate.lengthS.length=9 := by decide +kernel
   simp only [hq9,hw259,ht9,hq9',hs9,hpq9,hpr9,hps9,mcxVChainToffoliCost,mcxVChainAdaptiveToffoliCost]
   by_cases ht : T%4=0 <;> simp only [ht,↓reduceIte] <;> omega
+
+private theorem blockBAdaptive_wires_subset (r : IndexedStepRegisters) (n : Nat) (w : ActiveWindow) :
+    (blockBAdaptive r n w).wires ⊆ circuitWires (blockBForward r n w) := by
+  have hs := intervalAddSub_wires_subset (r.remainder w) n w.start w.stop .sub true .work1
+  have ha := intervalAddSub_wires_subset (r.remainder w) n w.start w.stop .add false .work1
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at hs ha
+  intro wire hw
+  simp only [blockBAdaptive,blockB1Adaptive,blockB3Adaptive,blockBForward,
+    blockB1Forward,blockB3Forward,adaptiveUnitary,modularWires_seq,
+    AdaptiveCircuit.wires,circuitWires,List.flatMap_append,List.mem_append,
+    List.not_mem_nil,or_false] at hw ⊢
+  aesop
+private theorem blockEAdaptive_wires_subset (r : IndexedStepRegisters) (n : Nat) (w : ActiveWindow) :
+    (blockEAdaptive r n w).wires ⊆ circuitWires (blockEForward r n w) := by
+  have hs := coefficientPrefixAdaptive_wires_subset (r.coefficient w) w.start w.stop .sub false .work2
+  have ha := coefficientPrefixAdaptive_wires_subset (r.coefficient w) w.start w.stop .add true .work2
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at hs ha
+  intro wire hw
+  simp only [blockEAdaptive,blockEFirstAdaptive,blockETailAdaptive,blockEPrefix,blockEMiddle,
+    blockESuffix,blockEForward,blockESubtractForward,blockEFinishForward,blockEPrepareForward,
+    coefficientSubtractControl,adaptiveUnitary,modularWires_seq,
+    AdaptiveCircuit.wires,circuitWires,List.flatMap_append,List.mem_append,
+    List.not_mem_nil,or_false] at hw ⊢
+  aesop
+theorem indexedStepAdaptive_wires_subset (r : IndexedStepRegisters) (n T : Nat) :
+    (indexedStepAdaptive r n T).wires ⊆ circuitWires (indexedStepUnitary r n T) := by
+  have hb := blockBAdaptive_wires_subset r n (certifiedActiveWindows n T).remainder
+  have he := blockEAdaptive_wires_subset r n (certifiedActiveWindows n T).coefficient
+  have hg := phaseUpdateEpochAdaptive_wires_subset r.phaseUpdate r.shiftEpoch
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at hb he hg
+  intro wire hw
+  simp only [indexedStepAdaptive,indexedStepUnitary,blockGForward,adaptiveUnitary,
+    modularWires_seq,AdaptiveCircuit.wires,circuitWires,List.flatMap_append,
+    List.mem_append,List.not_mem_nil,or_false] at hw ⊢
+  aesop
+theorem indexedStepInverseAdaptive_wires_subset (r : IndexedStepRegisters) (n T : Nat) :
+    (indexedStepInverseAdaptive r n T).wires ⊆ circuitWires (indexedStepInverseUnitary r n T) := by
+  have hb1 := intervalAddSubInverse_wires_subset (r.remainder (certifiedActiveWindows n T).remainder) n
+    (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .sub true .work1
+  have hb3 := intervalAddSubInverse_wires_subset (r.remainder (certifiedActiveWindows n T).remainder) n
+    (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .add false .work1
+  have he1 := coefficientPrefixInverseAdaptive_wires_subset (r.coefficient (certifiedActiveWindows n T).coefficient)
+    (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .sub false .work2
+  have he2 := coefficientPrefixInverseAdaptive_wires_subset (r.coefficient (certifiedActiveWindows n T).coefficient)
+    (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .add true .work2
+  have hg := phaseUpdateEpochInverseAdaptive_wires_subset r.phaseUpdate r.shiftEpoch
+  rw [← inverseAdaptive_source_split]
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at hb1 hb3 he1 he2 hg
+  intro wire hw
+  simp only [indexedStepInverseAdaptive,blockGInverse,adaptiveUnitary,modularWires_seq,
+    AdaptiveCircuit.wires,circuitWires,List.flatMap_append,List.mem_append,
+    List.not_mem_nil,or_false] at hw ⊢
+  aesop
 
 end ShorECDLP.Paper2607_13816

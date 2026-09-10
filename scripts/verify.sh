@@ -1003,6 +1003,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_toffoliCount
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_cnotCount
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseUnitary_tCount
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixFirstLeafAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSecondLeafAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardAdaptive_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.unaryAction_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveAction_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveAction_wires_subset
@@ -1632,8 +1644,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1608 ]]; then
-  printf 'expected 1608 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1620 ]]; then
+  printf 'expected 1620 #print axioms results\n' >&2
   exit 1
 fi
 

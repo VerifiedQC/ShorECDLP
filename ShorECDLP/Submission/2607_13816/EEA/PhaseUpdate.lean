@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.AdaptiveSupport
 import ShorECDLP.Submission.«2607_13816».EEA.IntervalLeaf
 import Lean.Elab.Tactic.Omega
 
@@ -3175,4 +3176,55 @@ theorem phaseUpdateEpochInverseAdaptive_secp256k1_resources :
       phaseUpdateSecp256k1Layout,
     phaseUpdateEpochInverseAdaptive_tCount _ _ phaseUpdateSecp256k1Layout]
   norm_num [phaseUpdateSecp256k1Registers,
-    mcxVChainMeasurementCost, mcxVChainAdaptiveToffoliCost]
+    mcxVChainMeasurementCost, mcxVChainAdaptiveToffoliCost]private theorem epoch_forward_tests_wires_subset
+    (r : PhaseUpdateRegisters) (epoch : Wire) :
+    (phaseUpdateEpochForwardTestsAdaptive r epoch).wires ⊆
+      circuitWires (phaseUpdateEpochForwardTests r epoch) := by
+  have hq := mcxVChainAdaptive_wires_subset (r.withShiftEpoch epoch).lengthQ
+    (r.withShiftEpoch epoch).zeroQ (r.withShiftEpoch epoch).equalityScratch
+  have hr := mcxVChainAdaptive_wires_subset (r.withShiftEpoch epoch).lengthRPrime
+    (r.withShiftEpoch epoch).zeroRPrime (r.withShiftEpoch epoch).equalityScratch
+  have hs := mcxVChainAdaptive_wires_subset (r.withShiftEpoch epoch).lengthS
+    (r.withShiftEpoch epoch).zeroS (r.withShiftEpoch epoch).equalityScratch
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at hq hr hs
+  intro w hw
+  simp only [phaseUpdateEpochForwardTestsAdaptive,phaseUpdateEpochForwardTests,
+    modularWires_seq,AdaptiveCircuit.wires,circuitWires,List.flatMap_append,
+    List.mem_append,List.not_mem_nil,or_false] at hw ⊢
+  aesop
+private theorem epoch_cleanup_tests_wires_subset
+    (r : PhaseUpdateRegisters) (epoch : Wire) :
+    (phaseUpdateEpochCleanupTestsAdaptive r epoch).wires ⊆
+      circuitWires (phaseUpdateEpochCleanupTests r epoch) := by
+  have hq := mcxVChainAdaptive_wires_subset (r.withShiftEpoch epoch).lengthQ
+    (r.withShiftEpoch epoch).zeroQ (r.withShiftEpoch epoch).equalityScratch
+  have hr := mcxVChainAdaptive_wires_subset (r.withShiftEpoch epoch).lengthRPrime
+    (r.withShiftEpoch epoch).zeroRPrime (r.withShiftEpoch epoch).equalityScratch
+  have hs := mcxVChainAdaptive_wires_subset (r.withShiftEpoch epoch).lengthS
+    (r.withShiftEpoch epoch).zeroS (r.withShiftEpoch epoch).equalityScratch
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at hq hr hs
+  intro w hw
+  simp only [phaseUpdateEpochCleanupTestsAdaptive,phaseUpdateEpochCleanupTests,
+    modularWires_seq,AdaptiveCircuit.wires,circuitWires,List.flatMap_append,
+    List.mem_append,List.not_mem_nil,or_false] at hw ⊢
+  aesop
+theorem phaseUpdateEpochAdaptive_wires_subset (r : PhaseUpdateRegisters) (epoch : Wire) :
+    (phaseUpdateEpochAdaptive r epoch).wires ⊆ circuitWires (phaseUpdateEpochUnitary r epoch) := by
+  have hf := epoch_forward_tests_wires_subset r epoch
+  have hc := epoch_cleanup_tests_wires_subset r epoch
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at hf hc
+  intro w hw
+  simp only [phaseUpdateEpochAdaptive,phaseUpdateEpochUnitary,modularWires_seq,
+    AdaptiveCircuit.wires,circuitWires,List.flatMap_append,List.mem_append,
+    List.not_mem_nil,or_false] at hw ⊢
+  aesop
+theorem phaseUpdateEpochInverseAdaptive_wires_subset (r : PhaseUpdateRegisters) (epoch : Wire) :
+    (phaseUpdateEpochInverseAdaptive r epoch).wires ⊆ circuitWires (phaseUpdateEpochInverseUnitary r epoch) := by
+  have hf := epoch_forward_tests_wires_subset r epoch
+  have hc := epoch_cleanup_tests_wires_subset r epoch
+  simp only [List.subset_def,circuitWires,List.mem_flatMap] at hf hc
+  intro w hw
+  simp only [phaseUpdateEpochInverseAdaptive,phaseUpdateEpochInverseUnitary,modularWires_seq,
+    AdaptiveCircuit.wires,circuitWires,List.flatMap_append,List.mem_append,
+    List.not_mem_nil,or_false] at hw ⊢
+  aesop
