@@ -2113,3 +2113,13 @@ identity on all valid input superpositions with uniform normalized branch
 coefficients. This closes the inverse-wrapper and reachable inverse-readiness
 boundaries described above. Phase 8 still requires Figure 15 in-place arithmetic
 composition and its resource certificates; Phases 9–12 remain open.
+
+The Figure 15 workspace interface now relabels the actual adaptive EEA trees
+onto the cleared data bank. The wire bijection exchanges 7–262 with 580–835
+and fixes every other wire. A generic Kraus-branch transport theorem preserves
+transcripts and the same normalized coefficients; well-formedness, T count,
+measurement count, distinct-wire count, and complete forward/reverse coherent
+identity are preserved. No swap gates are inserted. This is a composition
+interface, not a complete in-place multiplication/division theorem or the
+paper's aggregate 835-wire claim; those resource and arithmetic obligations
+remain open.

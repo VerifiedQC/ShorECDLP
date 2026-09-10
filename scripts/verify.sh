@@ -21,6 +21,39 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Gate.relabel
+#print axioms ShorECDLP.Quantum.relabelBasis
+#print axioms ShorECDLP.Quantum.relabelState
+#print axioms ShorECDLP.Quantum.relabelState_ket
+#print axioms ShorECDLP.Quantum.relabelBasis_at
+#print axioms ShorECDLP.Quantum.relabelBasis_upd
+#print axioms ShorECDLP.Quantum.applyGate_relabel
+#print axioms ShorECDLP.Quantum.run_relabel
+#print axioms ShorECDLP.Quantum.xResetKraus_relabel
+#print axioms ShorECDLP.Quantum.relabelBasis_symm
+#print axioms ShorECDLP.Quantum.relabelState_symm
+#print axioms ShorECDLP.Quantum.relabelState_symm_right
+#print axioms ShorECDLP.Quantum.InstrumentBranch.relabel
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.run_relabel
+#print axioms ShorECDLP.Quantum.CoherentlyImplementsOn.relabel
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel_seq
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel_wellFormed
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel_tCount
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel_measurementCount
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel_wires
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.eeaWorkspaceExchange
+#print axioms ShorECDLP.Paper2607_13816.eeaWorkspaceExchange_work
+#print axioms ShorECDLP.Paper2607_13816.eeaWorkspaceExchange_data
+#print axioms ShorECDLP.Paper2607_13816.eeaWorkspaceExchange_frame
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBank
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBank
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBank_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBank_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAInDataBank_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAInDataBank_resources
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAInDataBank_roundTrip
 #print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptiveInput_after_forward
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseUnitary_after_forward_preprocessed
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverse_adaptiveInput
@@ -1481,8 +1514,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1457 ]]; then
-  printf 'expected 1457 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1490 ]]; then
+  printf 'expected 1490 #print axioms results\n' >&2
   exit 1
 fi
 
