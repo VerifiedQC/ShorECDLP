@@ -1780,11 +1780,23 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig14EncodedEquiv_nonexceptional
 #print axioms ShorECDLP.Paper2607_13816.fig14CorrectionSwaps_length
 #print axioms ShorECDLP.Paper2607_13816.fig14CorrectionSwaps_correct
+#print axioms ShorECDLP.Paper2607_13816.run_twoRegisterControlledFlip
+#print axioms ShorECDLP.Paper2607_13816.twoRegisterControlledFlip_HPFree
+#print axioms ShorECDLP.Paper2607_13816.twoRegisterControlledFlip_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.twoRegisterControlledFlip_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.twoRegisterControlledFlip_tCount
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_correct
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_HPFree
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_tCount_le
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionEdge_ket
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1759 ]]; then
-  printf 'expected 1759 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1771 ]]; then
+  printf 'expected 1771 #print axioms results\n' >&2
   exit 1
 fi
 
