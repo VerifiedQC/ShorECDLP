@@ -2075,3 +2075,12 @@ compression, and reverses canonicalization. Its full-state cancellation theorem 
 original valid inputs; composing it with the forward wrapper coherently returns the complete
 terminal schedule state with normalized input-independent branch coefficients. The reverse
 Algorithm-3 schedule, inverse preprocessing and Figure 15 composition remain open.
+
+
+The explicit adaptive inverse indexed step now follows the existing inverse unitary
+in source order, using the proved measurement-assisted phase, coefficient, and
+remainder inverses. Its well-formedness and coherent equivalence hold on
+`IndexedStepInverseAdaptiveInput`: five readiness conditions evaluated at the
+actual preceding unitary prefixes. No reachable-state claim is hidden in these
+conditions. Deriving them from the forward endpoint, composing the reverse
+schedule, and undoing preprocessing remain open.
