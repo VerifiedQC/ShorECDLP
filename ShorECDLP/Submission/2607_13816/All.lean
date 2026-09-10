@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.HornerSupport
 import ShorECDLP.Submission.«2607_13816».Arithmetic.InPlaceResources
 import ShorECDLP.Submission.«2607_13816».EEA.ScheduleResources
 import ShorECDLP.Submission.«2607_13816».EEA.WrapperLocality

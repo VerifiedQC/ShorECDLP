@@ -1653,13 +1653,15 @@ import ShorECDLP
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLP_correct
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPSubmission
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPTotalGateCount_correct
+#print axioms ShorECDLP.Paper2607_13816.hornerMul256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.hornerMulInverse256_wires_subset
 #print axioms ShorECDLP.qubitCount
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPTrial_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1634 ]]; then
-  printf 'expected 1634 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1636 ]]; then
+  printf 'expected 1636 #print axioms results\n' >&2
   exit 1
 fi
 
