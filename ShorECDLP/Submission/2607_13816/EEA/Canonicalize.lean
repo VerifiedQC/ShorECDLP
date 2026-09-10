@@ -330,5 +330,39 @@ theorem secp256k1EEAForward_canonical_coefficient (s : BasisState)
   exact ⟨hwork.trans hd.1,hc.1,(hc.2 _ (by decide)).trans hd.2.2.1,
     (congrArg boolWordToNat hlength).trans hd.2.2.2⟩
 
+private theorem canonical_quantum_conditions :
+    CircuitWellFormed canonicalWork2Rotation ∧ HPFree canonicalWork2Rotation := by
+  have hl : ConstantLayout canonicalCounterWires (List.range' 560 10) 570 := by
+    change (570 :: List.range' 560 10 ++ (List.range' 540 9 ++ [559])).Nodup
+    decide
+  have hlen : (List.range' 560 10).length=canonicalCounterWires.length := by decide
+  have hp : CircuitWellFormed canonicalCounterPrepare ∧ HPFree canonicalCounterPrepare := by
+    constructor
+    · rw [canonicalCounterPrepare,circuitWellFormed_append]
+      exact ⟨by simp [CircuitWellFormed,Gate.WellFormed],addConstant_wellFormed _ _ _ _ hlen hl⟩
+    · simp [canonicalCounterPrepare,addConstant_HPFree]
+  have hr : CircuitWellFormed canonicalCounterRestore ∧ HPFree canonicalCounterRestore := by
+    constructor
+    · rw [canonicalCounterRestore,circuitWellFormed_append]
+      exact ⟨subConstant_wellFormed _ _ _ _ hlen hl,by simp [CircuitWellFormed,Gate.WellFormed]⟩
+    · simp [canonicalCounterRestore,subConstant_HPFree]
+  have hc (bits : List (Fin 10)) :
+      CircuitWellFormed (counterRotationChain bits) ∧ HPFree (counterRotationChain bits) := by
+    induction bits with
+    | nil => simp [counterRotationChain,CircuitWellFormed]
+    | cons bit bits ih =>
+        simp only [counterRotationChain,List.flatMap_cons,circuitWellFormed_append,hpFree_append]
+        exact ⟨⟨canonicalWork2RotationBit_wellFormed _ bit (counterControl_outside bit),ih.1⟩,
+          ⟨canonicalWork2RotationBit_HPFree _ bit,ih.2⟩⟩
+  have hchain := hc (List.finRange 10)
+  simp only [canonicalWork2Rotation,circuitWellFormed_append,hpFree_append]
+  exact ⟨⟨⟨hp.1,hchain.1⟩,hr.1⟩,⟨⟨hp.2,hchain.2⟩,hr.2⟩⟩
+/-- The canonicalization wrapper has distinct physical operands at every gate. -/
+theorem canonicalWork2Rotation_wellFormed : CircuitWellFormed canonicalWork2Rotation :=
+  canonical_quantum_conditions.1
+/-- Canonicalization uses only classical reversible gates. -/
+theorem canonicalWork2Rotation_HPFree : HPFree canonicalWork2Rotation :=
+  canonical_quantum_conditions.2
+
 end
 end ShorECDLP.Paper2607_13816
