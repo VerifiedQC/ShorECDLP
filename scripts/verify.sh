@@ -1681,11 +1681,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.squareLoop_coherent
 #print axioms ShorECDLP.Paper2607_13816.squareLoopInverse_coherent
 #print axioms ShorECDLP.Paper2607_13816.squareLoop_forward_inverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareLT_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareLT_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareLT_metrics
+#print axioms ShorECDLP.Paper2607_13816.constantModularAddIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAdd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAdd_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ControlledIncrement_correct_resources
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1660 ]]; then
-  printf 'expected 1660 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1667 ]]; then
+  printf 'expected 1667 #print axioms results\n' >&2
   exit 1
 fi
 
