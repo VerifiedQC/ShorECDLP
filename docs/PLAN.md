@@ -2151,3 +2151,19 @@ proves complete external-wire preservation and dependence only on the allocated
 input registers. These facts compose symbolic component bounds across all
 1,620 steps; the complete adaptive wrapper and Figure 15 resource certificate
 remain subsequent obligations.
+
+The complete EEA output ideal now preserves every wire outside `List.range 580`
+and depends only on its allocated input registers. `secp256k1EEAOutputIdealState_patchOutside`
+commutes replacement of an external bank with preprocessing, the EEA schedule,
+and all output corrections. `Secp256k1EEAInputValid_congrOn` preserves the clean,
+nonzero canonical input contract under the same replacement. These facts supply
+forward-image reconstruction for the reverse-wrapper contract used in Figure 15;
+they do not yet prove its specific phase-reconstruction arithmetic or total resources.
+
+The actual reverse wrapper now has a coherent contract whenever its allocated
+registers match a valid forward output, without restricting the retained external
+values. The proof constructs a valid original input with the same external frame,
+then applies the existing exact-forward-image inverse theorem with its unchanged
+normalized branches. Its full output restores the original EEA registers and
+preserves the current external frame. The contract also transports to the actual
+relabeled inverse borrowing Y, supplying Figure 15's retained-result inverse interface.
