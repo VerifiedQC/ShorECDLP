@@ -405,4 +405,204 @@ theorem secp256k1EEAForwardUnitary_production_congrOn
     secp256k1EEAForwardUnitary_production_usesOnly.run_congrOn s t (by
       simpa only [List.mem_range] using h)
 
+attribute [local irreducible] intervalAddSubInverseUnitary coefficientPrefixInverseUnitary
+  phaseUpdateEpochInverseUnitary terminalPaddingInverse swapWorkAndLengthUnarySharedInverse
+
+/-- The literal reverse production step stays inside the same 580 physical roles. -/
+theorem indexedStepInverseUnitary_production_usesOnly (T : Nat)
+    (hlayout : IndexedStepLayout indexedStepProductionRegisters 256 T) :
+    PaperCircuitUsesOnly (List.range 580)
+      (indexedStepInverseUnitary indexedStepProductionRegisters 256 T) := by
+  let r := indexedStepProductionRegisters
+  let windows := certifiedActiveWindows 256 T
+  have terminalTest := (computeControl_usesOnly (r.phase1 :: r.lengthRPrime)
+    (2^(r.lengthRPrime.length+1)-2) r.terminal r.blockScratch).mono
+    (support_to_580 _ (by decide +kernel))
+  have terminalRestore := (terminalEpochRestore_usesOnly r.terminal r.shiftEpoch r.quotientLow).mono
+    (support_to_580 _ (by decide +kernel))
+  have terminalSpill := (terminalEpochSpill_usesOnly r.terminal r.shiftEpoch r.quotientLow).mono
+    (support_to_580 _ (by decide +kernel))
+  have phaseToggle := gate_support_580 (.CX r.terminal r.phase1) (by decide +kernel)
+  have preShift := ((preShiftUnitary_usesOnly r.preShift).mono
+    (support_to_580 _ (by decide +kernel))).adjoint
+  have padding := (terminalPaddingInverse_usesOnly r.terminalPadding).mono
+    (support_to_580 _ (by decide +kernel))
+  have hA := (((((terminalTest.append terminalRestore).append phaseToggle).append preShift).append phaseToggle).append padding).append terminalTest
+  have hC := (terminalTest.append terminalSpill).append terminalTest
+  have hF := production_blockF_support.adjoint
+  have hG := (phaseUpdateEpochInverseUnitary_usesOnly r.phaseUpdate r.shiftEpoch).mono
+    (support_to_580 _ (by decide +kernel))
+  have subControl := (rControlNonterminal_usesOnly [r.phase1] 0 r.control r.lengthRPrime
+    r.terminal r.blockScratch).mono (support_to_580 _ (by decide +kernel))
+  have restoreControl := (rControlNonterminal_usesOnly [r.phase1,r.terminal] 0 r.control r.lengthRPrime
+    (r.blockScratch.getD 0 0) (r.blockScratch.drop 1)).mono (support_to_580 _ (by decide +kernel))
+  have terminalCCX := gate_support_580 (.CCX r.phase2 r.sign r.terminal) (by decide +kernel)
+  have restore := (terminalCCX.append restoreControl).append terminalCCX
+  have invSub := (intervalAddSubInverseUnitary_usesOnly (r.remainder windows.remainder) 256
+    windows.remainder.start windows.remainder.stop .sub true .work1 hlayout.remainder).mono
+    (production_remainder_support windows.remainder)
+  have invAdd := (intervalAddSubInverseUnitary_usesOnly (r.remainder windows.remainder) 256
+    windows.remainder.start windows.remainder.stop .add false .work1 hlayout.remainder).mono
+    (production_remainder_support windows.remainder)
+  have phaseControl := (rControlNonterminal_usesOnly [r.phase1,r.phase2] 2 r.control r.lengthRPrime
+    r.terminal r.blockScratch).mono (support_to_580 _ (by decide +kernel))
+  have signCX := gate_support_580 (.CX r.control r.sign) (by decide +kernel)
+  have hB := (((restore.append invAdd).append restore).append
+    ((phaseControl.append signCX).append phaseControl)).append
+    ((subControl.append invSub).append subControl)
+  have p2 := (computeControl_usesOnly [r.phase1,r.phase2] 2 r.control r.sourceScratch).mono
+    (support_to_580 _ (by decide +kernel))
+  have p3 := (computeControl_usesOnly [r.phase1,r.phase2] 1 r.control r.sourceScratch).mono
+    (support_to_580 _ (by decide +kernel))
+  have inc := (controlledIncrement_usesOnly r.control r.lengthQ
+    (r.sourceScratch.take (r.lengthQ.length-1))).mono (support_to_580 _ (by decide +kernel))
+  have dec := (controlledDecrement_usesOnly r.control r.lengthQ
+    (r.sourceScratch.take (r.lengthQ.length-1))).mono (support_to_580 _ (by decide +kernel))
+  have cx1 := gate_support_580 (.CX r.phase1 r.control) (by decide +kernel)
+  have cx2 := gate_support_580 (.CX r.phase2 r.control) (by decide +kernel)
+  have qs := (quotientSwapUnitary_usesOnly (r.quotient windows.quotientSwap) hlayout.quotient).mono
+    (production_quotient_support windows.quotientSwap)
+  have hD := (((p3.append inc).append p3).append
+    (((cx1.append cx2).append qs).append (cx2.append cx1))).append ((p2.append dec).append p2)
+  have temp := (computeControl_usesOnly [r.phase2,r.sign] 2 r.terminal r.blockScratch).mono
+    (support_to_580 _ (by decide +kernel))
+  have coefSub := (computeControl_usesOnly [r.phase1,r.terminal] 1 r.control r.blockScratch).mono
+    (support_to_580 _ (by decide +kernel))
+  have coefAdd := (computeControl_usesOnly [r.phase1] 1 r.control r.blockScratch).mono
+    (support_to_580 _ (by decide +kernel))
+  have prepare := (prepareLatestPaperTBoundary_usesOnly r.tBoundary 256).mono
+    (support_to_580 _ (by decide +kernel))
+  have finish := (restoreLatestPaperTBoundary_usesOnly r.tBoundary 256).mono
+    (support_to_580 _ (by decide +kernel))
+  have csub := (coefficientPrefixInverseUnitary_usesOnly (r.coefficient windows.coefficient)
+    .sub false .work2 hlayout.coefficient).mono (production_coefficient_support windows.coefficient)
+  have cadd := (coefficientPrefixInverseUnitary_usesOnly (r.coefficient windows.coefficient)
+    .add true .work2 hlayout.coefficient).mono (production_coefficient_support windows.coefficient)
+  have flipSign := gate_support_580 (.CX r.phase1 r.sign) (by decide +kernel)
+  have hE := ((((((((((((prepare.append coefAdd).append cadd).append coefAdd).append flipSign).append temp).append coefSub).append temp).append csub).append temp).append coefSub).append temp).append finish)
+  have hH : PaperCircuitUsesOnly (List.range 580) (
+    if T % 4 = 0 then
+        circuit! {
+          mcxVChain r.lengthQ (r.sourceScratch.getD 0 0)
+            (r.sourceScratch.drop 2);
+          gate! Gate.X r.shiftEpoch;
+          mcxVChain (r.lengthS ++ [r.shiftEpoch])
+            (r.sourceScratch.getD 1 0) (r.sourceScratch.drop 2);
+          gate! Gate.X r.shiftEpoch;
+          gate! Gate.CCX (r.sourceScratch.getD 0 0)
+            (r.sourceScratch.getD 1 0) r.control;
+          gate! Gate.CX r.control r.iter;
+          swapWorkAndLengthUnarySharedInverse (r.endIteration 256 T) 256
+            (endIterationWindowsAt 256 T);
+          gate! Gate.CCX (r.sourceScratch.getD 0 0)
+            (r.sourceScratch.getD 1 0) r.control;
+          gate! Gate.X r.shiftEpoch;
+          mcxVChain (r.lengthS ++ [r.shiftEpoch])
+            (r.sourceScratch.getD 1 0) (r.sourceScratch.drop 2);
+          gate! Gate.X r.shiftEpoch;
+          mcxVChain r.lengthQ (r.sourceScratch.getD 0 0)
+            (r.sourceScratch.drop 2)
+        }
+      else []) := by
+    split
+    · rename_i hmod
+      have he := hlayout.endIteration hmod
+      have hq := (mcxVChain_usesOnly r.lengthQ (r.sourceScratch.getD 0 0)
+        (r.sourceScratch.drop 2)).mono (support_to_580 _ (by decide +kernel))
+      have hs := (mcxVChain_usesOnly (r.lengthS ++ [r.shiftEpoch]) (r.sourceScratch.getD 1 0)
+        (r.sourceScratch.drop 2)).mono (support_to_580 _ (by decide +kernel))
+      have hx := gate_support_580 (.X r.shiftEpoch) (by decide +kernel)
+      have hc := gate_support_580 (.CCX (r.sourceScratch.getD 0 0)
+        (r.sourceScratch.getD 1 0) r.control) (by decide +kernel)
+      have hi := gate_support_580 (.CX r.control r.iter) (by decide +kernel)
+      have hw := (swapWorkAndLengthUnarySharedInverse_usesOnly (r.endIteration 256 T) 256
+        (endIterationWindowsAt 256 T) he.k4_le_K4 he.k5_le_decode).mono
+        (production_end_support T he)
+      simpa only [List.append_assoc,List.cons_append,List.nil_append] using ((((((((((hq.append hx).append hs).append hx).append hc).append hi).append hw).append hc).append hx).append hs).append hx).append hq
+    · intro g hg; simp only [List.not_mem_nil] at hg
+  have hall := ((((((hH.append hG).append hF).append hE).append hD).append hC).append hB).append hA
+  change PaperCircuitUsesOnly (List.range 580)
+    (((if T % 4 = 0 then
+    circuit! {
+      mcxVChain r.lengthQ (r.sourceScratch.getD 0 0)
+        (r.sourceScratch.drop 2);
+      gate! Gate.X r.shiftEpoch;
+      mcxVChain (r.lengthS ++ [r.shiftEpoch])
+        (r.sourceScratch.getD 1 0) (r.sourceScratch.drop 2);
+      gate! Gate.X r.shiftEpoch;
+      gate! Gate.CCX (r.sourceScratch.getD 0 0)
+        (r.sourceScratch.getD 1 0) r.control;
+      gate! Gate.CX r.control r.iter;
+      swapWorkAndLengthUnarySharedInverse (r.endIteration 256 T) 256
+        (endIterationWindowsAt 256 T);
+      gate! Gate.CCX (r.sourceScratch.getD 0 0)
+        (r.sourceScratch.getD 1 0) r.control;
+      gate! Gate.X r.shiftEpoch;
+      mcxVChain (r.lengthS ++ [r.shiftEpoch])
+        (r.sourceScratch.getD 1 0) (r.sourceScratch.drop 2);
+      gate! Gate.X r.shiftEpoch;
+      mcxVChain r.lengthQ (r.sourceScratch.getD 0 0)
+        (r.sourceScratch.drop 2)
+    }
+  else []) ++ phaseUpdateEpochInverseUnitary r.phaseUpdate r.shiftEpoch ++
+      (postShiftUnitary r.postShift).adjoint ++
+      (circuit! {
+        prepareLatestPaperTBoundary r.tBoundary 256;
+        computeControl [r.phase1] 1 r.control r.blockScratch;
+        coefficientPrefixInverseUnitary (r.coefficient windows.coefficient) windows.coefficient.start windows.coefficient.stop .add true .work2;
+        computeControl [r.phase1] 1 r.control r.blockScratch;
+        gate! Gate.CX r.phase1 r.sign;
+        computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch;
+        computeControl [r.phase1,r.terminal] 1 r.control r.blockScratch;
+        computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch;
+        coefficientPrefixInverseUnitary (r.coefficient windows.coefficient) windows.coefficient.start windows.coefficient.stop .sub false .work2;
+        computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch;
+        computeControl [r.phase1,r.terminal] 1 r.control r.blockScratch;
+        computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch;
+        restoreLatestPaperTBoundary r.tBoundary 256
+      }) ++
+      (circuit! {
+        computeControl [r.phase1,r.phase2] 1 r.control r.sourceScratch;
+        controlledIncrement r.control r.lengthQ (r.sourceScratch.take (r.lengthQ.length-1));
+        computeControl [r.phase1,r.phase2] 1 r.control r.sourceScratch;
+        [Gate.CX r.phase1 r.control,Gate.CX r.phase2 r.control];
+        quotientSwapUnitary (r.quotient windows.quotientSwap) windows.quotientSwap.start windows.quotientSwap.stop;
+        [Gate.CX r.phase2 r.control,Gate.CX r.phase1 r.control];
+        computeControl [r.phase1,r.phase2] 2 r.control r.sourceScratch;
+        controlledDecrement r.control r.lengthQ (r.sourceScratch.take (r.lengthQ.length-1));
+        computeControl [r.phase1,r.phase2] 2 r.control r.sourceScratch
+      }) ++
+      (circuit! {
+        computeControl (r.phase1::r.lengthRPrime) (2^(r.lengthRPrime.length+1)-2) r.terminal r.blockScratch;
+        terminalEpochSpill r.terminal r.shiftEpoch r.quotientLow;
+        computeControl (r.phase1::r.lengthRPrime) (2^(r.lengthRPrime.length+1)-2) r.terminal r.blockScratch
+      }) ++
+      ((circuit! {
+        ([Gate.CCX r.phase2 r.sign r.terminal] ++
+          rControlNonterminal [r.phase1,r.terminal] 0 r.control r.lengthRPrime (r.blockScratch.getD 0 0) (r.blockScratch.drop 1) ++
+          [Gate.CCX r.phase2 r.sign r.terminal]);
+        intervalAddSubInverseUnitary (r.remainder windows.remainder) 256 windows.remainder.start windows.remainder.stop .add false .work1;
+        ([Gate.CCX r.phase2 r.sign r.terminal] ++
+          rControlNonterminal [r.phase1,r.terminal] 0 r.control r.lengthRPrime (r.blockScratch.getD 0 0) (r.blockScratch.drop 1) ++
+          [Gate.CCX r.phase2 r.sign r.terminal])
+      }) ++ (circuit! {
+        rControlNonterminal [r.phase1,r.phase2] 2 r.control r.lengthRPrime r.terminal r.blockScratch;
+        [Gate.CX r.control r.sign];
+        rControlNonterminal [r.phase1,r.phase2] 2 r.control r.lengthRPrime r.terminal r.blockScratch
+      }) ++ (circuit! {
+        rControlNonterminal [r.phase1] 0 r.control r.lengthRPrime r.terminal r.blockScratch;
+        intervalAddSubInverseUnitary (r.remainder windows.remainder) 256 windows.remainder.start windows.remainder.stop .sub true .work1;
+        rControlNonterminal [r.phase1] 0 r.control r.lengthRPrime r.terminal r.blockScratch
+      })) ++
+      (circuit! {
+        computeControl (r.phase1::r.lengthRPrime) (2^(r.lengthRPrime.length+1)-2) r.terminal r.blockScratch;
+        terminalEpochRestore r.terminal r.shiftEpoch r.quotientLow;
+        [Gate.CX r.terminal r.phase1];
+        (preShiftUnitary r.preShift).adjoint;
+        [Gate.CX r.terminal r.phase1];
+        terminalPaddingInverse r.terminalPadding;
+        computeControl (r.phase1::r.lengthRPrime) (2^(r.lengthRPrime.length+1)-2) r.terminal r.blockScratch
+      })))
+  simpa only [blockFForward,List.append_assoc,List.cons_append,List.nil_append] using hall
+
 end ShorECDLP.Paper2607_13816

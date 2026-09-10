@@ -53,4 +53,34 @@ theorem secp256k1EEAForwardAdaptive_qubitCount :
   rw [List.toFinset_card_of_nodup (List.nodup_dedup _),
     List.toFinset_card_of_nodup (List.nodup_range (n := 580))] at hc
   simpa only [AdaptiveCircuit.qubitCount,List.length_range] using hc
+/-- All physically valid reverse steps retain the fixed production allocation. -/
+theorem indexedScheduleInverseUnitary_production_usesOnly (start count : Nat)
+    (hlayout : IndexedScheduleLayout indexedStepProductionRegisters 256 start count) :
+    PaperCircuitUsesOnly (List.range 580)
+      (indexedScheduleInverseUnitary indexedStepProductionRegisters 256 start count) := by
+  induction hlayout with
+  | done start => intro g hg; simp [indexedScheduleInverseUnitary] at hg
+  | step head tail ih => exact ih.append (indexedStepInverseUnitary_production_usesOnly _ head)
+
+theorem secp256k1EEAReverseAdaptive_wires_subset :
+    (secp256k1EEAReverseAdaptive indexedStepProductionRegisters).wires ⊆ List.range 580 := by
+  intro w hw
+  have hs := indexedScheduleInverseAdaptive_wires_subset indexedStepProductionRegisters 256 1 secp256k1ScheduleLength
+  have hm := hs hw
+  obtain ⟨g,hg,hwg⟩ := List.mem_flatMap.mp hm
+  exact indexedScheduleInverseUnitary_production_usesOnly 1 secp256k1ScheduleLength
+    secp256k1ScheduleLayout_production g hg w hwg
+
+/-- Measurement reset does not subtract any wire from this whole-tree distinct-label count. -/
+theorem secp256k1EEAReverseAdaptive_qubitCount :
+    (secp256k1EEAReverseAdaptive indexedStepProductionRegisters).qubitCount ≤ 580 := by
+  have hs : (secp256k1EEAReverseAdaptive indexedStepProductionRegisters).wires.dedup.toFinset ⊆
+      (List.range 580).toFinset := by
+    intro w hw
+    exact List.mem_toFinset.mpr (secp256k1EEAReverseAdaptive_wires_subset (by simpa using hw))
+  have hc := Finset.card_le_card hs
+  rw [List.toFinset_card_of_nodup (List.nodup_dedup _),
+    List.toFinset_card_of_nodup (List.nodup_range (n := 580))] at hc
+  simpa only [AdaptiveCircuit.qubitCount,List.length_range] using hc
+
 end ShorECDLP.Paper2607_13816
