@@ -1,3 +1,5 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.SquareCoherent
+import ShorECDLP.Submission.«2607_13816».Arithmetic.SquareInverse
 import ShorECDLP.Submission.«2607_13816».Arithmetic.InPlaceSupport
 import ShorECDLP.Submission.«2607_13816».Arithmetic.HornerSupport
 import ShorECDLP.Submission.«2607_13816».Arithmetic.InPlaceResources

@@ -317,7 +317,7 @@ theorem squareLoop_branch_correct (controls input : List Wire) (a : Wire) (rest 
         rw [ah.1]
         simpa only [squareLoopIdealState,if_neg hqs] using ah.2
 
-private theorem squareWrap_counts (g h : Circuit) (a : Quantum.AdaptiveCircuit) :
+theorem squareWrap_counts (g h : Circuit) (a : Quantum.AdaptiveCircuit) :
     gidneyToffoliCount (.unitary g (a.seq (.unitary h .done))) =
       eeaToffoliCount g + (gidneyToffoliCount a + eeaToffoliCount h) ∧
     gidneyCnotCount (.unitary g (a.seq (.unitary h .done))) =

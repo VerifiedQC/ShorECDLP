@@ -1668,11 +1668,24 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_certificate
 #print axioms ShorECDLP.qubitCount
 #print axioms ShorECDLP.Secp256k1.bitcoinECDLPTrial_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.modularSub_branch_after_add
+#print axioms ShorECDLP.Paper2607_13816.modularHalve_branch_after_double
+#print axioms ShorECDLP.Paper2607_13816.modularSub256_wires_iff
+#print axioms ShorECDLP.Paper2607_13816.modularHalve256_wires_iff
+#print axioms ShorECDLP.Paper2607_13816.squareWrap_counts
+#print axioms ShorECDLP.Paper2607_13816.squareSub_after_add
+#print axioms ShorECDLP.Paper2607_13816.squareSub_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverse_after_forward
+#print axioms ShorECDLP.Paper2607_13816.secp256k1SquareInverse_correct_resources
+#print axioms ShorECDLP.Paper2607_13816.squareLoop_coherent
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.squareLoop_forward_inverse_coherent
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1647 ]]; then
-  printf 'expected 1647 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1660 ]]; then
+  printf 'expected 1660 #print axioms results\n' >&2
   exit 1
 fi
 
