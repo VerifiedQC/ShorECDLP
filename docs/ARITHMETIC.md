@@ -2439,3 +2439,7 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Complete quotient microstep
 
 `indexedStepUnitary_quotient_packed` connects all eight actual blocks from the original packed input. After alignment and digit extraction, E/F are inactive and G enters the coefficient phase exactly at zero shift. The positive updated quotient length disables H at every index, including the last quotient digit. The resulting state has clean auxiliary wires, complete canonical packing, a remainder below the new aligned divisor and the exact extracted-digit identity. Original arithmetic, metadata and active-window conditions remain explicit; phase iteration and production reachability remain subsequent work.
+
+### Complete quotient phase
+
+`indexedScheduleUnitary_quotient_complete` proves that the actual multi-step schedule computes Euclidean division and remainder, leaves the quotient with its true bit length, and enters the coefficient phase. It starts from an empty quotient and a tightly aligned positive divisor. Weighted conservation, intermediate bounds, packing, and phase transitions are derived by induction. Physical layout and numerical window coverage at each index remain explicit; their production reachability is subsequent work.
