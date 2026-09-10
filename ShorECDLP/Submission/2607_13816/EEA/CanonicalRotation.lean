@@ -346,5 +346,37 @@ theorem canonicalWork2RotationBit_resources (control : Wire) (bit : Fin 10) :
   exact ⟨hcount.1,hcount.2.1,hcount.2.2.1,hcount.2.2.2,hu,by
     simpa only [List.length_cons,List.length_range'] using source_qubit_bound hu⟩
 
+/-- The source rotation stage contains only classical reversible gates. -/
+theorem canonicalWork2RotationBit_HPFree (control : Wire) (bit : Fin 10) :
+    HPFree (canonicalWork2RotationBit control bit) := by
+  have hs (swaps : List (Nat×Nat)) : HPFree (sourceSwapCircuit control swaps) := by
+    induction swaps with
+    | nil => simp [sourceSwapCircuit]
+    | cons p ps ih =>
+        simp only [sourceSwapCircuit,List.flatMap_cons,hpFree_append]
+        exact ⟨controlledSwap_HPFree _ _ _,ih⟩
+  exact hs _
+/-- All controls and swapped data wires are physically distinct in the source stage. -/
+theorem canonicalWork2RotationBit_wellFormed (control : Wire) (bit : Fin 10)
+    (hc : control∉List.range' 263 259) :
+    CircuitWellFormed (canonicalWork2RotationBit control bit) := by
+  have hs (swaps : List (Nat×Nat))
+      (hh : ∀ p∈swaps, control≠p.1 ∧ control≠p.2 ∧ p.1≠p.2) :
+      CircuitWellFormed (sourceSwapCircuit control swaps) := by
+    induction swaps with
+    | nil => simp [sourceSwapCircuit,CircuitWellFormed]
+    | cons p ps ih =>
+      have hp := hh p (by simp)
+      have ht := ih (fun q hq => hh q (by simp [hq]))
+      simp only [sourceSwapCircuit,List.flatMap_cons,circuitWellFormed_append]
+      exact ⟨controlledSwap_wellFormed _ _ _ hp.1 hp.2.1 hp.2.2,ht⟩
+  apply hs
+  intro p hp
+  obtain ⟨q,hq,rfl⟩ := List.mem_map.mp hp
+  have hq' := (rotation_data bit).2.1 q hq
+  have hleft : 263+q.1∈List.range' 263 259 := List.mem_range'.mpr ⟨q.1,hq'.1,by omega⟩
+  have hright : 263+q.2∈List.range' 263 259 := List.mem_range'.mpr ⟨q.2,hq'.2.1,by omega⟩
+  exact ⟨fun he => hc (he.symm ▸ hleft),fun he => hc (he.symm ▸ hright),by omega⟩
+
 end
 end ShorECDLP.Paper2607_13816
