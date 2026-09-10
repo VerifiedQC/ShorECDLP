@@ -332,6 +332,86 @@ theorem secp256k1EEAParityCorrection_measurementCount :
     secp256k1EEAParityCorrection.measurementCount=510 :=
   parity_measurements_generic _ _ _ _ _ _ _ (constMinus_measurements _ _ _ _ _ _ _
     List.length_range' List.length_range' (by decide +kernel) (by decide +kernel))
+private theorem uncenter_T (input dirty : List Wire) (modulus : List Bool) (p : Nat)
+    (c r t iter : Wire) : (eeaUncenter input dirty modulus p c r t iter).tCount=
+      (eeaCenter input dirty modulus p c r t iter).tCount := by
+  simp only [eeaUncenter,eeaCenter,adaptive_tCount_seq,Nat.add_comm]
+private theorem wrapped_T (a : AdaptiveCircuit) (c d : Circuit) :
+    (AdaptiveCircuit.unitary c (a.seq (.unitary d .done))).tCount=ShorECDLP.tCount c+a.tCount+ShorECDLP.tCount d := by
+  change ShorECDLP.tCount c + (a.seq (.unitary d .done)).tCount = _
+  rw [adaptive_tCount_seq,unitary_T]
+  omega
+private theorem wrapped_T_swap (a b : AdaptiveCircuit) (c d e f : Circuit)
+    (ha : a.tCount=b.tCount) (hc : ShorECDLP.tCount c=ShorECDLP.tCount f)
+    (hd : ShorECDLP.tCount d=ShorECDLP.tCount e) :
+    (AdaptiveCircuit.unitary c (a.seq (.unitary d .done))).tCount=
+      (AdaptiveCircuit.unitary e (b.seq (.unitary f .done))).tCount := by
+  simp only [wrapped_T,ha,hc,hd]
+  omega
+private theorem unpreprocess_T_eq : eeaUnpreprocess.tCount=eeaPreprocess.tCount := by
+  have hl : ShorECDLP.tCount eeaLengthUndo=ShorECDLP.tCount eeaLengthSetup := by
+    simp only [eeaLengthUndo,eeaLengthSetup,ShorECDLP.tCount_append]
+    omega
+  have hw : ShorECDLP.tCount workRegistersRestore=ShorECDLP.tCount workRegistersPrepare := by
+    rw [workRegistersRestore_resources.2.2.2.2,workRegistersPrepare_resources.2.2.2.2]
+  have hu := uncenter_T (List.range' 266 256).reverse (List.range' 4 256)
+    (constantBits 256 (2^256-2^32-977)) (2^256-2^32-977) 560 561 562 2
+  exact wrapped_T_swap
+    (eeaUncenter (List.range' 266 256).reverse (List.range' 4 256) (constantBits 256 (2^256-2^32-977)) (2^256-2^32-977) 560 561 562 2)
+    (eeaCenter (List.range' 266 256).reverse (List.range' 4 256) (constantBits 256 (2^256-2^32-977)) (2^256-2^32-977) 560 561 562 2)
+    eeaLengthUndo workRegistersRestore workRegistersPrepare eeaLengthSetup hu hl hw
+
+theorem eeaUnpreprocess_tCount : eeaUnpreprocess.tCount=933541 :=
+  unpreprocess_T_eq.trans eeaPreprocess_resources.2.2.2.1
+private theorem constMinus_T (input dirty : List Wire) (bits : List Bool)
+    (q c r t : Wire) (hi : input.length=256) (hd : dirty.length=255) (hb : bits.length=255) :
+    (controlledConstMinus input dirty (true::bits) q c r t).tCount=10696 := by
+  have hone := (constant_metrics input dirty (List.replicate 255 false) q c r t hi hd (by simp only [List.length_replicate])).1
+  have hmod := (constant_metrics input dirty bits q c r t hi hd hb).1
+  have he : ((List.range 256).map (Nat.testBit 1))=true::List.replicate 255 false := by decide +kernel
+  have hz : ShorECDLP.tCount (input.map (Gate.CX q))=0 := by
+    simp [ShorECDLP.tCount,List.map_map,Function.comp_def,ShorECDLP.tCost]
+  change ShorECDLP.tCount (input.map (Gate.CX q)) +
+    ((controlledGidneyAddConst input dirty ((List.range input.length).map (Nat.testBit 1)) q c r t).seq
+      (controlledGidneyAddConst input dirty (true::bits) q c r t)).tCount=10696
+  rw [hz,adaptive_tCount_seq,hi,he,hone,hmod]
+private theorem parity_T_generic (input dirty : List Wire) (modulus : List Bool)
+    (c r t iter : Wire) (h : (controlledConstMinus input dirty modulus iter c r t).tCount=10696) :
+    (eeaParityCorrection input dirty modulus c r t iter).tCount=10696 :=
+  (wrapped_T _ _ _).trans (show _=10696 by rw [h]; rfl)
+private theorem constMinus_256_T (input dirty : List Wire) (bits tail : List Bool)
+    (q c r t : Wire) (hi : input.length=256) (hd : dirty.length=255) (hb : bits.length=256)
+    (he : bits=true::tail) : (controlledConstMinus input dirty bits q c r t).tCount=10696 := by
+  subst bits
+  exact constMinus_T _ _ _ _ _ _ _ hi hd (by simpa only [List.length_cons] using Nat.add_right_cancel (show tail.length+1=255+1 from hb))
+theorem secp256k1EEAParityCorrection_tCount : secp256k1EEAParityCorrection.tCount=10696 :=
+  parity_T_generic _ _ _ _ _ _ _ (constMinus_256_T _ _ _ secp256k1ModulusBits.tail _ _ _ _
+    List.length_range' List.length_range' (by decide +kernel) (by decide +kernel))
+private theorem forward_wrapper_T (pre schedule parity : AdaptiveCircuit) (a b : Circuit)
+    (hpre : pre.tCount=933541) (hs : schedule.tCount=122179575) (hp : parity.tCount=10696)
+    (ha : ShorECDLP.tCount a=18445) (hb : ShorECDLP.tCount b=0) :
+    ((((pre.seq schedule).seq (.unitary a .done)).seq parity).seq (.unitary b .done)).tCount=123142257 := by
+  simp only [adaptive_tCount_seq,unitary_T,hpre,hs,hp,ha,hb]
+private theorem rotation_epoch_T : ShorECDLP.tCount (canonicalWork2Rotation++terminalEpochCompression)=18445 := by
+  rw [ShorECDLP.tCount_append,canonicalWork2Rotation_resources.2.2.2.1,terminalEpochCompression_resources.2.2.2.1]
+private theorem inverse_rotation_epoch_T : ShorECDLP.tCount (terminalEpochCompression++canonicalWork2InverseRotation)=18445 := by
+  rw [ShorECDLP.tCount_append,canonicalWork2InverseRotation_resources.2.2.2.1,terminalEpochCompression_resources.2.2.2.1]
+theorem secp256k1EEAForwardWrapper_tCount : secp256k1EEAForwardWrapper.tCount=123142257 :=
+  forward_wrapper_T _ _ _ _ _ eeaPreprocess_resources.2.2.2.1 secp256k1EEAForwardAdaptive_tCount
+    secp256k1EEAParityCorrection_tCount rotation_epoch_T terminalWork1Clear_resources.2.2.2.1
+private theorem reverse_wrapper_T (pre schedule parity : AdaptiveCircuit) (a b : Circuit)
+    (hpre : pre.tCount=933541) (hs : schedule.tCount=122179575) (hp : parity.tCount=10696)
+    (ha : ShorECDLP.tCount a=0) (hb : ShorECDLP.tCount b=18445) :
+    (((((AdaptiveCircuit.unitary a .done).seq parity).seq (.unitary b .done)).seq schedule).seq pre).tCount=123142257 := by
+  simp only [adaptive_tCount_seq,unitary_T,hpre,hs,hp,ha,hb]
+theorem secp256k1EEAReverseWrapper_tCount : secp256k1EEAReverseWrapper.tCount=123142257 :=
+  reverse_wrapper_T _ _ _ _ _ eeaUnpreprocess_tCount secp256k1EEAReverseAdaptive_tCount
+    secp256k1EEAParityCorrection_tCount terminalWork1Clear_resources.2.2.2.1 inverse_rotation_epoch_T
+private theorem forward_bank_T : secp256k1EEAForwardInDataBank.tCount=123142257 :=
+  (AdaptiveCircuit.relabel_tCount _ _).trans secp256k1EEAForwardWrapper_tCount
+private theorem reverse_bank_T : secp256k1EEAReverseInDataBank.tCount=123142257 :=
+  (AdaptiveCircuit.relabel_tCount _ _).trans secp256k1EEAReverseWrapper_tCount
+
 attribute [local irreducible] eeaPreprocess eeaUnpreprocess AdaptiveCircuit.measurementCount
 theorem eeaUnpreprocess_measurementCount : eeaUnpreprocess.measurementCount=766 :=
   unpreprocess_measure_eq.trans eeaPreprocess_resources.2.2.2.2.1
@@ -372,4 +452,14 @@ theorem secp256k1InPlaceMultiplication_measurements :
   rw [secp256k1InPlaceMultiplication_measurementCount,fig15MultiplyToWork_resources.2,
     forward_bank_measurements,fig15MultiplyToData_resources.2,
     fig15MultiplyToDataInverse_resources.2,reverse_bank_measurements]
+/-- Worst-branch T total on the same complete division circuit as the coherent contract. -/
+theorem secp256k1InPlaceDivision_T : secp256k1InPlaceDivision.tCount=269605707 := by
+  rw [secp256k1InPlaceDivision_tCount,secp256k1EEAForwardWrapper_tCount,
+    fig15MultiplyToWork_resources.1,reverse_bank_T,
+    fig15MultiplyToData_resources.1,fig15MultiplyToDataInverse_resources.1]
+/-- Worst-branch T total on the same complete multiplication circuit as the coherent contract. -/
+theorem secp256k1InPlaceMultiplication_T : secp256k1InPlaceMultiplication.tCount=269605707 := by
+  rw [secp256k1InPlaceMultiplication_tCount,fig15MultiplyToWork_resources.1,forward_bank_T,
+    fig15MultiplyToData_resources.1,fig15MultiplyToDataInverse_resources.1,reverse_bank_T]
+
 end ShorECDLP.Paper2607_13816
