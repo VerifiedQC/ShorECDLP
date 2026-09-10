@@ -1695,11 +1695,17 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.squareSubtract_correct
 #print axioms ShorECDLP.Paper2607_13816.squareSubtract_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.squareSubtract_coherent
+#print axioms ShorECDLP.Paper2607_13816.controlledComplement_state
+#print axioms ShorECDLP.Paper2607_13816.constantModular_layout
+#print axioms ShorECDLP.Paper2607_13816.modularNegateIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegate_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegate_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegate_coherent
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1674 ]]; then
-  printf 'expected 1674 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1680 ]]; then
+  printf 'expected 1680 #print axioms results\n' >&2
   exit 1
 fi
 

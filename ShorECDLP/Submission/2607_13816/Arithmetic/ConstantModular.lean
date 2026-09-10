@@ -102,7 +102,7 @@ theorem constantModularAddIdealState_correct (target : List Wire) (constant corr
         _=s w := hlw
 
 
-private theorem constant_modular_layout (target dirty : List Wire) (q c r t f : Wire)
+theorem constantModular_layout (target dirty : List Wire) (q c r t f : Wire)
     (hnd : ([q,c,r,t,f]++target++dirty).Nodup) :
     ([q,c,r,t]++target++dirty.take (target.length-1)).Nodup ∧
     ([f,c,r,t]++target++dirty.take (target.length-1)).Nodup ∧
@@ -121,7 +121,7 @@ theorem controlledConstantModularAdd_wellFormed (target dirty : List Wire) (cons
     (hd : target.length=dirty.length) (hne : 0<target.length)
     (hnd : ([q,c,r,t,f]++target++dirty).Nodup) :
     (controlledConstantModularAdd target dirty constant correction p q c r t f).WellFormed := by
-  have hl := constant_modular_layout target dirty q c r t f hnd
+  have hl := constantModular_layout target dirty q c r t f hnd
   have ht : target.length=(dirty.take (target.length-1)).length+1 := by simp only [List.length_take]; omega
   exact (controlledGidneyAddConst_wellFormed target _ constant q c r t hk ht hl.1).seq
     ((controlledGidneyCompareLT_wellFormed target dirty _ q c r t f hd hnd).seq
@@ -139,7 +139,7 @@ theorem controlledConstantModularAdd_branch_correct (target dirty : List Wire) (
     (hb : branch ∈ (controlledConstantModularAdd target dirty constant correction p q c r t f).run) :
     branch.kraus (Quantum.ket s)=Quantum.registerXResetMagnitude branch.history.length •
       Quantum.ket (constantModularAddIdealState target constant correction p q f s) := by
-  have hl := constant_modular_layout target dirty q c r t f hnd
+  have hl := constantModular_layout target dirty q c r t f hnd
   have htake : target.length=(dirty.take (target.length-1)).length+1 := by simp only [List.length_take]; omega
   have hn := (List.nodup_append.mp (List.nodup_append.mp hnd).1).2.1
   have hnot (w : Wire) (hw : w ∈ [q,c,r,t,f]) : w ∉ target := by
