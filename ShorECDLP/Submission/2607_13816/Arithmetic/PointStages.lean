@@ -6,7 +6,10 @@ namespace ShorECDLP.Paper2607_13816
 open Classical Quantum
 
 /-! Fixed shared-layout stages for Figure 14. Arithmetic, complete frame restoration,
-and canonical readiness are proved on the same layouts used by the coherent circuits. -/
+and canonical readiness are proved on the same layouts used by the coherent circuits.
+The pinned source maps S[0..3] to [558,559,560,561]: constant addition and
+negation use flag 558 and clean helpers 559,560,561. The square stage uses
+its own source ordering on these same physical wires. -/
 
 
 private theorem point_X_update (s t : BasisState) (hs : Secp256k1ZeroAllowedInputValid s)
@@ -42,10 +45,10 @@ private theorem point_Y_update (s t : BasisState) (hs : Secp256k1ZeroAllowedInpu
 
 def fig14ConstantX (k : Nat) : AdaptiveCircuit :=
   uncontrolledConstantModularAdd (List.range' 263 256) (List.range' 7 256) (constantBits 256 k)
-    secp256k1ReductionConstantBits ShorECDLP.p 558 560 561 559
+    secp256k1ReductionConstantBits ShorECDLP.p 559 560 561 558
 def fig14ConstantXState (k : Nat) : BasisState → BasisState :=
   uncontrolledConstantModularAddIdealState (List.range' 263 256) (constantBits 256 k)
-    secp256k1ReductionConstantBits ShorECDLP.p 559
+    secp256k1ReductionConstantBits ShorECDLP.p 558
 
 private theorem point_bits_value (k : Nat) (hk : k<ShorECDLP.p) : boolWordToNat (constantBits 256 k)=k := by
   rw [boolWordToNat_constantBits,Nat.mod_eq_of_lt]
@@ -57,9 +60,9 @@ theorem fig14ConstantXState_correct (k : Nat) (hk : k<ShorECDLP.p)
       (boolWordToNat (wireValues (List.range' 263 256) s)+k)%ShorECDLP.p ∧
     (∀ w, w ∉ List.range' 263 256 → fig14ConstantXState k s w=s w) := by
   have h := uncontrolledConstantModularAddIdealState_correct (List.range' 263 256)
-    (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 559 s
+    (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 558 s
     (by simp) (by simp [secp256k1ReductionConstantBits]) (List.nodup_range') (by decide +kernel)
-    (hs.1 559 (by decide +kernel)) (by decide +kernel) (by rw [point_bits_value k hk]; exact hk)
+    (hs.1 558 (by decide +kernel)) (by decide +kernel) (by rw [point_bits_value k hk]; exact hk)
     hs.2.2.1 (by rw [secp256k1ReductionConstant_value]; decide +kernel)
   simpa only [point_bits_value k hk] using h
 
@@ -69,11 +72,11 @@ theorem fig14ConstantXState_ready (k : Nat) (hk : k<ShorECDLP.p)
   have hh := fig14ConstantXState_correct k hk s hs
   exact point_X_update s _ hs (by rw [hh.1]; exact Nat.mod_lt _ ShorECDLP.Secp256k1.p_prime.pos) hh.2
 private theorem point_constantX_layout :
-    ([558,560,561,559]++List.range' 263 256++List.range' 7 256).Nodup := by decide +kernel
+    ([559,560,561,558]++List.range' 263 256++List.range' 7 256).Nodup := by decide +kernel
 private theorem point_const_valid_X (s : BasisState) (hs : Secp256k1ZeroAllowedInputValid s) :
-    ConstantModularValid (List.range' 263 256) ShorECDLP.p 558 560 561 559 s :=
-  ⟨hs.1 558 (by decide +kernel),hs.1 560 (by decide +kernel),hs.1 561 (by decide +kernel),
-    hs.1 559 (by decide +kernel),hs.2.2.1⟩
+    ConstantModularValid (List.range' 263 256) ShorECDLP.p 559 560 561 558 s :=
+  ⟨hs.1 559 (by decide +kernel),hs.1 560 (by decide +kernel),hs.1 561 (by decide +kernel),
+    hs.1 558 (by decide +kernel),hs.2.2.1⟩
 private theorem coherent_strengthen {program : AdaptiveCircuit}
     {ideal : State →ₗ[ℂ] State} {Valid Stronger : BasisState → Prop}
     (h : CoherentlyImplementsOn program ideal Valid) (hsub : ∀ s, Stronger s → Valid s) :
@@ -86,16 +89,16 @@ theorem fig14ConstantX_coherent (k : Nat) :
       Secp256k1ZeroAllowedInputValid := by
   apply coherent_strengthen
     (uncontrolledConstantModularAdd_coherent (List.range' 263 256) (List.range' 7 256)
-      (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 558 560 561 559
+      (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 559 560 561 558
       (by simp) (by simp [secp256k1ReductionConstantBits]) (by simp) (by simp)
       point_constantX_layout ShorECDLP.Secp256k1.p_prime.pos)
   exact point_const_valid_X
 def fig14ControlledConstantX (k : Nat) : AdaptiveCircuit :=
   controlledConstantModularAdd (List.range' 263 256) (List.range' 7 256) (constantBits 256 k)
-    secp256k1ReductionConstantBits ShorECDLP.p 836 558 560 561 559
+    secp256k1ReductionConstantBits ShorECDLP.p 836 559 560 561 558
 def fig14ControlledConstantXState (k : Nat) : BasisState → BasisState :=
   constantModularAddIdealState (List.range' 263 256) (constantBits 256 k)
-    secp256k1ReductionConstantBits ShorECDLP.p 836 559
+    secp256k1ReductionConstantBits ShorECDLP.p 836 558
 
 theorem fig14ControlledConstantXState_correct (k : Nat) (hk : k<ShorECDLP.p)
     (s : BasisState) (hs : Secp256k1ZeroAllowedInputValid s) :
@@ -103,9 +106,9 @@ theorem fig14ControlledConstantXState_correct (k : Nat) (hk : k<ShorECDLP.p)
       (boolWordToNat (wireValues (List.range' 263 256) s)+(if s 836 then k else 0))%ShorECDLP.p ∧
     (∀ w, w ∉ List.range' 263 256 → fig14ControlledConstantXState k s w=s w) := by
   have h := constantModularAddIdealState_correct (List.range' 263 256)
-    (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 836 559 s
+    (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 836 558 s
     (by simp) (by simp [secp256k1ReductionConstantBits]) (List.nodup_range') (by decide +kernel) (by decide +kernel) (by decide +kernel)
-    (hs.1 559 (by decide +kernel)) (by decide +kernel) (by rw [point_bits_value k hk]; exact hk)
+    (hs.1 558 (by decide +kernel)) (by decide +kernel) (by rw [point_bits_value k hk]; exact hk)
     hs.2.2.1 (by rw [secp256k1ReductionConstant_value]; decide +kernel)
   simpa only [point_bits_value k hk] using h
 
@@ -115,22 +118,22 @@ theorem fig14ControlledConstantXState_ready (k : Nat) (hk : k<ShorECDLP.p)
   have hh := fig14ControlledConstantXState_correct k hk s hs
   exact point_X_update s _ hs (by rw [hh.1]; exact Nat.mod_lt _ ShorECDLP.Secp256k1.p_prime.pos) hh.2
 private theorem point_controlledConstantX_layout :
-    ([836,558,560,561,559]++List.range' 263 256++List.range' 7 256).Nodup := by decide +kernel
+    ([836,559,560,561,558]++List.range' 263 256++List.range' 7 256).Nodup := by decide +kernel
 theorem fig14ControlledConstantX_coherent (k : Nat) :
     CoherentlyImplementsOn (fig14ControlledConstantX k) (Finsupp.lmapDomain ℂ ℂ (fig14ControlledConstantXState k))
       Secp256k1ZeroAllowedInputValid := by
   apply coherent_strengthen
     (controlledConstantModularAdd_coherent (List.range' 263 256) (List.range' 7 256)
-      (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 836 558 560 561 559
+      (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 836 559 560 561 558
       (by simp) (by simp [secp256k1ReductionConstantBits]) (by simp) (by simp)
       point_controlledConstantX_layout ShorECDLP.Secp256k1.p_prime.pos)
   exact point_const_valid_X
 def fig14ControlledConstantY (k : Nat) : AdaptiveCircuit :=
   controlledConstantModularAdd (List.range' 580 256) (List.range' 7 256) (constantBits 256 k)
-    secp256k1ReductionConstantBits ShorECDLP.p 836 558 560 561 559
+    secp256k1ReductionConstantBits ShorECDLP.p 836 559 560 561 558
 def fig14ControlledConstantYState (k : Nat) : BasisState → BasisState :=
   constantModularAddIdealState (List.range' 580 256) (constantBits 256 k)
-    secp256k1ReductionConstantBits ShorECDLP.p 836 559
+    secp256k1ReductionConstantBits ShorECDLP.p 836 558
 
 theorem fig14ControlledConstantYState_correct (k : Nat) (hk : k<ShorECDLP.p)
     (s : BasisState) (hs : Secp256k1ZeroAllowedInputValid s) :
@@ -138,9 +141,9 @@ theorem fig14ControlledConstantYState_correct (k : Nat) (hk : k<ShorECDLP.p)
       (boolWordToNat (wireValues (List.range' 580 256) s)+(if s 836 then k else 0))%ShorECDLP.p ∧
     (∀ w, w ∉ List.range' 580 256 → fig14ControlledConstantYState k s w=s w) := by
   have h := constantModularAddIdealState_correct (List.range' 580 256)
-    (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 836 559 s
+    (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 836 558 s
     (by simp) (by simp [secp256k1ReductionConstantBits]) (List.nodup_range') (by decide +kernel) (by decide +kernel) (by decide +kernel)
-    (hs.1 559 (by decide +kernel)) (by decide +kernel) (by rw [point_bits_value k hk]; exact hk)
+    (hs.1 558 (by decide +kernel)) (by decide +kernel) (by rw [point_bits_value k hk]; exact hk)
     hs.2.2.2 (by rw [secp256k1ReductionConstant_value]; decide +kernel)
   simpa only [point_bits_value k hk] using h
 
@@ -150,17 +153,17 @@ theorem fig14ControlledConstantYState_ready (k : Nat) (hk : k<ShorECDLP.p)
   have hh := fig14ControlledConstantYState_correct k hk s hs
   exact point_Y_update s _ hs (by rw [hh.1]; exact Nat.mod_lt _ ShorECDLP.Secp256k1.p_prime.pos) hh.2
 private theorem point_controlledConstantY_layout :
-    ([836,558,560,561,559]++List.range' 580 256++List.range' 7 256).Nodup := by decide +kernel
+    ([836,559,560,561,558]++List.range' 580 256++List.range' 7 256).Nodup := by decide +kernel
 private theorem point_const_valid_Y (s : BasisState) (hs : Secp256k1ZeroAllowedInputValid s) :
-    ConstantModularValid (List.range' 580 256) ShorECDLP.p 558 560 561 559 s :=
-  ⟨hs.1 558 (by decide +kernel),hs.1 560 (by decide +kernel),hs.1 561 (by decide +kernel),
-    hs.1 559 (by decide +kernel),hs.2.2.2⟩
+    ConstantModularValid (List.range' 580 256) ShorECDLP.p 559 560 561 558 s :=
+  ⟨hs.1 559 (by decide +kernel),hs.1 560 (by decide +kernel),hs.1 561 (by decide +kernel),
+    hs.1 558 (by decide +kernel),hs.2.2.2⟩
 theorem fig14ControlledConstantY_coherent (k : Nat) :
     CoherentlyImplementsOn (fig14ControlledConstantY k) (Finsupp.lmapDomain ℂ ℂ (fig14ControlledConstantYState k))
       Secp256k1ZeroAllowedInputValid := by
   apply coherent_strengthen
     (controlledConstantModularAdd_coherent (List.range' 580 256) (List.range' 7 256)
-      (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 836 558 560 561 559
+      (constantBits 256 k) secp256k1ReductionConstantBits ShorECDLP.p 836 559 560 561 558
       (by simp) (by simp [secp256k1ReductionConstantBits]) (by simp) (by simp)
       point_controlledConstantY_layout ShorECDLP.Secp256k1.p_prime.pos)
   exact point_const_valid_Y
@@ -185,9 +188,9 @@ theorem fig14Multiplication_ready (s : BasisState) (hs : Secp256k1ZeroAllowedInp
 as the constant additions; label 836 carries the arbitrary point control. -/
 def fig14Negate : AdaptiveCircuit :=
   controlledModularNegate (List.range' 263 256) (List.range' 7 256)
-    (constantBits 256 ShorECDLP.p) 836 558 560 561 559
+    (constantBits 256 ShorECDLP.p) 836 559 560 561 558
 def fig14NegateState : BasisState → BasisState :=
-  modularNegateIdealState (List.range' 263 256) (constantBits 256 ShorECDLP.p) 836 559
+  modularNegateIdealState (List.range' 263 256) (constantBits 256 ShorECDLP.p) 836 558
 
 private theorem point_modulus : boolWordToNat (constantBits 256 ShorECDLP.p)=ShorECDLP.p := by
   rw [boolWordToNat_constantBits,Nat.mod_eq_of_lt (by decide +kernel)]
@@ -197,9 +200,9 @@ theorem fig14NegateState_correct (s : BasisState) (hs : Secp256k1ZeroAllowedInpu
       (if s 836 then (ShorECDLP.p-boolWordToNat (wireValues (List.range' 263 256) s))%ShorECDLP.p
        else boolWordToNat (wireValues (List.range' 263 256) s)) ∧
     (∀ w, w ∉ List.range' 263 256 → fig14NegateState s w=s w) := by
-  exact modularNegateIdealState_correct _ _ ShorECDLP.p 836 559 s
+  exact modularNegateIdealState_correct _ _ ShorECDLP.p 836 558 s
     (by simp) (by simp) (List.nodup_range') (by decide +kernel) (by decide +kernel)
-    (by decide +kernel) (hs.1 559 (by decide +kernel)) (by decide +kernel) hs.2.2.1 point_modulus
+    (by decide +kernel) (hs.1 558 (by decide +kernel)) (by decide +kernel) hs.2.2.1 point_modulus
 
 theorem fig14NegateState_ready (s : BasisState) (hs : Secp256k1ZeroAllowedInputValid s) :
     Secp256k1ZeroAllowedInputValid (fig14NegateState s) := by
@@ -215,7 +218,7 @@ theorem fig14Negate_coherent :
       Secp256k1ZeroAllowedInputValid := by
   apply coherent_strengthen
     (controlledModularNegate_coherent (List.range' 263 256) (List.range' 7 256)
-      (constantBits 256 ShorECDLP.p) ShorECDLP.p 836 558 560 561 559
+      (constantBits 256 ShorECDLP.p) ShorECDLP.p 836 559 560 561 558
       (by simp) (by simp) (by simp) point_controlledConstantX_layout ShorECDLP.Secp256k1.p_prime.pos)
   exact point_const_valid_X
 

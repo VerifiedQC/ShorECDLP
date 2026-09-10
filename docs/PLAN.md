@@ -2232,3 +2232,5 @@ This closes coherent coordinate-stage composition. The field operations delibera
 explicit zero-as-one extension; the resulting coordinate map is not yet the total elliptic-curve
 group law. A direct coordinate formula, exceptional-point correction, and aggregate Phase 9
 resources remain open. Phases 10–12 remain open.
+
+The fixed constant-add and negation stages follow the pinned `S[:4]` order exactly: flag 558 and clean helpers 559, 560, 561. The square stage retains its distinct source role ordering on the shared bank.
