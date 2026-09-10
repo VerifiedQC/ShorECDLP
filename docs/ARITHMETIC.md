@@ -2451,3 +2451,7 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Division through the canonical swap boundary
 
 `indexedScheduleUnitary_quotient_coefficient_swap_packed` composes the actual division, coefficient and swap schedules. Original arithmetic and true input lengths derive every intermediate state and end in canonical packing with a strictly smaller second remainder. Layout, numerical window coverage and final scheduled-endpoint alignment remain explicit. The remainder-alignment phase and production reachability remain subsequent work.
+
+### Complete remainder-alignment microstep
+
+`indexedStepUnitary_remainder_packed` connects all eight actual blocks. Alignment increments the shift, comparison preserves both remainders, and the final phase update selects quotient entry exactly when the aligned divisor exceeds the remainder. The sign clears and the positive shift disables H at every index. Full packing and clean auxiliary wires are derived from the original input; arithmetic capacity and numerical windows remain explicit. Iterating alignment and proving production reachability remain subsequent work.

@@ -13815,4 +13815,61 @@ theorem blockHForward_nonzeroQuotient (r : IndexedStepRegisters) (n T : Nat)
     exact active_H_quotient_idle r n T b4 b5 s h hr hz
   · simp only [blockHForward, hstep, if_false, Classical.run_nil]
 
+/-- Both phase flags clear disable the actual quotient insertion block. -/
+theorem blockDForward_remainder_idle
+    (r : IndexedStepRegisters) (n T : Nat) (s : BasisState)
+    (h : IndexedStepLayout r n T) (hc : Clean r.aux s)
+    (hp1 : s r.phase1 = false) (hp2 : s r.phase2 = false) :
+    run (blockDForward r (certifiedActiveWindows n T).quotientSwap) s = s := by
+  have hc0 : s r.control = false := hc _ h.control_mem_aux
+  have hr : IndexedStepReady r s := by
+    intro w hw
+    apply hc w
+    simp only [IndexedStepRegisters.sharedScratch,List.mem_cons,List.mem_append] at hw
+    rcases hw with he | he | he
+    · subst w; exact h.control_mem_aux
+    · exact h.sourceScratch_mem_aux he
+    · exact h.remainderRepairScratch_mem_aux he
+  have hm2 : registerMatches [r.phase1,r.phase2] 2 s = false := by
+    simp [registerMatches,registerMatchesFrom,hp1,hp2]
+    decide
+  have hm1 : registerMatches [r.phase1,r.phase2] 1 s = false := by
+    simp [registerMatches,registerMatchesFrom,hp1,hp2]
+  have hm2idle := terminal_match_idle _ _ _ s hc0 hm2
+  have hm1idle := terminal_match_idle _ _ _ s hc0 hm1
+  have hd1 : blockD1ForwardState r s = s := by
+    simp only [blockD1ForwardState,hm2idle,hc0,terminal_increment_idle]
+  have hd3 : blockD3ForwardState r s = s := by
+    simp only [blockD3ForwardState,hm1idle,hc0,terminal_decrement_idle]
+  have hn1 : r.phase1 ≠ r.control := by
+    have hh := (List.nodup_cons.mp h.quotientControls).1
+    exact fun he => hh (by simp [he])
+  have hn2 : r.phase2 ≠ r.control := by
+    have hh := (List.nodup_cons.mp (List.nodup_cons.mp h.quotientControls).2).1
+    exact fun he => hh (by simp [he])
+  have hx1 : xorWireState r.phase2 r.control (xorWireState r.phase1 r.control s) = s := by
+    funext wire
+    by_cases hw : wire = r.control
+    · subst wire; simp [xorWireState,upd,hn2,hp1,hp2]
+    · simp [xorWireState,upd,hw]
+  have hx2 : xorWireState r.phase1 r.control (xorWireState r.phase2 r.control s) = s := by
+    funext wire
+    by_cases hw : wire = r.control
+    · subst wire; simp [xorWireState,upd,hn1,hp1,hp2]
+    · simp [xorWireState,upd,hw]
+  have hswap : indexedQuotientSwapState (r.quotient (certifiedActiveWindows n T).quotientSwap)
+      (certifiedActiveWindows n T).quotientSwap.start (certifiedActiveWindows n T).quotientSwap.stop s = s := by
+    simp [indexedQuotientSwapState,quotientSwapState,IndexedStepRegisters.quotient,hc0]
+  have hd2 : blockD2ForwardState r (certifiedActiveWindows n T).quotientSwap s = s := by
+    simp only [blockD2ForwardState,hx1,hswap,hx2]
+  have hd := (blockDForward_correct r n T _ s h rfl hr).1
+  rw [blockDForwardState,hd1,hd2,hd3] at hd
+  exact hd
+
+/-- A nonzero encoded shift disables the actual endpoint block at every index. -/
+theorem blockHForward_nonzeroShift (r : IndexedStepRegisters) (n T : Nat)
+    (s : BasisState) (h : IndexedStepLayout r n T) (hr : IndexedStepReady r s)
+    (hz : wireAnd r.lengthS s=false) : run (blockHForward r n T) s=s := by
+  exact coefficient_blockH_idle r n T s h hr (by simp [hz])
+
 end ShorECDLP.Paper2607_13816
