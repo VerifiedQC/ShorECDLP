@@ -2167,3 +2167,14 @@ then applies the existing exact-forward-image inverse theorem with its unchanged
 normalized branches. Its full output restores the original EEA registers and
 preserves the current external frame. The contract also transports to the actual
 relabeled inverse borrowing Y, supplying Figure 15's retained-result inverse interface.
+
+The concrete Figure 15 multipliers and both initial prefixes now have coherent
+contracts on the stated clean/nonzero/canonical input domain. For division,
+quotient accumulation followed by Y reset satisfies the actual relabeled
+inverse's live-register contract. Its deterministic output restores every
+original wire except retained quotient A and cleared Y. Recomputing Y proves
+full bit equality with the original measured word, so the literal transcript-
+selected Z correction produces exactly its measurement sign for every outcome.
+The actual final three-CX swap stream exchanges A and Y with a complete frame
+proof. The full continuation/measurement coherent composition and multiplication
+reconstruction remain open, followed by aggregate resources.

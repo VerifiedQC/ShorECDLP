@@ -21,6 +21,23 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.fig15WorkProductState
+#print axioms ShorECDLP.Paper2607_13816.fig15DataProductState
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig15WorkProductState_correct
+#print axioms ShorECDLP.Paper2607_13816.fig15DataProductState_correct
+#print axioms ShorECDLP.Paper2607_13816.Secp256k1InPlaceInputValid
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionPrefix_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplicationPrefix_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionReset_inverseReady
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionRestoredState
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionRestoredState_eq
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionRecompute_word
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionRecompute_bits
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionRecompute_phase
+#print axioms ShorECDLP.Paper2607_13816.fig15SwapOutput_run
 #print axioms ShorECDLP.Paper2607_13816.Secp256k1EEAForwardLocalImage
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_coherent_localImage
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_output_localImage
@@ -1546,8 +1563,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1522 ]]; then
-  printf 'expected 1522 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1539 ]]; then
+  printf 'expected 1539 #print axioms results\n' >&2
   exit 1
 fi
 
