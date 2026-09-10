@@ -1,3 +1,6 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointStateEncoding
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointTotalCircuit
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointTotal
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointWordProgram
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointCorrectionCircuit
 import ShorECDLP.Submission.«2607_13816».Arithmetic.BitTransposition
