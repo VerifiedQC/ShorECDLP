@@ -2216,3 +2216,19 @@ The source controlled modular negation now proves canonical output for every inp
 The unconditional constant modular adder now has a literal five-stage program with canonical arithmetic, full restoration of non-target wires, every-branch correctness and a normalized coherent contract. Its initial constant adder specializes away the enabled control through the existing compiler pass; no physical wire is allocated for that virtual control. The controlled constant modular adder also has a normalized coherent adapter. Figure 14 composition, exceptional point cases and aggregate Phase 9 resources remain open.
 
 Both Figure 15 field operations now have a reversible zero-input extension: zero X is temporarily changed to one, the unchanged operation runs, and X, the external zero flag and all workspace are restored. The complete output is the identity when X=0; for nonzero X the existing division/multiplication arithmetic applies. Normalized coherent contracts and same-program certificates give 269,612,833 T gates, 11,343,835 measurements and at most 837 distinct wires (the original 836 plus one zero flag). This extension is needed for exceptional point inputs; it does not close total elliptic-curve point addition.
+
+
+### Figure 14 shared-layout coordinate composition
+
+The actual nine coordinate stages now compose on one fixed layout: unconditional X offset,
+controlled Y offset, zero-extended division, controlled square-subtraction, controlled X offset,
+zero-extended multiplication, controlled X negation, unconditional X restoration, and controlled
+Y offset. Every stage proves canonical arithmetic and preserves the full clean-work input
+contract. The composed program has a normalized coherent contract on arbitrary supported
+superpositions, and its complete-state map restores every wire outside X and Y, including
+control 836 and zero flag 837.
+
+This closes coherent coordinate-stage composition. The field operations deliberately use the
+explicit zero-as-one extension; the resulting coordinate map is not yet the total elliptic-curve
+group law. A direct coordinate formula, exceptional-point correction, and aggregate Phase 9
+resources remain open. Phases 10–12 remain open.

@@ -1739,11 +1739,31 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_resources
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_certificate
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig14ConstantXState_correct
+#print axioms ShorECDLP.Paper2607_13816.fig14ConstantXState_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14ConstantX_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantXState_correct
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantXState_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantX_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantYState_correct
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantYState_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantY_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14Division_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14Multiplication_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14NegateState_correct
+#print axioms ShorECDLP.Paper2607_13816.fig14NegateState_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14Negate_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14SquareSubtractState_correct
+#print axioms ShorECDLP.Paper2607_13816.fig14SquareSubtractState_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14SquareSubtract_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateState_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateState_frame
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1718 ]]; then
-  printf 'expected 1718 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1738 ]]; then
+  printf 'expected 1738 #print axioms results\n' >&2
   exit 1
 fi
 
