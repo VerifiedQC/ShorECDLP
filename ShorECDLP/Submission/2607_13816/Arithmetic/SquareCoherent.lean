@@ -17,7 +17,7 @@ private theorem amplitude_norm (c : ℂ) (s : BasisState) :
   unfold normSq
   rw [inner_smul_smul, ← Complex.normSq_eq_conj_mul_self]
   simp
-private theorem coherent_branches (program : AdaptiveCircuit)
+theorem coherent_history_branches (program : AdaptiveCircuit)
     (f : BasisState → BasisState) (Valid : BasisState → Prop)
     (hw : program.WellFormed) (witness : BasisState) (hv : Valid witness)
     (hbranch : ∀ b ∈ program.run, ∀ s, Valid s →
@@ -72,7 +72,7 @@ theorem squareLoop_coherent (controls input : List Wire) (a : Wire) (rest : List
     CoherentlyImplementsOn (squareLoop controls input (a :: rest) correction p copied c r t f)
       (Finsupp.lmapDomain ℂ ℂ (squareLoopIdealState controls input (a :: rest) correction p copied c f))
       (SquareInputValid input (a :: rest) p copied c r t f) := by
-  apply coherent_branches _ _ _ (squareLoop_wellFormed controls input a rest correction p copied c r t f hlen hk hnd hcontrols)
+  apply coherent_history_branches _ _ _ (squareLoop_wellFormed controls input a rest correction p copied c r t f hlen hk hnd hcontrols)
     (fun _ => false) (square_zero_valid input (a :: rest) p copied c r t f (by omega))
   intro b hb s hs
   exact squareLoop_branch_correct controls input a rest correction p copied c r t f s hlen hk hnd hcontrols
@@ -109,7 +109,7 @@ theorem squareLoopInverse_coherent (controls input : List Wire) (a : Wire) (rest
       (Finsupp.lmapDomain ℂ ℂ (hornerClearOutput (a :: rest)))
       (fun state => ∃ s, SquareInputValid input (a :: rest) p copied c r t f s ∧
         state = squareLoopIdealState controls input (a :: rest) correction p copied c f s) := by
-  apply coherent_branches _ _ _
+  apply coherent_history_branches _ _ _
     (squareLoopInverse_wellFormed controls input a rest modulus p copied c r t f hlen hm hnd hcontrols)
     (squareLoopIdealState controls input (a :: rest) correction p copied c f (fun _ => false))
     ⟨_,square_zero_valid input (a :: rest) p copied c r t f (by omega),rfl⟩
