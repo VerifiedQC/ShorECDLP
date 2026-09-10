@@ -1,3 +1,5 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.WordGray
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointWordCorrection
 import ShorECDLP.Submission.«2607_13816».Arithmetic.TwoRegisterFlip
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointEdge
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointExceptions
