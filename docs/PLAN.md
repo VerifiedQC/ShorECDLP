@@ -2065,5 +2065,7 @@ be connected to the other EEA phases and the production reachable-state invarian
 The inverse canonical rotation stages follow the pinned greedy opposite permutation. Each
 of the ten stages preserves the complete external frame and has 258 CCX, 516 CX, zero X,
 1,806 T and at most 260 physical wires. Forward and inverse certificates share the literal
-source permutation builder. Descending stage composition and the inverse EEA wrapper remain
-separate proof boundaries.
+source permutation builder. The descending composition now restores its counter and rotates Work2 by the terminal padding,
+preserving every external wire. Its same-circuit certificate is 2,620 CCX, 5,240 CX, six X,
+18,340 T and at most 280 wires. The same inverse wrapper cancels forward canonicalization on every basis state, including
+arbitrary scratch contents. The complete inverse EEA wrapper remains a separate boundary.
