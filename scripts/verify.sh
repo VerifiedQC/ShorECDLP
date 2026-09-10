@@ -1860,11 +1860,19 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantX_counts
 #print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantY_counts
 #print axioms ShorECDLP.Paper2607_13816.fig14Negate_counts
+#print axioms ShorECDLP.Paper2607_13816.modularArithmetic256_counts
+#print axioms ShorECDLP.Paper2607_13816.modularScaling256_counts
+#print axioms ShorECDLP.Paper2607_13816.squareLoops256_counts
+#print axioms ShorECDLP.Paper2607_13816.squareSubtract256_counts
+#print axioms ShorECDLP.Paper2607_13816.fig14SquareSubtract_counts
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateProgram_counts
+#print axioms ShorECDLP.Paper2607_13816.totalPointProgram_counts
+#print axioms ShorECDLP.Paper2607_13816.pointAddProgram_counts
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1839 ]]; then
-  printf 'expected 1839 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1847 ]]; then
+  printf 'expected 1847 #print axioms results\n' >&2
   exit 1
 fi
 
