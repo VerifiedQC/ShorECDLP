@@ -1050,31 +1050,42 @@ private theorem gidneyForward_tCost (constant : List Bool) :
     | nil => rfl
     | cons l ls => simp [gidneyForwardCost] at ih ⊢; omega
 
-/-- Exact T count of the odd-constant circuit at every width at least two. -/
-theorem controlledGidneyAddConst_tCount_exact (a d q c r t : Wire)
+/-- Exact T count of every nonzero constant, independent of its bit pattern. -/
+theorem controlledGidneyAddConst_tCount_nonzero (a d q c r t : Wire) (k : Bool)
     (input dirty : List Wire) (constant : List Bool)
-    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1) :
-    (controlledGidneyAddConst (a :: input) (d :: dirty) (true :: constant) q c r t).tCount =
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1)
+    (hz : (k::constant).all (fun b => !b) ≠ true) :
+    (controlledGidneyAddConst (a :: input) (d :: dirty) (k :: constant) q c r t).tCount =
       7 * (3 * (input.length + 1) - 4) := by
   have hroot := gidneyRoot_gateCount tCost (fun _ => 7) (fun _ => 0)
     (by intro w; rfl) (by intro w; rfl)
     (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell,tCost])
-    (by intro q c a k; cases k <;> simp [tCost]) a d q c r t input dirty true constant hk hd (by simp)
+    (by intro q c a k; cases k <;> simp [tCost]) a d q c r t input dirty k constant hk hd hz
   have hki : (input.take dirty.length).length = (constant.take dirty.length).length := by simp [hk]
   have hdi : (a :: input.take dirty.length).length = (d :: dirty).length := by
     simp [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
-  have hcleanup := (controlledConstCarryXor_counts a (input.take dirty.length) (d :: dirty) true
+  have hcleanup := (controlledConstCarryXor_counts a (input.take dirty.length) (d :: dirty) k
     (constant.take dirty.length) q c hki hdi).2.2.2
   rw [← gidneyGateCount_tCount]
   apply hroot.trans
   simp only [List.length_cons,List.take_succ_cons]
   change 7 + gidneyForwardCost (fun _ => 7) (fun _ => 0) constant +
     tCount (controlledConstCarryXor (a :: input.take dirty.length) (d :: dirty)
-      (true :: constant.take dirty.length) q c) = _
+      (k :: constant.take dirty.length) q c) = _
   rw [gidneyForward_tCost,hcleanup]
   simp only [List.length_take]
   rw [Nat.min_eq_left (by omega : dirty.length ≤ input.length)]
   omega
+
+
+
+/-- Exact T count of the odd-constant circuit at every width at least two. -/
+theorem controlledGidneyAddConst_tCount_exact (a d q c r t : Wire)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1) :
+    (controlledGidneyAddConst (a :: input) (d :: dirty) (true :: constant) q c r t).tCount =
+      7 * (3 * (input.length + 1) - 4) :=
+  controlledGidneyAddConst_tCount_nonzero a d q c r t true input dirty constant hk hd (by simp)
 
 /-- Little-endian modulus word used by the source inverse correction. -/
 def secp256k1ModulusBits : List Bool :=

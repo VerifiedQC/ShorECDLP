@@ -2290,3 +2290,9 @@ and aggregate Phase 9 resources remain open. No new physical-width claim is made
 ### Phase 9 executable exception generation
 
 The correction now enumerates `[infinity, C, -C, -(C+C)]` in a fixed order and deduplicates by canonical coordinates. Coverage and the four-point bound are preserved, and all coordinate, correction and total-point constructors compile without `noncomputable`. The complete-state and coherent theorems are rechecked on these deterministic circuits. `artifacts/check-point-correction.py` evaluates the standard generator correction, replays six group cases, checks empty infinity addition, and reports selected actual gate counts. Aggregate total-point resources remain open.
+
+### Phase 9 exact correction T accounting
+
+`PointCorrectionResources` proves exact 21,371 T for each X-target edge and 21,399 T for each Y/infinity-target edge, then derives the complete correction T count from the number of each edge class. No gate-list expansion is needed for this equality. The constant-adder T theorem now covers every nonzero bit pattern, with the previous odd-constant theorem as a specialization. These are inputs to the remaining aggregate point resource certificate.
+
+`ConstantResourceCounts` and `PointConstantResources` derive the actual constant stages: zero constants use 10,717 T / 511 measurements, nonzero canonical constants use 26,803 T / 1,278 measurements, and negation uses 21,434 T / 1,022 measurements. These counts include every comparison and correction stage; zero constants do not make the existing modular-add circuit empty. Square subtraction and the aggregate point certificate remain open.
