@@ -2483,3 +2483,7 @@ The active-boundary theorem `indexedScheduleUnitary_active_paperStep` also deriv
 ### Canonical coefficient rotation stages
 
 `canonicalWork2RotationBit` implements each of the ten controlled right rotations in the pinned wrapper, using its exact greedy source-to-target swap order on the 259-wire Work2 bank. Its complete-state contract covers arbitrary data, restores the control and every outside wire, and derives the right-rotation direction from kernel-checked permutation certificates. Each same-circuit resource certificate gives 258 CCX, 516 CX, zero X, 1,806 T and at most 260 wires. Preparing the ten-bit shift counter and composing these stages into complete canonicalization remain the next boundary.
+
+### Complete coefficient canonicalization
+
+`canonicalWork2Rotation` implements the source wrapper's counter preparation, ten controlled rotations, and counter restoration. Its correctness theorem restores the 259-bit coefficient from terminal padding and preserves every other wire, including the original counter and scratch state. The same circuit has 2,620 CCX, 5,240 CX, 6 X, 18,340 T, and at most 280 wires. `secp256k1EEAForward_canonical_coefficient` composes it with all 1,620 production steps under the original clean-input and nonzero canonical-input hypotheses. It retains Work1, parity, and coefficient length. Epoch compression, parity correction, and terminal Work1 clearing remain subsequent wrapper stages.
