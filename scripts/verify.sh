@@ -429,6 +429,12 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.blockEFGForward_quotient_packed
 #print axioms ShorECDLP.Paper2607_13816.quotientMicrostep
 #print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_quotient_packed
+#print axioms ShorECDLP.Paper2607_13816.blockDForward_remainder_idle
+#print axioms ShorECDLP.Paper2607_13816.blockHForward_nonzeroShift
+#print axioms ShorECDLP.Paper2607_13816.remainderFinishMicrostep
+#print axioms ShorECDLP.Paper2607_13816.blockEFGForward_remainder_packed
+#print axioms ShorECDLP.Paper2607_13816.remainderAlignmentMicrostep
+#print axioms ShorECDLP.Paper2607_13816.indexedStepUnitary_remainder_packed
 #print axioms ShorECDLP.Paper2607_13816.quotientMicrostep_conservation
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_quotient_packed
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleUnitary_quotient_complete
@@ -1350,8 +1356,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1326 ]]; then
-  printf 'expected 1326 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1332 ]]; then
+  printf 'expected 1332 #print axioms results\n' >&2
   exit 1
 fi
 
