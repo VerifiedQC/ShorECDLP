@@ -2262,3 +2262,7 @@ states collide; this includes arbitrary external state and exceptional coordinat
 This supplies the injectivity needed for a finite exceptional-output correction. The correction
 circuit, proof that its exceptional set covers the full group-law boundary, infinity encoding,
 and aggregate Phase 9 resources remain open. No new physical-width claim is made.
+
+### Phase 9 finite exception correction
+
+`PointExceptions`, `FiniteCorrection`, and `PointCorrection` prove that infinity, C, -C and -2C cover the two exceptional factors. A constructive matching supplies at most four ordered transpositions, and its composition with the encoded coordinate permutation equals total addition by every finite constant on every curve point. Duplicate exceptions are removed without point-order assumptions. This is a mathematical permutation certificate; lowering the transpositions to gates, the infinity-constant case, and aggregate physical resources remain open.

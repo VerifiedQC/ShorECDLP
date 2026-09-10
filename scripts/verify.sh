@@ -1768,11 +1768,23 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig14CoordinateValues_equiv
 #print axioms ShorECDLP.Paper2607_13816.fig14CoordinateState_equiv
 #print axioms ShorECDLP.Paper2607_13816.fig14CoordinateState_injectiveOn
+#print axioms ShorECDLP.Paper2607_13816.fig14ExceptionalPoints_card_le
+#print axioms ShorECDLP.Paper2607_13816.fig14_nonexceptional_factors
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateState_nonexceptional
+#print axioms ShorECDLP.Paper2607_13816.finiteMatchingPermutation_correct
+#print axioms ShorECDLP.Paper2607_13816.finiteMatchingPermutation_frame
+#print axioms ShorECDLP.Paper2607_13816.finiteMatchingSwaps_length
+#print axioms ShorECDLP.Paper2607_13816.finiteMatchingSwaps_apply
+#print axioms ShorECDLP.Paper2607_13816.finiteMatchingPermutation_comp
+#print axioms ShorECDLP.Paper2607_13816.fig14PointEncoding_injective
+#print axioms ShorECDLP.Paper2607_13816.fig14EncodedEquiv_nonexceptional
+#print axioms ShorECDLP.Paper2607_13816.fig14CorrectionSwaps_length
+#print axioms ShorECDLP.Paper2607_13816.fig14CorrectionSwaps_correct
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1747 ]]; then
-  printf 'expected 1747 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1759 ]]; then
+  printf 'expected 1759 #print axioms results\n' >&2
   exit 1
 fi
 
