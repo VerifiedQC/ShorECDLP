@@ -453,6 +453,12 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.Secp256k1TerminalState.step_payload
 #print axioms ShorECDLP.Paper2607_13816.secp256k1TerminalSchedule_payload
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForward_payload
+#print axioms ShorECDLP.Paper2607_13816.eeaParityCorrection
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityIdealState
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_branch
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParity_inverse
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.terminalEpochCompression
 #print axioms ShorECDLP.Paper2607_13816.terminalEpochCompression_numeric
 #print axioms ShorECDLP.Paper2607_13816.terminalEpochCompression_resources
@@ -1385,8 +1391,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1361 ]]; then
-  printf 'expected 1361 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1367 ]]; then
+  printf 'expected 1367 #print axioms results\n' >&2
   exit 1
 fi
 

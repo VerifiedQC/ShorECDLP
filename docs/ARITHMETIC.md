@@ -2491,3 +2491,7 @@ The active-boundary theorem `indexedScheduleUnitary_active_paperStep` also deriv
 ### Returning the borrowed terminal epoch
 
 `terminalEpochCompression` implements the source's reversible three-bit transposition using 15 CCX and 10 X gates (105 T, exactly five wires). The numeric theorem identifies `compressBorrowedEpoch` on the counter and restores every other wire. Padding is divisible by four, so the composed production theorem clears the borrowed epoch after canonicalization, retains the 259-bit terminal coefficient, and restores shared scratch. Parity correction and known Work1 clearing remain the next stages.
+
+### Production parity correction
+
+`secp256k1EEAParityCorrection` complements Iter, invokes the source measurement-assisted constant-minus primitive on the low 256 coefficient bits with 255 borrowed Work1 wires, and restores Iter. Every measurement branch has the proved positive amplitude and realizes the complete ideal state. `secp256k1EEAParity_inverse` composes its arithmetic with the full EEA/canonicalization/epoch prefix under the original input assumptions: the coefficient equals `paperInverse` and multiplies the original input to one modulo secp256k1's prime. The epoch and shared scratch remain clear. Known terminal Work1 clearing and the complete adaptive wrapper composition remain subsequent work.
