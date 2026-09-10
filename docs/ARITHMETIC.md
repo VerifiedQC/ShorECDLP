@@ -2473,3 +2473,5 @@ The reachable-boundary theorem `indexedScheduleUnitary_reachable_paperStep` deri
 The active-boundary theorem `indexedScheduleUnitary_active_paperStep` also derives all endpoint scan bounds, including zero-remainder endpoints. Only physical layout and metadata-width capacities remain as circuit premises.
 
 `secp256k1EEA_iteration_paperStep` instantiates the fixed 580-role production layout, removing all physical premises except the input packed state. `secp256k1EEA_active_paperRun` iterates that actual circuit to the mathematical terminal state at the exact active clock. Initial preprocessing and the remaining fixed-horizon padding suffix are separate boundaries.
+
+`eeaPreprocess_initial_packed` combines the established preprocessing work banks, metadata and scratch guarantees into the complete active-run input. `eeaPreprocess_active_paperRun` therefore reaches the mathematical terminal state from the preprocessing output under only the original clean-input and nonzero canonical-input premises. The preprocessing branch theorem separately identifies every actual adaptive branch with that same output state.
