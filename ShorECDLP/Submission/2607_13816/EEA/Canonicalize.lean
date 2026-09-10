@@ -611,4 +611,19 @@ theorem canonicalWork2InverseRotation_after_forward (s : BasisState) :
   rw [canonicalPrepare_restore,inverseCounterRotationChain_after_forward,canonicalRestore_prepare]
 
 end
+
+private theorem canonicalRotationSupport_range580 : canonicalRotationSupport ⊆ List.range 580 := by
+  have h : canonicalRotationSupport.all (fun w => decide (w<580))=true := by decide +kernel
+  intro w hw
+  exact List.mem_range.mpr (of_decide_eq_true ((List.all_eq_true.mp h) w hw))
+
+/-- Both canonical rotations use only the declared production EEA allocation. -/
+theorem canonicalWork2Rotation_usesOnly :
+    PaperCircuitUsesOnly (List.range 580) canonicalWork2Rotation :=
+  canonicalRotation_support.mono (fun _ hw => canonicalRotationSupport_range580 hw)
+
+theorem canonicalWork2InverseRotation_usesOnly :
+    PaperCircuitUsesOnly (List.range 580) canonicalWork2InverseRotation :=
+  inverseCanonicalRotation_support.mono (fun _ hw => canonicalRotationSupport_range580 hw)
+
 end ShorECDLP.Paper2607_13816

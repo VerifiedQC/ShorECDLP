@@ -115,6 +115,7 @@ import ShorECDLP.Submission.«2607_13816».EEA.IntervalLeaf
 import ShorECDLP.Submission.«2607_13816».EEA.AdaptiveSupport
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientSupport
 import ShorECDLP.Submission.«2607_13816».EEA.AdaptivePhysicalSupport
+import ShorECDLP.Submission.«2607_13816».EEA.WrapperSupport
 import ShorECDLP.Submission.«2607_13816».EEA.IntervalCleanup
 import ShorECDLP.Submission.«2607_13816».EEA.LengthUpdate
 import ShorECDLP.Submission.«2607_13816».EEA.Affine
