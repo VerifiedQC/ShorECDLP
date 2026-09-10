@@ -209,30 +209,31 @@ theorem indexedStepUnitary_coefficient_packed (r : IndexedStepRegisters) (n inde
       simp only [upd_other _ _ _ hsg,upd_other _ _ _ h2]
       exact hstable wire (by simp [hw])
     exact he.trans (hp.clean wire hw)
-/-- Pure nonfinal swap microstep, before the bank-swap boundary. -/
-def swapInteriorMicrostep (v : EEAState) : EEAState :=
+/-- Logical swap update before the final H block, including shift one. -/
+def swapBeforeEndpointMicrostep (v : EEAState) : EEAState :=
   { v with
     shift := v.shift-1
-    phase := if v.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime) then .swap else .coefficient
+    phase := if v.shift = 1 then
+      (if v.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime) then .remainder else .quotient)
+      else if v.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime) then .swap else .coefficient
     sign := false }
 
-/-- The complete nonfinal swap circuit preserves the packed logical-state
-interpretation, including all metadata and the entire clean auxiliary bank. -/
-theorem indexedStepUnitary_swap_packed (r : IndexedStepRegisters) (n index : Nat)
+/-- E/F/G preserves the packed logical state for every positive swap shift. -/
+theorem blockEFGForward_swap_packed (r : IndexedStepRegisters) (n index : Nat)
     (s : BasisState) (v : EEAState) (h : IndexedStepLayout r n index)
     (hp : IndexedPackedState r n s v) (hphase : v.phase = .swap) (hQ : v.lQ = 0)
     (hthi : v.lT+1 < 2^r.lengthT.length) (hspan : v.lT+1+v.lRPrime ≤ n+3)
-    (hshift : 1 < v.shift) (hlo : v.lRPrime+v.shift ≤ n+3)
+    (hshift : 0 < v.shift) (hlo : v.lRPrime+v.shift ≤ n+3)
     (hhi : n+3-v.lRPrime-v.shift < 2^r.lengthT.length)
     (hv : n+3-v.lRPrime-v.shift ∈ quotientSwapLabels 1 (certifiedActiveWindows n index).coefficient.stop)
     (ht : v.t < 2^v.lT) (htB : v.t < 2^(n+3-v.lRPrime-v.shift))
     (htp : v.tPrime < 2^(n+3-v.lRPrime)) (hrem : v.r < 2^v.lRPrime)
     (hswidth : 0 < r.lengthS.length) (hsfit : v.shift < 2^r.lengthS.length)
     (hR : 0 < v.lRPrime) (hrfit : v.lRPrime < 2^r.lengthRPrime.length) :
-    IndexedPackedState r n (run (indexedStepUnitary r n index) s) (swapInteriorMicrostep v) := by
+    IndexedPackedState r n (run (blockEForward r n (certifiedActiveWindows n index).coefficient ++ blockFForward r ++ blockGForward r) s) (swapBeforeEndpointMicrostep v) := by
   let cw := (certifiedActiveWindows n index).coefficient
   let mid := run (blockEForward r n cw ++ blockFForward r) s
-  let out := run (indexedStepUnitary r n index) s
+  let out := run (blockEForward r n (certifiedActiveWindows n index).coefficient ++ blockFForward r ++ blockGForward r) s
   let comparison := v.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime)
   have hp1 : s r.phase1 = true := by simpa [hphase,EEAPhase.bits] using hp.phase1
   have hp2 : s r.phase2 = true := by simpa [hphase,EEAPhase.bits] using hp.phase2
@@ -256,11 +257,16 @@ theorem indexedStepUnitary_swap_packed (r : IndexedStepRegisters) (n index : Nat
       exact List.getElem_mem _
     · exact List.mem_of_mem_take (List.mem_of_mem_drop he)
     · exact List.mem_of_mem_drop he
-  have hg := indexedStepUnitary_swapPhase r n index cw s v h rfl hp.clean hp1 hp2
+  have hepoch : s r.shiftEpoch = false := hp.clean _ (by
+    change r.aux.getD 1 0 ∈ r.aux
+    rw [List.getD_eq_getElem _ _ (by rw [h.aux_length]; decide)]
+    exact List.getElem_mem _)
+  have hg := blockEFGForward_swapPhase r n index cw s v h rfl hr hp1 hp2
     hp.lengthT hrmeta hsmeta hthi hspan hshift hlo hhi hv ht htB htp hrem
-    hp.lengthS hswidth hsfit hqmeta hR hrfit hwork1 hp.work2
+    hp.lengthS hswidth hsfit hepoch hqmeta hR hrfit hwork1 hp.work2
   rw [hp.sign] at hg
-  change out = mid[r.phase1 ↦ true][r.phase2 ↦ comparison][r.sign ↦ false] ∧ _ at hg
+  change out = mid[r.phase1 ↦ !decide (v.shift=1)]
+    [r.phase2 ↦ comparison ^^ decide (v.shift=1)][r.sign ↦ false] ∧ _ at hg
   obtain ⟨hd1,hd2,hdS,_,_,hdFrame⟩ := blockEFForward_swap r n index cw s v h rfl hr hp1 hp2
     hp.lengthT hrmeta hsmeta hthi hspan (by omega) hlo hhi hv ht htB htp hrem
     hp.lengthS hswidth hsfit hwork1 hp.work2
@@ -334,13 +340,17 @@ theorem indexedStepUnitary_swap_packed (r : IndexedStepRegisters) (n index : Nat
   · change out r.phase1 = _
     rw [hg.1]
     simp only [upd_other _ _ _ hp1nesg,upd_other _ _ _ hp1ne2,upd_same]
-    change true = (if comparison then EEAPhase.swap else .coefficient).bits.1
-    cases comparison <;> rfl
+    change (!decide (v.shift=1)) = (if v.shift=1 then
+      (if comparison then EEAPhase.remainder else .quotient)
+      else if comparison then .swap else .coefficient).bits.1
+    by_cases hz : v.shift=1 <;> cases comparison <;> simp [hz,EEAPhase.bits]
   · change out r.phase2 = _
     rw [hg.1]
     simp only [upd_other _ _ _ hp2nesg,upd_same]
-    change comparison = (if comparison then EEAPhase.swap else .coefficient).bits.2
-    cases comparison <;> rfl
+    change (comparison ^^ decide (v.shift=1)) = (if v.shift=1 then
+      (if comparison then EEAPhase.remainder else .quotient)
+      else if comparison then .swap else .coefficient).bits.2
+    by_cases hz : v.shift=1 <;> cases comparison <;> simp [hz,EEAPhase.bits]
   · change out r.sign = _
     rw [hg.1,upd_same]
     rfl
@@ -351,6 +361,55 @@ theorem indexedStepUnitary_swap_packed (r : IndexedStepRegisters) (n index : Nat
   · intro wire hw
     have haux : wireValues r.aux out = wireValues r.aux s := hmeta _ (by intro w hm; simp [hm])
     exact ((List.map_eq_map_iff.mp haux) wire hw).trans (hp.clean wire hw)
+
+/-- Pure nonfinal swap microstep, before the bank-swap boundary. -/
+def swapInteriorMicrostep (v : EEAState) : EEAState :=
+  { v with
+    shift := v.shift-1
+    phase := if v.sign ^^ decide (v.t*2^v.shift ≤ v.tPrime) then .swap else .coefficient
+    sign := false }
+
+/-- The complete nonfinal swap circuit preserves the packed logical-state
+interpretation, including all metadata and the entire clean auxiliary bank. -/
+theorem indexedStepUnitary_swap_packed (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (v : EEAState) (h : IndexedStepLayout r n index)
+    (hp : IndexedPackedState r n s v) (hphase : v.phase = .swap) (hQ : v.lQ = 0)
+    (hthi : v.lT+1 < 2^r.lengthT.length) (hspan : v.lT+1+v.lRPrime ≤ n+3)
+    (hshift : 1 < v.shift) (hlo : v.lRPrime+v.shift ≤ n+3)
+    (hhi : n+3-v.lRPrime-v.shift < 2^r.lengthT.length)
+    (hv : n+3-v.lRPrime-v.shift ∈ quotientSwapLabels 1 (certifiedActiveWindows n index).coefficient.stop)
+    (ht : v.t < 2^v.lT) (htB : v.t < 2^(n+3-v.lRPrime-v.shift))
+    (htp : v.tPrime < 2^(n+3-v.lRPrime)) (hrem : v.r < 2^v.lRPrime)
+    (hswidth : 0 < r.lengthS.length) (hsfit : v.shift < 2^r.lengthS.length)
+    (hR : 0 < v.lRPrime) (hrfit : v.lRPrime < 2^r.lengthRPrime.length) :
+    IndexedPackedState r n (run (indexedStepUnitary r n index) s) (swapInteriorMicrostep v) := by
+  let out := run (blockEForward r n (certifiedActiveWindows n index).coefficient ++
+    blockFForward r ++ blockGForward r) s
+  have he := blockEFGForward_swap_packed r n index s v h hp hphase hQ hthi hspan
+    (by omega) hlo hhi hv ht htB htp hrem hswidth hsfit hR hrfit
+  have hc : Clean r.aux out := he.clean
+  have hr : IndexedStepReady r out := by
+    intro wire hm
+    apply hc wire
+    simp only [IndexedStepRegisters.sharedScratch,List.mem_cons,List.mem_append] at hm
+    rcases hm with he | he | he
+    · subst wire
+      change r.aux.getD 0 0 ∈ r.aux
+      rw [List.getD_eq_getElem _ _ (by rw [h.aux_length]; decide)]
+      exact List.getElem_mem _
+    · exact List.mem_of_mem_take (List.mem_of_mem_drop he)
+    · exact List.mem_of_mem_drop he
+  have hsout : boolWordToNat (wireValues r.lengthS out) =
+      truthMinusOneValue r.lengthS.length (v.shift-1) := he.lengthS
+  have hS : wireAnd r.lengthS out = false := by
+    rw [wireAnd_encoded_zero r.lengthS out (v.shift-1) hsout (by omega)]
+    exact decide_eq_false (by omega)
+  have hi := indexedStepUnitary_swap_tail r n index s h hp.clean
+    (by simpa [hphase,EEAPhase.bits] using hp.phase1)
+    (by simpa [hphase,EEAPhase.bits] using hp.phase2) hr (by change (wireAnd r.lengthS out && !out r.shiftEpoch) = false; rw [hS]; rfl)
+  rw [hi]
+  have hz : v.shift ≠ 1 := by omega
+  simpa only [swapBeforeEndpointMicrostep,swapInteriorMicrostep,if_neg hz] using he
 
 private theorem packed_endpoint_word (ws : List Wire) (s : BasisState) (value : Nat)
     (hv : boolWordToNat (wireValues ws s) = truthMinusOneValue ws.length value) :
@@ -590,5 +649,54 @@ theorem blockHForward_packed (r : IndexedStepRegisters) (n index : Nat)
   · change _ = !v.iter
     rw [hb.2.2.1,hp.iter]
   · exact hf.1
+
+/-- The complete scheduled final swap step, including E/F/G and H, preserves
+all packed fields. Numeric capacities and active-window coverage remain explicit. -/
+theorem indexedStepUnitary_swap_endpoint_packed (r : IndexedStepRegisters) (n index : Nat)
+    (s : BasisState) (v : EEAState) (h : IndexedStepLayout r n index)
+    (hp : IndexedPackedState r n s v) (hphase : v.phase = .swap) (hQ : v.lQ = 0)
+    (hthi : v.lT+1 < 2^r.lengthT.length) (hspan : v.lT+1+v.lRPrime ≤ n+3)
+    (hshift : v.shift = 1) (hlo : v.lRPrime+v.shift ≤ n+3)
+    (hhi : n+3-v.lRPrime-v.shift < 2^r.lengthT.length)
+    (hv : n+3-v.lRPrime-v.shift ∈ quotientSwapLabels 1 (certifiedActiveWindows n index).coefficient.stop)
+    (ht : v.t < 2^v.lT) (htB : v.t < 2^(n+3-v.lRPrime-v.shift))
+    (htp : v.tPrime < 2^(n+3-v.lRPrime)) (hrem : v.r < 2^v.lRPrime)
+    (hswidth : 0 < r.lengthS.length) (hsfit : v.shift < 2^r.lengthS.length)
+    (hR : 0 < v.lRPrime) (hrfit : v.lRPrime < 2^r.lengthRPrime.length)
+    (hstep : index % 4 = 0)
+    (hT : v.lT = v.t.size) (hRP : v.lRPrime = v.rPrime.size)
+    (hsmaller : v.r < v.rPrime) (hmono : v.lT ≤ v.tPrime.size)
+    (hguard : v.tPrime.size+1+v.lRPrime ≤ n+3)
+    (hcapacity : n+3 < 2^r.lengthT.length)
+    (hboundary4 : (endIterationWindowsAt n index).k4 ≤ n+3-v.lRPrime ∧
+      n+3-v.lRPrime ≤ (endIterationWindowsAt n index).K4)
+    (hboundary5 : (endIterationWindowsAt n index).k5 ≤ v.tPrime.size+2 ∧
+      v.tPrime.size+2 ≤ (endIterationWindowsAt n index).K5Decode n)
+    (htWindow : (endIterationWindowsAt n index).k4 ≤ v.t.size ∧
+      v.t.size ≤ (endIterationWindowsAt n index).K4)
+    (htpWindow : (endIterationWindowsAt n index).k4 ≤ v.tPrime.size ∧
+      v.tPrime.size ≤ (endIterationWindowsAt n index).K4)
+    (hrWindow : v.r ≠ 0 → (endIterationWindowsAt n index).k5 ≤ n+4-v.r.size ∧
+      n+4-v.r.size ≤ (endIterationWindowsAt n index).K5Decode n)
+    (hrpWindow : (endIterationWindowsAt n index).k5 ≤ n+4-v.rPrime.size ∧
+      n+4-v.rPrime.size ≤ (endIterationWindowsAt n index).K5Decode n) :
+    IndexedPackedState r n (run (indexedStepUnitary r n index) s)
+      (endpointMicrostep (swapBeforeEndpointMicrostep v)) := by
+  let pre := blockEForward r n (certifiedActiveWindows n index).coefficient ++
+    blockFForward r ++ blockGForward r
+  have he := blockEFGForward_swap_packed r n index s v h hp hphase hQ hthi hspan
+    (by omega) hlo hhi hv ht htB htp hrem hswidth hsfit hR hrfit
+  have hh := blockHForward_packed r n index (run pre s) (swapBeforeEndpointMicrostep v)
+    h he hstep hQ (by simp only [swapBeforeEndpointMicrostep,hshift,Nat.sub_self])
+    hT hRP hsmaller hmono hguard hcapacity hboundary4 hboundary5 htWindow htpWindow
+    hrWindow hrpWindow
+  have hpref := indexedStepSwapPrefix_idle r n index s h hp.clean
+    (by simpa [hphase,EEAPhase.bits] using hp.phase1)
+    (by simpa [hphase,EEAPhase.bits] using hp.phase2)
+  have heq : run (indexedStepUnitary r n index) s = run (blockHForward r n index) (run pre s) := by
+    simp only [indexedStepRemainderPrefix,Classical.run_append] at hpref
+    simp only [indexedStepUnitary,pre,Classical.run_append,hpref]
+  rw [heq]
+  exact hh
 
 end ShorECDLP.Paper2607_13816
