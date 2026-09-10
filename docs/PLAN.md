@@ -2069,3 +2069,9 @@ source permutation builder. The descending composition now restores its counter 
 preserving every external wire. Its same-circuit certificate is 2,620 CCX, 5,240 CX, six X,
 18,340 T and at most 280 wires. The same inverse wrapper cancels forward canonicalization on every basis state, including
 arbitrary scratch contents. The complete inverse EEA wrapper remains a separate boundary.
+
+The adaptive source reverse postprocessing now restores Work1, undoes parity and epoch
+compression, and reverses canonicalization. Its full-state cancellation theorem applies to
+original valid inputs; composing it with the forward wrapper coherently returns the complete
+terminal schedule state with normalized input-independent branch coefficients. The reverse
+Algorithm-3 schedule, inverse preprocessing and Figure 15 composition remain open.

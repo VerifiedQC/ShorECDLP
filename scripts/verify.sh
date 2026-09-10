@@ -21,6 +21,13 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessingIdealState
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing_after_forward
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing_output
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_reversePostprocessing_coherent
 #print axioms ShorECDLP.Paper2607_13816.canonicalWork2InverseRotation_after_forward
 #print axioms ShorECDLP.Paper2607_13816.canonicalWork2InverseRotation
 #print axioms ShorECDLP.Paper2607_13816.canonicalWork2InverseRotation_correct
@@ -1442,8 +1449,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1418 ]]; then
-  printf 'expected 1418 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1425 ]]; then
+  printf 'expected 1425 #print axioms results\n' >&2
   exit 1
 fi
 

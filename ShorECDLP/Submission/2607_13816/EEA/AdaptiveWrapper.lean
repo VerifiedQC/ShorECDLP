@@ -143,5 +143,134 @@ theorem secp256k1EEAForwardWrapper_wellFormed : secp256k1EEAForwardWrapper.WellF
       secp256k1ScheduleLength secp256k1ScheduleLayout_production)).seq
       hcanonical).seq secp256k1EEAParityCorrection_wellFormed).seq hclear)
 
+/-- The pinned inverse wrapper first restores Work1, undoes parity correction and epoch
+compression, then restores the circular terminal Work2 representation. -/
+def secp256k1EEAReversePostprocessing : AdaptiveCircuit :=
+  ((AdaptiveCircuit.unitary terminalWork1Clear .done).seq secp256k1EEAParityCorrection).seq
+    (.unitary (terminalEpochCompression ++ canonicalWork2InverseRotation) .done)
+/-- Complete state of the source reverse postprocessing, including retained metadata. -/
+def secp256k1EEAReversePostprocessingIdealState (s : BasisState) : BasisState :=
+  Classical.run (terminalEpochCompression ++ canonicalWork2InverseRotation)
+    (secp256k1EEAParityIdealState (Classical.run terminalWork1Clear s))
+/-- One normalized branch expansion covers all inputs with the three clean parity auxiliaries. -/
+theorem secp256k1EEAReversePostprocessing_coherent :
+    CoherentlyImplementsOn secp256k1EEAReversePostprocessing
+      (Finsupp.lmapDomain ℂ ℂ secp256k1EEAReversePostprocessingIdealState)
+      (fun s => s 560=false ∧ s 561=false ∧ s 562=false) := by
+  have hc := coherent_basis_unitary terminalWork1Clear (xorConstant_HPFree _ _)
+    (fun s => s 560=false ∧ s 561=false ∧ s 562=false)
+  have hp := coherent_basis_seq hc parity_basis_coherent (by
+    intro s hs
+    have hf := (xorConstant_correct (List.range' 4 259) (ShorECDLP.p+2^258) s List.nodup_range').2
+    exact ⟨(hf 560 (by decide)).trans hs.1,(hf 561 (by decide)).trans hs.2.1,
+      (hf 562 (by decide)).trans hs.2.2⟩)
+  have he : HPFree terminalEpochCompression := by simp [terminalEpochCompression,mcxVChain_HPFree]
+  have hall := coherent_basis_seq hp (coherent_basis_unitary
+    (terminalEpochCompression ++ canonicalWork2InverseRotation)
+    ((hpFree_append _ _).mpr ⟨he,canonicalWork2InverseRotation_HPFree⟩) (fun _ => True))
+    (fun _ _ => trivial)
+  apply hall.congrIdeal
+  intro s _
+  simp only [basisLift_ket]
+  rfl
+/-- Every actual gate and measurement of reverse postprocessing is physically well formed. -/
+theorem secp256k1EEAReversePostprocessing_wellFormed :
+    secp256k1EEAReversePostprocessing.WellFormed := by
+  have he : CircuitWellFormed terminalEpochCompression := by
+    simp [terminalEpochCompression,mcxVChain,mcxVChainTail,CircuitWellFormed,Gate.WellFormed]
+  have hc : (AdaptiveCircuit.unitary terminalWork1Clear .done).WellFormed :=
+    ⟨xorConstant_wellFormed _ _,trivial⟩
+  have ht : (AdaptiveCircuit.unitary
+      (terminalEpochCompression ++ canonicalWork2InverseRotation) .done).WellFormed :=
+    ⟨(circuitWellFormed_append _ _).mpr ⟨he,canonicalWork2InverseRotation_wellFormed⟩,trivial⟩
+  exact (hc.seq secp256k1EEAParityCorrection_wellFormed).seq ht
+private theorem reverseEpoch_cancel (s : BasisState) : run terminalEpochCompression (run terminalEpochCompression s)=s := by
+  have hw : CircuitWellFormed terminalEpochCompression := by
+    simp [terminalEpochCompression,mcxVChain,mcxVChainTail,CircuitWellFormed,Gate.WellFormed]
+  have ha : terminalEpochCompression.adjoint=terminalEpochCompression := by decide +kernel
+  simpa only [ha] using run_adjoint_run_classical terminalEpochCompression hw s
+private theorem reverseClear_cancel (s : BasisState) : run terminalWork1Clear (run terminalWork1Clear s)=s := by
+  exact run_xorConstant_twice (List.range' 4 259) (ShorECDLP.p+2^258) s List.nodup_range'
+private theorem reverseParity_cancel (s : BasisState)
+    (hx : boolWordToNat (wireValues (List.range' 263 256) s)≤ShorECDLP.p) :
+    secp256k1EEAParityIdealState (secp256k1EEAParityIdealState s)=s := by
+  let flip (t : BasisState) : BasisState := t[2 ↦ !t 2]
+  have hf (t : BasisState) : flip (flip t)=t := by
+    funext w
+    by_cases hw : w=2
+    · subst w; simp [flip,upd]
+    · simp [flip,upd,hw]
+  have hinput : wireValues (List.range' 263 256) (flip s)=wireValues (List.range' 263 256) s := by
+    apply List.map_congr_left
+    intro w hw
+    exact upd_other _ _ _ (by obtain ⟨i,hi,he⟩ := List.mem_range'.mp hw; dsimp only [Wire] at *; omega)
+  have hm := constMinusIdealState_involutive (List.range' 263 256) secp256k1ModulusBits
+    2 ShorECDLP.p (flip s) (by simp) (by simp [secp256k1ModulusBits]) List.nodup_range' (by decide)
+    (by decide +kernel) (by decide +kernel) (by rw [hinput];exact hx)
+  change flip (constMinusIdealState _ _ 2 (flip (flip (constMinusIdealState _ _ 2 (flip s)))))=s
+  rw [hf,hm,hf]
+/-- Reverse postprocessing cancels the exact forward postprocessing on every canonical coefficient. -/
+theorem secp256k1EEAReversePostprocessing_after_forward (s : BasisState)
+    (hx : boolWordToNat (wireValues (List.range' 263 256)
+      (Classical.run (canonicalWork2Rotation ++ terminalEpochCompression) s))≤ShorECDLP.p) :
+    secp256k1EEAReversePostprocessingIdealState
+      (Classical.run terminalWork1Clear (secp256k1EEAParityIdealState
+        (Classical.run (canonicalWork2Rotation ++ terminalEpochCompression) s)))=s := by
+  simp only [secp256k1EEAReversePostprocessingIdealState,Classical.run_append] at hx ⊢
+  rw [reverseClear_cancel,reverseParity_cancel _ hx,reverseEpoch_cancel,
+    canonicalWork2InverseRotation_after_forward]
+private theorem reverse_take_word_le (bits : List Bool) (count : Nat) :
+    boolWordToNat (bits.take count)≤boolWordToNat bits := by
+  induction bits generalizing count with
+  | nil => simp
+  | cons b bs ih =>
+    cases count with
+    | zero => simp
+    | succ n =>
+      simp only [List.take_succ_cons,boolWordToNat_cons]
+      have h := ih n
+      omega
+/-- On original valid inputs, reverse postprocessing restores the entire terminal EEA state,
+not just the modular coefficient. -/
+theorem secp256k1EEAReversePostprocessing_output (s : BasisState)
+    (hs : Secp256k1EEAInputValid s) :
+    secp256k1EEAReversePostprocessingIdealState (secp256k1EEAOutputIdealState s)=
+      Classical.run (secp256k1EEAForwardUnitary indexedStepProductionRegisters)
+        (eeaPreprocessIdealState s) := by
+  let before := Classical.run (secp256k1EEAForwardUnitary indexedStepProductionRegisters)
+    (eeaPreprocessIdealState s)
+  let post := Classical.run (canonicalWork2Rotation ++ terminalEpochCompression) before
+  have hfull := secp256k1EEAForward_canonical_epoch s hs.1 hs.2.1 hs.2.2
+  have hbound := paperRun_preservesInvariant
+    (paperInitial_invariant ShorECDLP.Secp256k1.p_prime hs.2.1 hs.2.2)
+  have hb : boolWordToNat (wireValues (List.range' 263 256) post)≤ShorECDLP.p := by
+    have ht := reverse_take_word_le (wireValues (List.range' 263 259) post) 256
+    have hbank : wireValues (List.range' 263 259) post=constantBits 259
+        (paperRun (paperInitial ShorECDLP.p (boolWordToNat (wireValues (List.range' 263 256) s)))).tPrime := by
+      simpa only [post,before,Classical.run_append] using hfull.1
+    rw [show (wireValues (List.range' 263 259) post).take 256=
+      wireValues (List.range' 263 256) post from by
+        simp only [wireValues,←List.map_take,List.take_range'_of_length_ge (by decide : 259≥256)],
+      hbank,boolWordToNat_constantBits] at ht
+    exact ht.trans ((Nat.mod_le _ _).trans hbound.tPrime_le)
+  have hc := secp256k1EEAReversePostprocessing_after_forward before hb
+  simpa only [secp256k1EEAOutputIdealState,Classical.run_append] using hc
+/-- Forward EEA followed by source reverse postprocessing coherently returns the full terminal
+schedule state, with one normalized coefficient list shared across all original valid inputs. -/
+theorem secp256k1EEAForwardWrapper_reversePostprocessing_coherent :
+    CoherentlyImplementsOn (secp256k1EEAForwardWrapper.seq secp256k1EEAReversePostprocessing)
+      (Finsupp.lmapDomain ℂ ℂ (fun s => Classical.run
+        (secp256k1EEAForwardUnitary indexedStepProductionRegisters) (eeaPreprocessIdealState s)))
+      Secp256k1EEAInputValid := by
+  have hc := coherent_basis_seq secp256k1EEAForwardWrapper_coherent
+    secp256k1EEAReversePostprocessing_coherent (by
+      intro s hs
+      have h := (secp256k1EEAOutputIdealState_correct s hs.1 hs.2.1 hs.2.2).2.2.2.2
+      exact ⟨h 560 (by decide),h 561 (by decide),h 562 (by decide)⟩)
+  apply hc.congrIdeal
+  intro s hs
+  simp only [basisLift_ket]
+  exact congrArg ket (secp256k1EEAReversePostprocessing_output s hs)
+
 end
 end ShorECDLP.Paper2607_13816
