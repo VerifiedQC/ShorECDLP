@@ -2091,3 +2091,13 @@ the per-index layout. Coherent equivalence with the existing reverse unitary
 uses the actual-prefix inverse readiness predicate at every descending step;
 this predicate still needs a reachable-state derivation before the adaptive
 reverse can be applied unconditionally to the forward endpoint.
+
+The literal inverse preprocessing is now proved: it clears the divisor-length
+encoding and all-one length words, reverses centering, and restores the original
+work-bank arrangement. The length initializer's XOR action yields full-state
+cancellation; every adaptive reverse branch restores a valid original input
+with a uniform positive amplitude. The same concrete program is well formed
+and coherent on the actual image of preprocessing, and preprocessing followed
+by its explicit reverse preserves every valid superposition. This closes
+inverse preprocessing; deriving inverse EEA readiness from reachable forward
+endpoints remains open before joining the complete inverse wrapper.

@@ -273,4 +273,49 @@ theorem secp256k1EEAForwardWrapper_reversePostprocessing_coherent :
   exact congrArg ket (secp256k1EEAReversePostprocessing_output s hs)
 
 end
+
+attribute [local irreducible] eeaPreprocessIdealState eeaUnpreprocessIdealState eeaUnpreprocess
+
+/-- Reverse preprocessing is coherent on the actual image of valid original inputs. -/
+theorem eeaUnpreprocess_coherent :
+    CoherentlyImplementsOn eeaUnpreprocess
+      (Finsupp.lmapDomain ℂ ℂ eeaUnpreprocessIdealState)
+      (fun s => ∃ original, Secp256k1EEAInputValid original ∧ s = eeaPreprocessIdealState original) := by
+  let witness : BasisState := fun w => decide (w = 263)
+  have hw : boolWordToNat (wireValues (List.range' 263 256) witness) = 1 := by decide +kernel
+  have hv : Secp256k1EEAInputValid witness := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro w hm
+      dsimp only [witness]
+      dsimp only [Wire] at *
+      simp only [List.mem_append, List.mem_range', Nat.one_mul] at hm
+      simp [show w ≠ (263 : Nat) by
+        intro he
+        subst w
+        norm_num at hm
+        obtain ⟨i,hi,he⟩ := hm
+        omega]
+    · rw [hw]; omega
+    · rw [hw]; decide
+  apply coherent_of_basis_branches eeaUnpreprocess eeaUnpreprocessIdealState _
+    (fun b => registerXResetMagnitude b.history.length) eeaUnpreprocess_wellFormed
+    (eeaPreprocessIdealState witness) ⟨witness,hv,rfl⟩
+  intro b hb s hs
+  obtain ⟨original,ho,rfl⟩ := hs
+  rw [eeaUnpreprocessIdealState_after_preprocess original ho.1 ho.2.1 ho.2.2]
+  exact eeaUnpreprocess_after_preprocess original ho.1 ho.2.1 ho.2.2 b hb
+
+/-- Preprocessing followed by its explicit source reverse preserves every valid superposition. -/
+theorem eeaPreprocess_unpreprocess_coherent :
+    CoherentlyImplementsOn (eeaPreprocess.seq eeaUnpreprocess)
+      (Finsupp.lmapDomain ℂ ℂ (fun s : BasisState => s)) Secp256k1EEAInputValid := by
+  have hp := coherent_basis_strengthen preprocess_basis_coherent
+    (Stronger := Secp256k1EEAInputValid) (fun _ hs => hs.1)
+  have hall := coherent_basis_seq hp eeaUnpreprocess_coherent
+    (fun s hs => ⟨s,hs,rfl⟩)
+  apply hall.congrIdeal
+  intro s hs
+  rw [basisLift_ket,basisLift_ket,
+    eeaUnpreprocessIdealState_after_preprocess s hs.1 hs.2.1 hs.2.2]
+
 end ShorECDLP.Paper2607_13816

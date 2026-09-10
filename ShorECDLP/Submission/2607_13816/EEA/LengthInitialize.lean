@@ -578,4 +578,50 @@ theorem secp256k1LengthInitialize_correct_resources (state : BasisState)
   unfold secp256k1LengthInitialize at hc hq ⊢
   exact ⟨hs.1, hs.2, hw, hf, hc.1, hc.2.1, hc.2.2, hq⟩
 
+/-- Source length initialization is an XOR update, hence clears itself on the same input. -/
+theorem lengthInitialize_twice (input targets : List Wire) (flag : Wire) (scratches : List Wire)
+    (known : Nat) (state : BasisState) (hnd : targets.Nodup)
+    (hlayout : ComputeControlLayout input flag scratches)
+    (htargets : ∀ wire ∈ targets, wire ∉ input ∧ wire ≠ flag ∧ wire ∉ scratches)
+    (hknown : wireValues scratches state = constantBits scratches.length known)
+    (hflag : state flag = false) :
+    run (lengthInitialize input targets flag scratches known)
+      (run (lengthInitialize input targets flag scratches known) state) = state := by
+  let next := run (lengthInitialize input targets flag scratches known) state
+  have hfirst := lengthInitialize_correct input targets flag scratches known state
+    hnd hlayout htargets hknown hflag
+  have hinput : ∀ w ∈ input, next w = state w := by
+    intro w hw
+    exact hfirst.2 w (fun hm => (htargets w hm).1 hw)
+  have hscratch : wireValues scratches next = wireValues scratches state := by
+    apply List.map_congr_left
+    intro w hw
+    exact hfirst.2 w (fun hm => (htargets w hm).2.2 hw)
+  have hnextflag : next flag = false := by
+    exact (hfirst.2 flag (fun hm => (htargets flag hm).2.1 rfl)).trans hflag
+  have hfind : input.findIdx next = input.findIdx state := by
+    have hm : wireValues input next = wireValues input state := List.map_congr_left hinput
+    simpa only [wireValues, List.findIdx_map, Function.comp_def] using
+      congrArg (List.findIdx id) hm
+  have hsecond := lengthInitialize_correct input targets flag scratches known next
+    hnd hlayout htargets (hscratch.trans hknown) hnextflag
+  rw [hfind, hfirst.1, xorConstantBits_involutive] at hsecond
+  funext w
+  by_cases hw : w ∈ targets
+  · have hvalues := hsecond.1
+    change wireValues targets _ = wireValues targets _ at hvalues
+    have hex : ∀ (ws : List Wire) (a b : BasisState), wireValues ws a = wireValues ws b →
+        ∀ v ∈ ws, a v = b v := by
+      intro ws a b he
+      induction ws with
+      | nil => simp
+      | cons x xs ih =>
+        simp only [wireValues, List.map_cons, List.cons.injEq] at he
+        intro v hv
+        rcases List.mem_cons.mp hv with rfl | hv
+        · exact he.1
+        · exact ih he.2 v hv
+    exact hex targets _ _ hvalues w hw
+  · exact (hsecond.2 w hw).trans (hfirst.2 w hw)
+
 end ShorECDLP.Paper2607_13816
