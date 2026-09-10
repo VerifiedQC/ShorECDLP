@@ -2123,3 +2123,12 @@ identity are preserved. No swap gates are inserted. This is a composition
 interface, not a complete in-place multiplication/division theorem or the
 paper's aggregate 835-wire claim; those resource and arithmetic obligations
 remain open.
+
+The existing Horner multiplier and explicit inverse now expose coherent
+contracts with one normalized coefficient list for all valid inputs. The
+forward contract requires a clean accumulator and shared scratch plus a
+canonical multiplicand; the inverse contract applies to the actual forward
+image and restores the complete original frame. The same forward/inverse
+program pair coherently implements identity. These facts supply the arithmetic
+composition contracts for Figure 15; its intervening measurement/recomputation
+schedule and full resource certificates remain open.
