@@ -2132,3 +2132,13 @@ image and restores the complete original frame. The same forward/inverse
 program pair coherently implements identity. These facts supply the arithmetic
 composition contracts for Figure 15; its intervening measurement/recomputation
 schedule and full resource certificates remain open.
+
+Both concrete Figure 15 adaptive source schedules are now assembled at
+secp256k1 width, with physical well-formedness for every gate and measurement.
+The initial 256-bit X-reset transcript selects a continuation containing the
+intervening EEA/multiplication calls, Z corrections, explicit multiplication
+inverse, and final physical swaps in source order. A generic adaptive
+continuation theorem proves coherent correction when its phase-reconstruction
+hypotheses hold. Establishing those hypotheses for these two concrete schedules
+and deriving their aggregate resource bounds remain open; physical
+well-formedness alone is not the arithmetic correctness claim.

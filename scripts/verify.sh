@@ -21,6 +21,19 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Quantum.measureResetThen
+#print axioms ShorECDLP.Quantum.run_measureResetThen
+#print axioms ShorECDLP.Quantum.measureResetThen_wellFormed
+#print axioms ShorECDLP.Quantum.measureResetThen_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse
+#print axioms ShorECDLP.Paper2607_13816.fig15SwapOutput
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionAfterReset
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplicationAfterReset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlace_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.HornerInputValid
 #print axioms ShorECDLP.Paper2607_13816.hornerMul_coherent
 #print axioms ShorECDLP.Paper2607_13816.hornerClearOutput
@@ -1519,8 +1532,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1495 ]]; then
-  printf 'expected 1495 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1508 ]]; then
+  printf 'expected 1508 #print axioms results\n' >&2
   exit 1
 fi
 
