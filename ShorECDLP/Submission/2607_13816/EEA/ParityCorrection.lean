@@ -171,5 +171,29 @@ theorem secp256k1EEAParityCorrection_wellFormed : secp256k1EEAParityCorrection.W
     secp256k1ModulusBits 2 560 561 562 (by simp [secp256k1ModulusBits]) (by simp) parity_layout
   exact ⟨by simp [CircuitWellFormed,Gate.WellFormed],hc.seq ⟨by simp [CircuitWellFormed,Gate.WellFormed],trivial⟩⟩
 
+/-- Production parity correction restores every wire outside the coefficient, without a value precondition. -/
+theorem secp256k1EEAParityIdealState_preservesOutside (s : BasisState) (w : Wire)
+    (hw : w∉List.range' 263 256) : secp256k1EEAParityIdealState s w=s w := by
+  let input := List.range' 263 256
+  let flipped := s[2 ↦ !s 2]
+  let complemented : BasisState := fun v => if v∈input then flipped v ^^ flipped 2 else flipped v
+  let increment := ((List.range input.length).map (Nat.testBit 1))
+  let first := gidneyAddIdealState input increment 2 complemented
+  let after := gidneyAddIdealState input secp256k1ModulusBits 2 first
+  have hfirst : ∀ v∉input,first v=complemented v :=
+    (gidneyAddIdealState_correct input increment 2 complemented (by simp [increment]) List.nodup_range').2
+  have hafter : ∀ v∉input,after v=first v :=
+    (gidneyAddIdealState_correct input secp256k1ModulusBits 2 first (by simp [input,secp256k1ModulusBits]) List.nodup_range').2
+  have hframe : ∀ v∉input,after v=flipped v := by
+    intro v hv
+    rw [hafter v hv,hfirst v hv]
+    simp only [complemented,if_neg hv]
+  have hflag : after 2= !s 2 := (hframe 2 (by simp [input])).trans (by simp [flipped])
+  change (after[2 ↦ !after 2]) w=s w
+  by_cases h : w=2
+  · subst w; simp [hflag]
+  · rw [upd_other _ _ _ h,hframe w hw]
+    exact upd_other _ _ _ h
+
 end
 end ShorECDLP.Paper2607_13816
