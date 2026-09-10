@@ -21,6 +21,15 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_resources
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData_resources
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse_resources
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocess_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_measurements
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_measurements
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_tCount
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_tCount
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_measurementCount
@@ -1591,8 +1600,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1567 ]]; then
-  printf 'expected 1567 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1576 ]]; then
+  printf 'expected 1576 #print axioms results\n' >&2
   exit 1
 fi
 

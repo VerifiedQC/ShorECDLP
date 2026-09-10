@@ -1,4 +1,5 @@
 import ShorECDLP.Submission.«2607_13816».Arithmetic.InPlace
+import ShorECDLP.Submission.«2607_13816».EEA.ScheduleResources
 /-! Resource composition for the literal Figure 15 schedules.
 The component equalities retain the actual adaptive circuit terms. -/
 namespace ShorECDLP.Paper2607_13816
@@ -128,4 +129,247 @@ theorem secp256k1InPlaceMultiplication_measurementCount :
       (256+(secp256k1EEAForwardInDataBank.measurementCount+fig15MultiplyToData.measurementCount+
       fig15MultiplyToDataInverse.measurementCount+secp256k1EEAReverseInDataBank.measurementCount)) :=
   multiplication_measurements_generic _ _ _ _ 256 List.length_range' (fun bs _ => multiplication_after_measurements bs)
+private theorem constant_metrics (acc dirty : List Wire) (bits : List Bool)
+    (q c r t : Wire) (ha : acc.length=256) (hd : dirty.length=255) (hb : bits.length=255) :
+    (controlledGidneyAddConst acc dirty (true::bits) q c r t).tCount=5348 ∧
+    (controlledGidneyAddConst acc dirty (true::bits) q c r t).measurementCount=255 := by
+  cases acc with
+  | nil => simp at ha
+  | cons a rest =>
+    cases dirty with
+    | nil => simp at hd
+    | cons d ds =>
+      have ht := controlledGidneyAddConst_tCount_exact a d q c r t rest ds bits (by simp_all) (by simp_all)
+      have hm := controlledGidneyAddConst_measurementCount (a::rest) (d::ds) (true::bits) q c r t
+        (by simp_all) (by simp_all)
+      constructor
+      · simpa only [show rest.length=255 by simpa using ha] using ht
+      · simpa only [List.all_cons,Bool.not_true,Bool.false_and,Bool.false_eq_true,↓reduceIte,hd] using hm
+private theorem comparison_metrics (acc dirty : List Wire) (p : Nat) (c r t f : Wire)
+    (ha : acc.length=256) (hd : dirty.length=256) (hp0 : 0<p) (hp : p<2^256) :
+    (gidneyCompareGE acc dirty p c r t f).tCount=5369 ∧
+    (gidneyCompareGE acc dirty p c r t f).measurementCount=256 := by
+  cases acc with
+  | nil => simp at ha
+  | cons a rest =>
+    have h := gidneyCompareGE_metrics a rest dirty p c r t f (by omega) hp0 (by simpa only [ha] using hp)
+    exact ⟨by simpa only [ha] using h.2.2.1, by simpa only [ha] using h.2.2.2.1⟩
+private theorem four_metrics (a b : Circuit) (c d : AdaptiveCircuit)
+    (ha : ShorECDLP.tCount a=5383) (hb : ShorECDLP.tCount b=3591)
+    (hc : c.tCount=5369 ∧ c.measurementCount=256)
+    (hd : d.tCount=5348 ∧ d.measurementCount=255) :
+    (AdaptiveCircuit.unitary a (c.seq (d.seq (.unitary b .done)))).tCount=19691 ∧
+    (AdaptiveCircuit.unitary a (c.seq (d.seq (.unitary b .done)))).measurementCount=511 := by
+  simp only [AdaptiveCircuit.tCount,AdaptiveCircuit.measurementCount,adaptive_tCount_seq,modularMeasurements_seq,
+    ha,hb,hc.1,hc.2,hd.1,hd.2]
+  trivial
+private theorem modular_add_metrics (input acc : List Wire) (bits : List Bool) (p : Nat)
+    (q c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (controlledModularAdd input acc (true::bits) p q c r t f).tCount=19691 ∧
+    (controlledModularAdd input acc (true::bits) p q c r t f).measurementCount=511 := by
+  have hc := comparison_metrics acc input p c r t f ha hi hp0 hp
+  have hd := constant_metrics acc (input.take (acc.length-1)) bits f c r t ha (by simp [ha,hi]) hb
+  have hcarry := controlledAddCarry_tCount input acc q c f (by omega)
+  have hlt : ShorECDLP.tCount (controlledCompareLT acc input q c f)=3591 := by
+    cases acc with
+    | nil => simp at ha
+    | cons a rest => simpa only [show rest.length=255 by simpa using ha] using
+        (controlledCompareLT_counts a rest input q c f (by omega)).2.2.2
+  exact four_metrics _ _ _ _ (by simpa only [hi] using hcarry) hlt hc hd
+private theorem unitary_pair_metrics (a b : Circuit) (c d : AdaptiveCircuit)
+    (ta tb tc td mc md : Nat) (ha : ShorECDLP.tCount a=ta) (hb : ShorECDLP.tCount b=tb)
+    (hc : c.tCount=tc ∧ c.measurementCount=mc) (hd : d.tCount=td ∧ d.measurementCount=md) :
+    (AdaptiveCircuit.unitary a (c.seq (d.seq (.unitary b .done)))).tCount=ta+(tc+(td+tb)) ∧
+    (AdaptiveCircuit.unitary a (c.seq (d.seq (.unitary b .done)))).measurementCount=mc+md := by
+  simp only [AdaptiveCircuit.tCount,AdaptiveCircuit.measurementCount,adaptive_tCount_seq,modularMeasurements_seq,
+    ha,hb,hc.1,hc.2,hd.1,hd.2,Nat.add_zero,and_self]
+private theorem modular_double_metrics (input acc : List Wire) (bits : List Bool) (p : Nat)
+    (c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (modularDouble acc input (true::bits) p c r t f).tCount=10717 ∧
+    (modularDouble acc input (true::bits) p c r t f).measurementCount=511 := by
+  cases acc with
+  | nil => simp at ha
+  | cons a rest =>
+    have hc := comparison_metrics (a::rest) input p c r t f ha hi hp0 hp
+    have hd := constant_metrics (a::rest) (input.take rest.length) bits f c r t ha
+      (by simp only [List.length_take]; have hh := ha; simp only [List.length_cons] at hh; omega) hb
+    exact unitary_pair_metrics _ _ _ _ 0 0 5369 5348 256 255 (doublingShift_counts a f rest).2.2 rfl hc hd
+private theorem modular_sub_metrics (input acc : List Wire) (bits : List Bool) (p : Nat)
+    (q c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (controlledModularSub input acc (true::bits) p q c r t f).tCount=19691 ∧
+    (controlledModularSub input acc (true::bits) p q c r t f).measurementCount=511 := by
+  have hc := comparison_metrics acc input p c r t f ha hi hp0 hp
+  have hd := constant_metrics acc (input.take (acc.length-1)) bits f c r t ha (by simp [ha,hi]) hb
+  have hcarry : ShorECDLP.tCount (controlledSubCarry input acc q c f)=5383 := by
+    rw [controlledSubCarry,ShorECDLP.tCount_adjoint,controlledAddCarry_tCount input acc q c f (by omega),hi]
+  have hlt : ShorECDLP.tCount (controlledCompareLT acc input q c f)=3591 := by
+    cases acc with
+    | nil => simp at ha
+    | cons a rest => simpa only [show rest.length=255 by simpa using ha] using
+        (controlledCompareLT_counts a rest input q c f (by omega)).2.2.2
+  exact unitary_pair_metrics _ _ _ _ 3591 5383 5348 5369 255 256 hlt hcarry hd hc
+private theorem modular_halve_metrics (input acc : List Wire) (bits : List Bool) (p : Nat)
+    (c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (modularHalve acc input (true::bits) p c r t f).tCount=10717 ∧
+    (modularHalve acc input (true::bits) p c r t f).measurementCount=511 := by
+  cases acc with
+  | nil => simp at ha
+  | cons a rest =>
+    have hc := comparison_metrics (a::rest) input p c r t f ha hi hp0 hp
+    have hd := constant_metrics (a::rest) (input.take rest.length) bits f c r t ha
+      (by simp only [List.length_take]; have hh := ha; simp only [List.length_cons] at hh; omega) hb
+    exact unitary_pair_metrics _ _ _ _ 0 0 5348 5369 255 256 rfl
+      ((ShorECDLP.tCount_adjoint _).trans (doublingShift_counts a f rest).2.2) hd hc
+private theorem hornerMul_metrics (controls input acc : List Wire) (bits : List Bool) (p : Nat)
+    (c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (hornerMul controls input acc (true::bits) p c r t f).tCount=
+      controls.length*19691+(controls.length-1)*10717 ∧
+    (hornerMul controls input acc (true::bits) p c r t f).measurementCount=(controls.length*2-1)*511 := by
+  induction controls with
+  | nil => simp [hornerMul,AdaptiveCircuit.tCount,AdaptiveCircuit.measurementCount]
+  | cons q qs ih =>
+    have hadd := modular_add_metrics input acc bits p q c r t f hi ha hb hp0 hp
+    have hdbl := modular_double_metrics input acc bits p f r t c hi ha hb hp0 hp
+    rw [hornerMul]
+    by_cases hz : qs=[]
+    · rw [if_pos hz]
+      simp only [adaptive_tCount_seq,modularMeasurements_seq,ih.1,ih.2,hadd.1,hadd.2]
+      subst qs
+      simp
+    · rw [if_neg hz]
+      simp only [adaptive_tCount_seq,modularMeasurements_seq,ih.1,ih.2,hadd.1,hadd.2,hdbl.1,hdbl.2,List.length_cons]
+      have hn : qs.length ≠ 0 := fun h => hz (List.eq_nil_of_length_eq_zero h)
+      omega
+private theorem hornerMulInverse_metrics (controls input acc : List Wire) (bits : List Bool) (p : Nat)
+    (c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
+    (hp0 : 0<p) (hp : p<2^256) :
+    (hornerMulInverse controls input acc (true::bits) p c r t f).tCount=
+      controls.length*19691+(controls.length-1)*10717 ∧
+    (hornerMulInverse controls input acc (true::bits) p c r t f).measurementCount=(controls.length*2-1)*511 := by
+  induction controls with
+  | nil => simp [hornerMulInverse,AdaptiveCircuit.tCount,AdaptiveCircuit.measurementCount]
+  | cons q qs ih =>
+    have hadd := modular_sub_metrics input acc bits p q c r t f hi ha hb hp0 hp
+    have hdbl := modular_halve_metrics input acc bits p f r t c hi ha hb hp0 hp
+    rw [hornerMulInverse]
+    by_cases hz : qs=[]
+    · rw [if_pos hz]
+      simp only [adaptive_tCount_seq,modularMeasurements_seq,hadd.1,hadd.2,AdaptiveCircuit.tCount,AdaptiveCircuit.measurementCount]
+      subst qs
+      simp
+    · rw [if_neg hz]
+      simp only [adaptive_tCount_seq,modularMeasurements_seq,ih.1,ih.2,hadd.1,hadd.2,hdbl.1,hdbl.2,List.length_cons]
+      have hn : qs.length ≠ 0 := fun h => hz (List.eq_nil_of_length_eq_zero h)
+      omega
+private theorem hornerMul_256_metrics (controls input acc : List Wire) (bits tail : List Bool) (p : Nat)
+    (c r t f : Wire) (hctrl : controls.length=256) (hi : input.length=256) (ha : acc.length=256)
+    (hb : bits.length=256) (he : bits=true::tail) (hp0 : 0<p) (hp : p<2^256) :
+    (hornerMul controls input acc bits p c r t f).tCount=7773731 ∧
+    (hornerMul controls input acc bits p c r t f).measurementCount=261121 := by
+  subst bits
+  have ht : tail.length=255 := by simpa using hb
+  simpa only [hctrl] using hornerMul_metrics controls input acc tail p c r t f hi ha ht hp0 hp
+private theorem hornerMulInverse_256_metrics (controls input acc : List Wire) (bits tail : List Bool) (p : Nat)
+    (c r t f : Wire) (hctrl : controls.length=256) (hi : input.length=256) (ha : acc.length=256)
+    (hb : bits.length=256) (he : bits=true::tail) (hp0 : 0<p) (hp : p<2^256) :
+    (hornerMulInverse controls input acc bits p c r t f).tCount=7773731 ∧
+    (hornerMulInverse controls input acc bits p c r t f).measurementCount=261121 := by
+  subst bits
+  have ht : tail.length=255 := by simpa using hb
+  simpa only [hctrl] using hornerMulInverse_metrics controls input acc tail p c r t f hi ha ht hp0 hp
+/-- T and measurement counts of the actual Figure 15 arithmetic component. -/
+theorem fig15MultiplyToWork_resources : fig15MultiplyToWork.tCount=7773731 ∧ fig15MultiplyToWork.measurementCount=261121 :=
+  hornerMul_256_metrics _ _ _ _ secp256k1ReductionConstantBits.tail _ _ _ _ _
+    List.length_range' List.length_range' List.length_range'
+    (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
+/-- T and measurement counts of the actual Figure 15 arithmetic component. -/
+theorem fig15MultiplyToData_resources : fig15MultiplyToData.tCount=7773731 ∧ fig15MultiplyToData.measurementCount=261121 :=
+  hornerMul_256_metrics _ _ _ _ secp256k1ReductionConstantBits.tail _ _ _ _ _
+    List.length_range' List.length_range' List.length_range'
+    (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
+/-- T and measurement counts of the actual Figure 15 arithmetic component. -/
+theorem fig15MultiplyToDataInverse_resources : fig15MultiplyToDataInverse.tCount=7773731 ∧ fig15MultiplyToDataInverse.measurementCount=261121 :=
+  hornerMulInverse_256_metrics _ _ _ _ (constantBits 256 ShorECDLP.p).tail _ _ _ _ _
+    List.length_range' List.length_range' List.length_range'
+    (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
+private theorem uncenter_measurements (input dirty : List Wire) (modulus : List Bool) (p : Nat)
+    (c r t iter : Wire) :
+    (eeaUncenter input dirty modulus p c r t iter).measurementCount=
+      (eeaCenter input dirty modulus p c r t iter).measurementCount := by
+  simp only [eeaUncenter,eeaCenter,modularMeasurements_seq,Nat.add_comm]
+private theorem wrapped_measurements (a : AdaptiveCircuit) (c d : Circuit) :
+    (AdaptiveCircuit.unitary c (a.seq (.unitary d .done))).measurementCount=a.measurementCount := by
+  change (a.seq (.unitary d .done)).measurementCount = _
+  rw [modularMeasurements_seq]
+  rfl
+private theorem unpreprocess_measure_eq : eeaUnpreprocess.measurementCount=eeaPreprocess.measurementCount :=
+  (wrapped_measurements _ _ _).trans ((uncenter_measurements _ _ _ _ _ _ _ _).trans
+    (wrapped_measurements _ _ _).symm)
+private theorem constMinus_measurements (input dirty : List Wire) (modulus : List Bool)
+    (q c r t : Wire) (hi : input.length=256) (hd : dirty.length=255)
+    (hm : modulus.length=256) (hz : modulus.all (fun b => !b)=false) :
+    (controlledConstMinus input dirty modulus q c r t).measurementCount=510 := by
+  have hinc := controlledGidneyAddConst_measurementCount input dirty
+    ((List.range input.length).map (Nat.testBit 1)) q c r t (by simp) (by omega)
+  have hmod := controlledGidneyAddConst_measurementCount input dirty modulus q c r t (by omega) (by omega)
+  have hzero : ((List.range 256).map (Nat.testBit 1)).all (fun b => !b)=false := by decide +kernel
+  rw [hi,hzero,hd] at hinc
+  rw [hz,hd] at hmod
+  change ((controlledGidneyAddConst input dirty ((List.range input.length).map (Nat.testBit 1)) q c r t).seq
+    (controlledGidneyAddConst input dirty modulus q c r t)).measurementCount=510
+  rw [modularMeasurements_seq,hi,hinc,hmod]
+  rfl
+private theorem parity_measurements_generic (input dirty : List Wire) (modulus : List Bool)
+    (c r t iter : Wire) (h : (controlledConstMinus input dirty modulus iter c r t).measurementCount=510) :
+    (eeaParityCorrection input dirty modulus c r t iter).measurementCount=510 :=
+  (wrapped_measurements _ _ _).trans h
+theorem secp256k1EEAParityCorrection_measurementCount :
+    secp256k1EEAParityCorrection.measurementCount=510 :=
+  parity_measurements_generic _ _ _ _ _ _ _ (constMinus_measurements _ _ _ _ _ _ _
+    List.length_range' List.length_range' (by decide +kernel) (by decide +kernel))
+attribute [local irreducible] eeaPreprocess eeaUnpreprocess AdaptiveCircuit.measurementCount
+theorem eeaUnpreprocess_measurementCount : eeaUnpreprocess.measurementCount=766 :=
+  unpreprocess_measure_eq.trans eeaPreprocess_resources.2.2.2.2.1
+private theorem forward_wrapper_measurements (pre schedule parity : AdaptiveCircuit) (a b : Circuit)
+    (hpre : pre.measurementCount=766) (hs : schedule.measurementCount=5278832)
+    (hp : parity.measurementCount=510) :
+    ((((pre.seq schedule).seq (.unitary a .done)).seq parity).seq (.unitary b .done)).measurementCount=5280108 := by
+  simp only [modularMeasurements_seq,AdaptiveCircuit.measurementCount,hpre,hs,hp]
+theorem secp256k1EEAForwardWrapper_measurementCount :
+    secp256k1EEAForwardWrapper.measurementCount=5280108 :=
+  forward_wrapper_measurements _ _ _ _ _ eeaPreprocess_resources.2.2.2.2.1
+    secp256k1EEAForwardAdaptive_measurementCount secp256k1EEAParityCorrection_measurementCount
+private theorem reverse_wrapper_measurements (pre schedule parity : AdaptiveCircuit) (a b : Circuit)
+    (hpre : pre.measurementCount=766) (hs : schedule.measurementCount=5278832)
+    (hp : parity.measurementCount=510) :
+    (((((AdaptiveCircuit.unitary a .done).seq parity).seq (.unitary b .done)).seq schedule).seq pre).measurementCount=5280108 := by
+  simp only [modularMeasurements_seq,AdaptiveCircuit.measurementCount,hpre,hs,hp]
+theorem secp256k1EEAReverseWrapper_measurementCount :
+    secp256k1EEAReverseWrapper.measurementCount=5280108 :=
+  reverse_wrapper_measurements _ _ _ _ _ eeaUnpreprocess_measurementCount
+    secp256k1EEAReverseAdaptive_measurementCount secp256k1EEAParityCorrection_measurementCount
+
+private theorem forward_bank_measurements : secp256k1EEAForwardInDataBank.measurementCount=5280108 :=
+  (AdaptiveCircuit.relabel_measurementCount _ _).trans secp256k1EEAForwardWrapper_measurementCount
+private theorem reverse_bank_measurements : secp256k1EEAReverseInDataBank.measurementCount=5280108 :=
+  (AdaptiveCircuit.relabel_measurementCount _ _).trans secp256k1EEAReverseWrapper_measurementCount
+attribute [local irreducible] fig15MultiplyToWork fig15MultiplyToData fig15MultiplyToDataInverse
+  secp256k1EEAForwardWrapper secp256k1EEAForwardInDataBank secp256k1EEAReverseInDataBank
+/-- Worst-branch measurement total of the same complete division circuit as the coherent contract. -/
+theorem secp256k1InPlaceDivision_measurements :
+    secp256k1InPlaceDivision.measurementCount=11343835 := by
+  rw [secp256k1InPlaceDivision_measurementCount,secp256k1EEAForwardWrapper_measurementCount,
+    fig15MultiplyToWork_resources.2,reverse_bank_measurements,
+    fig15MultiplyToData_resources.2,fig15MultiplyToDataInverse_resources.2]
+/-- Worst-branch measurement total of the complete multiplication circuit. -/
+theorem secp256k1InPlaceMultiplication_measurements :
+    secp256k1InPlaceMultiplication.measurementCount=11343835 := by
+  rw [secp256k1InPlaceMultiplication_measurementCount,fig15MultiplyToWork_resources.2,
+    forward_bank_measurements,fig15MultiplyToData_resources.2,
+    fig15MultiplyToDataInverse_resources.2,reverse_bank_measurements]
 end ShorECDLP.Paper2607_13816
