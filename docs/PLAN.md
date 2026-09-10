@@ -2249,3 +2249,16 @@ second potentially zero multiplication factor; it is not silently assumed away.
 Total exceptional-point correction and aggregate Phase 9 resources remain open. These
 coordinate formulas do not yet handle infinity, doubling, inverse pairs or the additional
 second-factor exceptional input as a total group-law circuit. Phases 10–12 remain open.
+
+
+### Figure 14 permutation on all canonical coordinates
+
+The enabled coordinate stages now form an explicit field-coordinate equivalence, with inverse
+maps for each stage. The two zero factors use one in both directions. The direct arithmetic
+formula and actual circuit state map agree with this equivalence on all canonical coordinate
+pairs, not only the affine generic domain. Consequently, no two valid enabled complete input
+states collide; this includes arbitrary external state and exceptional coordinate pairs.
+
+This supplies the injectivity needed for a finite exceptional-output correction. The correction
+circuit, proof that its exceptional set covers the full group-law boundary, infinity encoding,
+and aggregate Phase 9 resources remain open. No new physical-width claim is made.

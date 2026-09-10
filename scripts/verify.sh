@@ -1765,11 +1765,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig14CoordinateProgram_disabled
 #print axioms ShorECDLP.Paper2607_13816.fig14CoordinateValues_generic
 #print axioms ShorECDLP.Paper2607_13816.fig14CoordinateState_generic
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateValues_equiv
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateState_equiv
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateState_injectiveOn
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1744 ]]; then
-  printf 'expected 1744 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1747 ]]; then
+  printf 'expected 1747 #print axioms results\n' >&2
   exit 1
 fi
 
