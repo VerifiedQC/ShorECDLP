@@ -1557,4 +1557,137 @@ theorem secp256k1GidneyAdd_correct_resources (s : BasisState)
   · exact Quantum.AdaptiveCircuit.run_bornMass_eq_one _ hw _ (Quantum.normSq_ket s)
   · simpa [hz] using controlledGidneyAddConst_measurementCount _ _ _ 0 1 2 3 hk hd
 
+private theorem gidneyAddCell_controlSafe (q c r t a d : Wire) (k : Bool)
+    (h : q ∉ [c,r,t,a,d]) :
+    ∀ g ∈ gidneyAddCarryCell q c r t a d k, constantControlSafe q g := by
+  cases k <;> simp_all [gidneyAddCarryCell,constantControlSafe,eq_comm]
+private theorem gidneyAddTail_controlSafe (input dirty : List Wire) (constant : List Bool)
+    (q c r t : Wire) (callback : List Bool → Circuit) (history : List Bool)
+    (hroles : q ∉ [c,r,t]++input++dirty)
+    (hcallback : ∀ outcomes g, g ∈ callback outcomes → constantControlSafe q g) :
+    constantControlProgramSafe q (gidneyAddTail q c r t callback history input dirty constant) := by
+  induction input generalizing dirty constant c r history with
+  | nil => cases dirty <;> cases constant <;> simp [gidneyAddTail,constantControlProgramSafe]
+  | cons a input ih =>
+      cases dirty with
+      | nil =>
+        cases input <;> cases constant with
+        | nil => simp [gidneyAddTail,constantControlProgramSafe]
+        | cons k ks =>
+          cases ks <;> cases k <;> simp_all [gidneyAddTail,constantControlProgramSafe,constantControlSafe,eq_comm]
+          all_goals exact ⟨hcallback _,hcallback _⟩
+      | cons d dirty =>
+        cases constant with
+        | nil => simp [gidneyAddTail,constantControlProgramSafe]
+        | cons k constant =>
+          have hc : c≠q := by simp_all [eq_comm]
+          have hcell : q ∉ [c,r,t,a,d] := by simp_all
+          have htail : q ∉ [r,c,t]++input++dirty := by simp_all
+          cases input <;> simp only [gidneyAddTail,constantControlProgramSafe] <;>
+            exact ⟨gidneyAddCell_controlSafe q c r t a d k hcell,
+            hc,by have hh := ih dirty constant r c (history++[false]) htail; simp only [gidneyAddTail,constantControlProgramSafe] at hh; exact hh,
+            by have hh := ih dirty constant r c (history++[true]) htail; simp only [gidneyAddTail,constantControlProgramSafe] at hh; exact hh⟩
+private theorem addZ_controlSafe (q : Wire) (dirty : List Wire) (outcomes : List Bool)
+    (h : q ∉ dirty) : ∀ g ∈ Quantum.registerZCorrection dirty outcomes, constantControlSafe q g := by
+  intro g hg
+  have hn : q ∉ gateWires g := by
+    intro hq
+    exact h (gidneyZ_usesOnly dirty outcomes q (List.mem_flatMap.mpr ⟨g,hg,hq⟩))
+  cases g <;> simp_all [constantControlSafe,gateWires,eq_comm]
+private theorem addCleanup_controlSafe (input dirty : List Wire) (constant : List Bool)
+    (q c : Wire) (h : q ∉ c::input++dirty) :
+    ∀ g ∈ gidneyAddCleanup input dirty constant q c, constantControlSafe q g := by
+  have hx : ∀ g ∈ gidneyFlipWord input, constantControlSafe q g := by
+    intro g hg
+    obtain ⟨w,hw,rfl⟩ := List.mem_map.mp hg
+    change w≠q
+    intro he
+    subst w
+    simp_all
+  have hc : q ∉ c::input.take dirty.length++dirty := by
+    simp only [List.mem_cons,List.mem_append,not_or] at h ⊢
+    exact ⟨⟨h.1.1,fun hh => h.1.2 (List.mem_of_mem_take hh)⟩,h.2⟩
+  simp only [gidneyAddCleanup,List.forall_mem_append]
+  exact ⟨⟨hx,controlledConstCarryXor_controlSafe _ _ _ q c hc⟩,hx⟩
+/-- The adder's external control is read only, including measured phase cleanup. -/
+theorem controlledGidneyAddConst_controlSafe (input dirty : List Wire) (constant : List Bool)
+    (q c r t : Wire) (h : q ∉ [c,r,t]++input++dirty) :
+    constantControlProgramSafe q (controlledGidneyAddConst input dirty constant q c r t) := by
+  unfold controlledGidneyAddConst
+  split
+  · trivial
+  · cases input with
+    | nil => simp [constantControlProgramSafe]
+    | cons a input =>
+      cases dirty with
+      | nil =>
+        cases input <;> cases constant with
+        | nil => simp [constantControlProgramSafe]
+        | cons k ks =>
+          cases ks <;> cases k <;> simp only [constantControlProgramSafe,constantControlSafe,List.forall_mem_cons,List.forall_mem_nil, and_true, Bool.false_eq_true, if_false, if_true]
+          all_goals simp_all only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false,not_or,ne_eq,eq_comm]
+          all_goals simp
+      | cons d dirty =>
+        cases constant with
+        | nil => trivial
+        | cons k constant =>
+          have hcell : q ∉ [c,r,t,a,d] := by simp_all
+          have ht : q ∉ [r,c,t]++input++dirty := by simp_all
+          have hd : q ∉ d::dirty := by simp_all
+          have hx : q ∉ c::(a::input)++d::dirty := by simp_all
+          cases input <;> simp only [constantControlProgramSafe] <;>
+            refine ⟨gidneyAddCell_controlSafe q c r t a d k hcell,
+            gidneyAddTail_controlSafe _ dirty constant q r c t _ _ ht ?_⟩
+          all_goals intro outcomes
+          all_goals simp only [List.forall_mem_append]
+          all_goals exact ⟨⟨addZ_controlSafe q _ outcomes hd,addCleanup_controlSafe _ _ _ q c hx⟩,
+            addZ_controlSafe q _ outcomes hd⟩
+
+/-- Uncontrolled fixed-width constant sum, with no virtual control in the state map. -/
+def gidneyUncontrolledAddIdealState (input : List Wire) (constant : List Bool) (s : BasisState) : BasisState :=
+  gidneyWriteBits input (cuccaroAddBits false (wireValues input s) constant) s
+private theorem gidneyWriteBits_control (input : List Wire) (bits : List Bool) (s : BasisState)
+    (q : Wire) (b : Bool) (hq : q ∉ input) :
+    gidneyWriteBits input bits (upd s q b)=upd (gidneyWriteBits input bits s) q b := by
+  induction input generalizing bits s with
+  | nil => rfl
+  | cons a input ih =>
+    cases bits with
+    | nil => rfl
+    | cons bit bits =>
+      have hqa : q≠a := by intro he; exact hq (by simp [he])
+      have hqt : q ∉ input := fun hh => hq (List.mem_cons_of_mem a hh)
+      have hcomm : upd (upd s q b) a bit=upd (upd s a bit) q b := by
+        funext w
+        by_cases hwq : w=q <;> by_cases hwa : w=a <;> simp_all [upd]
+      simp only [gidneyWriteBits,hcomm,ih bits (upd s a bit) hqt]
+theorem gidneyAddIdealState_enabled (input : List Wire) (constant : List Bool) (s : BasisState)
+    (q : Wire) (hq : q ∉ input) :
+    gidneyAddIdealState input constant q (upd s q true)=upd (gidneyUncontrolledAddIdealState input constant s) q true := by
+  have hi : wireValues input (upd s q true)=wireValues input s := by
+    apply List.map_congr_left
+    intro w hw
+    have hn : w≠q := by intro he; exact hq (he ▸ hw)
+    simp [upd,hn]
+  have hmap : List.map (fun k : Bool => k) constant=constant := by induction constant <;> simp_all
+  simp only [gidneyAddIdealState,upd_same,Bool.true_and,hmap,hi,
+    gidneyWriteBits_control input _ s q true hq,gidneyUncontrolledAddIdealState]
+theorem gidneyUncontrolledAddIdealState_correct (input : List Wire) (constant : List Bool) (s : BasisState)
+    (hk : input.length=constant.length) (hnd : input.Nodup) :
+    boolWordToNat (wireValues input (gidneyUncontrolledAddIdealState input constant s))=
+      (boolWordToNat (wireValues input s)+boolWordToNat constant)%2^input.length ∧
+    ∀ w, w ∉ input → gidneyUncontrolledAddIdealState input constant s w=s w := by
+  have hlen : (wireValues input s).length=constant.length := by simp [wireValues,hk]
+  have hw := gidneyWriteBits_values input (cuccaroAddBits false (wireValues input s) constant) s hnd
+    (by rw [cuccaroAddBits_length _ _ _ hlen]; simp [wireValues])
+  have hv := carryAddBits_value false (wireValues input s) constant hlen
+  have hlo := boolWordToNat_lt_pow_two (cuccaroAddBits false (wireValues input s) constant)
+  rw [cuccaroAddBits_length _ _ _ hlen] at hlo
+  constructor
+  · change boolWordToNat (wireValues input (gidneyWriteBits input _ s))=_
+    rw [hw]
+    have hh := congrArg (fun n => n%2^input.length) hv
+    simpa [wireValues,Nat.add_mod,Nat.mod_eq_of_lt (by simpa [wireValues] using hlo)] using hh
+  · exact fun w hw => gidneyWriteBits_frame input _ s w hw
+
 end ShorECDLP.Paper2607_13816

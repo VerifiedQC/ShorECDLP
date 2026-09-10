@@ -1701,11 +1701,25 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledModularNegate_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.controlledModularNegate_branch_correct
 #print axioms ShorECDLP.Paper2607_13816.controlledModularNegate_coherent
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_controlSafe
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddIdealState_enabled
+#print axioms ShorECDLP.Paper2607_13816.gidneyUncontrolledAddIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.constantAddition_overflow
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddConst_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddConst_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddConst_virtualControl_absent
+#print axioms ShorECDLP.Paper2607_13816.gidneyCompareLT_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.gidneyCompareLT_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAddIdealState_correct
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd_branch_correct
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAdd_coherent
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd_coherent
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1680 ]]; then
-  printf 'expected 1680 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1694 ]]; then
+  printf 'expected 1694 #print axioms results\n' >&2
   exit 1
 fi
 

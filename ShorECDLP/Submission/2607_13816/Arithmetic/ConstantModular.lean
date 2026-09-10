@@ -2,7 +2,7 @@ import ShorECDLP.Submission.«2607_13816».Arithmetic.ConstantCompare
 import ShorECDLP.Submission.«2607_13816».Arithmetic.HornerMul
 namespace ShorECDLP.Paper2607_13816
 open Classical
-private theorem constant_add_overflow (B p x y : Nat) (q : Bool)
+theorem constantAddition_overflow (B p x y : Nat) (q : Bool)
     (hp : p<B) (hx : x<p) (hy : y<p) :
     (q && decide ((y+(if q then x else 0))%B<x))=decide (B≤y+(if q then x else 0)) := by
   cases q with
@@ -68,7 +68,7 @@ theorem constantModularAddIdealState_correct (target : List Wire) (constant corr
     simp only [carried,upd_same]
     rw [hlf,hlq,hl.1]
     simp only [Bool.false_xor]
-    rw [constant_add_overflow (2^target.length) p _ _ (s q) hp hx hy]
+    rw [constantAddition_overflow (2^target.length) p _ _ (s q) hp hx hy]
   have hm := gidneyAddIdealState_correct target correction f flagged hr hn
   have hmath := modularCorrection_correct (2^target.length) p (boolWordToNat constant)
     (boolWordToNat (wireValues target s)) (s q) hp hx hy
