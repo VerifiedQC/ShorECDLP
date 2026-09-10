@@ -848,6 +848,28 @@ private theorem size_add_size_add_size_le_of_mul_lt_pow {a b c n : ℕ}
     Nat.mul_le_mul (Nat.mul_le_mul haPow hbPow) hcPow
   exact (not_lt_of_ge (hpow.trans hproduct)) habc
 
+/-- The widest alignment frame fits the work register at every reachable active boundary. -/
+theorem PaperBoundaryReachable.alignment_span {p x spent n : Nat} {v : EEAState}
+    (hreach : PaperBoundaryReachable p x spent v)
+    (hp : p.Prime) (hx : 1 ≤ x) (hxp : x < p) (hbits : p < 2^n)
+    (hactive : v.rPrime ≠ 0) :
+    v.lT + v.lQ + 1 + (paperQuotient v).size + v.lRPrime ≤ n+3 := by
+  have hi := hreach.invariant hp hx hxp
+  have hr : 0 < v.rPrime := Nat.pos_of_ne_zero hactive
+  have ht : 0 < v.t := lt_of_le_of_lt (Nat.zero_le _) hi.coefficient_increases
+  have hq : 0 < paperQuotient v :=
+    Nat.div_pos hi.remainder_decreases.le hr
+  have hmul : paperQuotient v * v.rPrime ≤ v.r := by
+    simpa [paperQuotient] using Nat.div_mul_le_self v.r v.rPrime
+  have hrt : v.r * v.t ≤ p := by
+    rw [← hi.magnitude_identity]
+    exact Nat.le_add_right _ _
+  have hsize := size_add_size_add_size_le_of_mul_lt_pow hq hr ht
+    ((Nat.mul_le_mul_right v.t hmul).trans hrt |>.trans_lt hbits)
+  obtain ⟨_,hQ,_,_,_,hT,hR⟩ := hi.canonical
+  rw [hQ,hT,hR]
+  omega
+
 private theorem packedFields_of_capacity {p : ℕ} {s : EEAState}
     (hlt : s.lT = s.t.size) (hlq : s.lQ = s.q.size)
     (hlrp : s.lRPrime = s.rPrime.size)
