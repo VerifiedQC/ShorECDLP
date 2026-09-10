@@ -2142,3 +2142,12 @@ continuation theorem proves coherent correction when its phase-reconstruction
 hypotheses hold. Establishing those hypotheses for these two concrete schedules
 and deriving their aggregate resource bounds remain open; physical
 well-formedness alone is not the arithmetic correctness claim.
+
+The actual coherent EEA schedule now has a direct physical-support certificate:
+`secp256k1EEAForwardUnitary_production_usesOnly` places every gate wire in
+`List.range 580`, and `secp256k1EEAForwardUnitary_production_qubitCount` derives
+at most 580 distinct qubits for that same circuit. The support witness also
+proves complete external-wire preservation and dependence only on the allocated
+input registers. These facts compose symbolic component bounds across all
+1,620 steps; the complete adaptive wrapper and Figure 15 resource certificate
+remain subsequent obligations.
