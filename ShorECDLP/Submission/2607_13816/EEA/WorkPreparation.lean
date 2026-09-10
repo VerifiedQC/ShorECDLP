@@ -495,4 +495,25 @@ theorem workRegistersPrepare_correct_resources (state : BasisState)
     workRegistersRestore_after_prepare state, hr.1, hr.2.1, workRegistersPrepare_length,
     hr.2.2.1, hr.2.2.2.1, hr.2.2.2.2, workRegistersPrepare_qubits, workRegistersRestore_resources⟩
 
+
+/-- Restoring the two work registers uses the same physical bank as preparation. -/
+theorem workRegistersRestore_usesOnly :
+    PaperCircuitUsesOnly (List.range' 4 518) workRegistersRestore := by
+  have hr : PaperCircuitUsesOnly (List.range' 4 518) (work2Restore 263) := by
+    unfold work2Restore
+    exact (workSwapSequence_usesOnly 263 work2RestorePairs work2Pairs_bounds.2.1).mono (by
+      intro wire hw
+      simp at hw ⊢
+      omega)
+  have hl : PaperCircuitUsesOnly (List.range' 4 518)
+      (work1Load 4 (2 ^ 256 - 2 ^ 32 - 977)) := by
+    unfold work1Load
+    apply PaperCircuitUsesOnly.append
+    · simp [PaperCircuitUsesOnly, PaperGateUsesOnly, gateWires]
+    · exact (xorConstant_usesOnly _ _).adjoint.mono (by
+        intro wire hw
+        simp at hw ⊢
+        omega)
+  exact hl.append hr
+
 end ShorECDLP.Paper2607_13816

@@ -1009,6 +1009,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.canonicalWork2Rotation_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.canonicalWork2InverseRotation_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.workRegistersRestore_usesOnly
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocess_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.indexedStepInverseUnitary_production_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseUnitary_production_usesOnly
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseAdaptive_wires_subset
@@ -1648,8 +1658,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1624 ]]; then
-  printf 'expected 1624 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1634 ]]; then
+  printf 'expected 1634 #print axioms results\n' >&2
   exit 1
 fi
 
