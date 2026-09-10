@@ -14300,4 +14300,154 @@ theorem indexedStepInverseAdaptive_tCount (r : IndexedStepRegisters) (n T : Nat)
     phaseUpdateEpochInverseAdaptive_tCount _ _ hlayout.phaseUpdate]
   rfl
 
+private theorem blockH_T (r : IndexedStepRegisters) (n T : Nat)
+    (h : IndexedStepLayout r n T) (hw : 2 ≤ r.lengthT.length) :
+    ShorECDLP.tCount (blockHForward r n T) =
+      if T%4=0 then
+        14*mcxVChainToffoliCost r.lengthQ.length +
+        14*mcxVChainToffoliCost (r.lengthS.length+1) +14+
+        endIterationTFormula r.work1.length r.lengthT.length n (endIterationWindowsAt n T)
+      else 0 := by
+  unfold blockHForward
+  split
+  · rename_i ht
+    have he := (swapWorkAndLengthUnaryShared_resourceCounts (r.endIteration n T) n
+      (endIterationWindowsAt n T) hw (h.endIteration ht)).2.2.2
+    change ShorECDLP.tCount (swapWorkAndLengthUnaryShared (r.endIteration n T) n
+      (endIterationWindowsAt n T)) = endIterationTFormula r.work1.length r.lengthT.length n
+      (endIterationWindowsAt n T) at he
+    simp only [ShorECDLP.tCount_append]
+    rw [mcxVChain_tCount _ _ _ h.endQ.1,mcxVChain_tCount _ _ _ h.endS.1,he]
+    simp only [List.length_append,List.length_singleton]
+    simp only [ShorECDLP.tCount, List.map_cons,List.map_nil,List.sum_cons,List.sum_nil,ShorECDLP.tCost]
+    omega
+  · rfl
+
+private theorem blockHInverse_T (r : IndexedStepRegisters) (n T : Nat)
+    (h : IndexedStepLayout r n T) (hw : 2 ≤ r.lengthT.length) :
+    ShorECDLP.tCount (blockHInverse r n T) =
+      if T%4=0 then
+        14*mcxVChainToffoliCost r.lengthQ.length +
+        14*mcxVChainToffoliCost (r.lengthS.length+1) +14+
+        endIterationTFormula r.work1.length r.lengthT.length n (endIterationWindowsAt n T)
+      else 0 := by
+  unfold blockHInverse
+  split
+  · rename_i ht
+    have he := (swapWorkAndLengthUnaryShared_resourceCounts (r.endIteration n T) n
+      (endIterationWindowsAt n T) hw (h.endIteration ht)).2.2.2
+    change ShorECDLP.tCount (swapWorkAndLengthUnaryShared (r.endIteration n T) n
+      (endIterationWindowsAt n T)) = endIterationTFormula r.work1.length r.lengthT.length n
+      (endIterationWindowsAt n T) at he
+    simp only [ShorECDLP.tCount_append]
+    rw [swapWorkAndLengthUnarySharedInverse_tCount _ _ _
+      ((h.endIteration ht).work1_length.trans (h.endIteration ht).work2_length.symm)]
+    rw [mcxVChain_tCount _ _ _ h.endQ.1,mcxVChain_tCount _ _ _ h.endS.1,he]
+    simp only [List.length_append,List.length_singleton]
+    simp only [ShorECDLP.tCount, List.map_cons,List.map_nil,List.sum_cons,List.sum_nil,ShorECDLP.tCost]
+    omega
+  · rfl
+private theorem production_small_T :
+    ShorECDLP.tCount (toggleTerminal indexedStepProductionRegisters)=119 ∧
+    ShorECDLP.tCount (remainderSubControl indexedStepProductionRegisters)=217 ∧
+    ShorECDLP.tCount (blockB2 indexedStepProductionRegisters)=462 ∧
+    ShorECDLP.tCount (remainderRestoreControl indexedStepProductionRegisters)=245 ∧
+    ShorECDLP.tCount (coefficientTemporaryControl indexedStepProductionRegisters)=7 ∧
+    ShorECDLP.tCount (coefficientSubControl indexedStepProductionRegisters)=7 ∧
+    ShorECDLP.tCount (coefficientAddControl indexedStepProductionRegisters)=0 ∧
+    ShorECDLP.tCount (phase2LengthControl indexedStepProductionRegisters)=7 ∧
+    ShorECDLP.tCount (phase3LengthControl indexedStepProductionRegisters)=7 ∧
+    ShorECDLP.tCount (controlledIncrement indexedStepProductionRegisters.control
+      indexedStepProductionRegisters.lengthQ (lengthCarries indexedStepProductionRegisters))=112 ∧
+    ShorECDLP.tCount (controlledDecrement indexedStepProductionRegisters.control
+      indexedStepProductionRegisters.lengthQ (lengthCarries indexedStepProductionRegisters))=112 := by
+  decide +kernel
+
+private theorem production_A_T (T : Nat) (h : IndexedStepLayout indexedStepProductionRegisters 256 T) :
+    ShorECDLP.tCount (blockAForward indexedStepProductionRegisters)=6342 ∧
+    ShorECDLP.tCount (blockAInverse indexedStepProductionRegisters)=6342 := by
+  have hs := (preShiftUnitary_productionResources _ h.preShift (by decide +kernel) (by decide +kernel)).2.2.2
+  have hp := terminalPaddingForward_tCount _ h.terminalPadding
+  have hi := terminalPaddingInverse_tCount _ h.terminalPadding
+  have hp' : ShorECDLP.tCount (terminalPaddingForward indexedStepProductionRegisters.terminalPadding)=2135 :=
+    hp.trans (by decide +kernel)
+  have hi' : ShorECDLP.tCount (terminalPaddingInverse indexedStepProductionRegisters.terminalPadding)=2135 :=
+    hi.trans (by decide +kernel)
+  simp only [blockAForward,blockAInverse,ShorECDLP.tCount_append,ShorECDLP.tCount_adjoint,
+    production_small_T.1,hp',hi',hs,terminalEpochSpill_tCount,terminalEpochRestore_tCount]
+  decide +kernel
+
+/-- Production step cost with every literal unitary block reduced to integer arithmetic.
+Only the three certified decoder label counts remain symbolic. -/
+def productionStepTComponents (T : Nat) : Nat :=
+  let r := indexedStepProductionRegisters
+  let w := certifiedActiveWindows 256 T
+  let c := coefficientPrefixTree (r.coefficient w.coefficient) w.coefficient.start w.coefficient.stop
+  let q := quotientSwapTree (r.quotient w.quotientSwap) w.quotientSwap.start w.quotientSwap.stop
+  14189 + intervalAdaptiveTFormula (r.remainder w.remainder) w.remainder.start w.remainder.stop .sub +
+    intervalAdaptiveTFormula (r.remainder w.remainder) w.remainder.start w.remainder.stop .add +
+    70*c.leaves +28*c.internalNodes +7*q.leaves +14*q.internalNodes +
+    if T%4=0 then 462+endIterationTFormula 259 9 256 (endIterationWindowsAt 256 T) else 0
+
+theorem indexedStepAdaptiveTFormula_components (T : Nat)
+    (h : IndexedStepLayout indexedStepProductionRegisters 256 T) :
+    indexedStepAdaptiveTFormula indexedStepProductionRegisters 256 T = productionStepTComponents T := by
+  obtain ⟨_, hrs, hb, hrr, hct, hcs, hca, hp2, hp3, hinc, hdec⟩ := production_small_T
+  have ha := (production_A_T T h).1
+  have hc : ShorECDLP.tCount (blockCForward indexedStepProductionRegisters)=245 := by decide +kernel
+  have hf := (postShiftUnitary_productionResources _ h.postShift (by decide +kernel) (by decide +kernel)).2.2.2
+  have hprep := prepareLatestPaperTBoundary_tCount _ 256 h.tBoundary (by decide +kernel)
+  have hrest := restoreLatestPaperTBoundary_tCount _ 256 h.tBoundary (by decide +kernel)
+  have hq := quotientSwapUnitary_tCount _ h.quotient
+  have hh := blockH_T _ 256 T h (by decide +kernel)
+  change ShorECDLP.tCount (prepareLatestPaperTBoundary indexedStepProductionRegisters.tBoundary 256)=539 at hprep
+  change ShorECDLP.tCount (restoreLatestPaperTBoundary indexedStepProductionRegisters.tBoundary 256)=539 at hrest
+  simp only [indexedStepAdaptiveTFormula,blockDForward,blockD1Forward,blockD2Forward,blockD3Forward,
+    blockEPrefix,blockEMiddle,blockESuffix,blockFForward,ShorECDLP.tCount_append,
+    ha,hrs,hb,hrr,hc,hct,hcs,hca,hp2,hp3,hinc,hdec,hf,hprep,hrest,hq,hh]
+  simp only [quotientXorControl,quotientXorControlInverse,ShorECDLP.tCount,List.map_cons,List.map_nil,
+    List.sum_cons,List.sum_nil,ShorECDLP.tCost]
+  dsimp only [productionStepTComponents]
+  have hq9 : (indexedStepProductionRegisters.quotient (certifiedActiveWindows 256 T).quotientSwap).lengthT.length=9 := by rfl
+  have hw259 : indexedStepProductionRegisters.work1.length=259 := by decide +kernel
+  have ht9 : indexedStepProductionRegisters.lengthT.length=9 := by decide +kernel
+  have hq9' : indexedStepProductionRegisters.lengthQ.length=9 := by decide +kernel
+  have hs9 : indexedStepProductionRegisters.lengthS.length=9 := by decide +kernel
+  have hpq9 : indexedStepProductionRegisters.phaseUpdate.lengthQ.length=9 := by decide +kernel
+  have hpr9 : indexedStepProductionRegisters.phaseUpdate.lengthRPrime.length=9 := by decide +kernel
+  have hps9 : indexedStepProductionRegisters.phaseUpdate.lengthS.length=9 := by decide +kernel
+  simp only [hq9,hw259,ht9,hq9',hs9,hpq9,hpr9,hps9,mcxVChainToffoliCost,mcxVChainAdaptiveToffoliCost]
+  by_cases ht : T%4=0 <;> simp only [ht,↓reduceIte] <;> omega
+
+theorem indexedStepInverseAdaptiveTFormula_components (T : Nat)
+    (h : IndexedStepLayout indexedStepProductionRegisters 256 T) :
+    indexedStepInverseAdaptiveTFormula indexedStepProductionRegisters 256 T = productionStepTComponents T := by
+  obtain ⟨_, hrs, hb, hrr, hct, hcs, hca, hp2, hp3, hinc, hdec⟩ := production_small_T
+  have ha := (production_A_T T h).2
+  have hc : ShorECDLP.tCount (blockCInverse indexedStepProductionRegisters)=245 := by decide +kernel
+  have hf := (postShiftUnitary_productionResources _ h.postShift (by decide +kernel) (by decide +kernel)).2.2.2
+  have hprep := prepareLatestPaperTBoundary_tCount _ 256 h.tBoundary (by decide +kernel)
+  have hrest := restoreLatestPaperTBoundary_tCount _ 256 h.tBoundary (by decide +kernel)
+  have hq := quotientSwapUnitary_tCount _ h.quotient
+  have hh := blockHInverse_T _ 256 T h (by decide +kernel)
+  change ShorECDLP.tCount (prepareLatestPaperTBoundary indexedStepProductionRegisters.tBoundary 256)=539 at hprep
+  change ShorECDLP.tCount (restoreLatestPaperTBoundary indexedStepProductionRegisters.tBoundary 256)=539 at hrest
+  simp only [indexedStepInverseAdaptiveTFormula,inverseCoefficientEntry,inverseCoefficientMiddle,
+    inverseRemainderEntry,inverseRemainderMiddle,inverseStepFinish,blockDInverse,blockFInverse,
+    ShorECDLP.tCount_append,ShorECDLP.tCount_adjoint,
+    ha,hrs,hb,hrr,hc,hct,hcs,hca,hp2,hp3,hinc,hdec,hf,hprep,hrest,hq,hh]
+  simp only [quotientXorControl,quotientXorControlInverse,ShorECDLP.tCount,List.map_cons,List.map_nil,
+    List.sum_cons,List.sum_nil,ShorECDLP.tCost]
+  dsimp only [productionStepTComponents]
+  have hq9 : (indexedStepProductionRegisters.quotient (certifiedActiveWindows 256 T).quotientSwap).lengthT.length=9 := by rfl
+  have hw259 : indexedStepProductionRegisters.work1.length=259 := by decide +kernel
+  have ht9 : indexedStepProductionRegisters.lengthT.length=9 := by decide +kernel
+  have hq9' : indexedStepProductionRegisters.lengthQ.length=9 := by decide +kernel
+  have hs9 : indexedStepProductionRegisters.lengthS.length=9 := by decide +kernel
+  have hpq9 : indexedStepProductionRegisters.phaseUpdate.lengthQ.length=9 := by decide +kernel
+  have hpr9 : indexedStepProductionRegisters.phaseUpdate.lengthRPrime.length=9 := by decide +kernel
+  have hps9 : indexedStepProductionRegisters.phaseUpdate.lengthS.length=9 := by decide +kernel
+  simp only [hq9,hw259,ht9,hq9',hs9,hpq9,hpr9,hps9,mcxVChainToffoliCost,mcxVChainAdaptiveToffoliCost]
+  by_cases ht : T%4=0 <;> simp only [ht,↓reduceIte] <;> omega
+
 end ShorECDLP.Paper2607_13816
