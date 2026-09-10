@@ -2459,3 +2459,7 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Complete remainder-alignment phase
 
 `indexedScheduleUnitary_remainder_complete` proves the actual alignment schedule reaches quotient entry after exactly the bit length of `r / rPrime` steps. Positive divisor, ordered remainders and zero initial shift derive the stopping interval; induction derives every intermediate comparison, phase and packed state. Layout, original capacities and numerical windows remain explicit. Full iteration composition and production reachability remain subsequent work.
+
+### One complete four-phase EEA iteration
+
+`indexedScheduleUnitary_full_iteration_packed` composes actual alignment, division, coefficient and swap schedules from a zero-shift remainder-phase input. Its step count is four times the quotient bit length. Every intermediate arithmetic bound, phase and packed state is derived; the output is canonical with a strictly smaller second remainder. Original numerical windows, capacities, true input lengths and final endpoint scheduling remain explicit. Reachable production windows and iteration to termination remain subsequent work.

@@ -1,5 +1,6 @@
 import ShorECDLP.Submission.«2607_13816».EEA.RemainderMicrostep
 import ShorECDLP.Submission.«2607_13816».EEA.Schedule
+import ShorECDLP.Submission.«2607_13816».EEA.QuotientIteration
 namespace ShorECDLP.Paper2607_13816
 open Classical
 private theorem remainder_coordinates (v : EEAState) (steps count : Nat)
@@ -122,5 +123,125 @@ theorem indexedScheduleUnitary_remainder_complete (r : IndexedStepRegisters) (n 
   refine ⟨hpnext,hph,hsg,hS,hr,hq,?_,?_⟩
   · rw [hS,hr]; exact hlo
   · rw [hS,hr]; exact hhi
+
+/-- All four actual phases reach a canonical state with a smaller second remainder. -/
+theorem indexedScheduleUnitary_full_iteration_packed (r : IndexedStepRegisters) (n start steps : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (hphase : v.phase=.remainder) (hsign : v.sign=false)
+    (hsteps : steps=(v.r/v.rPrime).size) (hzero : v.shift=0)
+    (hrpos : 0<v.rPrime) (hrlower : v.rPrime≤v.r)
+    (halignLayout : ∀ offset<steps, IndexedStepLayout r n (start+offset))
+    (halignWindows : ∀ offset<steps,
+      (certifiedActiveWindows n (start+offset)).remainder.start≤v.lT+v.lQ+2 ∧
+      v.lT+v.lQ+2-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthQ.length ∧
+      offset+1+(certifiedActiveWindows n (start+offset)).remainder.start≤n+3 ∧
+      n+3-(offset+1)-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthS.length)
+    (hlayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+offset))
+    (hwindows : ∀ offset<steps,
+      (certifiedActiveWindows n (start+steps+offset)).remainder.start≤v.lT+(v.lQ+offset)+2 ∧
+      v.lT+(v.lQ+offset)+2-(certifiedActiveWindows n (start+steps+offset)).remainder.start<2^r.lengthQ.length ∧
+      steps-offset-1+(certifiedActiveWindows n (start+steps+offset)).remainder.start≤n+3 ∧
+      n+3-(steps-offset-1)-(certifiedActiveWindows n (start+steps+offset)).remainder.start<2^r.lengthS.length ∧
+      (certifiedActiveWindows n (start+steps+offset)).quotientSwap.start≤v.lT+(v.lQ+offset)+2 ∧
+      v.lT+(v.lQ+offset)+2≤(certifiedActiveWindows n (start+steps+offset)).quotientSwap.stop)
+    (hcapacity : v.lT+v.lQ+steps+1<2^r.lengthQ.length)
+    (hspan : v.lT+v.lQ+1+steps+v.lRPrime≤n+3)
+    (hR : 0<v.lRPrime) (hRfit : v.lRPrime<2^r.lengthRPrime.length)
+    (hwidth : 0<r.lengthS.length) (hSfit : steps<2^r.lengthS.length)
+    (hrp : v.rPrime<2^v.lRPrime) (hqzero : v.q=0) (hQzero : v.lQ=0)
+    (hcoeffLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+offset))
+    (hcoeffWindows : ∀ offset<steps,
+      (certifiedActiveWindows n (start+steps+steps+offset)).quotientSwap.start ≤ v.lT+(steps-offset)+1 ∧
+      v.lT+(steps-offset)+1 ≤ (certifiedActiveWindows n (start+steps+steps+offset)).quotientSwap.stop ∧
+      v.lT+1 ∈ quotientSwapLabels 1 (certifiedActiveWindows n (start+steps+steps+offset)).coefficient.stop)
+    (htmeta : v.lT+1<2^r.lengthT.length)
+    (hupperT : n+3-v.lRPrime<2^r.lengthT.length)
+    (ht : v.t<2^v.lT) (htpSmall : v.tPrime<v.t)
+    (hcapacityT : n+3<2^r.lengthT.length)
+    (hT : v.lT=v.t.size) (hRP : v.lRPrime=v.rPrime.size)
+    (hswapLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+steps+offset))
+    (hswapWindows : ∀ offset<steps, n+3-v.lRPrime-(steps-offset) ∈
+      quotientSwapLabels 1 (certifiedActiveWindows n (start+steps+steps+steps+offset)).coefficient.stop)
+    (hstep : (start+steps+steps+steps+(steps-1))%4=0)
+    (hboundary4 : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k4 ≤ n+3-v.lRPrime ∧
+      n+3-v.lRPrime ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K4)
+    (hboundary5 : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k5 ≤ ((v.tPrime+v.t*(v.r/v.rPrime))).size+2 ∧
+      ((v.tPrime+v.t*(v.r/v.rPrime))).size+2 ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K5Decode n)
+    (htWindow : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k4 ≤ v.t.size ∧
+      v.t.size ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K4)
+    (htpWindow : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k4 ≤ ((v.tPrime+v.t*(v.r/v.rPrime))).size ∧
+      ((v.tPrime+v.t*(v.r/v.rPrime))).size ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K4)
+    (hrWindow : v.r%v.rPrime ≠ 0 → (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k5 ≤ n+4-(v.r%v.rPrime).size ∧
+      n+4-(v.r%v.rPrime).size ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K5Decode n)
+    (hrpWindow : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k5 ≤ n+4-v.rPrime.size ∧
+      n+4-v.rPrime.size ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K5Decode n) :
+    let aligned := remainderAlignmentMicrostep^[steps] v
+    let divided := quotientMicrostep^[steps] aligned
+    let accumulated := coefficientMicrostep^[steps] divided
+    let next := endpointMicrostep (swapBeforeEndpointMicrostep^[steps] accumulated)
+    IndexedPackedState r n (run (indexedScheduleUnitary r n start (steps+(steps+(steps+steps)))) s) next ∧
+      next.Canonical ∧ next.rPrime<v.rPrime := by
+  obtain ⟨hpositive,hlower,hupper⟩ := division_alignment_interval v.r v.rPrime hrpos hrlower
+  rw [← hsteps] at hpositive hlower hupper
+  have hrem : v.r<2^(n+3-(v.lT+v.lQ+1)) := by
+    have hb : v.rPrime*2^steps≤2^(v.lRPrime+steps) := by
+      rw [Nat.pow_add]
+      exact Nat.mul_le_mul_right _ (Nat.le_of_lt hrp)
+    exact (hupper.trans_le hb).trans_le (Nat.pow_le_pow_right (by decide) (by omega))
+  have htpAlign : v.tPrime<2^(v.lT+v.lQ+1+(v.shift+1)) :=
+    htpSmall.trans (ht.trans_le (Nat.pow_le_pow_right (by decide) (by omega)))
+  have hpacked := indexedScheduleUnitary_remainder_packed r n start steps steps s v hp
+    hphase hsign hpositive (by omega) halignLayout
+    (by simpa only [hzero,Nat.zero_add] using halignWindows) hQzero hR hRfit hwidth
+    (by simpa only [hzero,Nat.zero_add] using hSfit)
+    (by simpa only [hzero,Nat.zero_add] using hspan) htpAlign hrp hrem
+    (by simpa only [hzero,Nat.zero_add] using hlower)
+    (by simpa only [hzero,Nat.zero_add] using hupper)
+  obtain ⟨htt,hTT,htpW,hrpW,hRR,hi,hqW,hrW,hQW,hSW,hsgW,hphW⟩ :=
+    remainder_coordinates v steps steps hphase hsign hpositive (by omega)
+      (by simpa only [hzero,Nat.zero_add] using hlower)
+      (by simpa only [hzero,Nat.zero_add] using hupper)
+  simp only [hzero,Nat.zero_add,if_true] at hSW hphW
+  let aligned := remainderAlignmentMicrostep^[steps] v
+  let mid := run (indexedScheduleUnitary r n start steps) s
+  have hc := indexedScheduleUnitary_quotient_coefficient_swap_packed r n (start+steps) mid aligned
+    hpacked hphW hsgW
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hpositive)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hlayout)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hwindows)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hcapacity)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hspan)
+    (by change (remainderAlignmentMicrostep^[steps] v).tPrime<_; rw [htpW,hTT,hQW,hSW]
+        exact htpSmall.trans (ht.trans_le (Nat.pow_le_pow_right (by decide) (by omega))))
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hR)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hRfit)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hwidth)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hSfit)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hrp)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hupper)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hqzero)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hQzero)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hlower)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hcoeffLayout)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hcoeffWindows)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using htmeta)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hupperT)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using ht)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using htpSmall)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hcapacityT)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hT)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hRP)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hswapLayout)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hswapWindows)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hstep)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hboundary4)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hboundary5)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using htWindow)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using htpWindow)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hrWindow)
+    (by simpa only [aligned,htt,hTT,htpW,hrpW,hRR,hqW,hrW,hQW,hSW] using hrpWindow)
+  dsimp only at hc ⊢
+  rw [indexedScheduleUnitary_append,Classical.run_append]
+  simpa only [aligned,mid,hSW,hrpW] using hc
 
 end ShorECDLP.Paper2607_13816
