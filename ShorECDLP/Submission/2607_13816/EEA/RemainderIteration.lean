@@ -459,4 +459,214 @@ theorem indexedScheduleUnitary_paperStep_packed (r : IndexedStepRegisters) (n st
   rw [heq] at hpnext
   exact hpnext
 
+private def iterationFrame {p x spent : Nat} {v : EEAState}
+    (hreach : PaperBoundaryReachable p x spent v) (hactive : v.rPrime≠0)
+    (within : Nat) (hpos : 1≤within) (hle : within≤4*(paperQuotient v).size) :
+    PaperActiveFrame p x (4*spent+within) where
+  spent := spent
+  boundary := v
+  reachable := hreach
+  nonterminal := hactive
+  within := within
+  within_pos := hpos
+  within_le := hle
+  time_eq := rfl
+
+private theorem alignment_windows {p x spent n : Nat} {v : EEAState}
+    (hreach : PaperBoundaryReachable p x spent v) (hp : p.Prime)
+    (hx : 1≤x) (hxp : x<p) (hbits : p<2^n) (hactive : v.rPrime≠0)
+    (offset : Nat) (ho : offset<(paperQuotient v).size) :
+    (certifiedActiveWindows n (4*spent+1+offset)).remainder.start≤v.lT+v.lQ+2 ∧
+    offset+1+(certifiedActiveWindows n (4*spent+1+offset)).remainder.start≤n+3 := by
+  let frame := iterationFrame hreach hactive (offset+1) (by omega) (by omega)
+  have hw := frame.certifiedRemainderWindow_covers hp hx hxp hbits (by
+    change offset+1≤2*(paperQuotient v).size
+    omega)
+  have hi := hreach.invariant hp hx hxp
+  have htime : 4*spent+(offset+1)=4*spent+1+offset := by omega
+  simp only [ActiveWindow.Covers, PaperActiveFrame.remainderLeft,
+    PaperActiveFrame.remainderRight, frame, iterationFrame,
+    remainderQuotientLength, remainderShiftLength, if_pos (by omega : offset+1≤(paperQuotient v).size),
+    Nat.add_zero, htime] at hw
+  have hspan := hreach.alignment_span hp hx hxp hbits hactive
+  obtain ⟨_,hQ,_,_,_,hT,_⟩ := hi.canonical
+  simp only [certifiedActiveWindows]
+  rw [hQ,hT]
+  constructor
+  · simpa only [Nat.add_zero] using hw.1
+  · omega
+
+private theorem division_windows {p x spent n : Nat} {v : EEAState}
+    (hreach : PaperBoundaryReachable p x spent v) (hp : p.Prime)
+    (hx : 1≤x) (hxp : x<p) (hbits : p<2^n) (hactive : v.rPrime≠0)
+    (offset : Nat) (ho : offset<(paperQuotient v).size) :
+    let steps := (paperQuotient v).size
+    let w := certifiedActiveWindows n (4*spent+1+steps+offset)
+    w.remainder.start≤v.lT+(v.lQ+offset)+2 ∧
+    steps-offset-1+w.remainder.start≤n+3 ∧
+    w.quotientSwap.start≤v.lT+(v.lQ+offset)+2 ∧
+    v.lT+(v.lQ+offset)+2≤w.quotientSwap.stop := by
+  let steps := (paperQuotient v).size
+  let frame := iterationFrame hreach hactive (steps+offset+1) (by omega) (by dsimp [steps]; omega)
+  have hw := frame.certifiedRemainderWindow_covers hp hx hxp hbits (by
+    change steps+offset+1≤2*steps
+    dsimp [steps]; omega)
+  have hswap := frame.quotientSwapWindow_contains hp hx hxp hbits
+    (by change steps<steps+offset+1; omega)
+    (by change steps+offset+1≤3*steps; dsimp [steps]; omega)
+  have hi := hreach.invariant hp hx hxp
+  have htime : 4*spent+(steps+offset+1)=4*spent+1+steps+offset := by omega
+  have hnot : ¬steps+offset+1≤steps := by omega
+  have hle : steps+offset+1≤2*steps := by dsimp [steps]; omega
+  dsimp only [steps] at htime hnot hle
+  simp only [ActiveWindow.Covers, PaperActiveFrame.remainderLeft,
+    PaperActiveFrame.remainderRight, frame, iterationFrame, steps,
+    remainderQuotientLength, remainderShiftLength,
+    if_neg hnot, htime] at hw
+  simp only [ActiveWindow.Contains, PaperActiveFrame.swapLocation, frame, iterationFrame,
+    swapQuotientLength, steps,
+    if_pos hle, htime] at hswap
+  have hspan := hreach.alignment_span hp hx hxp hbits hactive
+  obtain ⟨_,hQ,_,_,_,hT,_⟩ := hi.canonical
+  dsimp only
+  simp only [certifiedActiveWindows,hQ,hT,Nat.zero_add]
+  change _ ∧ _ ∧ _ ∧ _
+  omega
+private theorem coefficient_windows {p x spent n : Nat} {v : EEAState}
+    (hreach : PaperBoundaryReachable p x spent v) (hp : p.Prime)
+    (hx : 1≤x) (hxp : x<p) (hlower : 2^(n-1)<p) (hbits : p<2^n) (hactive : v.rPrime≠0)
+    (offset : Nat) (ho : offset<(paperQuotient v).size) :
+    let steps := (paperQuotient v).size
+    let w := certifiedActiveWindows n (4*spent+1+steps+steps+offset)
+    w.quotientSwap.start≤v.lT+(steps-offset)+1 ∧
+    v.lT+(steps-offset)+1≤w.quotientSwap.stop ∧
+    v.lT+1 ∈ quotientSwapLabels 1 w.coefficient.stop := by
+  let steps := (paperQuotient v).size
+  let frame := iterationFrame hreach hactive (2*steps+offset+1) (by omega) (by dsimp [steps]; omega)
+  have hc := frame.coefficientWindow_covers hp hx hxp hlower hbits
+  have hswap := frame.quotientSwapWindow_contains hp hx hxp hbits
+    (by change steps<2*steps+offset+1; omega)
+    (by change 2*steps+offset+1≤3*steps; dsimp [steps]; omega)
+  have htime : 4*spent+(2*steps+offset+1)=4*spent+1+steps+steps+offset := by omega
+  have hnot : ¬2*steps+offset+1≤2*steps := by omega
+  have hle : 2*steps+offset+1≤3*steps := by dsimp [steps]; omega
+  dsimp only [steps] at htime hnot hle
+  simp only [ActiveWindow.Covers,PaperActiveFrame.coefficientRight,frame,iterationFrame,
+    steps,if_pos hle,htime] at hc
+  simp only [ActiveWindow.Contains,PaperActiveFrame.swapLocation,frame,iterationFrame,
+    swapQuotientLength,steps,if_neg hnot,htime] at hswap
+  have heq : 3*(paperQuotient v).size-(2*(paperQuotient v).size+offset+1)+1=(paperQuotient v).size-offset := by omega
+  rw [heq] at hswap
+  have hT := (hreach.invariant hp hx hxp).canonical.2.2.2.2.2.1
+  dsimp only
+  simp [certifiedActiveWindows,hT,quotientSwapLabels]
+  omega
+
+private theorem swap_windows {p x spent n : Nat} {v : EEAState}
+    (hreach : PaperBoundaryReachable p x spent v) (hp : p.Prime)
+    (hx : 1≤x) (hxp : x<p) (hlower : 2^(n-1)<p) (hbits : p<2^n) (hactive : v.rPrime≠0)
+    (offset : Nat) (ho : offset<(paperQuotient v).size) :
+    let steps := (paperQuotient v).size
+    n+3-v.lRPrime-(steps-offset) ∈ quotientSwapLabels 1
+      (certifiedActiveWindows n (4*spent+1+steps+steps+steps+offset)).coefficient.stop := by
+  let steps := (paperQuotient v).size
+  let frame := iterationFrame hreach hactive (3*steps+offset+1) (by omega) (by dsimp [steps]; omega)
+  have hc := frame.coefficientWindow_covers hp hx hxp hlower hbits
+  have htime : 4*spent+(3*steps+offset+1)=4*spent+1+steps+steps+steps+offset := by omega
+  have hnot : ¬3*steps+offset+1≤3*steps := by omega
+  dsimp only [steps] at htime hnot
+  simp only [ActiveWindow.Covers,PaperActiveFrame.coefficientRight,frame,iterationFrame,
+    steps,if_neg hnot,htime] at hc
+  have heq : 4*(paperQuotient v).size-(3*(paperQuotient v).size+offset+1)+1=(paperQuotient v).size-offset := by omega
+  rw [heq] at hc
+  have hR := (hreach.invariant hp hx hxp).canonical.2.2.2.2.2.2
+  dsimp only
+  simp [certifiedActiveWindows,hR,quotientSwapLabels]
+  omega
+
+
+/-- Reachability supplies all logical arithmetic and packing-capacity premises of an iteration. -/
+theorem indexedScheduleUnitary_reachable_paperStep (r : IndexedStepRegisters) (n start steps : Nat)
+    (s : BasisState) (v : EEAState) (hp : IndexedPackedState r n s v)
+    (p x spent : Nat) (hreach : PaperBoundaryReachable p x spent v)
+    (hprime : p.Prime) (hx : 1≤x) (hxp : x<p) (hlower : 2^(n-1)<p) (hbits : p<2^n)
+    (hactive : v.rPrime≠0) (hstart : start=4*spent+1)
+    (hcapacityQ : n+3<2^r.lengthQ.length)
+    (hcapacityS : n+3<2^r.lengthS.length)
+    (hcapacityR : n+3<2^r.lengthRPrime.length)
+    (hsteps : steps=(v.r/v.rPrime).size)
+    (halignLayout : ∀ offset<steps, IndexedStepLayout r n (start+offset))
+    (hlayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+offset))
+    (hcoeffLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+offset))
+    (hcapacityT : n+3<2^r.lengthT.length)
+    (hswapLayout : ∀ offset<steps, IndexedStepLayout r n (start+steps+steps+steps+offset))
+    (hboundary4 : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k4 ≤ n+3-v.lRPrime ∧
+      n+3-v.lRPrime ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K4)
+    (hboundary5 : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k5 ≤ ((v.tPrime+v.t*(v.r/v.rPrime))).size+2 ∧
+      ((v.tPrime+v.t*(v.r/v.rPrime))).size+2 ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K5Decode n)
+    (htWindow : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k4 ≤ v.t.size ∧
+      v.t.size ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K4)
+    (htpWindow : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k4 ≤ ((v.tPrime+v.t*(v.r/v.rPrime))).size ∧
+      ((v.tPrime+v.t*(v.r/v.rPrime))).size ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K4)
+    (hrWindow : v.r%v.rPrime ≠ 0 → (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k5 ≤ n+4-(v.r%v.rPrime).size ∧
+      n+4-(v.r%v.rPrime).size ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K5Decode n)
+    (hrpWindow : (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).k5 ≤ n+4-v.rPrime.size ∧
+      n+4-v.rPrime.size ≤ (endIterationWindowsAt n (start+steps+steps+steps+(steps-1))).K5Decode n) :
+    IndexedPackedState r n
+      (run (indexedScheduleUnitary r n start (steps+(steps+(steps+steps)))) s) (paperStep v) := by
+  have hi := hreach.invariant hprime hx hxp
+  obtain ⟨hqzero,hQzero,hzero,hphase,hsign,hT,hRP⟩ := hi.canonical
+  have hrpos : 0<v.rPrime := Nat.pos_of_ne_zero hactive
+  have hrlower := hi.remainder_decreases.le
+  have hspan := hreach.alignment_span hprime hx hxp hbits hactive
+  change v.lT+v.lQ+1+(v.r/v.rPrime).size+v.lRPrime≤n+3 at hspan
+  rw [← hsteps] at hspan
+  have hR : 0<v.lRPrime := by rw [hRP]; exact Nat.size_pos.mpr hrpos
+  have hrp : v.rPrime<2^v.lRPrime := by rw [hRP]; exact Nat.lt_size_self _
+  have ht : v.t<2^v.lT := by rw [hT]; exact Nat.lt_size_self _
+  have hwidth : 0<r.lengthS.length := by
+    by_contra hh
+    have hz : r.lengthS.length=0 := by omega
+    simp only [hz,pow_zero] at hcapacityS
+    omega
+  have hpositive : 0<steps := by
+    rw [hsteps]
+    exact Nat.size_pos.mpr (Nat.div_pos hrlower hrpos)
+  have hstep : (start+steps+steps+steps+(steps-1))%4=0 := by
+    rw [hstart]
+    omega
+  have hstepsQ : steps=(paperQuotient v).size := hsteps
+  have halignWindows := fun offset (ho : offset<steps) => by
+    have hw := alignment_windows hreach hprime hx hxp hbits hactive offset (by omega)
+    rw [← hstart] at hw
+    exact And.intro hw.1 (And.intro
+      (show v.lT+v.lQ+2-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthQ.length by omega)
+      (And.intro hw.2
+      (show n+3-(offset+1)-(certifiedActiveWindows n (start+offset)).remainder.start<2^r.lengthS.length by omega)))
+  have hwindows := fun offset (ho : offset<steps) => by
+    have hw := division_windows hreach hprime hx hxp hbits hactive offset (by omega)
+    dsimp only at hw
+    rw [← hstart,← hstepsQ] at hw
+    exact And.intro hw.1 (And.intro
+      (show v.lT+(v.lQ+offset)+2-(certifiedActiveWindows n (start+steps+offset)).remainder.start<2^r.lengthQ.length by omega)
+      (And.intro hw.2.1 (And.intro
+      (show n+3-(steps-offset-1)-(certifiedActiveWindows n (start+steps+offset)).remainder.start<2^r.lengthS.length by omega)
+      hw.2.2)))
+  have hcoeffWindows := fun offset (ho : offset<steps) => by
+    have hw := coefficient_windows hreach hprime hx hxp hlower hbits hactive offset (by omega)
+    dsimp only at hw
+    rw [← hstart,← hstepsQ] at hw
+    exact hw
+  have hswapWindows := fun offset (ho : offset<steps) => by
+    have hw := swap_windows hreach hprime hx hxp hlower hbits hactive offset (by omega)
+    dsimp only at hw
+    rw [← hstart,← hstepsQ] at hw
+    exact hw
+  exact indexedScheduleUnitary_paperStep_packed r n start steps s v hp hphase hsign
+    hsteps hzero hrpos hrlower halignLayout halignWindows hlayout hwindows
+    (by omega) hspan hR (by omega) hwidth (by omega) hrp hqzero hQzero
+    hcoeffLayout hcoeffWindows (by omega) (by omega) ht hi.coefficient_increases
+    hcapacityT hT hRP hswapLayout hswapWindows hstep hboundary4 hboundary5
+    htWindow htpWindow hrWindow hrpWindow
+
 end ShorECDLP.Paper2607_13816

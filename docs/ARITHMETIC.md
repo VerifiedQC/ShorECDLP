@@ -2467,3 +2467,5 @@ full A–H remainder/quotient microstep and its reachable-state bounds remain op
 ### Refinement of the mathematical Euclidean step
 
 `indexedScheduleUnitary_paperStep_packed` identifies the complete actual four-phase output with `paperStep` on the original state. Division gives the exact remainder, coefficient accumulation gives the exact updated coefficient, and field-preservation lemmas connect the swap payload and iteration parity. Canonical metadata yields equality of the entire logical state. Original physical windows, capacities and endpoint scheduling remain explicit; production reachability and iteration to termination remain subsequent work.
+
+The reachable-boundary theorem `indexedScheduleUnitary_reachable_paperStep` derives the canonical input, arithmetic bounds, alignment span, all four phases’ active windows, and endpoint timing from `PaperBoundaryReachable`. It requires only physical layouts, register-width capacities, and endpoint scan-window bounds; those remaining physical premises are explicit.
