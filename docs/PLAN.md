@@ -2061,3 +2061,9 @@ conditions. The theorem gives the quotient-length decrease and shift advance;
 consuming the complete quotient leaves zero quotient and adds its full weighted
 contribution to the coefficient. These initial schedule conditions still need to
 be connected to the other EEA phases and the production reachable-state invariant.
+
+The inverse canonical rotation stages follow the pinned greedy opposite permutation. Each
+of the ten stages preserves the complete external frame and has 258 CCX, 516 CX, zero X,
+1,806 T and at most 260 physical wires. Forward and inverse certificates share the literal
+source permutation builder. Descending stage composition and the inverse EEA wrapper remain
+separate proof boundaries.
