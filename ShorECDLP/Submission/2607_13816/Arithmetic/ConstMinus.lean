@@ -10,12 +10,12 @@ namespace ShorECDLP.Paper2607_13816
 open Classical Quantum
 noncomputable section
 
-private def constMinusFlip (input : List Wire) (q : Wire) : Circuit :=
+def controlledComplement (input : List Wire) (q : Wire) : Circuit :=
   input.map (Gate.CX q)
 
-private theorem constMinusFlip_state (input : List Wire) (q : Wire)
+theorem controlledComplement_state (input : List Wire) (q : Wire)
     (s : BasisState) (hnd : input.Nodup) (hq : q ∉ input) :
-    run (constMinusFlip input q) s =
+    run (controlledComplement input q) s =
       fun w => if w ∈ input then s w ^^ s q else s w := by
   induction input generalizing s with
   | nil => rfl
@@ -24,7 +24,7 @@ private theorem constMinusFlip_state (input : List Wire) (q : Wire)
     have ht := (List.nodup_cons.mp hnd).2
     have hqa : q ≠ a := by intro h; exact hq (by simp [h])
     have hqr : q ∉ rest := fun h => hq (by simp [h])
-    change run (Gate.CX q a :: constMinusFlip rest q) s = _
+    change run (Gate.CX q a :: controlledComplement rest q) s = _
     rw [Classical.run_cons,ih _ ht hqr]
     funext w
     by_cases hwa : w = a
@@ -34,7 +34,7 @@ private theorem constMinusFlip_state (input : List Wire) (q : Wire)
 /-- Source wrapper: controlled complement, add one, add the modulus. -/
 def controlledConstMinus (input dirty : List Wire) (modulus : List Bool)
     (q c r t : Wire) : AdaptiveCircuit :=
-  .unitary (constMinusFlip input q)
+  .unitary (controlledComplement input q)
     ((controlledGidneyAddConst input dirty
       ((List.range input.length).map (Nat.testBit 1)) q c r t).seq
       (controlledGidneyAddConst input dirty modulus q c r t))
@@ -140,7 +140,7 @@ theorem controlledConstMinus_branch_correct (input dirty : List Wire) (modulus :
   have hflip (w : Wire) (hw : w ∈ [q,c,r,t]) : flipped w = s w := by
     simp [flipped,hg.2 w hw]
   have hmid := gidneyAddIdealState_correct input increment q flipped (by simp [increment]) hg.1
-  obtain ⟨after,ha,hh,htransfer⟩ := gidneyUnitaryBranch (constMinusFlip input q) _ branch hb
+  obtain ⟨after,ha,hh,htransfer⟩ := gidneyUnitaryBranch (controlledComplement input q) _ branch hb
   have hrest : after.kraus (ket flipped) = registerXResetMagnitude after.history.length •
       ket (constMinusIdealState input modulus q s) := by
     apply horner_seq_branch _ _ flipped mid _ _ _ after ha
@@ -158,8 +158,8 @@ theorem controlledConstMinus_branch_correct (input dirty : List Wire) (modulus :
       rw [hb'.1,hb'.2]
       rfl
   rw [hh,htransfer]
-  rw [Quantum.run_ket_agrees_classical _ _ (by simp [constMinusFlip,HPFree])]
-  rw [constMinusFlip_state input q s hg.1 (hg.2 q (by simp))]
+  rw [Quantum.run_ket_agrees_classical _ _ (by simp [controlledComplement,HPFree])]
+  rw [controlledComplement_state input q s hg.1 (hg.2 q (by simp))]
   exact hrest
 
 /-- The actual measured wrapper is well formed on disjoint registers. -/
@@ -264,13 +264,13 @@ theorem secp256k1ConstMinus_wires (w : Wire) :
   simp only [secp256k1ConstMinus,controlledConstMinus,AdaptiveCircuit.wires,
     modularWires_seq,List.mem_append]
   rw [hm]
-  change (w ∈ circuitWires (constMinusFlip (List.range' 4 256) 0) ∨
+  change (w ∈ circuitWires (controlledComplement (List.range' 4 256) 0) ∨
     (w ∈ (controlledGidneyAddConst (4 :: List.range' 5 255) (260 :: List.range' 261 254)
       (true :: (List.range' 1 255).map (Nat.testBit 1)) 0 1 2 3).wires ∨ _)) ↔ _
   rw [hinc]
   rw [show List.range' 4 256 = 4 :: List.range' 5 255 from rfl,
     show List.range' 260 255 = 260 :: List.range' 261 254 from rfl,hmod]
-  simp [constMinusFlip,circuitWires,gateWires]
+  simp [controlledComplement,circuitWires,gateWires]
   dsimp only [Wire] at *
   constructor
   · intro h
