@@ -2607,11 +2607,29 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass_total
 #print axioms ShorECDLP.Paper2607_13816.pointPhasePairProgram_normalized
 #print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass_le_one
+#print axioms ShorECDLP.Paper2607_13816.windowDigits
+#print axioms ShorECDLP.Paper2607_13816.windowValue
+#print axioms ShorECDLP.Paper2607_13816.signedWindowDigit
+#print axioms ShorECDLP.Paper2607_13816.signedWindowValue
+#print axioms ShorECDLP.Paper2607_13816.windowOffset
+#print axioms ShorECDLP.Paper2607_13816.windowDigits_length
+#print axioms ShorECDLP.Paper2607_13816.windowDigits_bound
+#print axioms ShorECDLP.Paper2607_13816.windowValue_digits
+#print axioms ShorECDLP.Paper2607_13816.signedWindowValue_map
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_reconstruct
+#print axioms ShorECDLP.Paper2607_13816.signedWindowDigit_bounds
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_point
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_doubleScalar
+#print axioms ShorECDLP.Paper2607_13816.windowCount
+#print axioms ShorECDLP.Paper2607_13816.windowCount_257_16
+#print axioms ShorECDLP.Paper2607_13816.windowCount_256_16
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_secp257
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_secp257_count
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2586 ]]; then
-  printf 'expected 2586 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2604 ]]; then
+  printf 'expected 2604 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -2624,3 +2624,7 @@ Phase 11 optimized lookup schedule remain separate obligations.
 ### Physical paired sampling normalization
 
 The same paired adaptive program now has a complete numerical history decoder: every actual branch belongs to exactly one output pair. Summing the disjoint decoded Born masses equals the complete instrument mass. Recursive binary normalization proves each geometric phase distribution sums to one, hence the paired character mixture and physical instrument both have total mass one. The existing same-program success lower bound is now accompanied by an upper bound of one. The selected exponent precision remains 257 bits; signed windows, address lifetimes and final resource composition remain open.
+
+### Signed-window recoding foundation
+
+Fixed-width radix decomposition now reconstructs each scalar exactly. Centering every digit by `2^(w-1)` changes the double-scalar sum by one explicit, input-independent point offset; adding that offset restores `a • P + b • Q`. Digit bounds and the zero-window case are proved. At the proved 257-bit precision, width 16 gives 17 windows per exponent, hence 34 before any omission or special initialization. The paper's 28-addition estimate is not asserted by this baseline: QROM, coherent offset handling, omitted-window justification and address lifetimes remain open.
