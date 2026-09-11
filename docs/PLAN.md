@@ -2663,3 +2663,14 @@ restore the loaded word and decoder path. Their whole-state semantics agree
 with the existing constant stages at the addressed value, and both preserve
 the next arithmetic stage’s input contract. Physical support lies in 855 wires;
 this is not yet a full windowed point or oracle resource certificate.
+
+
+### Five-query coordinate composition
+
+`Window/Coordinate.lean` composes five actual lookup/add/clear episodes with
+division, square subtraction, multiplication and negation. Every stage preserves
+the next input contract and the original table address. The complete coherent
+state map equals the existing Figure 14 coordinate map at the addressed X/Y
+values, and the same circuit has a direct 855-wire bound. This coordinate
+permutation still requires table-selected exceptional-point correction before
+it becomes total point addition; signed-window and oracle integration remain open.

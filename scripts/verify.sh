@@ -2698,11 +2698,19 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig14LookupX_wires
 #print axioms ShorECDLP.Paper2607_13816.fig14LookupY_wires
 #print axioms ShorECDLP.Paper2607_13816.controlledModularAdd256_wires
+#print axioms ShorECDLP.Paper2607_13816.lookupCoordinateProgram
+#print axioms ShorECDLP.Paper2607_13816.lookupCoordinateState
+#print axioms ShorECDLP.Paper2607_13816.lookupCoordinateProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.lookupCoordinateState_ready
+#print axioms ShorECDLP.Paper2607_13816.lookupCoordinateState_address
+#print axioms ShorECDLP.Paper2607_13816.lookupCoordinateState_eq
+#print axioms ShorECDLP.Paper2607_13816.lookupCoordinateProgram_wires
+#print axioms ShorECDLP.Paper2607_13816.lookupCoordinateProgram_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2677 ]]; then
-  printf 'expected 2677 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2685 ]]; then
+  printf 'expected 2685 #print axioms results\n' >&2
   exit 1
 fi
 
