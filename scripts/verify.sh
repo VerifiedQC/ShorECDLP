@@ -2040,11 +2040,29 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_relabel
+#print axioms ShorECDLP.Paper2607_13816.registerZCorrection_primitive
+#print axioms ShorECDLP.Paper2607_13816.measureResetThen_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBank_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBank_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig15SwapOutput_primitive
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionAfterReset_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplicationAfterReset_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.computeEqConst_primitive
+#print axioms ShorECDLP.Paper2607_13816.fig15ZeroPrepare_primitive
+#print axioms ShorECDLP.Paper2607_13816.fig15ZeroRestore_primitive
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_primitive_bounds
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2019 ]]; then
-  printf 'expected 2019 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2037 ]]; then
+  printf 'expected 2037 #print axioms results\n' >&2
   exit 1
 fi
 
