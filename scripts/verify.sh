@@ -2003,6 +2003,51 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGESource
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGESource_erase
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGESource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledModularAddSource
+#print axioms ShorECDLP.Paper2607_13816.controlledModularSubSource
+#print axioms ShorECDLP.Paper2607_13816.controlledModularAddSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledModularSubSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledModularAddSource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledModularSubSource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAddSource
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAddSource_erase
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAddSource
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAddSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegateSource
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegateSource_erase
+#print axioms ShorECDLP.Paper2607_13816.modularDoubleSource
+#print axioms ShorECDLP.Paper2607_13816.modularDoubleSource_erase
+#print axioms ShorECDLP.Paper2607_13816.modularHalveSource
+#print axioms ShorECDLP.Paper2607_13816.modularHalveSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAddSource_events
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAddSource_events
+#print axioms ShorECDLP.Paper2607_13816.modularDoubleSource_events
+#print axioms ShorECDLP.Paper2607_13816.modularHalveSource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegateSource_events
+#print axioms ShorECDLP.Paper2607_13816.squareAddSource
+#print axioms ShorECDLP.Paper2607_13816.squareAddSource_erase
+#print axioms ShorECDLP.Paper2607_13816.squareSubSource
+#print axioms ShorECDLP.Paper2607_13816.squareSubSource_erase
+#print axioms ShorECDLP.Paper2607_13816.hornerMulSource
+#print axioms ShorECDLP.Paper2607_13816.hornerMulSource_erase
+#print axioms ShorECDLP.Paper2607_13816.hornerMulInverseSource
+#print axioms ShorECDLP.Paper2607_13816.hornerMulInverseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.squareLoopSource
+#print axioms ShorECDLP.Paper2607_13816.squareLoopSource_erase
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverseSource
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.hornerMulSource_events
+#print axioms ShorECDLP.Paper2607_13816.hornerMulInverseSource_events
+#print axioms ShorECDLP.Paper2607_13816.squareLoopSource_events
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverseSource_events
+#print axioms ShorECDLP.Paper2607_13816.secp256k1HornerMulSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1HornerMulSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1HornerMulInverseSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1HornerMulInverseSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1SquareSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1SquareSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1SquareInverseSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1SquareInverseSource_certificate
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource_erase
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource_events
@@ -2198,8 +2243,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2174 ]]; then
-  printf 'expected 2174 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2219 ]]; then
+  printf 'expected 2219 #print axioms results\n' >&2
   exit 1
 fi
 
