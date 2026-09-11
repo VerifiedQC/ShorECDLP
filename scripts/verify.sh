@@ -2048,6 +2048,52 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1SquareSource_certificate
 #print axioms ShorECDLP.Paper2607_13816.secp256k1SquareInverseSource
 #print axioms ShorECDLP.Paper2607_13816.secp256k1SquareInverseSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.measuredAndEraseSource
+#print axioms ShorECDLP.Paper2607_13816.measuredAndEraseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredAndEraseSource_events
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainTailSource
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainSource
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainSource_erase
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainSource_events
+#print axioms ShorECDLP.Paper2607_13816.eraseZeroAndSource
+#print axioms ShorECDLP.Paper2607_13816.eraseZeroAndSource_erase
+#print axioms ShorECDLP.Paper2607_13816.eraseZeroAndSource_events
+#print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAndSource
+#print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAndSource_erase
+#print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAndSource_events
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveActionSource
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveActionSource
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveActionSource_erase
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveActionSource_events
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveActionSource_erase
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveActionSource_events
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstSource
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstSource_erase
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstSource_events
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlSource
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlSource_erase
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlSource_events
+#print axioms ShorECDLP.Paper2607_13816.cleanC3XSource
+#print axioms ShorECDLP.Paper2607_13816.cleanC3XSource_erase
+#print axioms ShorECDLP.Paper2607_13816.cleanC3XSource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledMajSource
+#print axioms ShorECDLP.Paper2607_13816.controlledMajSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledMajSource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledUmaSource
+#print axioms ShorECDLP.Paper2607_13816.controlledUmaSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledUmaSource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledMajInvSource
+#print axioms ShorECDLP.Paper2607_13816.controlledMajInvSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledMajInvSource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledUmaInvSource
+#print axioms ShorECDLP.Paper2607_13816.controlledUmaInvSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledUmaInvSource_events
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCellSource
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCellSource_erase
+#print axioms ShorECDLP.Paper2607_13816.rippleFirstCellSource_events
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCellSource
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCellSource_erase
+#print axioms ShorECDLP.Paper2607_13816.rippleSecondCellSource_events
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource_erase
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource_events
@@ -2243,8 +2289,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2219 ]]; then
-  printf 'expected 2219 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2265 ]]; then
+  printf 'expected 2265 #print axioms results\n' >&2
   exit 1
 fi
 
