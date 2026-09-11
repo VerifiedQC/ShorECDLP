@@ -1958,11 +1958,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSub9_primitive
 #print axioms ShorECDLP.Paper2607_13816.intervalPrimitiveFormula9_inverse
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse9_primitive
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive9_primitive
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive9_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1937 ]]; then
-  printf 'expected 1937 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1939 ]]; then
+  printf 'expected 1939 #print axioms results\n' >&2
   exit 1
 fi
 
