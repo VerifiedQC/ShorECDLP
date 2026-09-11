@@ -2686,3 +2686,14 @@ fixed half-point offset, including both endpoints. The arithmetic identity
 assumes an odd cyclic order annihilating the base point. Physical signed Y
 selection, total table-selected point correction and the complete window
 schedule are still open.
+
+
+### Negative-sign modular negation
+
+`Window/NegativeControl.lean` wraps the actual measured modular negator with
+two physical X gates. It negates a canonical loaded word when the sign bit is
+false, restores the sign and every non-target wire, and is an involution. The
+complete coherent contract allows an arbitrary borrowed dirty bank. T and
+measurement counts are unchanged; physical support adds only the sign wire.
+This supplies the sign operation needed between lookup and addition; that
+full signed lookup composition remains next.
