@@ -2620,3 +2620,7 @@ output, and the canonical postprocessor's success mass is at least
 physical branch twice. This is a same-program success-mass theorem;
 whole-distribution normalization, final submission packaging, and the
 Phase 11 optimized lookup schedule remain separate obligations.
+
+### Physical paired sampling normalization
+
+The same paired adaptive program now has a complete numerical history decoder: every actual branch belongs to exactly one output pair. Summing the disjoint decoded Born masses equals the complete instrument mass. Recursive binary normalization proves each geometric phase distribution sums to one, hence the paired character mixture and physical instrument both have total mass one. The existing same-program success lower bound is now accompanied by an upper bound of one. The selected exponent precision remains 257 bits; signed windows, address lifetimes and final resource composition remain open.

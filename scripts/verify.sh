@@ -2595,11 +2595,23 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass_lower
 #print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_injective
 #print axioms ShorECDLP.Paper2607_13816.physicalPairOutput_unique
+#print axioms ShorECDLP.Paper2607_13816.phaseProduct_totalMass
+#print axioms ShorECDLP.Paper2607_13816.paperPhaseAmplitude_totalMass
+#print axioms ShorECDLP.Paper2607_13816.paperPairMass_total
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_of_word
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSchedule_decode_complete
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePair_decode_complete
+#print axioms ShorECDLP.Paper2607_13816.decodePhysicalPairOutcome
+#print axioms ShorECDLP.Paper2607_13816.decodePhysicalPairOutcome_eq
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass_partition
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass_total
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairProgram_normalized
+#print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass_le_one
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2574 ]]; then
-  printf 'expected 2574 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2586 ]]; then
+  printf 'expected 2586 #print axioms results\n' >&2
   exit 1
 fi
 
