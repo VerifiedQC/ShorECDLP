@@ -1,3 +1,8 @@
+import ShorECDLP.Submission.«2607_13816».Window.CorrectionTable
+import ShorECDLP.Submission.«2607_13816».Window.CorrectionControl
+import ShorECDLP.Submission.«2607_13816».Window.SignedCoordinate
+import ShorECDLP.Submission.«2607_13816».Window.SignedPointY
+import ShorECDLP.Submission.«2607_13816».Window.SignedLookup
 import ShorECDLP.Submission.«2607_13816».Window.NegativeControl
 import ShorECDLP.Submission.«2607_13816».Window.SignedAddress
 import ShorECDLP.Submission.«2607_13816».Window.Coordinate

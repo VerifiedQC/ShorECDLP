@@ -2736,11 +2736,62 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.negativeModularNegateState_involution
 #print axioms ShorECDLP.Paper2607_13816.negativeControlledModularNegate_resources
 #print axioms ShorECDLP.Paper2607_13816.negativeControlledModularNegate_wires
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddProgram
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddState
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddState_correct
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddProgram_resources
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddState_ready
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupY
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupYState
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupYState_correct
+#print axioms ShorECDLP.Paper2607_13816.signedPointTableValue
+#print axioms ShorECDLP.Paper2607_13816.signedPointTableValue_lt
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupYState_eq
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupY_coherent
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupYState_ready
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupYState_address
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupYState_sign
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupY_wires
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookup_address_layout
+#print axioms ShorECDLP.Paper2607_13816.signedPointLookupY_resources
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_ready
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_address
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_eq
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_frame
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_sign
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_wires
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_run
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_frame
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_disabled
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_HPFree
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_ket
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_correct
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_tCount
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_wires
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_support
+#print axioms ShorECDLP.Paper2607_13816.correctionWrittenBank
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_unconditional_frame
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionAt_unconditional_frame
+#print axioms ShorECDLP.Paper2607_13816.correctionTableBits
+#print axioms ShorECDLP.Paper2607_13816.correctionTablePath
+#print axioms ShorECDLP.Paper2607_13816.correctionTableProgram
+#print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_measurements
+#print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_support
+#print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_tCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2715 ]]; then
-  printf 'expected 2715 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2766 ]]; then
+  printf 'expected 2766 #print axioms results\n' >&2
   exit 1
 fi
 

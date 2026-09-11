@@ -2697,3 +2697,34 @@ complete coherent contract allows an arbitrary borrowed dirty bank. T and
 measurement counts are unchanged; physical support adds only the sign wire.
 This supplies the sign operation needed between lookup and addition; that
 full signed lookup composition remains next.
+
+
+### Actual signed lookup addition
+
+`Window/SignedLookup.lean` surrounds the actual lookup/add/clear program with
+negative-sign modular negation of its accumulator. The same table adds its
+addressed value for a positive sign and subtracts it for a negative sign. The
+complete coherent proof restores every non-accumulator wire, including sign,
+address, loaded word and paths, and preserves readiness. Exact resource formulas
+include both measured negators and both lookups. The optimized physical
+15-address-bit point stages and total point/window composition remain open.
+
+
+### Physical signed Y lookup and fifteen address bits
+
+The physical address and decoder path now contain fifteen wires; wire 854 is the separate sign. Existing positive X/Y lookup and coordinate proofs use the refined address directly. The signed Y stage composes actual negative-controlled negation, measured lookup/add/clear, and negative-controlled negation. Its coherent and numeric contracts preserve the complete outside-Y frame, including address and sign, and restore readiness. It equals the existing controlled constant-Y map at the signed addressed value. Support remains within 855 wires. The two actual decoder traversals contribute 458,738 T and 65,534 measurements, in addition to the two negators and modular adder. Full signed coordinate composition, exceptional-point correction, and window lifetime scheduling remain open; this is not a total windowed point-addition certificate.
+
+
+### Five-query signed coordinate composition
+
+The nine-stage coordinate program now uses three positive X queries and two signed Y queries, each with actual measured load/add/clear and sign-conditioned negation. Its complete coherent state map equals the existing constant-coordinate map for the addressed X and signed Y values. Address, sign, the full outside-coordinate frame and readiness are preserved. The same program has physical support and a direct qubit-count certificate within 855 wires. This closes signed coordinate arithmetic only: table-dependent exceptional-point correction, complete total windowed addition, lifetime scheduling and final resources remain open.
+
+
+### Exceptional correction under a selected physical control
+
+The existing exceptional-point circuit can now have its physical control reassigned from wire 836 to any wire outside the point word and clean correction scratch. A bijective gate relabeling adds no gates. Complete classical execution, enabled point-word correction, disabled identity, full outside-point frame, physical well-formedness and ket semantics are proved. T count is unchanged, and any selected control below 855 preserves the 855-wire support bound. This prepares decoder-selected correction; the actual table traversal and its composition with signed coordinates remain open.
+
+
+### Measured exceptional-correction table traversal
+
+An actual sixteen-bit decoder now dispatches relabeled exceptional-point correction circuits, using the fifteen address bits plus sign and sixteen reusable path wires. A stronger unconditional frame proves that correction leaves never change decoder wires even when correction scratch is dirty. The measured traversal coherently implements its literal unitary reference, is physically well formed, remains within 855 wires, and performs exactly 65,535 decoder measurements. Its T count is the actual leaf-cost sum plus 458,745. This is an additional correction traversal beyond the five coordinate queries. The selected-entry functional theorem, clean-work restoration and total signed-point composition remain open; no complete windowed point-addition claim is made yet.
