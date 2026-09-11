@@ -2800,3 +2800,13 @@ from a clean point word under the original digit bindings. Coherent execution
 and the direct 1,383-wire bound apply to this initialized circuit; T and
 measurement costs are unchanged. Phase-register binding/lifetimes and the
 full resource/success contract remain open.
+
+### Physical scalar-register binding
+
+`Window/ScalarRegisters` derives the raw digit lists from the physical
+register words. Each axis reads 257 input bits followed by 15 clean padding
+bits. The initialized actual circuit coherently computes the combination of
+these two input values and preserves both registers and all external wires;
+no separate scalar-digit binding assumptions remain. Root setup/cleanup,
+phase preparation and Fourier sampling, aggregate resources and final
+success-contract composition remain open.
