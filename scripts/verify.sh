@@ -1905,11 +1905,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareLT256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.gidneyCompareLT256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAdd256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegate256_primitive_bounds
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1884 ]]; then
-  printf 'expected 1884 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1887 ]]; then
+  printf 'expected 1887 #print axioms results\n' >&2
   exit 1
 fi
 
