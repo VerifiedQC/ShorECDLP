@@ -2892,11 +2892,24 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.scalarWindowsState_ready
 #print axioms ShorECDLP.Paper2607_13816.scalarWindows_support
 #print axioms ShorECDLP.Paper2607_13816.scalarWindows_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_correct
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_HPFree
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_tCount
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_coherent
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_ready
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_coherent
+#print axioms ShorECDLP.Paper2607_13816.initializedScalarState_correct
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_support
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_support
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_tCount
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_measurementCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2871 ]]; then
-  printf 'expected 2871 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2884 ]]; then
+  printf 'expected 2884 #print axioms results\n' >&2
   exit 1
 fi
 
