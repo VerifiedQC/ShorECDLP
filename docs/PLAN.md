@@ -2432,3 +2432,11 @@ predicate masks and have vector (41769233, 24259500, 67286144, 38516119, 0, 1134
 These count structural maxima; no claim that every history has positive probability
 on every input is needed. Point-level exact composition and logical correction/table
 counts remain the next Phase 9 resource boundary.
+
+The same total point program now has an exact six-component primitive vector.
+`pointCoordinatePrimitives` computes all nine stage costs, retaining the classical
+constant-dependent shortcut branches; `pointWordPrimitives` sums the actual
+exceptional edge masks after deleting each target wire. Their sum is proved equal
+to `primitiveResources (totalPointProgram hC)`, with no surrogate circuit. This closes
+exact X/H/CNOT/CCX/P/measurement composition. Logical correction and table-event
+accounting remain open, as do Phases 10–12 and the separately recorded 839/835 gap.

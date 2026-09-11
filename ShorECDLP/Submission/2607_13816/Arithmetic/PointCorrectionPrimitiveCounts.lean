@@ -125,3 +125,44 @@ theorem totalPointProgram_primitive_bounds {x₂ y₂ : ShorECDLP.Fp}
   exact totalPoint_primitive_sum _ _ _ (fig14CoordinateProgram_primitive_bounds _ _)
     (pointCorrectionCircuit_primitive_bounds hC)
 end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+open Quantum
+/-- Count the actual target-deleted equality masks for one exceptional word edge. -/
+def pointWordEdgePrimitives (a b : List Bool) : PrimitiveResources :=
+  let t := pointLogicalWires.getD (firstDifferentBit a b) 0
+  let A := pointCorrectionX.erase t
+  let B := pointCorrectionYInf.erase t
+  let va := boolWordToNat (wireValues A (wordPattern pointLogicalWires a))
+  let vb := boolWordToNat (wireValues B (wordPattern pointLogicalWires a))
+  ⟨8*zeroBitCount va 0 A.length+4*zeroBitCount vb 0 B.length,0,0,
+    4*(2*A.length-3)+2*(2*B.length-3)+3,0,0⟩
+/-- Sum the mask counts in the literal correction edge order. -/
+def pointWordPrimitives : List (List Bool × List Bool) → PrimitiveResources
+  | [] => ⟨0,0,0,0,0,0⟩
+  | (a,b)::ps => (pointWordEdgePrimitives a b).add (pointWordPrimitives ps)
+theorem pointWordEdge_primitive_exact (a b : List Bool) :
+    primitiveResources (.unitary (pointWordEdge a b) .done)=pointWordEdgePrimitives a b := by
+  unfold pointWordEdge pointPatternEdge pointWordEdgePrimitives
+  exact pointCorrectionEdge_primitive _ _ _
+theorem pointWordProgram_primitive_exact (ps : List (List Bool × List Bool)) :
+    primitiveResources (.unitary (pointWordProgram ps) .done)=pointWordPrimitives ps := by
+  induction ps with
+  | nil => rfl
+  | cons p ps ih =>
+    rw [pointWordProgram,primitiveResources_unitary_append,pointWordEdge_primitive_exact,ih]
+    rfl
+theorem pointCorrectionCircuit_primitive_exact {x y : ShorECDLP.Fp}
+    (hC : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular x y) :
+    primitiveResources (.unitary (pointCorrectionCircuit hC) .done)=
+      pointWordPrimitives (pointCorrectionWordEdges hC) :=
+  pointWordProgram_primitive_exact _
+/-- Exact primitive counts for the same total point circuit, including exceptional inputs. -/
+theorem totalPointProgram_primitive_exact {x y : ShorECDLP.Fp}
+    (hC : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular x y) :
+    primitiveResources (totalPointProgram hC)=
+      (pointCoordinatePrimitives x.val y.val).add
+        (pointWordPrimitives (pointCorrectionWordEdges hC)) := by
+  rw [totalPointProgram,primitiveResources_seq,fig14CoordinateProgram_primitive_exact,
+    pointCorrectionCircuit_primitive_exact]
+end ShorECDLP.Paper2607_13816

@@ -1958,6 +1958,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.pointConstantPrimitives
+#print axioms ShorECDLP.Paper2607_13816.fig14ConstantX_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantX_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantY_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig14Negate_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.squareSubtract256_secp_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig14SquareSubtract_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.pointCoordinatePrimitives
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateProgram_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdgePrimitives
+#print axioms ShorECDLP.Paper2607_13816.pointWordPrimitives
+#print axioms ShorECDLP.Paper2607_13816.pointWordEdge_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.pointWordProgram_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.totalPointProgram_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_cnot_le
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE256_primitive_bounds
@@ -2134,8 +2149,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2110 ]]; then
-  printf 'expected 2110 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2125 ]]; then
+  printf 'expected 2125 #print axioms results\n' >&2
   exit 1
 fi
 
