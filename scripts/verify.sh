@@ -1868,11 +1868,24 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig14CoordinateProgram_counts
 #print axioms ShorECDLP.Paper2607_13816.totalPointProgram_counts
 #print axioms ShorECDLP.Paper2607_13816.pointAddProgram_counts
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddConst256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.squareLoop256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverse256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.squareSubtract256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAdd256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.controlledModularNegate256_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateProgram_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.totalPointProgram_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.pointAddProgram_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.pointAddProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.pointAddProgram_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1847 ]]; then
-  printf 'expected 1847 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1860 ]]; then
+  printf 'expected 1860 #print axioms results\n' >&2
   exit 1
 fi
 
