@@ -2015,11 +2015,36 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptive256_primitive
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseAdaptive256_primitive
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePrimitive_certificate
+#print axioms ShorECDLP.Paper2607_13816.xorConstant_xCount
+#print axioms ShorECDLP.Paper2607_13816.controlledXorConstant_xCount
+#print axioms ShorECDLP.Paper2607_13816.knownScratchControl_primitive
+#print axioms ShorECDLP.Paper2607_13816.lengthInitializeCase_primitive
+#print axioms ShorECDLP.Paper2607_13816.lengthInitializeScan_primitive
+#print axioms ShorECDLP.Paper2607_13816.lengthInitialize_primitive
+#print axioms ShorECDLP.Paper2607_13816.eeaLengthScan_primitive
+#print axioms ShorECDLP.Paper2607_13816.eeaLengthSetup_primitive
+#print axioms ShorECDLP.Paper2607_13816.eeaLengthUndo_primitive
+#print axioms ShorECDLP.Paper2607_13816.workRegistersPrepare_primitive
+#print axioms ShorECDLP.Paper2607_13816.workRegistersRestore_primitive
+#print axioms ShorECDLP.Paper2607_13816.canonicalWork2Rotation_primitive
+#print axioms ShorECDLP.Paper2607_13816.canonicalWork2InverseRotation_primitive
+#print axioms ShorECDLP.Paper2607_13816.terminalEpochCompression_primitive
+#print axioms ShorECDLP.Paper2607_13816.terminalWork1Clear_primitive
+#print axioms ShorECDLP.Paper2607_13816.controlledConstMinus256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.eeaCenter256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.eeaUncenter256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.eeaParityCorrection256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocess_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_primitive_bounds
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1994 ]]; then
-  printf 'expected 1994 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2019 ]]; then
+  printf 'expected 2019 #print axioms results\n' >&2
   exit 1
 fi
 
