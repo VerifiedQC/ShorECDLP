@@ -2410,3 +2410,7 @@ For a nonzero constant at width `n ≥ 2`, the actual controlled Gidney adder no
 ### Complete exact unconditional-adder vector
 
 Fixed-control compilation transfers the constant-dependent CNOTs to X gates. For a nonzero constant at width `n ≥ 2`, the actual unconditional adder has `4n−2+8b₀+10w+bₙ₋₁` X, `4(n−1)` H, `5(n−2)+6` CNOT, `3n−4` Toffoli, zero P and `n−1` resets. The proof preserves the combined X/CNOT maximum, proves the retained CNOT chain exactly, and uses the actual fresh virtual control. The replay checks 254 actual programs and alternate virtual controls. These structural counts do not close whole-point exact resources or logical-event accounting.
+
+### Complete exact controlled-comparator vectors
+
+The nonempty carry comparator now has exact `2n` X, `4n` H, `6n+1+7b₀+9w` CNOT, `3n−1` Toffoli, zero P and `n` resets, where `w` counts set bits after the first constant bit. The X/H proof follows the all-true structural history through both deferred correction copies. The actual nontrivial threshold comparator inherits the vector; the production modulus comparator has `(512, 1024, 1598, 767, 0, 256)`. A replay checks 536 carry/threshold cases at widths 0–6, including zero and out-of-range shortcuts. Whole-point exact resources and logical-event accounting remain open.
