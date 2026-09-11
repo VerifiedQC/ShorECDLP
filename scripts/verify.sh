@@ -2382,11 +2382,39 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapperSource_certificate
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessingSource_events
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapperSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.CorrectionFragment.relabel
+#print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.relabel
+#print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.erase_relabel
+#print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.events_relabel
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBankSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBankSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBankSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBankSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWorkSource
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWorkSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataSource
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverseSource
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverseSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionAfterResetSource
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplicationAfterResetSource
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionAfterResetSource_erase
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplicationAfterResetSource_erase
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionAfterResetSource_events
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplicationAfterResetSource_events
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivisionSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplicationSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivisionSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplicationSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivisionSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivisionSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplicationSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplicationSource_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2361 ]]; then
-  printf 'expected 2361 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2389 ]]; then
+  printf 'expected 2389 #print axioms results\n' >&2
   exit 1
 fi
 
