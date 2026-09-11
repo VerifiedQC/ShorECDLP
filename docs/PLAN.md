@@ -2628,3 +2628,15 @@ The same paired adaptive program now has a complete numerical history decoder: e
 ### Signed-window recoding foundation
 
 Fixed-width radix decomposition now reconstructs each scalar exactly. Centering every digit by `2^(w-1)` changes the double-scalar sum by one explicit, input-independent point offset; adding that offset restores `a • P + b • Q`. Digit bounds and the zero-window case are proved. At the proved 257-bit precision, width 16 gives 17 windows per exponent, hence 34 before any omission or special initialization. The paper's 28-addition estimate is not asserted by this baseline: QROM, coherent offset handling, omitted-window justification and address lifetimes remain open.
+
+
+### Complete measured table lookup
+
+`Window/TableLookup.lean` constructs the full little-endian unary address tree
+and proves selected-entry XOR semantics, coherent refinement, whole-state
+load/clear identity, physical support and decoder cleanup. A width-16 address
+with 16 reusable path wires and a 256-bit target uses at most 289 distinct wires,
+458,745 T gates and 65,535 measurements per lookup. These counts come from the
+actual adaptive constructor, including corrections; they are not an aggregate
+windowed-oracle count. Five-lookups composition, variable-coordinate point
+arithmetic, signed-offset integration and exponent/address lifetime remain open.

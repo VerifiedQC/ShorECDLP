@@ -2625,11 +2625,47 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.windowCount_256_16
 #print axioms ShorECDLP.Paper2607_13816.signedWindow_secp257
 #print axioms ShorECDLP.Paper2607_13816.signedWindow_secp257_count
+#print axioms ShorECDLP.Paper2607_13816.tableXorGates
+#print axioms ShorECDLP.Paper2607_13816.tableXorState
+#print axioms ShorECDLP.Paper2607_13816.run_tableXorGates
+#print axioms ShorECDLP.Paper2607_13816.tableXorState_false
+#print axioms ShorECDLP.Paper2607_13816.tableXorState_outside
+#print axioms ShorECDLP.Paper2607_13816.tableXorState_involution
+#print axioms ShorECDLP.Paper2607_13816.tableXorGates_HPFree
+#print axioms ShorECDLP.Paper2607_13816.tableXorGates_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.tableLookup
+#print axioms ShorECDLP.Paper2607_13816.tableLookup_logical
+#print axioms ShorECDLP.Paper2607_13816.tableLookup_coherent
+#print axioms ShorECDLP.Paper2607_13816.tableLookup_run
+#print axioms ShorECDLP.Paper2607_13816.tableLookup_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.tableXorGates_tCount
+#print axioms ShorECDLP.Paper2607_13816.tableLookup_tCount
+#print axioms ShorECDLP.Paper2607_13816.tableLookup_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.tableAddressTree
+#print axioms ShorECDLP.Paper2607_13816.tableAddressTree_mem_index
+#print axioms ShorECDLP.Paper2607_13816.tableAddressTree_index
+#print axioms ShorECDLP.Paper2607_13816.tableAddressTree_nodes
+#print axioms ShorECDLP.Paper2607_13816.tableAddressTree_layout
+#print axioms ShorECDLP.Paper2607_13816.tableAddressValue
+#print axioms ShorECDLP.Paper2607_13816.tableAddressValue_lt
+#print axioms ShorECDLP.Paper2607_13816.tableAddressTree_route
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_tCount
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_support
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_run
+#print axioms ShorECDLP.Paper2607_13816.tableAddressValue_preserved
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_clear
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_coherent_clear
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_16_256_resources
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2604 ]]; then
-  printf 'expected 2604 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2640 ]]; then
+  printf 'expected 2640 #print axioms results\n' >&2
   exit 1
 fi
 
