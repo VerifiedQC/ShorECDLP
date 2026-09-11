@@ -2390,3 +2390,7 @@ Adding both zero predicates gives zero-allowed division/multiplication budgets
 11,343,835 measurements. The constant-arithmetic components remain conservative;
 these bounds do not replace the existing exact T/measurement certificates or
 close Phase 9's exact resource-vector and logical-event obligations.
+
+### Coordinate primitive propagation
+
+The actual nine-stage coordinate circuit now has conservative componentwise bounds: 100,961,378 X, 50,639,660 H, 156,187,745 CNOT, 79,278,324 Toffoli and 23,217,835 measurements, with exactly zero P gates. This includes both zero-allowed arithmetic calls, the square/subtract pair, all constant stages and negation. Exceptional-point correction and exact primitive totals remain open.

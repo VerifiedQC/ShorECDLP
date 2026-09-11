@@ -2054,6 +2054,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.computeEqConst_primitive
+#print axioms ShorECDLP.Paper2607_13816.fig14ConstantX_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantX_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantY_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig14Negate_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.squareSubtract256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig14SquareSubtract_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateProgram_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.fig15ZeroPrepare_primitive
 #print axioms ShorECDLP.Paper2607_13816.fig15ZeroRestore_primitive
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_primitive_bounds
@@ -2061,8 +2068,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2037 ]]; then
-  printf 'expected 2037 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2044 ]]; then
+  printf 'expected 2044 #print axioms results\n' >&2
   exit 1
 fi
 
