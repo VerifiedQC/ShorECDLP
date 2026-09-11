@@ -2769,3 +2769,14 @@ other non-point wire, and readiness for another call. The circuit keeps the
 same T/measurement counts and core-plus-16-bit support. Its coherent theorem
 covers the actual prepare/call/unprepare program. Scalar-table assignment and
 the prepared multi-window recoding theorem remain open.
+
+### Prepared schedule and concrete odd-point tables
+
+`Window/PreparedSchedule` composes actual prepare/call/unprepare windows, proving
+coherence, complete-state addition from the original banks, and the 34-call
+1,383-wire bound with all addresses retained. `Window/OddTables` constructs
+affine odd-multiple tables for any nonzero order-torsion point. Primality of the
+secp256k1 order proves every table entry is finite, including arbitrary window
+indices. The actual prepared call adds the centered raw digit times its radix
+weight plus the fixed half-point offset. Binding all banks to the scalar digits
+and discharging the aggregate offsets remain the next boundary.

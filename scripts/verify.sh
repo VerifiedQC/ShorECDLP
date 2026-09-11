@@ -2864,11 +2864,29 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_selected
 #print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_support
 #print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowDelta
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowScheduleState
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowScheduleState_ready
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_coherent
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSum
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowScheduleState_correct
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_support
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_34_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.oddWindowPoint
+#print axioms ShorECDLP.Paper2607_13816.oddWindowPoint_ne_zero
+#print axioms ShorECDLP.Paper2607_13816.oddWindowX
+#print axioms ShorECDLP.Paper2607_13816.oddWindowY
+#print axioms ShorECDLP.Paper2607_13816.oddWindowTable_valid
+#print axioms ShorECDLP.Paper2607_13816.oddWindowTable_point
+#print axioms ShorECDLP.Paper2607_13816.preparedOddWindowCall_correct
+#print axioms ShorECDLP.Paper2607_13816.preparedOddWindowCallAt_correct
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2843 ]]; then
-  printf 'expected 2843 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2861 ]]; then
+  printf 'expected 2861 #print axioms results\n' >&2
   exit 1
 fi
 
