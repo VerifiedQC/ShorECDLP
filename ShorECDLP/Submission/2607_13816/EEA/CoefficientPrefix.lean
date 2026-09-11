@@ -3632,7 +3632,7 @@ theorem coefficientPrefixUnitary_adjoint_roundtrip
 
 /-! ## Constructor-derived resources -/
 
-private theorem coefficientPrefix_leafCostSum_const
+theorem coefficientPrefix_leafCostSum_const
     (tree : UnaryActionTree) (control : Wire) (path : List Wire)
     (cost : Nat) (hlayout : tree.Layout control path) :
     tree.leafCostSum (fun _ _ ↦ cost) control path = cost * tree.leaves := by

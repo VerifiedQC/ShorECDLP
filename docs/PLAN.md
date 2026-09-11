@@ -2359,3 +2359,7 @@ EEA steps and whole-point primitive propagation remain open.
 Both epoch-aware phase/sign updates have exact production primitive vector
 8 X, 88 H, 50 CX, 54 CCX, zero P and 44 measurements. Coefficient-prefix and other
 indexed-step components remain before the full EEA/point primitive vector.
+
+Prepared-boundary coefficient prefixes now have exact primitive vectors for both modes
+and their explicit adaptive inverses, including decoder cleanup and optional sign updates.
+Remaining unitary components and indexed-step/whole-point propagation remain open.

@@ -1960,11 +1960,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverse9_primitive
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochAdaptive9_primitive
 #print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseAdaptive9_primitive
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefix_leafCostSum_const
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixFirstLeafAdaptive_primitive
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSecondLeafAdaptive_primitive
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixAdaptive_primitive
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1939 ]]; then
-  printf 'expected 1939 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1944 ]]; then
+  printf 'expected 1944 #print axioms results\n' >&2
   exit 1
 fi
 
