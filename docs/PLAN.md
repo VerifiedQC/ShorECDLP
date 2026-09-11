@@ -2366,5 +2366,6 @@ Forward indexed-step, reverse-step and whole-point primitive aggregation remain 
 The complete forward 1,620-step EEA program now has a same-program primitive certificate:
 19,045,616 X, 10,557,664 H, 29,716,831 CNOT, 17,454,225 Toffoli, zero phase rotations,
 and 5,278,832 measurements. Its finite sum is kernel-checked using source-window scalars
-without constructing physical decoder trees or adaptive circuits. Reverse EEA and
-whole-point primitive propagation remain open.
+without constructing physical decoder trees or adaptive circuits. The explicit reverse adds 51,840 X gates to that vector; its other five components
+are identical, proved from the emitted inverse blocks and descending schedule.
+Whole-wrapper and whole-point primitive propagation remain open.

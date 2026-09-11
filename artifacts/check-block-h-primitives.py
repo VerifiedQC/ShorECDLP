@@ -28,7 +28,9 @@ def main : IO Unit := do
           66+endIterationToffoliFormula 259 9 256 windows,0,0⟩ else ⟨0,0,0,0,0,0⟩
       unless ((blockHForward r 256 t).foldl (fun (v : PrimitiveResources) g => v.add (gateVector g)) ⟨0,0,0,0,0,0⟩) == v do
         throw (IO.userError s!"indexed end-of-iteration primitive mismatch at {t}")
-      checked := checked+1
+      unless ((blockHInverse r 256 t).foldl (fun (v : PrimitiveResources) g => v.add (gateVector g)) ⟨0,0,0,0,0,0⟩) == v do
+        throw (IO.userError s!"inverse end-of-iteration primitive mismatch at {t}")
+      checked := checked+2
   IO.println s!"{checked} actual production H blocks passed"
 """
 if __name__ == "__main__":
