@@ -1936,11 +1936,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveAction_primitive
 #print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAnd_primitive
 #print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveAction_primitive
+#print axioms ShorECDLP.Paper2607_13816.mcxVChainAdaptive_primitive
+#print axioms ShorECDLP.Paper2607_13816.computeEqConstAdaptive_primitive
+#print axioms ShorECDLP.Paper2607_13816.toggleEqConstUnderControlAdaptive_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1915 ]]; then
-  printf 'expected 1915 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1918 ]]; then
+  printf 'expected 1918 #print axioms results\n' >&2
   exit 1
 fi
 
