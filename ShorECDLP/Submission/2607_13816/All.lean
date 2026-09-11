@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.LookupArithmetic
 import ShorECDLP.Submission.«2607_13816».Window.TableLookup
 import ShorECDLP.Submission.«2607_13816».Window.Recoding
 import ShorECDLP.Submission.«2607_13816».OrderFinding.Normalization

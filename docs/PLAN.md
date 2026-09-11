@@ -2640,3 +2640,15 @@ with 16 reusable path wires and a 256-bit target uses at most 289 distinct wires
 actual adaptive constructor, including corrections; they are not an aggregate
 windowed-oracle count. Five-lookups composition, variable-coordinate point
 arithmetic, signed-offset integration and exponent/address lifetime remain open.
+
+
+### Actual lookup-loaded modular addition
+
+`Window/LookupArithmetic.lean` connects numeric table words to the actual
+variable modular adder and surrounds that adder with the two measured lookups.
+The complete coherent contract covers every valid superposition; the numeric
+result adds the addressed field value and restores every non-accumulator wire,
+including the loaded word. The lookup root is explicitly enabled in its input
+contract. Lookup overhead is exactly twice the decoder cost around the unchanged
+adder body. Signed negation, the full five-query point circuit and address
+lifetime remain open.

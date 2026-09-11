@@ -2661,11 +2661,28 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_coherent_clear
 #print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_16_256_resources
+#print axioms ShorECDLP.Paper2607_13816.VariableModularValid
+#print axioms ShorECDLP.Paper2607_13816.controlledModularAdd_coherent
+#print axioms ShorECDLP.Paper2607_13816.tableBitsMask
+#print axioms ShorECDLP.Paper2607_13816.tableBitsMask_subset
+#print axioms ShorECDLP.Paper2607_13816.tableBitsMask_nodup
+#print axioms ShorECDLP.Paper2607_13816.tableWordMask
+#print axioms ShorECDLP.Paper2607_13816.tableBitsMask_read
+#print axioms ShorECDLP.Paper2607_13816.tableWordMask_read
+#print axioms ShorECDLP.Paper2607_13816.tableLookupState
+#print axioms ShorECDLP.Paper2607_13816.tableLookupProgram_coherent_state
+#print axioms ShorECDLP.Paper2607_13816.lookupModularAddProgram
+#print axioms ShorECDLP.Paper2607_13816.lookupModularAddState
+#print axioms ShorECDLP.Paper2607_13816.LookupModularValid
+#print axioms ShorECDLP.Paper2607_13816.lookupModularAddProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.tableAddressValue_congr
+#print axioms ShorECDLP.Paper2607_13816.lookupModularAddState_correct
+#print axioms ShorECDLP.Paper2607_13816.lookupModularAddProgram_resources
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2640 ]]; then
-  printf 'expected 2640 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2657 ]]; then
+  printf 'expected 2657 #print axioms results\n' >&2
   exit 1
 fi
 
