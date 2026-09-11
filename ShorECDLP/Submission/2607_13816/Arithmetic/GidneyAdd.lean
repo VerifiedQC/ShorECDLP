@@ -1092,6 +1092,50 @@ theorem controlledGidneyAddConst_XH_le (a d q c r t : Wire) (k : Bool)
   simp only [primitiveResources]
   constructor <;> omega
 
+private theorem gidneyForward_cnot_le (constant : List Bool) (hn : constant ≠ []) :
+    gidneyForwardCost (fun k => 5+3*k.toNat) (fun k => 1+k.toNat) constant ≤
+      8*(constant.length-1)+2 := by
+  induction constant with
+  | nil => contradiction
+  | cons k ks ih =>
+    cases ks with
+    | nil => cases k <;> simp [gidneyForwardCost]
+    | cons l ls =>
+      have hh := ih (by simp)
+      cases k <;> simp [gidneyForwardCost] at * <;> omega
+
+/-- A pattern-independent CNOT bound for the actual controlled adder. -/
+theorem controlledGidneyAddConst_cnot_le (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length+1) :
+    gidneyCnotCount (controlledGidneyAddConst (a :: input) (d :: dirty)
+      (k :: constant) q c r t) ≤ 15*input.length := by
+  by_cases hz : (k :: constant).all (fun b => !b) = true
+  · simp [controlledGidneyAddConst,hz,gidneyCnotCount,gidneyGateCount]
+  have hroot := gidneyRoot_gateCount (fun g => match g with | .CX _ _ => 1 | _ => 0)
+    (fun k => 5+3*k.toNat) (fun k => 1+k.toNat)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell])
+    (by intro q c a k; cases k <;> simp)
+    a d q c r t input dirty k constant hk hd hz
+  have hcleanup := (controlledConstCarryXor_counts a (input.take dirty.length) (d :: dirty) k
+    (constant.take dirty.length) q c (by simp [hk])
+    (by simp [Nat.min_eq_left (by omega : dirty.length ≤ input.length)])).2.2.1
+  have hw (ks : List Bool) : constantBitWeight ks ≤ ks.length := by
+    induction ks with
+    | nil => rfl
+    | cons b bs ih => cases b <;> simp [constantBitWeight] at * <;> omega
+  have hw' := hw (constant.take dirty.length)
+  have hf := gidneyForward_cnot_le constant (by intro h; simp_all)
+  apply hroot.le.trans
+  simp only [List.length_cons,List.take_succ_cons]
+  change 5+3*k.toNat + gidneyForwardCost (fun k => 5+3*k.toNat) (fun k => 1+k.toNat) constant +
+    eeaCnotCount (controlledConstCarryXor (a :: input.take dirty.length) (d :: dirty)
+      (k :: constant.take dirty.length) q c) ≤ _
+  rw [hcleanup]
+  simp only [List.length_take] at hw'
+  cases k <;> simp only [Bool.toNat_false,Bool.toNat_true] <;> omega
+
 /-- An odd, nonzero constant uses exactly `3n - 4` Toffolis at every width
 `n ≥ 2`, independent of its other bits and all wire labels. -/
 theorem controlledGidneyAddConst_toffoli_exact (a d q c r t : Wire)

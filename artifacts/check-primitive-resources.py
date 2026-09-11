@@ -6,8 +6,10 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 LEAN_CHECK = r"""
-import ShorECDLP.Submission.«2607_13816».Arithmetic.GidneyAdd
+import ShorECDLP.Submission.«2607_13816».Arithmetic.AdderPrimitiveCounts
 open ShorECDLP ShorECDLP.Paper2607_13816 Quantum
+
+deriving instance BEq for AdaptiveCircuit
 
 def main : IO Unit := do
   let mut checked := 0
@@ -20,6 +22,15 @@ def main : IO Unit := do
         throw (IO.userError s!"primitive bound failed at width {n}, constant {k}: {repr v}")
       unless v.toffoli == (if k == 0 then 0 else 3*n-4) && program.tCount == 7*v.toffoli do
         throw (IO.userError "Toffoli/T conversion failed")
+      unless v.cnot ≤ 15*(n-1) do
+        throw (IO.userError "CNOT bound failed")
+      let lowered := constantControlProgram 0 program
+      let u := primitiveResources lowered
+      unless u.x ≤ v.x+v.cnot && u.cnot ≤ v.cnot && u.h == v.h &&
+          u.toffoli == v.toffoli && u.phase == v.phase && u.measurements == v.measurements do
+        throw (IO.userError "fixed-control resource transfer failed")
+      unless lowered == gidneyAddConst (List.range' 4 n) (List.range' (4+n) (n-1)) bits 1 2 3 do
+        throw (IO.userError "uncontrolled constructor differs from explicit lowering")
       unless primitiveResources (program.seq program) == v.add v do
         throw (IO.userError "sequence resource composition failed")
       checked := checked+1
@@ -30,7 +41,7 @@ def main : IO Unit := do
   let v := primitiveResources branch
   unless branch.tCount == 7 && 7*v.toffoli+v.phase == 8 && v.measurements == 1 do
     throw (IO.userError "mixed-branch T conversion must be a strict upper bound")
-  IO.println s!"{checked} actual constant-adder circuits and mixed-branch conversion passed"
+  IO.println s!"{checked} controlled/uncontrolled constant-adder pairs and mixed-branch conversion passed"
 """
 
 if __name__ == "__main__":

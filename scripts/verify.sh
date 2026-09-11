@@ -1890,11 +1890,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_phase_zero
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_XH_le
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_toffoli_nonzero
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_cnot_le
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.primitiveCost_constantControl
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_constantControl_preserved
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_constantControl_bounds
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst256_lowered_bounds
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddConst256_primitive_bounds
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1869 ]]; then
-  printf 'expected 1869 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1876 ]]; then
+  printf 'expected 1876 #print axioms results\n' >&2
   exit 1
 fi
 
