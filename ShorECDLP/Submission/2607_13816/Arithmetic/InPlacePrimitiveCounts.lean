@@ -120,3 +120,116 @@ theorem secp256k1InPlaceMultiplication_primitive_bounds :
   simp only [primitiveResources_seq]
   exact fig15Multiplication_primitive_sum _ fig15MultiplyToWork_primitive_bounds _ fig15MultiplicationReset_primitive_bounds
 end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+open Quantum
+/-- A linear per-outcome continuation attains its componentwise maximum at all true. -/
+private theorem measureResetThen_primitive_linear (targets : List Wire)
+    (next : List Bool → Quantum.AdaptiveCircuit) (base delta : PrimitiveResources)
+    (h : ∀ bs, bs.length=targets.length → primitiveResources (next bs)=
+      base.add (delta.scale (bs.count true))) :
+    primitiveResources (measureResetThen targets next)=
+      (base.add (delta.scale targets.length)).add ⟨0,0,0,0,0,targets.length⟩ := by
+  induction targets generalizing next base with
+  | nil =>
+    simpa only [measureResetThen,List.length_nil,List.count_nil,PrimitiveResources.add,
+      PrimitiveResources.scale,Nat.zero_mul,Nat.add_zero] using h [] rfl
+  | cons w ws ih =>
+    have h0 : ∀ bs, bs.length=ws.length → primitiveResources (next (false::bs))=
+        base.add (delta.scale (bs.count true)) := by
+      intro bs hb
+      simpa only [List.count_cons] using h (false::bs) (by simp [hb])
+    have h1 : ∀ bs, bs.length=ws.length → primitiveResources (next (true::bs))=
+        (base.add delta).add (delta.scale (bs.count true)) := by
+      intro bs hb
+      rw [h (true::bs) (by simp [hb])]
+      simp only [List.count_cons]
+      change base.add (delta.scale (bs.count true+1))=(base.add delta).add (delta.scale (bs.count true))
+      simp only [PrimitiveResources.scale,PrimitiveResources.add,
+        PrimitiveResources.mk.injEq,Nat.add_mul,Nat.one_mul]
+      omega
+    have a := ih (fun bs => next (false::bs)) base h0
+    have b := ih (fun bs => next (true::bs)) (base.add delta) h1
+    rw [measureResetThen,primitiveResources_branch,a,b]
+    simp only [PrimitiveResources.branch,PrimitiveResources.scale,PrimitiveResources.add,
+      List.length_cons,PrimitiveResources.mk.injEq,Nat.add_mul,Nat.one_mul]
+    omega
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+open Quantum
+attribute [local irreducible] primitiveResources hornerMulInverse
+/-- Relabeling the forward EEA wrapper preserves its exact vector. -/
+theorem secp256k1EEAForwardInDataBank_primitive_exact : primitiveResources secp256k1EEAForwardInDataBank=
+    (⟨19437345,10562768,29735643,17591751,0,5280108⟩ : PrimitiveResources) := by
+  rw [secp256k1EEAForwardInDataBank,primitiveResources_relabel,secp256k1EEAForwardWrapper_primitive_exact]
+/-- Relabeling the independently compiled reverse wrapper preserves its exact vector. -/
+theorem secp256k1EEAReverseInDataBank_primitive_exact : primitiveResources secp256k1EEAReverseInDataBank=
+    (⟨19489185,10562768,29735643,17591751,0,5280108⟩ : PrimitiveResources) := by
+  rw [secp256k1EEAReverseInDataBank,primitiveResources_relabel,secp256k1EEAReverseWrapper_primitive_exact]
+theorem fig15MultiplyToWork_primitive_exact : primitiveResources fig15MultiplyToWork=
+    (⟨947141,1044484,2192319,1110533,0,261121⟩ : PrimitiveResources) := by
+  rw [fig15MultiplyToWork]
+  apply hornerMul256_secp_primitive_exact <;> simp
+theorem fig15MultiplyToData_primitive_exact : primitiveResources fig15MultiplyToData=
+    (⟨947141,1044484,2192319,1110533,0,261121⟩ : PrimitiveResources) := by
+  rw [fig15MultiplyToData]
+  apply hornerMul256_secp_primitive_exact <;> simp
+theorem fig15MultiplyToDataInverse_primitive_exact : primitiveResources fig15MultiplyToDataInverse=
+    (⟨947141,1044484,3429450,1110533,0,261121⟩ : PrimitiveResources) := by
+  unfold fig15MultiplyToDataInverse
+  have bits : constantBits 256 ShorECDLP.p = secp256k1ModulusBits := by decide +kernel
+  rw [bits]
+  apply hornerMulInverse256_secp_primitive_exact <;> simp
+/-- Exact continuation count keeps the selected Z corrections visible. -/
+theorem fig15DivisionAfterReset_primitive_exact (bs : List Bool) (hb : bs.length=256) :
+    primitiveResources (fig15DivisionAfterReset bs)=
+      (⟨21383467+bs.count true,12651736+2*bs.count true,35358180,19812817,0,5802350⟩ : PrimitiveResources) := by
+  simp only [fig15DivisionAfterReset,primitiveResources_seq,
+    registerZCorrection_primitive (List.range' 580 256) bs (by simpa using hb.symm),
+    fig15SwapOutput_primitive,secp256k1EEAReverseInDataBank_primitive_exact,
+    fig15MultiplyToData_primitive_exact,fig15MultiplyToDataInverse_primitive_exact,
+    PrimitiveResources.add,PrimitiveResources.mk.injEq]
+  simp [Nat.add_comm, Nat.add_left_comm]
+/-- Exact multiplication continuation counts both EEA directions and the selected corrections. -/
+theorem fig15MultiplicationAfterReset_primitive_exact (bs : List Bool) (hb : bs.length=256) :
+    primitiveResources (fig15MultiplicationAfterReset bs)=
+      (⟨40820812+bs.count true,23214504+2*bs.count true,65093823,37404568,0,11082458⟩ : PrimitiveResources) := by
+  simp only [fig15MultiplicationAfterReset,primitiveResources_seq,
+    registerZCorrection_primitive (List.range' 580 256) bs (by simpa using hb.symm),
+    fig15SwapOutput_primitive,secp256k1EEAForwardInDataBank_primitive_exact,
+    secp256k1EEAReverseInDataBank_primitive_exact,fig15MultiplyToData_primitive_exact,
+    fig15MultiplyToDataInverse_primitive_exact,PrimitiveResources.add,PrimitiveResources.mk.injEq]
+  simp [Nat.add_comm, Nat.add_left_comm]
+private theorem fig15DivisionReset_primitive_exact :
+    primitiveResources (measureResetThen (List.range' 580 256) fig15DivisionAfterReset)=
+      (⟨21383723,12652248,35358180,19812817,0,5802606⟩ : PrimitiveResources) := by
+  have hh := measureResetThen_primitive_linear (List.range' 580 256) fig15DivisionAfterReset
+    ⟨21383467,12651736,35358180,19812817,0,5802350⟩ ⟨1,2,0,0,0,0⟩ (by
+      intro bs hb
+      rw [fig15DivisionAfterReset_primitive_exact bs (by simpa using hb)]
+      simp [PrimitiveResources.scale,PrimitiveResources.add,Nat.mul_comm])
+  simpa only [List.length_range'] using hh
+private theorem fig15MultiplicationReset_primitive_exact :
+    primitiveResources (measureResetThen (List.range' 580 256) fig15MultiplicationAfterReset)=
+      (⟨40821068,23215016,65093823,37404568,0,11082714⟩ : PrimitiveResources) := by
+  have hh := measureResetThen_primitive_linear (List.range' 580 256) fig15MultiplicationAfterReset
+    ⟨40820812,23214504,65093823,37404568,0,11082458⟩ ⟨1,2,0,0,0,0⟩ (by
+      intro bs hb
+      rw [fig15MultiplicationAfterReset_primitive_exact bs (by simpa using hb)]
+      simp [PrimitiveResources.scale,PrimitiveResources.add,Nat.mul_comm])
+  simpa only [List.length_range'] using hh
+/-- Complete exact Figure 15 division vector, including the worst reset history. -/
+theorem secp256k1InPlaceDivision_primitive_exact : primitiveResources secp256k1InPlaceDivision=
+    (⟨41768209,24259500,67286142,38515101,0,11343835⟩ : PrimitiveResources) := by
+  rw [secp256k1InPlaceDivision]
+  simp only [primitiveResources_seq,secp256k1EEAForwardWrapper_primitive_exact,
+    fig15MultiplyToWork_primitive_exact,fig15DivisionReset_primitive_exact]
+  rfl
+/-- Complete exact Figure 15 multiplication vector on the same physical program. -/
+theorem secp256k1InPlaceMultiplication_primitive_exact : primitiveResources secp256k1InPlaceMultiplication=
+    (⟨41768209,24259500,67286142,38515101,0,11343835⟩ : PrimitiveResources) := by
+  rw [secp256k1InPlaceMultiplication]
+  simp only [primitiveResources_seq,fig15MultiplyToWork_primitive_exact,
+    fig15MultiplicationReset_primitive_exact]
+  rfl
+end ShorECDLP.Paper2607_13816

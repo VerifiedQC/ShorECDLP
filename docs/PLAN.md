@@ -2422,3 +2422,13 @@ Fixed-control compilation now proves the actual unconditional nontrivial compara
 ### Exact modular and Horner/square vectors
 
 The actual constant addition, negation, variable addition/subtraction and doubling/halving stages now have exact primitive formulas, including every constant shortcut. Forward/inverse Horner and square loops compose these formulas with the exact number of inter-bit shifts. At width 256, Horner has `(947141,1044484,2192319,1110533,0,261121)` and inverse Horner has 3429450 CNOT with the other components unchanged. Squaring adds 512 CNOT in either direction. The replay checks all six counts on 168 actual small modular, constant, negation and loop circuits. Exact EEA-wrapper and whole-point propagation plus logical-event accounting remain open.
+
+Exact Figure 15 primitive counts now compose through both EEA wrappers, relabeling,
+Horner recomputation and inverse, and every measurement-reset history. The maximum
+is derived for continuations linear in the number of true outcomes. Both complete
+multiplication and division have vector (41768209, 24259500, 67286142, 38515101, 0,
+11343835), ordered X/H/CNOT/CCX/P/measurements. Zero-allowed variants include both
+predicate masks and have vector (41769233, 24259500, 67286144, 38516119, 0, 11343835).
+These count structural maxima; no claim that every history has positive probability
+on every input is needed. Point-level exact composition and logical correction/table
+counts remain the next Phase 9 resource boundary.
