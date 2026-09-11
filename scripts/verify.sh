@@ -2341,11 +2341,22 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleSource256
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleSource256_erase
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleSource256_events
+#print axioms ShorECDLP.Paper2607_13816.indexedStepSourceEvents256_eq
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseSource256
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseSource256_erase
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseSource256_events
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseSource256
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseSource256_erase
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseSource256_events
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseSource_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2320 ]]; then
-  printf 'expected 2320 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2331 ]]; then
+  printf 'expected 2331 #print axioms results\n' >&2
   exit 1
 fi
 
