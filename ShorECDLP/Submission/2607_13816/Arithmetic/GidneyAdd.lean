@@ -1906,3 +1906,90 @@ theorem gidneyUncontrolledAddIdealState_correct (input : List Wire) (constant : 
   · exact fun w hw => gidneyWriteBits_frame input _ s w hw
 
 end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+private theorem gidneyTail_allTrue_cost_le (cost : Gate → Nat)
+    (hcell : ∀ q c r t a d k, ((gidneyAddCarryCell q c r t a d k).map cost).sum=0)
+    (htop : ∀ (q c a : Wire) (k : Bool), (((if k then [Gate.CX q a] else []) ++ [Gate.CX c a]).map cost).sum=0)
+    (input dirty : List Wire) (constant : List Bool) (q c r t : Wire)
+    (callback : List Bool → Circuit) (history : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1) :
+    ((callback (history ++ List.replicate input.length true)).map cost).sum ≤
+      gidneyGateCount cost (gidneyAddTail q c r t callback history input dirty constant) := by
+  induction input generalizing dirty constant c r history with
+  | nil => simp at hd
+  | cons a as ih =>
+    cases constant with
+    | nil => simp at hk
+    | cons k ks =>
+      cases dirty with
+      | nil =>
+        have he : as=[] := List.eq_nil_of_length_eq_zero (by simpa using hd)
+        subst as
+        have he : ks=[] := List.eq_nil_of_length_eq_zero (by simpa using hk.symm)
+        subst ks
+        simp only [gidneyAddTail,gidneyGateCount,htop,Nat.zero_add,Nat.add_zero,List.length_singleton,List.replicate_one]
+        exact Nat.le_max_right _ _
+      | cons d ds =>
+        simp only [gidneyAddTail,gidneyGateCount,hcell,Nat.zero_add]
+        have h := ih ds ks r c (history++[true]) (by simpa using hk) (by simpa using hd)
+        have he : history ++ List.replicate (a::as).length true =
+            (history++[true]) ++ List.replicate as.length true := by
+          simp [List.replicate_succ,List.append_assoc]
+        rw [he]
+        exact h.trans (Nat.le_max_right _ _)
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+private theorem gidneyRoot_plain_cost_ge (cost : Gate → Nat) (x h : Nat)
+    (hX : ∀ w, cost (.X w)=x) (hH : ∀ w, cost (.H w)=h)
+    (hcx : ∀ a b, cost (.CX a b)=0) (hccx : ∀ a b c, cost (.CCX a b c)=0)
+    (a d q c r t : Wire) (k : Bool) (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) :
+    2*(input.length+1)*x+2*(dirty.length+1)*(2*h+x) ≤
+      gidneyGateCount cost (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t) := by
+  have hc : ∀ q c r t a d k, ((gidneyAddCarryCell q c r t a d k).map cost).sum=0 := by
+    intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell,hcx,hccx]
+  have hz (ws : List Wire) :
+      ((Quantum.registerZCorrection ws (List.replicate ws.length true)).map cost).sum=ws.length*(2*h+x) := by
+    induction ws with
+    | nil => simp [Quantum.registerZCorrection]
+    | cons w ws ih =>
+      simp [Quantum.registerZCorrection,Quantum.pauliZ,List.replicate_succ,hX,hH,ih,Nat.add_mul]
+      omega
+  have hf (ws : List Wire) : ((gidneyFlipWord ws).map cost).sum=ws.length*x := by
+    induction ws with
+    | nil => simp [gidneyFlipWord]
+    | cons w ws ih => simp [gidneyFlipWord] at ih ⊢; rw [hX,ih]; simp [Nat.add_mul,Nat.add_comm]
+  simp only [controlledGidneyAddConst,if_neg hn,gidneyGateCount,hc,Nat.zero_add]
+  have ht := gidneyTail_allTrue_cost_le cost hc
+    (by intro q c a k; cases k <;> simp [hcx]) input dirty constant q r c t
+    (fun outcomes => Quantum.registerZCorrection (d::dirty) outcomes ++
+      gidneyAddCleanup (a::input) (d::dirty) (k::constant) q c ++
+      Quantum.registerZCorrection (d::dirty) outcomes) (List.nil : List Bool) hk hd
+  simp only [List.nil_append] at ht
+  have he : input.length=(d::dirty).length := by simp [hd]
+  rw [he] at ht
+  have hz' := hz (d::dirty)
+  simp only [List.length_cons] at hz'
+  simp only [List.map_append,List.sum_append,gidneyAddCleanup,hf,
+    controlledConstCarryXor_cost_zero cost hcx hccx,List.length_cons,hz'] at ht
+  simp only [gidneyAddCleanup,List.length_cons]
+  simp only [Nat.mul_assoc] at *
+  omega
+/-- All-true reset outcomes attain both X and H budgets for a nonzero constant. -/
+theorem controlledGidneyAddConst_XH_exact (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) :
+    (primitiveResources (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)).x=4*(input.length+1)-2 ∧
+    (primitiveResources (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)).h=4*input.length := by
+  have hu := controlledGidneyAddConst_XH_le a d q c r t k input dirty constant hk hd
+  have hx := gidneyRoot_plain_cost_ge primitiveXCost 1 0 (by intro w; rfl)
+    (by intro w; rfl) (by intro a b; rfl) (by intro a b c; rfl)
+    a d q c r t k input dirty constant hk hd hn
+  have hh := gidneyRoot_plain_cost_ge primitiveHCost 0 1 (by intro w; rfl)
+    (by intro w; rfl) (by intro a b; rfl) (by intro a b c; rfl)
+    a d q c r t k input dirty constant hk hd hn
+  simp only [primitiveResources] at hu ⊢
+  constructor <;> omega
+end ShorECDLP.Paper2607_13816

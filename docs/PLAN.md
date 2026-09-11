@@ -2398,3 +2398,7 @@ The actual nine-stage coordinate circuit now has conservative componentwise boun
 ### Complete point primitive bounds
 
 The actual exceptional-point circuit now has exact per-edge primitive vectors from the target-deleted equality masks and conservative whole-program bounds. With `n = (pointCorrectionWordEdges hC).length`, the actual total point program is bounded by 100,961,378 + 3,076n X, 50,639,660 H, 156,187,745 CNOT, 79,278,324 + 3,061n Toffoli, and 23,217,835 measurements, with exactly zero P gates. The correction adds only X and Toffoli gates. These are conservative primitive bounds, not exact totals or a new space claim; Phase 9 exact totals and subsequent phases remain open. The replay artifact checks 930 small selectors and 90 production edges against independently computed vectors.
+
+### Exact constant-adder X/H counts
+
+For every nonzero constant at width `n ≥ 2`, the actual controlled Gidney adder has exactly `4n - 2` X and `4(n - 1)` H gates under the structural worst-history resource definition. A lower-bound proof follows the all-true reset history and counts both copies of the deferred corrections, meeting the existing upper bound. This does not claim that this history has positive probability for every input state. The replay checks all 254 constant/width/layout cases at widths 0–6, including zero constants. Whole-point exact primitive totals remain open.
