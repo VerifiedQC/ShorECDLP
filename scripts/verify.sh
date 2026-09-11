@@ -2882,11 +2882,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.oddWindowTable_point
 #print axioms ShorECDLP.Paper2607_13816.preparedOddWindowCall_correct
 #print axioms ShorECDLP.Paper2607_13816.preparedOddWindowCallAt_correct
+#print axioms ShorECDLP.Paper2607_13816.axisWindowState_correct
+#print axioms ShorECDLP.Paper2607_13816.axisWindow_coherent
+#print axioms ShorECDLP.Paper2607_13816.axisWindowState_ready
+#print axioms ShorECDLP.Paper2607_13816.axisWindowState_scalar
+#print axioms ShorECDLP.Paper2607_13816.rawWindowDigits_pointWrite
+#print axioms ShorECDLP.Paper2607_13816.scalarWindows_coherent
+#print axioms ShorECDLP.Paper2607_13816.scalarWindowsState_correct
+#print axioms ShorECDLP.Paper2607_13816.scalarWindowsState_ready
+#print axioms ShorECDLP.Paper2607_13816.scalarWindows_support
+#print axioms ShorECDLP.Paper2607_13816.scalarWindows_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2861 ]]; then
-  printf 'expected 2861 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2871 ]]; then
+  printf 'expected 2871 #print axioms results\n' >&2
   exit 1
 fi
 
