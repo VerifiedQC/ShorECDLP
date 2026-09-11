@@ -2577,3 +2577,13 @@ orthonormal cyclic point states. The actual adaptive point-addition program
 acts on each such state with the correct controlled eigenphase in every
 Kraus branch; its branch coefficients have total squared mass one.
 Interleaved control preparation, measurement and reuse remain to be composed.
+
+### Recycled-control sampling step
+
+`OrderFinding/PhaseStep.lean` defines one physical sampling step using control
+wire 836: Hadamard preparation, the existing adaptive point oracle, inverse
+Fourier history rotations, and X-basis measurement/reset. Its interpreter
+is exactly the declared Kraus branch expansion. Each character has the
+expected phase-estimation scalar, and the normalized internal-oracle
+coefficients are shared across all characters and both outcomes. The
+full repeated schedule and final sampling-distribution equality remain open.
