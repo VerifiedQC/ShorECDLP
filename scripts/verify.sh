@@ -1908,11 +1908,24 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledConstantModularAdd256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.controlledModularNegate256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.primitiveHCost_of_HPFree
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_unitary_HPFree
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_unitary_adjoint
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry_xCount
+#print axioms ShorECDLP.Paper2607_13816.controlledAddCarry256_primitive
+#print axioms ShorECDLP.Paper2607_13816.controlledSubCarry256_primitive
+#print axioms ShorECDLP.Paper2607_13816.controlledCompareLT256_primitive
+#print axioms ShorECDLP.Paper2607_13816.doublingShift_xCount
+#print axioms ShorECDLP.Paper2607_13816.doublingShift256_primitive
+#print axioms ShorECDLP.Paper2607_13816.controlledModularAdd256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.controlledModularSub256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.modularDouble256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.modularHalve256_primitive_bounds
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1887 ]]; then
-  printf 'expected 1887 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1900 ]]; then
+  printf 'expected 1900 #print axioms results\n' >&2
   exit 1
 fi
 
