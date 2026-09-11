@@ -556,7 +556,7 @@ private def blockB3Adaptive
       .add false .work1).seq
       (adaptiveUnitary (remainderRestoreControl registers)))
 
-private def blockBAdaptive
+def blockBAdaptive
     (registers : IndexedStepRegisters) (n : Nat) (window : ActiveWindow) :
     Quantum.AdaptiveCircuit :=
   (blockB1Adaptive registers n window).seq
@@ -603,11 +603,24 @@ private def blockETailAdaptive
       window.start window.stop .add true .work2).seq
       (adaptiveUnitary (blockESuffix registers n)))
 
-private def blockEAdaptive
+def blockEAdaptive
     (registers : IndexedStepRegisters) (n : Nat) (window : ActiveWindow) :
     Quantum.AdaptiveCircuit :=
   (blockEFirstAdaptive registers n window).seq
     (blockETailAdaptive registers n window)
+
+/-- Expose the actual E block's five stages without expanding either adaptive arithmetic scan. -/
+theorem blockEAdaptive_eq_parts (r : IndexedStepRegisters) (n : Nat) (w : ActiveWindow) :
+    blockEAdaptive r n w =
+      ((Quantum.AdaptiveCircuit.unitary (((computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch ++ computeControl [r.phase1,r.terminal] 1 r.control r.blockScratch) ++ computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch) ++ prepareLatestPaperTBoundary r.tBoundary n) .done).seq
+        (coefficientPrefixAdaptive (r.coefficient w) w.start w.stop .sub false .work2)).seq
+      ((Quantum.AdaptiveCircuit.unitary
+        ((((computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch ++ computeControl [r.phase1,r.terminal] 1 r.control r.blockScratch) ++ computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch) ++ [.CX r.phase1 r.sign]) ++
+          computeControl [r.phase1] 1 r.control r.blockScratch) .done).seq
+        ((coefficientPrefixAdaptive (r.coefficient w) w.start w.stop .add true .work2).seq
+          (.unitary (computeControl [r.phase1] 1 r.control r.blockScratch ++
+            restoreLatestPaperTBoundary r.tBoundary n) .done))) := by
+  rfl
 
 /-! ## Physical composition contract -/
 

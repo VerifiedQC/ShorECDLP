@@ -968,7 +968,7 @@ private theorem quotientSwap_carry_mem_scratch
   rw [hlayout.scratch_length]
   omega
 
-private theorem quotientSwap_constantScratch_length
+theorem quotientSwap_constantScratch_length
     (registers : QuotientSwapRegisters) {k K : Nat}
     (hlayout : QuotientSwapLayout registers k K) :
     registers.constantScratch.length = registers.lengthQ.length := by
@@ -2221,7 +2221,7 @@ theorem quotientSwap_coherent
   simpa only [quotientSwap, quotientSwapUnitary, prepare, traversal,
     adaptiveTraversal, restore, List.append_assoc] using hall
 
-private theorem unaryActionTree_leafCostSum_const
+theorem unaryActionTree_leafCostSum_const
     (tree : UnaryActionTree) (control : Wire) (path : List Wire)
     (cost : Nat) (hlayout : tree.Layout control path) :
     tree.leafCostSum (fun _ _ => cost) control path = cost * tree.leaves := by

@@ -2022,7 +2022,7 @@ private theorem mcxVChainTail_stepControl_xCount
                 ih scratch scratches]
               rfl
 
-private theorem mcxVChain_stepControl_xCount_of_two_le
+theorem mcxVChain_stepControl_xCount_of_two_le
     (controls : List Wire) (target : Wire) (scratches : List Wire)
     (hwidth : 2 ≤ controls.length) :
     eeaXCount (mcxVChain controls target scratches) = 0 := by
