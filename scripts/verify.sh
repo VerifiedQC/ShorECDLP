@@ -2787,11 +2787,19 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_measurements
 #print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_support
 #print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_tCount
+#print axioms ShorECDLP.Paper2607_13816.correctionTableState
+#print axioms ShorECDLP.Paper2607_13816.correctionTable_selected
+#print axioms ShorECDLP.Paper2607_13816.correctionTable_coherent_selected
+#print axioms ShorECDLP.Paper2607_13816.correctionTableState_clean
+#print axioms ShorECDLP.Paper2607_13816.correctionTableState_frame
+#print axioms ShorECDLP.Paper2607_13816.correctionTableState_correct
+#print axioms ShorECDLP.Paper2607_13816.correctionTableState_ready
+#print axioms ShorECDLP.Paper2607_13816.correctionTableState_address
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2766 ]]; then
-  printf 'expected 2766 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2774 ]]; then
+  printf 'expected 2774 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.CorrectionSelection
 import ShorECDLP.Submission.«2607_13816».Window.CorrectionTable
 import ShorECDLP.Submission.«2607_13816».Window.CorrectionControl
 import ShorECDLP.Submission.«2607_13816».Window.SignedCoordinate
