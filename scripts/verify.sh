@@ -2826,11 +2826,27 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.parkedWindowProgram_tCount
 #print axioms ShorECDLP.Paper2607_13816.parkedWindowProgram_measurements
 #print axioms ShorECDLP.Paper2607_13816.parkedWindowProgram_tight_support
+#print axioms ShorECDLP.Paper2607_13816.windowBankStart
+#print axioms ShorECDLP.Paper2607_13816.windowPointDelta
+#print axioms ShorECDLP.Paper2607_13816.windowCall
+#print axioms ShorECDLP.Paper2607_13816.windowCallState
+#print axioms ShorECDLP.Paper2607_13816.WindowPointValid
+#print axioms ShorECDLP.Paper2607_13816.windowCallState_correct
+#print axioms ShorECDLP.Paper2607_13816.windowCallState_ready
+#print axioms ShorECDLP.Paper2607_13816.windowSchedule
+#print axioms ShorECDLP.Paper2607_13816.windowScheduleState
+#print axioms ShorECDLP.Paper2607_13816.windowScheduleState_ready
+#print axioms ShorECDLP.Paper2607_13816.windowSchedule_coherent
+#print axioms ShorECDLP.Paper2607_13816.windowPointSum
+#print axioms ShorECDLP.Paper2607_13816.windowScheduleState_correct
+#print axioms ShorECDLP.Paper2607_13816.windowSchedule_support
+#print axioms ShorECDLP.Paper2607_13816.windowSchedule_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.windowSchedule_34_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2805 ]]; then
-  printf 'expected 2805 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2821 ]]; then
+  printf 'expected 2821 #print axioms results\n' >&2
   exit 1
 fi
 

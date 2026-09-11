@@ -2744,3 +2744,9 @@ Physical signed-window calls can now read a disjoint parked 16-bit address bank 
 reusing the arithmetic core. A wire bijection preserves coherent execution and exact gate/measurement
 counts; full-state correctness reads the parked 15-bit address and sign, with support below start+16.
 This establishes the primitive needed to count all parked address bits in the multi-window schedule.
+
+An actual sequential window schedule now reuses the arithmetic core across disjoint parked
+address banks. Its coherent contract preserves valid point encoding, and complete-state correctness
+adds the sum of entries selected by the original bank contents. The 34-call baseline has a
+direct 1,383-wire bound (839 core plus 544 parked address bits). This does not yet identify the
+tables with scalar windows or connect their input lifetime to phase estimation.
