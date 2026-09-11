@@ -2558,3 +2558,13 @@ assigns successful classical recovery mass at least `((r-1)/r)*(4/pi^2)^2`
 for prime order below the sampling dimension. The selected peak pairs are
 injective and the zero character is excluded explicitly. Connecting this
 mathematical mixture to the actual recycled-control oracle remains open.
+
+### Cyclic-character states
+
+`OrderFinding/CyclicStates.lean` constructs cyclic Fourier states from any
+orthonormal family and proves their orthonormality, uniform decomposition of
+the zero-index state, and exact squared norm of every linear combination.
+Pure character orthogonality is shared through Math with the Naive theorem
+names preserved. Cyclic translation is proved to multiply each character state by its exact
+eigenphase. The controlled point-oracle action and physical sampling
+refinement remain open.

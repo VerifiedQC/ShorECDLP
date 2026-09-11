@@ -2503,11 +2503,25 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.paperPairPeak_mass
 #print axioms ShorECDLP.Paper2607_13816.paperSuccessMass
 #print axioms ShorECDLP.Paper2607_13816.paperSuccessMass_lower
+#print axioms ShorECDLP.Paper2607_13816.cyclicState
+#print axioms ShorECDLP.Paper2607_13816.cyclicState_orthonormal
+#print axioms ShorECDLP.Paper2607_13816.cyclicState_average
+#print axioms ShorECDLP.Paper2607_13816.cyclicState_mass
+#print axioms ShorECDLP.Quantum.OrderFinding.eigenvalue_add
+#print axioms ShorECDLP.Quantum.OrderFinding.eigenvalue_neg
+#print axioms ShorECDLP.Quantum.OrderFinding.star_eigenvalue
+#print axioms ShorECDLP.Quantum.OrderFinding.eigenvalue_int_div_eq_stdAddChar
+#print axioms ShorECDLP.Quantum.OrderFinding.sum_stdAddChar_mul
+#print axioms ShorECDLP.Quantum.OrderFinding.character_sum
+#print axioms ShorECDLP.Quantum.OrderFinding.character_sum_zero_index
+#print axioms ShorECDLP.Paper2607_13816.cyclicShift
+#print axioms ShorECDLP.Paper2607_13816.cyclicShift_injective
+#print axioms ShorECDLP.Paper2607_13816.cyclicState_shift
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2482 ]]; then
-  printf 'expected 2482 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2496 ]]; then
+  printf 'expected 2496 #print axioms results\n' >&2
   exit 1
 fi
 
