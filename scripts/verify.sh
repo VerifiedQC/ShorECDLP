@@ -2736,11 +2736,17 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.negativeModularNegateState_involution
 #print axioms ShorECDLP.Paper2607_13816.negativeControlledModularNegate_resources
 #print axioms ShorECDLP.Paper2607_13816.negativeControlledModularNegate_wires
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddProgram
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddState
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddState_correct
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddProgram_resources
+#print axioms ShorECDLP.Paper2607_13816.signedLookupModularAddState_ready
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2715 ]]; then
-  printf 'expected 2715 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2721 ]]; then
+  printf 'expected 2721 #print axioms results\n' >&2
   exit 1
 fi
 

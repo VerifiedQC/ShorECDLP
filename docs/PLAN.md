@@ -2697,3 +2697,14 @@ complete coherent contract allows an arbitrary borrowed dirty bank. T and
 measurement counts are unchanged; physical support adds only the sign wire.
 This supplies the sign operation needed between lookup and addition; that
 full signed lookup composition remains next.
+
+
+### Actual signed lookup addition
+
+`Window/SignedLookup.lean` surrounds the actual lookup/add/clear program with
+negative-sign modular negation of its accumulator. The same table adds its
+addressed value for a positive sign and subtracts it for a negative sign. The
+complete coherent proof restores every non-accumulator wire, including sign,
+address, loaded word and paths, and preserves readiness. Exact resource formulas
+include both measured negators and both lookups. The optimized physical
+15-address-bit point stages and total point/window composition remain open.
