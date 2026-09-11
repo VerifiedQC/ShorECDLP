@@ -2652,3 +2652,14 @@ including the loaded word. The lookup root is explicitly enabled in its input
 contract. Lookup overhead is exactly twice the decoder cost around the unchanged
 adder body. Signed negation, the full five-query point circuit and address
 lifetime remain open.
+
+
+### Physical lookup coordinate stages
+
+`Window/PointStages.lean` places the persistent 16-bit address outside the
+839-wire point core and borrows 16 clean work wires for the decoder. Actual
+lookup/add/clear circuits update either coordinate, preserve the address and
+restore the loaded word and decoder path. Their whole-state semantics agree
+with the existing constant stages at the addressed value, and both preserve
+the next arithmetic stage’s input contract. Physical support lies in 855 wires;
+this is not yet a full windowed point or oracle resource certificate.

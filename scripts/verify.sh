@@ -2678,11 +2678,31 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.tableAddressValue_congr
 #print axioms ShorECDLP.Paper2607_13816.lookupModularAddState_correct
 #print axioms ShorECDLP.Paper2607_13816.lookupModularAddProgram_resources
+#print axioms ShorECDLP.Paper2607_13816.pointLookupAddress
+#print axioms ShorECDLP.Paper2607_13816.pointLookupPath
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupX
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupXState
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupXState_eq
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupY
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupYState
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupYState_eq
+#print axioms ShorECDLP.Paper2607_13816.PointLookupValid
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupX_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupY_coherent
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupXState_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupYState_ready
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupXState_address
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupYState_address
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupXState_clean
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupYState_clean
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupX_wires
+#print axioms ShorECDLP.Paper2607_13816.fig14LookupY_wires
+#print axioms ShorECDLP.Paper2607_13816.controlledModularAdd256_wires
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2657 ]]; then
-  printf 'expected 2657 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2677 ]]; then
+  printf 'expected 2677 #print axioms results\n' >&2
   exit 1
 fi
 
