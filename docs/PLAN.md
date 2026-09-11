@@ -2406,3 +2406,7 @@ For every nonzero constant at width `n ≥ 2`, the actual controlled Gidney adde
 ### Complete exact controlled-adder vector
 
 For a nonzero constant at width `n ≥ 2`, the actual controlled Gidney adder now has exact X/H/CNOT/Toffoli/P/measurement counts in one vector theorem. Its CNOT count is `5(n-2)+6+8b₀+10w+bₙ₋₁`, where `w` counts set interior bits. This handles even constants and retains the zero-constant shortcut separately. The replay now compares all six components of all 254 small cases. Whole-point exact primitive propagation remains open.
+
+### Complete exact unconditional-adder vector
+
+Fixed-control compilation transfers the constant-dependent CNOTs to X gates. For a nonzero constant at width `n ≥ 2`, the actual unconditional adder has `4n−2+8b₀+10w+bₙ₋₁` X, `4(n−1)` H, `5(n−2)+6` CNOT, `3n−4` Toffoli, zero P and `n−1` resets. The proof preserves the combined X/CNOT maximum, proves the retained CNOT chain exactly, and uses the actual fresh virtual control. The replay checks 254 actual programs and alternate virtual controls. These structural counts do not close whole-point exact resources or logical-event accounting.

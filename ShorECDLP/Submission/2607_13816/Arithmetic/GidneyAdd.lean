@@ -1,4 +1,4 @@
-import ShorECDLP.Submission.«2607_13816».Arithmetic.PrimitiveResources
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PrimitiveTransforms
 
 /-!
 # Measurement-assisted constant addition
@@ -2059,4 +2059,213 @@ theorem controlledGidneyAddConst_primitive_exact (a d q c r t : Wire) (k : Bool)
   simp only [hn,Bool.false_eq_true,if_false,List.length_cons] at hm
   simp only [primitiveResources] at hx hp ⊢
   rw [hx.1,hx.2,hc,ht,hp,hm,hd]
+end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+private theorem gidneyTail_lowered_cnot (input dirty : List Wire) (constant : List Bool)
+    (q c r t : Wire) (callback : List Bool → Circuit) (history : List Bool)
+    (hcallback : ∀ bs, eeaCnotCount ((callback bs).map (constantControlGate q))=0)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hc : c≠q) (hr : r≠q) :
+    gidneyCnotCount (constantControlProgram q (gidneyAddTail q c r t callback history input dirty constant))=
+      5*(input.length-1)+1 := by
+  induction input generalizing dirty constant c r history with
+  | nil => simp at hd
+  | cons a as ih =>
+    cases constant with
+    | nil => simp at hk
+    | cons k ks =>
+      cases dirty with
+      | nil =>
+        have he : as=[] := List.eq_nil_of_length_eq_zero (by simpa using hd)
+        subst as
+        have he : ks=[] := List.eq_nil_of_length_eq_zero (by simpa using hk.symm)
+        subst ks
+        have hb (bs : List Bool) : (List.map ((fun g => match g with | .CX _ _ => 1 | _ => 0) ∘ constantControlGate q) (callback bs)).sum=0 := by
+          simpa only [eeaCnotCount,List.map_map] using hcallback bs
+        cases k <;> simp [gidneyAddTail,constantControlProgram,gidneyCnotCount,gidneyGateCount,
+          constantControlGate,hc] <;> exact ⟨hb _,hb _⟩
+      | cons d ds =>
+        have hcell : eeaCnotCount ((gidneyAddCarryCell q c r t a d k).map (constantControlGate q))=5 := by
+          cases k <;> simp [gidneyAddCarryCell,constantControlGate,eeaCnotCount,hc,hr]
+        simp only [gidneyAddTail,constantControlProgram,gidneyCnotCount,gidneyGateCount]
+        change eeaCnotCount ((gidneyAddCarryCell q c r t a d k).map (constantControlGate q))+
+          max (gidneyCnotCount (constantControlProgram q (gidneyAddTail q r c t callback (history++[false]) as ds ks)))
+            (gidneyCnotCount (constantControlProgram q (gidneyAddTail q r c t callback (history++[true]) as ds ks)))=_
+        rw [hcell,ih ds ks r c _ (by simpa using hk) (by simpa using hd) hr hc,
+          ih ds ks r c _ (by simpa using hk) (by simpa using hd) hr hc,max_self]
+        simp only [List.length_cons]
+        have hn : 1≤as.length := by simp only [List.length_cons] at hd; omega
+        omega
+/-- Eliminating the fixed control leaves a pattern-independent CNOT chain. -/
+private theorem controlledGidneyAddConst_lowered_cnot (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) (hc : c≠q) (hr : r≠q) :
+    gidneyCnotCount (constantControlProgram q
+      (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t))=
+      5*(input.length-1)+6 := by
+  have hz (ws : List Wire) (bs : List Bool) :
+      eeaCnotCount ((Quantum.registerZCorrection ws bs).map (constantControlGate q))=0 := by
+    induction ws generalizing bs with
+    | nil => rfl
+    | cons w ws ih => cases bs with
+      | nil => rfl
+      | cons b bs => cases b <;> simp [Quantum.registerZCorrection,Quantum.pauliZ,constantControlGate,eeaCnotCount] at * <;> exact ih bs
+  have hf (ws : List Wire) : eeaCnotCount ((gidneyFlipWord ws).map (constantControlGate q))=0 := by
+    simp [gidneyFlipWord,constantControlGate,eeaCnotCount,List.map_map,Function.comp_def]
+  have hcallback : ∀ bs, eeaCnotCount (((Quantum.registerZCorrection (d::dirty) bs ++
+      gidneyAddCleanup (a::input) (d::dirty) (k::constant) q c ++ Quantum.registerZCorrection (d::dirty) bs)).map (constantControlGate q))=0 := by
+    intro bs
+    simp only [List.map_append,eeaCnotCount_append,hz,gidneyAddCleanup,hf,
+      controlledConstCarryXor_uncontrolled_cnot,Nat.add_zero]
+  have hcell : eeaCnotCount ((gidneyAddCarryCell q c r t a d k).map (constantControlGate q))=5 := by
+    cases k <;> simp [gidneyAddCarryCell,constantControlGate,eeaCnotCount,hc,hr]
+  simp only [controlledGidneyAddConst,if_neg hn,constantControlProgram]
+  change eeaCnotCount ((gidneyAddCarryCell q c r t a d k).map (constantControlGate q))+
+    gidneyCnotCount (constantControlProgram q (gidneyAddTail q r c t _ _ input dirty constant))=_
+  rw [hcell,gidneyTail_lowered_cnot _ _ _ _ _ _ _ _ _ hcallback hk hd hr hc]
+  omega
+end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+private theorem gidneyTail_cost_history (cost : Gate → Nat)
+    (input dirty : List Wire) (constant : List Bool) (q c r t : Wire)
+    (callback : List Bool → Circuit) (history history' : List Bool) (budget : Nat)
+    (hb : ∀ bs, ((callback bs).map cost).sum=budget)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1) :
+    gidneyGateCount cost (gidneyAddTail q c r t callback history input dirty constant)=
+      gidneyGateCount cost (gidneyAddTail q c r t callback history' input dirty constant) := by
+  induction input generalizing dirty constant c r history history' with
+  | nil => simp at hd
+  | cons a as ih =>
+    cases constant with
+    | nil => simp at hk
+    | cons k ks =>
+      cases dirty with
+      | nil =>
+        have he : as=[] := List.eq_nil_of_length_eq_zero (by simpa using hd)
+        subst as
+        have he : ks=[] := List.eq_nil_of_length_eq_zero (by simpa using hk.symm)
+        subst ks
+        simp only [gidneyAddTail,gidneyGateCount,hb]
+      | cons d ds =>
+        simp only [gidneyAddTail,gidneyGateCount]
+        rw [ih ds ks r c (history++[false]) (history'++[false]) (by simpa using hk) (by simpa using hd),
+          ih ds ks r c (history++[true]) (history'++[true]) (by simpa using hk) (by simpa using hd)]
+private theorem gidneyTail_cost_add (cost plain : Gate → Nat)
+    (input dirty : List Wire) (constant : List Bool) (q c r t : Wire)
+    (callback : List Bool → Circuit) (history : List Bool) (budget : Nat)
+    (hb : ∀ bs, ((callback bs).map plain).sum=budget)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1) :
+    gidneyGateCount (fun g => cost g+plain g) (gidneyAddTail q c r t callback history input dirty constant)=
+      gidneyGateCount cost (gidneyAddTail q c r t callback history input dirty constant)+
+      gidneyGateCount plain (gidneyAddTail q c r t callback history input dirty constant) := by
+  induction input generalizing dirty constant c r history with
+  | nil => simp at hd
+  | cons a as ih =>
+    cases constant with
+    | nil => simp at hk
+    | cons k ks =>
+      cases dirty with
+      | nil =>
+        have he : as=[] := List.eq_nil_of_length_eq_zero (by simpa using hd)
+        subst as
+        have he : ks=[] := List.eq_nil_of_length_eq_zero (by simpa using hk.symm)
+        subst ks
+        simp [gidneyAddTail,gidneyGateCount,List.sum_map_add,hb,Nat.add_assoc,Nat.add_left_comm,Nat.add_comm]
+      | cons d ds =>
+        have hp := gidneyTail_cost_history plain as ds ks q r c t callback
+          (history++[false]) (history++[true]) budget hb (by simpa using hk) (by simpa using hd)
+        simp only [gidneyAddTail,gidneyGateCount,List.sum_map_add]
+        rw [ih ds ks r c _ (by simpa using hk) (by simpa using hd),
+          ih ds ks r c _ (by simpa using hk) (by simpa using hd),hp,max_self,max_add_add_right]
+        omega
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+private theorem gidneyRoot_cost_add (cost plain : Gate → Nat)
+    (hX : ∀ w, plain (.X w)=0) (hH : ∀ w, plain (.H w)=0)
+    (a d q c r t : Wire) (k : Bool) (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) :
+    gidneyGateCount (fun g => cost g+plain g) (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)=
+      gidneyGateCount cost (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)+
+      gidneyGateCount plain (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t) := by
+  simp only [controlledGidneyAddConst,if_neg hn,gidneyGateCount,List.sum_map_add]
+  rw [gidneyTail_cost_add cost plain input dirty constant q r c t _ _
+    ((gidneyAddCleanup (a::input) (d::dirty) (k::constant) q c).map plain).sum
+    (by intro bs; simp [List.map_append,List.sum_append,gidneyZ_cost plain hX hH]) hk hd]
+  omega
+private theorem gidneyCount_control (cost : Gate → Nat) (q : Wire) (ac : Quantum.AdaptiveCircuit) :
+    gidneyGateCount cost (constantControlProgram q ac)=gidneyGateCount (fun g => cost (constantControlGate q g)) ac := by
+  induction ac with
+  | done => rfl
+  | unitary g ac ih => simp [constantControlProgram,gidneyGateCount,List.map_map,Function.comp_def,ih]
+  | xMeasureReset w ac bc iha ihb => simp [constantControlProgram,gidneyGateCount,iha,ihb]
+/-- Fixed-control compilation preserves the combined X/CNOT maximum for this adder. -/
+private theorem controlledGidneyAddConst_lowered_XC (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) :
+    let ac := controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t
+    (primitiveResources (constantControlProgram q ac)).x+(primitiveResources (constantControlProgram q ac)).cnot=
+      (primitiveResources ac).x+(primitiveResources ac).cnot := by
+  simp only [primitiveResources,gidneyCnotCount,gidneyCount_control]
+  have hfirst := gidneyRoot_cost_add (fun g => primitiveXCost (constantControlGate q g))
+    (fun g => match constantControlGate q g with | .CX _ _ => 1 | _ => 0)
+    (by intro w; rfl) (by intro w; rfl) a d q c r t k input dirty constant hk hd hn
+  have he : (fun g => primitiveXCost (constantControlGate q g)+
+      (match constantControlGate q g with | .CX _ _ => 1 | _ => 0))=
+      (fun g => primitiveXCost g+(match g with | .CX _ _ => 1 | _ => 0)) := by
+    funext g
+    cases g with
+    | CX c t => by_cases h : c=q <;> simp [constantControlGate,primitiveXCost,h]
+    | _ => rfl
+  have hlast := gidneyRoot_cost_add primitiveXCost (fun g => match g with | .CX _ _ => 1 | _ => 0)
+    (by intro w; rfl) (by intro w; rfl) a d q c r t k input dirty constant hk hd hn
+  exact hfirst.symm.trans ((congrArg (fun f => gidneyGateCount f
+    (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)) he).trans hlast)
+end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+/-- CNOTs removed by fixed-control compilation become X gates. -/
+private theorem controlledGidneyAddConst_lowered_x (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) (hc : c≠q) (hr : r≠q) :
+    (primitiveResources (constantControlProgram q
+      (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t))).x=
+      4*(input.length+1)-2+8*k.toNat+10*constantBitWeight (constant.take dirty.length)+
+        (constant.getLastD false).toNat := by
+  have hs := controlledGidneyAddConst_lowered_XC a d q c r t k input dirty constant hk hd hn
+  have hx := controlledGidneyAddConst_XH_exact a d q c r t k input dirty constant hk hd hn
+  have ho := controlledGidneyAddConst_cnot_nonzero a d q c r t k input dirty constant hk hd hn
+  have hl := controlledGidneyAddConst_lowered_cnot a d q c r t k input dirty constant hk hd hn hc hr
+  dsimp only at hs
+  simp only [primitiveResources] at hs hx ⊢
+  rw [hx.1,ho,hl] at hs
+  omega
+/-- Complete exact vector after eliminating the fixed external control. -/
+theorem controlledGidneyAddConst_lowered_primitive_exact (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) (hc : c≠q) (hr : r≠q) :
+    primitiveResources (constantControlProgram q
+      (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t))=
+      (⟨4*(input.length+1)-2+8*k.toNat+10*constantBitWeight (constant.take dirty.length)+
+          (constant.getLastD false).toNat,4*input.length,5*(input.length-1)+6,
+        3*(input.length+1)-4,0,input.length⟩ : PrimitiveResources) := by
+  have hx := controlledGidneyAddConst_lowered_x a d q c r t k input dirty constant hk hd hn hc hr
+  have hl := controlledGidneyAddConst_lowered_cnot a d q c r t k input dirty constant hk hd hn hc hr
+  have hp := primitiveResources_constantControl_preserved q
+    (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)
+  rw [controlledGidneyAddConst_primitive_exact a d q c r t k input dirty constant hk hd hn] at hp
+  cases he : primitiveResources (constantControlProgram q
+    (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)) with
+  | mk x h cx ccx p m =>
+    have hcx : (primitiveResources (constantControlProgram q
+      (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t))).cnot=5*(input.length-1)+6 := hl
+    simp only [he] at hx hp hcx
+    simp only [PrimitiveResources.mk.injEq]
+    exact ⟨hx,hp.1,hcx,hp.2.1,hp.2.2.1,hp.2.2.2⟩
 end ShorECDLP.Paper2607_13816
