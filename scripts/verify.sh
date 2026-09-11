@@ -2755,11 +2755,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.signedPointLookupY_wires
 #print axioms ShorECDLP.Paper2607_13816.signedPointLookup_address_layout
 #print axioms ShorECDLP.Paper2607_13816.signedPointLookupY_resources
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_ready
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_address
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_eq
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_frame
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateState_sign
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_wires
+#print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2734 ]]; then
-  printf 'expected 2734 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2744 ]]; then
+  printf 'expected 2744 #print axioms results\n' >&2
   exit 1
 fi
 

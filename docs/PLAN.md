@@ -2713,3 +2713,8 @@ include both measured negators and both lookups. The optimized physical
 ### Physical signed Y lookup and fifteen address bits
 
 The physical address and decoder path now contain fifteen wires; wire 854 is the separate sign. Existing positive X/Y lookup and coordinate proofs use the refined address directly. The signed Y stage composes actual negative-controlled negation, measured lookup/add/clear, and negative-controlled negation. Its coherent and numeric contracts preserve the complete outside-Y frame, including address and sign, and restore readiness. It equals the existing controlled constant-Y map at the signed addressed value. Support remains within 855 wires. The two actual decoder traversals contribute 458,738 T and 65,534 measurements, in addition to the two negators and modular adder. Full signed coordinate composition, exceptional-point correction, and window lifetime scheduling remain open; this is not a total windowed point-addition certificate.
+
+
+### Five-query signed coordinate composition
+
+The nine-stage coordinate program now uses three positive X queries and two signed Y queries, each with actual measured load/add/clear and sign-conditioned negation. Its complete coherent state map equals the existing constant-coordinate map for the addressed X and signed Y values. Address, sign, the full outside-coordinate frame and readiness are preserved. The same program has physical support and a direct qubit-count certificate within 855 wires. This closes signed coordinate arithmetic only: table-dependent exceptional-point correction, complete total windowed addition, lifetime scheduling and final resources remain open.
