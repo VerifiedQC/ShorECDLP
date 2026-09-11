@@ -2842,11 +2842,33 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.windowSchedule_support
 #print axioms ShorECDLP.Paper2607_13816.windowSchedule_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.windowSchedule_34_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.windowAddressBits
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState_ready
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_ket
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState_involution
+#print axioms ShorECDLP.Paper2607_13816.windowRawDigit
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState_address
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_tCount
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState_pointWrite
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_correct
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_coherent
+#print axioms ShorECDLP.Paper2607_13816.windowRawDigit_bound
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_ready
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_frame
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_tCount
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_measurements
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_selected
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_support
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_wellFormed
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2821 ]]; then
-  printf 'expected 2821 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2843 ]]; then
+  printf 'expected 2843 #print axioms results\n' >&2
   exit 1
 fi
 
