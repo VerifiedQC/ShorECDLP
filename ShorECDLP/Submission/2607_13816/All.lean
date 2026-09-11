@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.EndpointPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.TraversalPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.RipplePrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.SelectorPrimitiveCounts

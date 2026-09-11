@@ -1387,7 +1387,7 @@ def swapWorkAndLengthUnarySharedInverse
 
 /-! ## Structural and constructor-derived resource contracts -/
 
-private theorem endIteration_cuccaroAdd_xCount :
+theorem endIteration_cuccaroAdd_xCount :
     ∀ (addends targets : List Wire) (carry : Wire),
       eeaXCount (cuccaroAdd addends targets carry) = 0 := by
   intro addends
@@ -1402,7 +1402,7 @@ private theorem endIteration_cuccaroAdd_xCount :
             ih targets addend]
           rfl
 
-private theorem endIteration_cuccaroSub_xCount
+theorem endIteration_cuccaroSub_xCount
     (addends targets : List Wire) (carry : Wire) :
     eeaXCount (cuccaroSub addends targets carry) = 0 := by
   rw [cuccaroSub, eeaXCount_adjoint, endIteration_cuccaroAdd_xCount]
@@ -1473,7 +1473,7 @@ private theorem endIteration_uncontrolledIncrement_xCount
                 endIteration_incrementTail_xCount]
               rfl
 
-private theorem endIteration_addConstant_xCount
+theorem endIteration_addConstant_xCount
     (register constants : List Wire) (carry : Wire) (value : Nat) :
     eeaXCount (addConstant register constants carry value) =
       2 * (constantBits constants.length value).count true := by
@@ -1481,7 +1481,7 @@ private theorem endIteration_addConstant_xCount
     endIteration_cuccaroAdd_xCount]
   omega
 
-private theorem endIteration_subConstant_xCount
+theorem endIteration_subConstant_xCount
     (register constants : List Wire) (carry : Wire) (value : Nat) :
     eeaXCount (subConstant register constants carry value) =
       2 * (constantBits constants.length value).count true := by
@@ -1489,7 +1489,7 @@ private theorem endIteration_subConstant_xCount
     endIteration_cuccaroSub_xCount]
   omega
 
-private theorem endIteration_constMinus_xCount
+theorem endIteration_constMinus_xCount
     (register constants : List Wire) (carry : Wire) (value : Nat)
     (hpositive : 0 < register.length)
     (hlength : constants.length = register.length) :
