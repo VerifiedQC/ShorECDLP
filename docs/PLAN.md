@@ -2780,3 +2780,13 @@ secp256k1 order proves every table entry is finite, including arbitrary window
 indices. The actual prepared call adds the centered raw digit times its radix
 weight plus the fixed half-point offset. Binding all banks to the scalar digits
 and discharging the aggregate offsets remain the next boundary.
+
+### Two scalar axes from original raw banks
+
+`Window/ScalarWindows` composes the actual prepared calls into two 17-window
+axes. Under explicit original-bank bindings to the two 257-bit scalars and
+an initial point equal to the sum of the fixed offsets, the complete output
+state is `pointWrite (a • P + b • Q) s`. It proves coherent execution, readiness,
+and direct support/count at 1,383 wires including all 544 retained bank bits.
+The initial-point preparation circuit, phase-register binding/lifetimes,
+and final aggregate resource and success contracts remain open.
