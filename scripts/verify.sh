@@ -19,7 +19,7 @@ lake --wfail build
 # anything not reachable from the root aggregator.
 SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
-axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
+axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocess_tCount
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_tCount
