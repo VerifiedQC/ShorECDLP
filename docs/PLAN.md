@@ -2739,3 +2739,8 @@ The resulting coherent program implements total addition of the signed table poi
 the full outside-point frame, with a direct same-program bound of 855 physical wires. The
 16-bit correction address is proved to be the 15-bit address plus the sign bit; lower-half
 entries negate the point. Multi-window scheduling and aggregate resources remain open.
+
+Physical signed-window calls can now read a disjoint parked 16-bit address bank while
+reusing the arithmetic core. A wire bijection preserves coherent execution and exact gate/measurement
+counts; full-state correctness reads the parked 15-bit address and sign, with support below start+16.
+This establishes the primitive needed to count all parked address bits in the multi-window schedule.
