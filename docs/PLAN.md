@@ -2728,3 +2728,8 @@ The existing exceptional-point circuit can now have its physical control reassig
 ### Measured exceptional-correction table traversal
 
 An actual sixteen-bit decoder now dispatches relabeled exceptional-point correction circuits, using the fifteen address bits plus sign and sixteen reusable path wires. A stronger unconditional frame proves that correction leaves never change decoder wires even when correction scratch is dirty. The measured traversal coherently implements its literal unitary reference, is physically well formed, remains within 855 wires, and performs exactly 65,535 decoder measurements. Its T count is the actual leaf-cost sum plus 458,745. This is an additional correction traversal beyond the five coordinate queries. The selected-entry functional theorem, clean-work restoration and total signed-point composition remain open; no complete windowed point-addition claim is made yet.
+
+The measured correction-table reference now equals the single correction selected by the complete
+16-bit address, on clean decoder and correction scratch. Its coherent contract preserves the full
+frame, restores both scratch banks, and derives the enabled exceptional-point correction result.
+This is the additional correction traversal; composition with signed coordinates remains next.
