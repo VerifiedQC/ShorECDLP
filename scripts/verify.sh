@@ -1931,11 +1931,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.squareLoopInverse256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.squareLoop256_full_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.squareLoopInverse256_full_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.measuredAndErase_primitive
+#print axioms ShorECDLP.Paper2607_13816.eraseZeroAnd_primitive
+#print axioms ShorECDLP.Paper2607_13816.unaryAdaptiveAction_primitive
+#print axioms ShorECDLP.Paper2607_13816.eraseDualZeroAnd_primitive
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAdaptiveAction_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1910 ]]; then
-  printf 'expected 1910 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1915 ]]; then
+  printf 'expected 1915 #print axioms results\n' >&2
   exit 1
 fi
 
