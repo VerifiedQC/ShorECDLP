@@ -2478,3 +2478,10 @@ paired adaptive decoders. Exact erasure preserves all original unitary boundarie
 a whole selected controlled-Z correction contributes one event. Decoder events
 are the actual leaf sum plus one per unary internal node or two per paired node.
 The interval/coefficient/phase schedule and full EEA/point composition remain open.
+
+Source correction accounting now covers complete interval and coefficient-prefix
+scans and their inverse-mode specializations. Literal erasure preserves endpoint
+preparation, optional top lanes, both traversal orders, sign updates and cleanup.
+Exact formulas include all selected-correction blocks: one per ripple leaf,
+two per paired decoder node, and both equality selectors on each special lane.
+Indexed block/phase/schedule and whole EEA/point composition remain open.
