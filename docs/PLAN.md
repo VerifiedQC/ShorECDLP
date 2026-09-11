@@ -2759,3 +2759,13 @@ All lists are checked by the Lean kernel against `sourceRotationSwaps`; the circ
 public theorem statements, axiom allowlist, verification limits, and CI gate are unchanged.
 A local single-offset comparison of the three certificates took 44.47 seconds before
 and 25.96 seconds after; this is local timing evidence, not a hosted-CI success claim.
+
+### Physical raw-digit preparation
+
+`Window/Preparation` surrounds an actual parked signed-point call with the
+30-CX address reflection and its inverse. It proves selection from the original
+16-bit raw digit, full-state correctness, restored address/sign bits and every
+other non-point wire, and readiness for another call. The circuit keeps the
+same T/measurement counts and core-plus-16-bit support. Its coherent theorem
+covers the actual prepare/call/unprepare program. Scalar-table assignment and
+the prepared multi-window recoding theorem remain open.
