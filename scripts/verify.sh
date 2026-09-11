@@ -2574,11 +2574,32 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_mass
 #print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_run
 #print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_identity_mass
+#print axioms ShorECDLP.Paper2607_13816.paperPhaseAmplitude_mod
+#print axioms ShorECDLP.Paper2607_13816.pointScheduleCoeff_scaled
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_scaled_eigenstate
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_nsmul
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairProgram
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairSlice
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairSlice_eigenstate
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairSlice_mass
+#print axioms ShorECDLP.Paper2607_13816.decodePointPhasePair
+#print axioms ShorECDLP.Paper2607_13816.decodePointPhasePair_seq
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairSlice_run
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_length
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_word
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass_eq
+#print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass
+#print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass_eq
+#print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass_lower
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_injective
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutput_unique
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2553 ]]; then
-  printf 'expected 2553 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2574 ]]; then
+  printf 'expected 2574 #print axioms results\n' >&2
   exit 1
 fi
 

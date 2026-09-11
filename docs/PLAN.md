@@ -2608,3 +2608,15 @@ normalized internal coefficient list shared across all characters. The Born
 mass is proved for every character superposition, and the identity point
 yields the uniform one-dimensional character mixture. The two-dimensional
 oracle composition and final success theorem remain open.
+
+### Physical two-dimensional sampling and success mass
+
+`OrderFinding/PhysicalPair.lean` composes the two actual point-oracle
+sampling programs for P and Q, under Q = d • P. Its structural history
+decoder identifies both external samples despite internal measurements.
+The filtered physical Born mass equals `paperPairMass` for every dyadic
+output, and the canonical postprocessor's success mass is at least
+`((r-1)/r) * (4/pi^2)^2`. Distinct decoded output events cannot count a
+physical branch twice. This is a same-program success-mass theorem;
+whole-distribution normalization, final submission packaging, and the
+Phase 11 optimized lookup schedule remain separate obligations.
