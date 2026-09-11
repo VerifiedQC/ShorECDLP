@@ -46,7 +46,8 @@ private theorem unitary_support (g : Circuit) (support : List Wire) (h : PaperCi
   intro w hw
   obtain ⟨gate,hgate,hw⟩ := List.mem_flatMap.mp hw
   exact h gate hgate w hw
-private theorem modularAdd256_support (input acc : List Wire) (bits : List Bool) (p : Nat)
+/-- Physical support of the width-256 variable modular adder on arbitrary banks. -/
+theorem controlledModularAdd256_wires (input acc : List Wire) (bits : List Bool) (p : Nat)
     (q c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
     (hp0 : 0<p) (hp : p<2^256) :
     (controlledModularAdd input acc (true::bits) p q c r t f).wires ⊆ [q,c,r,t,f]++input++acc := by
@@ -180,7 +181,7 @@ theorem hornerMul256_wires_subset (controls input acc : List Wire) (bits : List 
   induction controls with
   | nil => simp [hornerMul,AdaptiveCircuit.wires]
   | cons q qs ih =>
-    have hadd := modularAdd256_support input acc bits p q c r t f hi ha hb hp0 hp
+    have hadd := controlledModularAdd256_wires input acc bits p q c r t f hi ha hb hp0 hp
     have hdbl := double256_support acc input bits p f r t c ha hi hb hp0 hp
     simp only [List.subset_def,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at ih hadd hdbl
     intro w hw
@@ -226,7 +227,7 @@ private theorem squareAdd256_support (input acc : List Wire) (bits : List Bool) 
     (q copied c r t f : Wire) (hi : input.length=256) (ha : acc.length=256) (hb : bits.length=255)
     (hp0 : 0<p) (hp : p<2^256) :
     (squareAdd input acc (true::bits) p q copied c r t f).wires ⊆ [q,copied,c,r,t,f]++input++acc := by
-  have hh := modularAdd256_support input acc bits p copied c r t f hi ha hb hp0 hp
+  have hh := controlledModularAdd256_wires input acc bits p copied c r t f hi ha hb hp0 hp
   intro w hw
   simp only [squareAdd,AdaptiveCircuit.wires,modularWires_seq,circuitWires,List.flatMap_cons,
     List.flatMap_nil,List.append_nil,gateWires,List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hw

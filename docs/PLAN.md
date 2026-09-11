@@ -2628,3 +2628,72 @@ The same paired adaptive program now has a complete numerical history decoder: e
 ### Signed-window recoding foundation
 
 Fixed-width radix decomposition now reconstructs each scalar exactly. Centering every digit by `2^(w-1)` changes the double-scalar sum by one explicit, input-independent point offset; adding that offset restores `a • P + b • Q`. Digit bounds and the zero-window case are proved. At the proved 257-bit precision, width 16 gives 17 windows per exponent, hence 34 before any omission or special initialization. The paper's 28-addition estimate is not asserted by this baseline: QROM, coherent offset handling, omitted-window justification and address lifetimes remain open.
+
+
+### Complete measured table lookup
+
+`Window/TableLookup.lean` constructs the full little-endian unary address tree
+and proves selected-entry XOR semantics, coherent refinement, whole-state
+load/clear identity, physical support and decoder cleanup. A width-16 address
+with 16 reusable path wires and a 256-bit target uses at most 289 distinct wires,
+458,745 T gates and 65,535 measurements per lookup. These counts come from the
+actual adaptive constructor, including corrections; they are not an aggregate
+windowed-oracle count. Five-lookups composition, variable-coordinate point
+arithmetic, signed-offset integration and exponent/address lifetime remain open.
+
+
+### Actual lookup-loaded modular addition
+
+`Window/LookupArithmetic.lean` connects numeric table words to the actual
+variable modular adder and surrounds that adder with the two measured lookups.
+The complete coherent contract covers every valid superposition; the numeric
+result adds the addressed field value and restores every non-accumulator wire,
+including the loaded word. The lookup root is explicitly enabled in its input
+contract. Lookup overhead is exactly twice the decoder cost around the unchanged
+adder body. Signed negation, the full five-query point circuit and address
+lifetime remain open.
+
+
+### Physical lookup coordinate stages
+
+`Window/PointStages.lean` places the persistent 16-bit address outside the
+839-wire point core and borrows 16 clean work wires for the decoder. Actual
+lookup/add/clear circuits update either coordinate, preserve the address and
+restore the loaded word and decoder path. Their whole-state semantics agree
+with the existing constant stages at the addressed value, and both preserve
+the next arithmetic stage’s input contract. Physical support lies in 855 wires;
+this is not yet a full windowed point or oracle resource certificate.
+
+
+### Five-query coordinate composition
+
+`Window/Coordinate.lean` composes five actual lookup/add/clear episodes with
+division, square subtraction, multiplication and negation. Every stage preserves
+the next input contract and the original table address. The complete coherent
+state map equals the existing Figure 14 coordinate map at the addressed X/Y
+values, and the same circuit has a direct 855-wire bound. This coordinate
+permutation still requires table-selected exceptional-point correction before
+it becomes total point addition; signed-window and oracle integration remain open.
+
+
+### Signed address reflection and odd-multiple table
+
+`Window/SignedAddress.lean` provides the actual reversible reflection of the
+low address bits, its complete quantum basis-state action, involution, frame,
+zero T count and exact two-CX-per-bit length. An odd-multiple table of a concrete
+half-point represents all centered width-16 digits with 32,768 entries and a
+fixed half-point offset, including both endpoints. The arithmetic identity
+assumes an odd cyclic order annihilating the base point. Physical signed Y
+selection, total table-selected point correction and the complete window
+schedule are still open.
+
+
+### Negative-sign modular negation
+
+`Window/NegativeControl.lean` wraps the actual measured modular negator with
+two physical X gates. It negates a canonical loaded word when the sign bit is
+false, restores the sign and every non-target wire, and is an involution. The
+complete coherent contract allows an arbitrary borrowed dirty bank. T and
+measurement counts are unchanged; physical support adds only the sign wire.
+This supplies the sign operation needed between lookup and addition; that
+full signed lookup composition remains next.
