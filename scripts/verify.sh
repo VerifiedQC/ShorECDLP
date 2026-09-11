@@ -1965,11 +1965,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSecondLeafAdaptive_primitive
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixAdaptive_primitive
 #print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseAdaptive_primitive
+#print axioms ShorECDLP.Paper2607_13816.rightTwoSwapCount_of_odd
+#print axioms ShorECDLP.Paper2607_13816.preShiftUnitary259_primitive
+#print axioms ShorECDLP.Paper2607_13816.postShiftUnitary259_primitive
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward259_primitive
+#print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse259_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1944 ]]; then
-  printf 'expected 1944 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1949 ]]; then
+  printf 'expected 1949 #print axioms results\n' >&2
   exit 1
 fi
 

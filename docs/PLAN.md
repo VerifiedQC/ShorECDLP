@@ -2363,3 +2363,7 @@ indexed-step components remain before the full EEA/point primitive vector.
 Prepared-boundary coefficient prefixes now have exact primitive vectors for both modes
 and their explicit adaptive inverses, including decoder cleanup and optional sign updates.
 Remaining unitary components and indexed-step/whole-point propagation remain open.
+
+The actual 259-work/9-length shift and terminal-padding circuits have exact primitive
+vectors, preserving the explicit padding inverse’s extra X gates. Indexed-step and
+whole-point aggregation remain open.
