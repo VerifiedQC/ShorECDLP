@@ -1,3 +1,5 @@
+import ShorECDLP.Submission.«2607_13816».EEA.SchedulePrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».EEA.IndexedStepPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.BlockHPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.BlockEPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.BlockBPrimitiveCounts

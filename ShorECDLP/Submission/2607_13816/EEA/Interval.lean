@@ -302,7 +302,7 @@ private theorem intervalEndpointScratch_length
   simp [IntervalRegisters.endpointScratch, List.length_take,
     Nat.min_eq_left (intervalEndpointWidth_le_scratch registers k K target hlayout)]
 
-private theorem intervalLengthQ_le_endpointScratch
+theorem intervalLengthQ_le_endpointScratch
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     registers.lengthQ.length ≤ registers.endpointScratch.length := by
@@ -332,7 +332,7 @@ private theorem intervalEqualityScratch_length
     omega
   simp [IntervalRegisters.equalityScratch, List.length_take, Nat.min_eq_left hbase]
 
-private theorem intervalLengthQ_sub_two_le_equalityScratch
+theorem intervalLengthQ_sub_two_le_equalityScratch
     (registers : IntervalRegisters) (k K : Nat) (target : IntervalTarget)
     (hlayout : IntervalLayout registers k K target) :
     registers.lengthQ.length - 2 ≤ (registers.equalityScratch k K).length := by
