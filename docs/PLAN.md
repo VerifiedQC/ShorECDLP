@@ -2449,3 +2449,10 @@ counts both copies. Sequence adds and reset branches take a proved maximum. Lite
 erasure and exact n / 2n maxima are proved for complete reset/correction programs.
 This is the source-accounting foundation; integration through arithmetic and total
 point addition remains open, and table lookup events enter with Phase 11.
+
+The Gidney carry comparator and its controlled GE interface now have source
+correction annotations with literal erasure to the unchanged circuits. For matching
+widths, the carry comparator has exactly 2n selected-correction events in the worst
+history: both deferred Z copies are counted. The GE zero/out-of-range shortcuts
+have zero events. The proof follows the actual alternating-carry reset recursion,
+including arbitrary accumulated histories. Other arithmetic adapters remain open.

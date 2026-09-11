@@ -1997,6 +1997,12 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.doubleZResetSource
 #print axioms ShorECDLP.Paper2607_13816.doubleZResetSource_erase
 #print axioms ShorECDLP.Paper2607_13816.doubleZResetSource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarrySource
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarrySource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarrySource_events
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGESource
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGESource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGESource_events
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_cnot_le
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE256_primitive_bounds
@@ -2173,8 +2179,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2149 ]]; then
-  printf 'expected 2149 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2155 ]]; then
+  printf 'expected 2155 #print axioms results\n' >&2
   exit 1
 fi
 
