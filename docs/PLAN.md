@@ -2463,3 +2463,11 @@ program including width-one, all-zero constant, and threshold shortcuts. Fixed
 control elimination preserves the markers and their event count. Nonzero n-bit
 adders have 2(n-1) events; nontrivial comparators have 2n. These formulas count both
 selected Z copies. Modular arithmetic and EEA composition remain next.
+
+Source correction accounting now composes through controlled modular addition and
+subtraction, controlled/uncontrolled constant modular addition, negation, doubling,
+and halving. All preserve the literal circuits on erasure and retain exact shortcut
+formulas. Forward/inverse Horner multiplication and copied-control squaring each
+have exact source-event formulas; their four production certificates tie erasure
+to the existing circuit and give 522,242 selected-correction events. This does not
+yet close EEA/point source-event composition or table-event accounting.
