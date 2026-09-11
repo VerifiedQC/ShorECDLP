@@ -2455,11 +2455,33 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_bornMass
 #print axioms ShorECDLP.Paper2607_13816.fourierOutcomes_nodup
+#print axioms ShorECDLP.Paper2607_13816.dyadicFourierKernel
+#print axioms ShorECDLP.Paper2607_13816.dyadicFourierKernel_exp
+#print axioms ShorECDLP.Paper2607_13816.dyadicPhase_square
+#print axioms ShorECDLP.Paper2607_13816.dyadicPhase_power
+#print axioms ShorECDLP.Paper2607_13816.dyadicPhase_period
+#print axioms ShorECDLP.Paper2607_13816.dyadicPhase_half_period
+#print axioms ShorECDLP.Paper2607_13816.dyadicFourierKernel_split
+#print axioms ShorECDLP.Paper2607_13816.fourierHistoryAngle_scale
+#print axioms ShorECDLP.Paper2607_13816.fourierWordMSB
+#print axioms ShorECDLP.Paper2607_13816.fourierWordLSB
+#print axioms ShorECDLP.Paper2607_13816.fourierBitAmplitude
+#print axioms ShorECDLP.Paper2607_13816.fourierHistoryPhase
+#print axioms ShorECDLP.Paper2607_13816.fourierBitAmplitude_eq
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch_ket_kernel
+#print axioms ShorECDLP.Paper2607_13816.measuredFourierKernel
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch_eq_kernel
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_run_kernel
+#print axioms ShorECDLP.Paper2607_13816.fourierWordLSB_lt
+#print axioms ShorECDLP.Paper2607_13816.fourierWordMSB_lt
+#print axioms ShorECDLP.Paper2607_13816.fourierNormalization
+#print axioms ShorECDLP.Paper2607_13816.fourierWordLSB_injective
+#print axioms ShorECDLP.Paper2607_13816.fourierWordLSB_surjective
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2434 ]]; then
-  printf 'expected 2434 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2456 ]]; then
+  printf 'expected 2456 #print axioms results\n' >&2
   exit 1
 fi
 

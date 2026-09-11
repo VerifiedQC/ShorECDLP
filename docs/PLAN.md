@@ -2529,3 +2529,13 @@ of all distinct output strings of the required length, with explicit Kraus maps.
 Each map has an exact basis-state amplitude and resets all input wires; the
 well-formed schedule preserves total Born mass and makes one measurement per wire.
 The closed mathematical Fourier-kernel comparison and sampling theorem remain open.
+
+### Complete measured Fourier-kernel equality
+
+`Fourier.Kernel` identifies the actual adaptive Fourier instrument with the
+mathematical dyadic Fourier rows followed by measurement/reset, as equality of
+linear Kraus maps for every output. The result covers arbitrary superpositions
+and spectator entanglement, both phase signs, standard normalization and explicit
+MSB-input/LSB-output encodings. Output words are bijective with integers below
+the dimension. Phase 10 still requires its two-dimensional sampling/postprocessing
+lower bound and the interleaved one-wire oracle schedule.
