@@ -1781,7 +1781,7 @@ def rightTwoSwapCount (register : List Wire) : Nat :=
   ((rightTwoCycles register).map fun cycle => cycle.length - 1).sum
 
 /-- Odd source widths above two form one cycle and therefore use exactly `width - 1` swaps. -/
-private theorem rightTwoSwapCount_of_odd
+theorem rightTwoSwapCount_of_odd
     (register : List Wire) (hlarge : 2 < register.length)
     (hodd : register.length % 2 ≠ 0) :
     rightTwoSwapCount register = register.length - 1 := by
