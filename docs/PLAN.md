@@ -2497,3 +2497,7 @@ Both actual 1,620-step EEA schedules erase from explicit source annotations and 
 ### Source correction events: complete EEA wrappers
 
 Both physical EEA wrappers now erase from source annotations and have exactly 5,281,384 selected correction events. Preprocessing contributes 1,532 and parity correction contributes 1,020; the ordinary preparation, canonicalization, epoch and clearing stages contribute zero. Both copies of each Gidney correction are retained, so source-event totals differ from measurement counts. Figure 15 and total point source-event composition remain open.
+
+### Source correction events: Figure 15
+
+Both actual Figure 15 operations and their zero-input extensions now have source-erasure certificates with exactly 12,129,750 selected events. Wire relabeling preserves each event, all three Horner calls retain both correction copies, and the retained 256 reset outcomes each select at most one final Z event. Ordinary bank swaps and zero-input preparation/restoration contribute zero. Total point source-event composition remains open.
