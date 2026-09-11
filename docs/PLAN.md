@@ -2520,3 +2520,12 @@ preserves each unnormalised branch on every entangled state with clean ancilla.
 The most-recent-first history rotation list has its exact summed phase theorem.
 This is the local measurement-commutation step; the complete Fourier schedule,
 bit-ordering equivalence and sampling lower bound remain open.
+
+### Semiclassical Fourier schedule and retained branches
+
+`Fourier.Semiclassical` constructs the most-significant-input-first adaptive
+schedule with reversed prior-output history. Its interpreter is exactly the list
+of all distinct output strings of the required length, with explicit Kraus maps.
+Each map has an exact basis-state amplitude and resets all input wires; the
+well-formed schedule preserves total Born mass and makes one measurement per wire.
+The closed mathematical Fourier-kernel comparison and sampling theorem remain open.

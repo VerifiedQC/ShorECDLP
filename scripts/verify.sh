@@ -2442,11 +2442,24 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fourierHistoryRotations
 #print axioms ShorECDLP.Paper2607_13816.fourierHistoryAngle
 #print axioms ShorECDLP.Paper2607_13816.fourierHistoryRotations_ket
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier
+#print axioms ShorECDLP.Paper2607_13816.fourierOutcomes
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_run
+#print axioms ShorECDLP.Paper2607_13816.fourierOutcomes_length
+#print axioms ShorECDLP.Paper2607_13816.fourierOutcomes_mem
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_measurements
+#print axioms ShorECDLP.Paper2607_13816.fourierClear
+#print axioms ShorECDLP.Paper2607_13816.fourierBranchCoeff
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch_ket
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_bornMass
+#print axioms ShorECDLP.Paper2607_13816.fourierOutcomes_nodup
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2421 ]]; then
-  printf 'expected 2421 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2434 ]]; then
+  printf 'expected 2434 #print axioms results\n' >&2
   exit 1
 fi
 
