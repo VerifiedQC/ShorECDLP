@@ -2414,3 +2414,7 @@ Fixed-control compilation transfers the constant-dependent CNOTs to X gates. For
 ### Complete exact controlled-comparator vectors
 
 The nonempty carry comparator now has exact `2n` X, `4n` H, `6n+1+7b₀+9w` CNOT, `3n−1` Toffoli, zero P and `n` resets, where `w` counts set bits after the first constant bit. The X/H proof follows the all-true structural history through both deferred correction copies. The actual nontrivial threshold comparator inherits the vector; the production modulus comparator has `(512, 1024, 1598, 767, 0, 256)`. A replay checks 536 carry/threshold cases at widths 0–6, including zero and out-of-range shortcuts. Whole-point exact resources and logical-event accounting remain open.
+
+### Exact unconditional comparators and width-256 adapters
+
+Fixed-control compilation now proves the actual unconditional nontrivial comparator has `2n+7b₀+9w` X, `4n` H, `6n+1` CNOT, `3n−1` Toffoli, zero P and `n` resets. It reuses the existing retained-CNOT proof and proves combined X/CNOT maximum preservation using history-independent CNOT counts. The replay checks 282 actual thresholds plus alternate virtual controls. Six width-256 adder/GE/LT adapters give complete formulas with zero-constant, zero-threshold and out-of-range branches intact. Exact modular-stage and whole-point propagation remain open.

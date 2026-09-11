@@ -64,3 +64,60 @@ theorem gidneyAddConst256_primitive_bounds
   unfold gidneyAddConst
   exact controlledGidneyAddConst256_lowered_bounds input dirty constant _ c r t hi hd hk
 end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+/-- A numeric-width exact vector, including the all-zero constant shortcut. -/
+theorem controlledGidneyAddConst256_primitive_exact (input dirty : List Wire)
+    (constant : List Bool) (q c r t : Wire)
+    (hi : input.length=256) (hd : dirty.length=255) (hk : constant.length=256) :
+    let extra := 8*(constant.headD false).toNat+10*constantBitWeight (constant.tail.take 254)+
+      (constant.tail.getLastD false).toNat
+    primitiveResources (controlledGidneyAddConst input dirty constant q c r t)=
+      if constant.all (fun b => !b) then (⟨0,0,0,0,0,0⟩ : PrimitiveResources)
+      else ⟨1022,1020,1276+extra,764,0,255⟩ := by
+  cases input with
+  | nil => simp at hi
+  | cons a input =>
+    cases dirty with
+    | nil => simp at hd
+    | cons d dirty =>
+      cases constant with
+      | nil => simp at hk
+      | cons k constant =>
+        have hi' : input.length=255 := by simpa using hi
+        have hd' : dirty.length=254 := by simpa using hd
+        have hki : input.length=constant.length := by simp_all
+        have hdi : input.length=dirty.length+1 := by omega
+        by_cases hz : (k::constant).all (fun b => !b)=true
+        · simp [controlledGidneyAddConst,hz,primitiveResources,gidneyCnotCount,gidneyToffoliCount,
+            gidneyGateCount,Quantum.AdaptiveCircuit.measurementCount]
+        have h := controlledGidneyAddConst_primitive_exact a d q c r t k input dirty constant hki hdi hz
+        simpa [hz,hi',hd',Nat.add_assoc] using h
+/-- Exact actual unconditional-adder resources at width 256, including zero constants. -/
+theorem gidneyAddConst256_primitive_exact (input dirty : List Wire)
+    (constant : List Bool) (c r t : Wire)
+    (hi : input.length=256) (hd : dirty.length=255) (hk : constant.length=256) :
+    let extra := 8*(constant.headD false).toNat+10*constantBitWeight (constant.tail.take 254)+
+      (constant.tail.getLastD false).toNat
+    primitiveResources (gidneyAddConst input dirty constant c r t)=
+      if constant.all (fun b => !b) then (⟨0,0,0,0,0,0⟩ : PrimitiveResources)
+      else ⟨1022+extra,1020,1276,764,0,255⟩ := by
+  cases input with
+  | nil => simp at hi
+  | cons a input =>
+    cases dirty with
+    | nil => simp at hd
+    | cons d dirty =>
+      cases constant with
+      | nil => simp at hk
+      | cons k constant =>
+        have hi' : input.length=255 := by simpa using hi
+        have hd' : dirty.length=254 := by simpa using hd
+        have hki : input.length=constant.length := by simp_all
+        have hdi : input.length=dirty.length+1 := by omega
+        by_cases hz : (k::constant).all (fun b => !b)=true
+        · simp [gidneyAddConst,controlledGidneyAddConst,hz,constantControlProgram,primitiveResources,
+            gidneyCnotCount,gidneyToffoliCount,gidneyGateCount,Quantum.AdaptiveCircuit.measurementCount]
+        have h := gidneyAddConst_primitive_exact a d c r t k input dirty constant hki hdi hz
+        simpa [hz,hi',hd',Nat.add_assoc] using h
+end ShorECDLP.Paper2607_13816
