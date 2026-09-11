@@ -2517,11 +2517,38 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.cyclicShift
 #print axioms ShorECDLP.Paper2607_13816.cyclicShift_injective
 #print axioms ShorECDLP.Paper2607_13816.cyclicState_shift
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_frame
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_word
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_coordinates
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_valid
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_overwrite
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_injective
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicBasis
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicBasis_orthonormal
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicBasis_shift
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_shift
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_supported
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_disabled
+#print axioms ShorECDLP.Paper2607_13816.pointAddProgram_eigenstate
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_control
+#print axioms ShorECDLP.Paper2607_13816.pointControl_valid
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_hadamard
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_rotations
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_reset
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseStepCoeff
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseIdeal
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseIdeal_eigenstate
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseBranch
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseStep
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseStep_run
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseBranch_eigenstate
+#print axioms ShorECDLP.Quantum.BranchCoherentOn.on_supported
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2496 ]]; then
-  printf 'expected 2496 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2523 ]]; then
+  printf 'expected 2523 #print axioms results\n' >&2
   exit 1
 fi
 

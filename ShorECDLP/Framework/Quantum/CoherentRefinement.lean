@@ -89,6 +89,15 @@ private theorem branch_coherent_on_supported_state
       rw [map_add, hsingle, map_smul, hbranch s hsValid, ih hpsiValid]
       simp [smul_add, smul_smul, mul_comm]
 
+/-- A fixed branch coefficient applies to every supported superposition. -/
+theorem BranchCoherentOn.on_supported
+    {ideal : State →ₗ[ℂ] State} {Valid : BasisState → Prop}
+    {branch : InstrumentBranch} {coefficient : ℂ}
+    (h : BranchCoherentOn ideal Valid branch coefficient)
+    {psi : State} (hpsi : SupportedOn Valid psi) :
+    branch.kraus psi = coefficient • ideal psi :=
+  branch_coherent_on_supported_state h hpsi
+
 /-- Coherent basis-state refinement extends, with the same aligned branch
 coefficients, to every superposition supported on valid inputs. -/
 theorem coherent_on_supported_state
