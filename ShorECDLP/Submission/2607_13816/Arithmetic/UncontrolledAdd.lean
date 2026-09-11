@@ -76,3 +76,21 @@ theorem gidneyAddConst256_wires_subset (input dirty : List Wire) (constant : Lis
         simp only [List.mem_append,List.mem_cons,List.not_mem_nil,or_false] at hh ⊢
         tauto
 end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+/-- Complete exact primitive counts for the actual unconditional source adder. -/
+theorem gidneyAddConst_primitive_exact (a d c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) :
+    primitiveResources (gidneyAddConst (a::input) (d::dirty) (k::constant) c r t)=
+      (⟨4*(input.length+1)-2+8*k.toNat+10*constantBitWeight (constant.take dirty.length)+
+          (constant.getLastD false).toNat,4*input.length,5*(input.length-1)+6,
+        3*(input.length+1)-4,0,input.length⟩ : PrimitiveResources) := by
+  let q := gidneyAddVirtualControl (a::input) (d::dirty) c r t
+  have hq : q ∉ [c,r,t]++(a::input)++(d::dirty) := addVirtual_fresh _ _ _ _ _
+  have hc : c≠q := by intro h; apply hq; simp [← h]
+  have hr : r≠q := by intro h; apply hq; simp [← h]
+  unfold gidneyAddConst
+  exact controlledGidneyAddConst_lowered_primitive_exact a d q c r t k input dirty constant hk hd hn hc hr
+end ShorECDLP.Paper2607_13816
