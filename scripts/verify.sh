@@ -2544,11 +2544,22 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointPhaseStep_run
 #print axioms ShorECDLP.Paper2607_13816.pointPhaseBranch_eigenstate
 #print axioms ShorECDLP.Quantum.BranchCoherentOn.on_supported
+#print axioms ShorECDLP.Paper2607_13816.phaseProduct
+#print axioms ShorECDLP.Paper2607_13816.dyadicPhaseAverage
+#print axioms ShorECDLP.Paper2607_13816.dyadicPhaseAverage_succ
+#print axioms ShorECDLP.Paper2607_13816.phaseProductRoot
+#print axioms ShorECDLP.Paper2607_13816.phaseProductRoot_cons
+#print axioms ShorECDLP.Paper2607_13816.phaseProductRoot_power
+#print axioms ShorECDLP.Paper2607_13816.phaseProduct_average
+#print axioms ShorECDLP.Paper2607_13816.phaseProductRoot_nil
+#print axioms ShorECDLP.Paper2607_13816.phaseProduct_eq_amplitude
+#print axioms ShorECDLP.Paper2607_13816.phaseProduct_cons_point
+#print axioms ShorECDLP.Paper2607_13816.phaseProduct_peak_mass
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2523 ]]; then
-  printf 'expected 2523 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2534 ]]; then
+  printf 'expected 2534 #print axioms results\n' >&2
   exit 1
 fi
 

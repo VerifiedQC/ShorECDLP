@@ -2587,3 +2587,12 @@ is exactly the declared Kraus branch expansion. Each character has the
 expected phase-estimation scalar, and the normalized internal-oracle
 coefficients are shared across all characters and both outcomes. The
 full repeated schedule and final sampling-distribution equality remain open.
+
+### Repeated phase-sampling scalar
+
+`OrderFinding/PhaseProduct.lean` proves that the recursive scalar of the
+recycled-control steps is exactly the dyadic geometric phase amplitude,
+including the inverse history rotations and least-significant-bit output
+order. It connects each factor to the physical point-step coefficient and
+inherits the nearest-peak lower bound. The full instrument, decoding and
+two-dimensional distribution refinement remain to be composed.
