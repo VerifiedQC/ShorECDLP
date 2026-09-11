@@ -1970,11 +1970,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.postShiftUnitary259_primitive
 #print axioms ShorECDLP.Paper2607_13816.terminalPaddingForward259_primitive
 #print axioms ShorECDLP.Paper2607_13816.terminalPaddingInverse259_primitive
+#print axioms ShorECDLP.Paper2607_13816.mcxVChain_stepControl_xCount_of_two_le
+#print axioms ShorECDLP.Paper2607_13816.mcxVChain_control_xCount
+#print axioms ShorECDLP.Paper2607_13816.computeControl_primitive
+#print axioms ShorECDLP.Paper2607_13816.rControlNonterminal_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockAForward259_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockCForward9_primitive
+#print axioms ShorECDLP.Paper2607_13816.quotientSwap_constantScratch_length
+#print axioms ShorECDLP.Paper2607_13816.unaryActionTree_leafCostSum_const
+#print axioms ShorECDLP.Paper2607_13816.unaryActionUnitary_xCount
+#print axioms ShorECDLP.Paper2607_13816.quotientSwapUnitary9_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockDForward9_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockBAdaptive9_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockEAdaptive_eq_parts
+#print axioms ShorECDLP.Paper2607_13816.prepareLatestPaperTBoundary256_primitive
+#print axioms ShorECDLP.Paper2607_13816.restoreLatestPaperTBoundary256_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockEAdaptive256_primitive
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockHForward256_primitive
+#print axioms ShorECDLP.Paper2607_13816.primitiveResources_unitary_append
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1949 ]]; then
-  printf 'expected 1949 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1968 ]]; then
+  printf 'expected 1968 #print axioms results\n' >&2
   exit 1
 fi
 

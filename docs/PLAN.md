@@ -1,30 +1,20 @@
 # ShorECDLP implementation plan
 
-ShorECDLP is an ecdsa.fail-style Lean verification repository for quantum resource-estimate
-submissions against secp256k1. It currently contains one complete, deliberately naive construction.
-The next construction will implement the space-efficient algorithm from
-[arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) as an independent submission.
+ShorECDLP verifies quantum resource-estimate submissions against secp256k1 in Lean.
+The Naive submission is complete. The independent space-efficient submission implements
+[arXiv:2607.13816v2](https://arxiv.org/html/2607.13816v2) and remains under construction.
 
-**Status snapshot.** The verified Naive result and merged paper foundation below are on
-`main@11366f2eaecf86ef87097667eb6c1649580fa504`. PR #56 → PR #57 → PR #58 → PR #59
-→ PR #60 → PR #61 → PR #62 → PR #63 → PR #64 → PR #65 → PR #66 → PR #67 → PR #68
-→ PR #69 → PR #70 → PR #71 → PR #72 → PR #73 → PR #74 → PR #75 → PR #76 → PR #77
-→ PR #78 → PR #79 → PR #80 → PR #81 → PR #82 → PR #83 → PR #84 landed the source split, adaptive Kraus semantics,
-coherent-refinement bridge, measurement-based uncomputation, pure EEA model, indexed EEA
-bounds/windows, and all twenty-one Phase-5 circuit units ending with the source-ordered indexed
-four-phase microstep. Phase 6 schedule unit 1 serially composes the exact
-1,620 one-based forward steps, the descending explicit reverse stream, the adaptive forward
-program, and the direct automatically routed trace. That trace is noncircular relative to the
-complete schedule, but its route extraction and Block-B endpoint semantics remain circuit-bound.
-Phase 6 schedule-cancellation unit 2 is merged in PR #84. It proves that the same forward-route
-invariant suffices for the pinned reverse to restore the complete basis state: inverse decoder
-routes are derived inside the proof rather than assumed. PR #85 is merged: it proves that one
-explicit repaired 580-role allocation satisfies every physical component layout at all 1,620
-schedule indices. The reachable-state encoding/invariant, maximum-live allocation and pinned 579
-target, and aggregate paper resources remain open.
-A `✓` means a
-declaration is root-reachable and covered by the repository verifier on the stated baseline or
-exact review head. “Target” is not a proved claim.
+**Status snapshot.** The paper's EEA and in-place arithmetic through Phase 8 are proved.
+Phase 9 has total controlled point-addition correctness and cleanup, with a proved upper
+bound of 839 physical wires; its complete primitive resource vector remains unfinished.
+The current arithmetic and EEA block certificates count the actual circuits, including
+measurement cleanup and explicit inverse costs. They still need whole-program propagation.
+Phases 10–12 (semiclassical order finding, signed-window/QROM scheduling, and the final
+adaptive submission contract) remain open. Neither the paper's 835-wire target nor its
+complete end-to-end estimate is a verified claim.
+
+The dependency sections below retain historical construction notes. A `✓` marks a declaration
+covered by the repository verifier at the stated baseline; “target” does not mean proved.
 
 ## 1. Current verified result
 
@@ -2367,3 +2357,8 @@ Remaining unitary components and indexed-step/whole-point propagation remain ope
 The actual 259-work/9-length shift and terminal-padding circuits have exact primitive
 vectors, preserving the explicit padding inverse’s extra X gates. Indexed-step and
 whole-point aggregation remain open.
+
+The coherent control masks and complete A/C, B, D, E and H blocks now have exact
+primitive vectors. These compose actual interval/coefficient circuits with their
+boundary transforms, terminal tests, quotient selection and scheduled refresh.
+Forward indexed-step, reverse-step and whole-point primitive aggregation remain open.

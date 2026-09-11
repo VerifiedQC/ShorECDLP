@@ -1,3 +1,10 @@
+import ShorECDLP.Submission.«2607_13816».EEA.BlockHPrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».EEA.BlockEPrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».EEA.BlockBPrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».EEA.BlockDPrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».EEA.QuotientPrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».EEA.BlockAPrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».EEA.ControlPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.ShiftPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.PhasePrimitiveCounts
