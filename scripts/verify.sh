@@ -1973,6 +1973,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointWordProgram_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.pointCorrectionCircuit_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.totalPointProgram_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.CorrectionFragment.erase
+#print axioms ShorECDLP.Paper2607_13816.CorrectionFragment.events
+#print axioms ShorECDLP.Paper2607_13816.correctionBlockErase
+#print axioms ShorECDLP.Paper2607_13816.correctionBlockEvents
+#print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.erase
+#print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.events
+#print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.seq
+#print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.erase_seq
+#print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.events_seq
+#print axioms ShorECDLP.Paper2607_13816.registerZFragments
+#print axioms ShorECDLP.Paper2607_13816.registerZFragments_erase
+#print axioms ShorECDLP.Paper2607_13816.registerZFragments_events
+#print axioms ShorECDLP.Paper2607_13816.correctionResetThen
+#print axioms ShorECDLP.Paper2607_13816.correctionResetThen_erase
+#print axioms ShorECDLP.Paper2607_13816.correctionResetThen_events
+#print axioms ShorECDLP.Paper2607_13816.registerZResetSource
+#print axioms ShorECDLP.Paper2607_13816.registerZResetSource_erase
+#print axioms ShorECDLP.Paper2607_13816.registerZResetSource_events
+#print axioms ShorECDLP.Paper2607_13816.doubleZCorrectionFragments
+#print axioms ShorECDLP.Paper2607_13816.doubleZCorrectionFragments_erase
+#print axioms ShorECDLP.Paper2607_13816.doubleZCorrectionFragments_events
+#print axioms ShorECDLP.Paper2607_13816.doubleZResetSource
+#print axioms ShorECDLP.Paper2607_13816.doubleZResetSource_erase
+#print axioms ShorECDLP.Paper2607_13816.doubleZResetSource_events
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_cnot_le
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE256_primitive_bounds
@@ -2149,8 +2173,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2125 ]]; then
-  printf 'expected 2125 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2149 ]]; then
+  printf 'expected 2149 #print axioms results\n' >&2
   exit 1
 fi
 
