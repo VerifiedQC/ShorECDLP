@@ -2810,3 +2810,15 @@ these two input values and preserves both registers and all external wires;
 no separate scalar-digit binding assumptions remain. Root setup/cleanup,
 phase preparation and Fourier sampling, aggregate resources and final
 success-contract composition remain open.
+
+### Clean control and physical phase preparation
+
+`Window/PhasePrepare` wraps scalar computation with actual X gates that set
+and restore control 836. From clean work and padding, its coherent output
+replaces only the point word by the physical input scalars' combination.
+It then prepends 514 actual Hadamards on the two 257-bit input registers;
+a support proof establishes readiness of the resulting superposition and
+composes the same circuit's coherent semantics. Direct support remains
+1,383 wires; the added preparation does not change T or measurement counts.
+The final Fourier sampling, aggregate resource/success contract, and tighter
+lifetime allocation remain open.
