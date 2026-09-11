@@ -2723,3 +2723,8 @@ The nine-stage coordinate program now uses three positive X queries and two sign
 ### Exceptional correction under a selected physical control
 
 The existing exceptional-point circuit can now have its physical control reassigned from wire 836 to any wire outside the point word and clean correction scratch. A bijective gate relabeling adds no gates. Complete classical execution, enabled point-word correction, disabled identity, full outside-point frame, physical well-formedness and ket semantics are proved. T count is unchanged, and any selected control below 855 preserves the 855-wire support bound. This prepares decoder-selected correction; the actual table traversal and its composition with signed coordinates remain open.
+
+
+### Measured exceptional-correction table traversal
+
+An actual sixteen-bit decoder now dispatches relabeled exceptional-point correction circuits, using the fifteen address bits plus sign and sixteen reusable path wires. A stronger unconditional frame proves that correction leaves never change decoder wires even when correction scratch is dirty. The measured traversal coherently implements its literal unitary reference, is physically well formed, remains within 855 wires, and performs exactly 65,535 decoder measurements. Its T count is the actual leaf-cost sum plus 458,745. This is an additional correction traversal beyond the five coordinate queries. The selected-entry functional theorem, clean-work restoration and total signed-point composition remain open; no complete windowed point-addition claim is made yet.
