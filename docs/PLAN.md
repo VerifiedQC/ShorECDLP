@@ -2328,3 +2328,7 @@ Whole-point primitive propagation and logical correction/table events remain ope
 Primitive bounds now cover variable modular addition/subtraction and doubling/halving.
 The coherent carry/comparison/shift pieces have exact vectors and adjoint count
 preservation; measured corrections compose separately. Whole-point propagation remains open.
+
+All six primitive budgets now follow actual forward/inverse Horner and square loops,
+including copied controls and the n-1 intervening double/halve stages. EEA and whole-point
+primitive propagation, logical correction/table events, and later phases remain open.
