@@ -19,7 +19,7 @@ lake --wfail build
 # anything not reachable from the root aggregator.
 SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
-axiom_output="$({ lake env lean /dev/stdin <<'LEAN'
+axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocess_tCount
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_tCount
@@ -1989,11 +1989,27 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnaryShared_primitive
 #print axioms ShorECDLP.Paper2607_13816.blockHForward256_primitive
 #print axioms ShorECDLP.Paper2607_13816.primitiveResources_unitary_append
+#print axioms ShorECDLP.Paper2607_13816.intervalLengthQ_le_endpointScratch
+#print axioms ShorECDLP.Paper2607_13816.intervalLengthQ_sub_two_le_equalityScratch
+#print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive_eq_parts
+#print axioms ShorECDLP.Paper2607_13816.indexedStepAdaptive256_primitive
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleAdaptive256_primitive
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardAdaptive_primitive
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_leaves_eq_labels_length
+#print axioms ShorECDLP.Paper2607_13816.dualUnaryAction_internalNodes_add_one
+#print axioms ShorECDLP.Paper2607_13816.unaryAction_leaves_eq_labels_length
+#print axioms ShorECDLP.Paper2607_13816.unaryAction_internalNodes_add_one
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefix_leaf_count
+#print axioms ShorECDLP.Paper2607_13816.intervalPrimitiveFormula9_eq_shape
+#print axioms ShorECDLP.Paper2607_13816.indexedStepPrimitiveFormula256_eq_shape
+#print axioms ShorECDLP.Paper2607_13816.indexedSchedulePrimitiveFormula256_eq_shape
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardPrimitive_sum
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardPrimitive_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1968 ]]; then
-  printf 'expected 1968 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1984 ]]; then
+  printf 'expected 1984 #print axioms results\n' >&2
   exit 1
 fi
 
