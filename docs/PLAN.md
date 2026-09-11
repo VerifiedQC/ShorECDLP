@@ -2310,3 +2310,8 @@ The correction now enumerates `[infinity, C, -C, -(C+C)]` in a fixed order and d
 ### Phase 9 shared total-point physical layout
 
 `PointSupport` proves every gate and measurement branch of the complete `pointAddProgram C` uses only labels 0–838. The resulting same-program certificate combines total group semantics, coherent execution, exact executable T/measurement counts and a conservative 839-wire bound, four above the source target of 835. The proof includes arbitrary constant patterns, removes the unconditional adder's virtual control, and reuses one bank throughout square/subtract/uncompute and all exceptional corrections. The other resource-vector components required by §3.3 remain open; this is not Phase 9 completion.
+
+Primitive budgets now also cover every 256-bit controlled and unconditional constant adder.
+Fixed-control lowering preserves H/Toffoli/phase/measurement counts, cannot increase CNOT,
+and bounds new X by the original X plus CNOT counts. These are proved pattern-independent
+upper bounds; full point-program propagation remains open.
