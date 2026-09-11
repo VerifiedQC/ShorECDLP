@@ -2380,3 +2380,13 @@ componentwise budgets because constant arithmetic uses pattern-independent bound
 existing exact T/measurement certificates remain unchanged. All 257 production
 length rows are replayed at two wire offsets, plus both totals and six fixed streams.
 Whole-point primitive propagation and logical correction/table events remain open.
+
+Both complete Figure 15 schedules now have primitive budgets of 47,567,435 X,
+24,259,500 H, 73,396,358 CNOT, 38,515,101 Toffoli, zero P and 11,343,835
+measurements. The proof includes the 256-bit reset, every retained history,
+its selected H-X-H corrections, bank relabeling and 256 explicit three-CNOT swaps.
+Adding both zero predicates gives zero-allowed division/multiplication budgets
+47,568,459 X, 24,259,500 H, 73,396,360 CNOT, 38,516,119 Toffoli, zero P and
+11,343,835 measurements. The constant-arithmetic components remain conservative;
+these bounds do not replace the existing exact T/measurement certificates or
+close Phase 9's exact resource-vector and logical-event obligations.
