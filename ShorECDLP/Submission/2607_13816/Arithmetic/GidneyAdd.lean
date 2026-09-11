@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.SourceCorrections
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PrimitiveTransforms
 
 /-!
@@ -2268,4 +2269,161 @@ theorem controlledGidneyAddConst_lowered_primitive_exact (a d q c r t : Wire) (k
     simp only [he] at hx hp hcx
     simp only [PrimitiveResources.mk.injEq]
     exact ⟨hx,hp.1,hcx,hp.2.1,hp.2.2.1,hp.2.2.2⟩
+end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+private def gidneyAddSourceTail (q current spare ancilla : Wire)
+    (callback : List Bool → List CorrectionFragment) (outcomes : List Bool) :
+    List Wire → List Wire → List Bool → CorrectionProgram
+  | [a],[],[k] => .unitary [.ordinary ((if k then [.CX q a] else []) ++ [.CX current a])]
+      (.reset current (.unitary (callback (outcomes++[false])) .done)
+        (.unitary (callback (outcomes++[true])) .done))
+  | a::input,d::dirty,k::constant =>
+      .unitary [.ordinary (gidneyAddCarryCell q current spare ancilla a d k)]
+        (.reset current
+          (gidneyAddSourceTail q spare current ancilla callback (outcomes++[false]) input dirty constant)
+          (gidneyAddSourceTail q spare current ancilla callback (outcomes++[true]) input dirty constant))
+  | _,_,_ => .done
+private theorem gidneyAddSourceTail_erase (q current spare ancilla : Wire)
+    (callback : List Bool → List CorrectionFragment) (outcomes : List Bool) (input dirty : List Wire) (constant : List Bool) :
+    (gidneyAddSourceTail q current spare ancilla callback outcomes input dirty constant).erase=
+      gidneyAddTail q current spare ancilla (fun bs => correctionBlockErase (callback bs)) outcomes input dirty constant := by
+  induction input generalizing current spare outcomes dirty constant with
+  | nil => cases dirty <;> cases constant <;> rfl
+  | cons a input ih =>
+    cases dirty with
+    | nil => cases input <;> cases constant with
+      | nil => rfl
+      | cons k ks => cases ks <;> simp [gidneyAddSourceTail,gidneyAddTail,CorrectionProgram.erase,correctionBlockErase,CorrectionFragment.erase]
+    | cons d dirty =>
+      cases constant with
+      | nil => cases input <;> rfl
+      | cons k ks =>
+        simp [gidneyAddSourceTail,gidneyAddTail,CorrectionProgram.erase,
+          correctionBlockErase,CorrectionFragment.erase,ih]
+/-- The actual controlled Gidney adder with both deferred correction copies marked. -/
+def controlledGidneyAddConstSource (input dirty : List Wire) (constant : List Bool)
+    (q carry spare ancilla : Wire) : CorrectionProgram :=
+  if constant.all (fun k => !k) then .done else
+  match input,dirty,constant with
+  | [a],[],[k] => .unitary [.ordinary (if k then [.CX q a] else [])] .done
+  | a::input,d::dirty,k::constant =>
+      let callback := fun bs => doubleZCorrectionFragments (d::dirty) bs
+        (gidneyAddCleanup (a::input) (d::dirty) (k::constant) q carry)
+      .unitary [.ordinary (gidneyAddCarryCell q carry spare ancilla a d k)]
+        (gidneyAddSourceTail q spare carry ancilla callback (List.nil : List Bool) input dirty constant)
+  | _,_,_ => .done
+theorem controlledGidneyAddConstSource_erase (input dirty : List Wire) (constant : List Bool)
+    (q carry spare ancilla : Wire) :
+    (controlledGidneyAddConstSource input dirty constant q carry spare ancilla).erase=
+      controlledGidneyAddConst input dirty constant q carry spare ancilla := by
+  have hz (ws : List Wire) (bs : List Bool) (middle : Circuit) := doubleZCorrectionFragments_erase ws bs middle
+  simp only [correctionBlockErase] at hz
+  unfold controlledGidneyAddConstSource controlledGidneyAddConst
+  split
+  · rfl
+  · cases input with
+    | nil => cases dirty <;> cases constant <;> rfl
+    | cons a input =>
+      cases dirty with
+      | nil => cases input <;> cases constant with
+        | nil => rfl
+        | cons k ks => cases ks <;> simp [CorrectionProgram.erase,correctionBlockErase,CorrectionFragment.erase]
+      | cons d dirty =>
+        cases constant with
+        | nil => cases input <;> rfl
+        | cons k ks =>
+          simp [CorrectionProgram.erase,correctionBlockErase,CorrectionFragment.erase,
+            gidneyAddSourceTail_erase,hz,List.append_assoc]
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+private theorem gidneyAddSourceTail_events (q current spare ancilla : Wire)
+    (callback : List Bool → List CorrectionFragment) (outcomes : List Bool)
+    (input dirty : List Wire) (constant : List Bool) (N base perTrue : Nat)
+    (hd : input.length=dirty.length+1) (hk : constant.length=input.length)
+    (hp : outcomes.length+input.length=N)
+    (hc : ∀ bs, bs.length=N → correctionBlockEvents (callback bs)=base+perTrue*bs.count true) :
+    (gidneyAddSourceTail q current spare ancilla callback outcomes input dirty constant).events=
+      base+perTrue*(outcomes.count true+input.length) := by
+  induction input generalizing current spare outcomes dirty constant with
+  | nil => simp at hd
+  | cons a input ih =>
+    cases input with
+    | nil =>
+      have hd0 : dirty=[] := by
+        have hh : dirty.length=0 := by simpa using hd.symm
+        simpa using hh
+      have hk1 : constant.length=1 := by simpa using hk
+      obtain ⟨k,rfl⟩ : ∃ k, constant=[k] := by
+        cases constant with
+        | nil => simp at hk1
+        | cons k ks =>
+          have ht : ks=[] := by simpa using hk1
+          exact ⟨k, by rw [ht]⟩
+      subst dirty
+      have hf := hc (outcomes++[false]) (by simpa using hp)
+      have ht := hc (outcomes++[true]) (by simpa using hp)
+      simp only [gidneyAddSourceTail,CorrectionProgram.events,correctionBlockEvents,
+        List.map_cons,List.map_nil,List.sum_cons,List.sum_nil,CorrectionFragment.events,Nat.zero_add]
+      simp only [correctionBlockEvents] at hf ht
+      rw [hf,ht]
+      simp
+    | cons a' input =>
+      cases dirty with
+      | nil => simp at hd
+      | cons d dirty =>
+        cases constant with
+        | nil => simp at hk
+        | cons k constant =>
+          have hdt : (a'::input).length=dirty.length+1 := by simpa using hd
+          have hkt : constant.length=(a'::input).length := by simpa using hk
+          have hf := ih spare current (outcomes++[false]) dirty constant hdt hkt (by
+            simp only [List.length_append,List.length_cons,List.length_nil] at *; omega)
+          have ht := ih spare current (outcomes++[true]) dirty constant hdt hkt (by
+            simp only [List.length_append,List.length_cons,List.length_nil] at *; omega)
+          simp only [gidneyAddSourceTail,CorrectionProgram.events,correctionBlockEvents,
+            List.map_cons,List.map_nil,List.sum_cons,List.sum_nil,CorrectionFragment.events,Nat.zero_add,hf,ht]
+          simp
+          omega
+/-- A nonzero n-bit addition has two selected correction copies over n-1 carries. -/
+theorem controlledGidneyAddConstSource_events (input dirty : List Wire) (constant : List Bool)
+    (q carry spare ancilla : Wire) (hi : 0 < input.length)
+    (hd : dirty.length=input.length-1) (hk : constant.length=input.length) :
+    (controlledGidneyAddConstSource input dirty constant q carry spare ancilla).events=
+      if constant.all (fun k => !k) then 0 else 2*(input.length-1) := by
+  unfold controlledGidneyAddConstSource
+  split
+  · rfl
+  · cases input with
+    | nil => simp at hi
+    | cons a input =>
+      cases input with
+      | nil =>
+        have hd0 : dirty=[] := by simpa using hd
+        have hk1 : constant.length=1 := by simpa using hk
+        obtain ⟨k,rfl⟩ : ∃ k, constant=[k] := by
+          cases constant with
+          | nil => simp at hk1
+          | cons k ks =>
+            have ht : ks=[] := by simpa using hk1
+            exact ⟨k, by rw [ht]⟩
+        subst dirty
+        rfl
+      | cons a' input =>
+        cases dirty with
+        | nil => simp at hd
+        | cons d dirty =>
+          cases constant with
+          | nil => simp at hk
+          | cons k constant =>
+            simp only [CorrectionProgram.events,correctionBlockEvents,List.map_cons,List.map_nil,
+              List.sum_cons,List.sum_nil,CorrectionFragment.events,Nat.zero_add]
+            have hh := gidneyAddSourceTail_events q spare carry ancilla
+              (fun bs => doubleZCorrectionFragments (d::dirty) bs
+                (gidneyAddCleanup (a::a'::input) (d::dirty) (k::constant) q carry))
+              (List.nil : List Bool) (a'::input) dirty constant (input.length+1) 0 2
+              (by simp only [List.length_cons] at *; omega) (by simpa using hk) (by simp) (by
+                intro bs hb
+                simpa using doubleZCorrectionFragments_events (d::dirty) bs _ (by simpa [hd] using hb))
+            simpa using hh
 end ShorECDLP.Paper2607_13816
