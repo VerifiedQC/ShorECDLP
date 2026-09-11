@@ -252,7 +252,7 @@ def blockAForward
     toggleTerminal registers
   }
 
-private def blockAInverse
+def blockAInverse
     (registers : IndexedStepRegisters) : Circuit :=
   circuit! {
     toggleTerminal registers;
@@ -345,7 +345,7 @@ def blockCForward (registers : IndexedStepRegisters) : Circuit :=
     toggleTerminal registers
   }
 
-private def blockCInverse (registers : IndexedStepRegisters) : Circuit :=
+def blockCInverse (registers : IndexedStepRegisters) : Circuit :=
   circuit! {
     toggleTerminal registers;
     terminalEpochSpill registers.terminal registers.shiftEpoch registers.quotientLow;
@@ -401,7 +401,7 @@ def blockDForward
     blockD3Forward registers
   }
 
-private def blockDInverse
+def blockDInverse
     (registers : IndexedStepRegisters) (window : ActiveWindow) : Circuit :=
   circuit! {
     phase3LengthControl registers;
@@ -509,7 +509,7 @@ def blockHForward
     }
   else []
 
-private def blockHInverse
+def blockHInverse
     (registers : IndexedStepRegisters) (n T : Nat) : Circuit :=
   if T % 4 = 0 then
     circuit! {
@@ -13925,6 +13925,18 @@ private def inverseStepFinish (r : IndexedStepRegisters) : Circuit :=
 def indexedStepInverseAdaptive (registers : IndexedStepRegisters) (n T : Nat) :
     Quantum.AdaptiveCircuit :=
   (((((((((((adaptiveUnitary (blockHInverse registers n T)).seq (phaseUpdateEpochInverseAdaptive registers.phaseUpdate registers.shiftEpoch)).seq (adaptiveUnitary (inverseCoefficientEntry registers n))).seq (coefficientPrefixInverseAdaptive (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .add true .work2)).seq (adaptiveUnitary (inverseCoefficientMiddle registers))).seq (coefficientPrefixInverseAdaptive (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .sub false .work2)).seq (adaptiveUnitary (inverseRemainderEntry registers n (certifiedActiveWindows n T).quotientSwap))).seq (intervalAddSubInverse (registers.remainder (certifiedActiveWindows n T).remainder) n (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .add false .work1)).seq (adaptiveUnitary (inverseRemainderMiddle registers))).seq (intervalAddSubInverse (registers.remainder (certifiedActiveWindows n T).remainder) n (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .sub true .work1)).seq (adaptiveUnitary (inverseStepFinish registers)))
+
+/-- Expose the actual explicit inverse stages without expanding either measured scan. -/
+theorem indexedStepInverseAdaptive_eq_parts (r : IndexedStepRegisters) (T : Nat) :
+    indexedStepInverseAdaptive r 256 T =
+    (((((((((((AdaptiveCircuit.unitary (blockHInverse r 256 T) .done).seq (phaseUpdateEpochInverseAdaptive r.phaseUpdate r.shiftEpoch)).seq (AdaptiveCircuit.unitary ((blockFForward r).adjoint ++ prepareLatestPaperTBoundary r.tBoundary 256 ++ computeControl [r.phase1] 1 r.control r.blockScratch) .done)).seq (coefficientPrefixInverseAdaptive (r.coefficient (certifiedActiveWindows 256 T).coefficient) (certifiedActiveWindows 256 T).coefficient.start (certifiedActiveWindows 256 T).coefficient.stop .add true .work2)).seq (AdaptiveCircuit.unitary (computeControl [r.phase1] 1 r.control r.blockScratch ++ [.CX r.phase1 r.sign] ++ computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch ++ computeControl [r.phase1,r.terminal] 1 r.control r.blockScratch ++ computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch) .done)).seq (coefficientPrefixInverseAdaptive (r.coefficient (certifiedActiveWindows 256 T).coefficient) (certifiedActiveWindows 256 T).coefficient.start (certifiedActiveWindows 256 T).coefficient.stop .sub false .work2)).seq (AdaptiveCircuit.unitary (computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch ++ computeControl [r.phase1,r.terminal] 1 r.control r.blockScratch ++ computeControl [r.phase2,r.sign] 2 r.terminal r.blockScratch ++ restoreLatestPaperTBoundary r.tBoundary 256 ++ blockDInverse r (certifiedActiveWindows 256 T).quotientSwap ++ blockCInverse r ++ (([.CCX r.phase2 r.sign r.terminal] ++ rControlNonterminal [r.phase1,r.terminal] 0 r.control r.lengthRPrime (r.blockScratch.getD 0 0) (r.blockScratch.drop 1)) ++ [.CCX r.phase2 r.sign r.terminal])) .done)).seq (intervalAddSubInverse (r.remainder (certifiedActiveWindows 256 T).remainder) 256 (certifiedActiveWindows 256 T).remainder.start (certifiedActiveWindows 256 T).remainder.stop .add false .work1)).seq (AdaptiveCircuit.unitary ((([.CCX r.phase2 r.sign r.terminal] ++ rControlNonterminal [r.phase1,r.terminal] 0 r.control r.lengthRPrime (r.blockScratch.getD 0 0) (r.blockScratch.drop 1)) ++ [.CCX r.phase2 r.sign r.terminal]) ++ blockB2 r ++ rControlNonterminal [r.phase1] 0 r.control r.lengthRPrime r.terminal r.blockScratch) .done)).seq (intervalAddSubInverse (r.remainder (certifiedActiveWindows 256 T).remainder) 256 (certifiedActiveWindows 256 T).remainder.start (certifiedActiveWindows 256 T).remainder.stop .sub true .work1)).seq (AdaptiveCircuit.unitary (rControlNonterminal [r.phase1] 0 r.control r.lengthRPrime r.terminal r.blockScratch ++ blockAInverse r) .done)) := by
+  rfl
+
+/-- The actual remainder block as controls surrounding its two measured scans. -/
+theorem blockBAdaptive_eq_parts (r : IndexedStepRegisters) (n : Nat) (w : ActiveWindow) :
+    blockBAdaptive r n w =
+    ((AdaptiveCircuit.unitary (rControlNonterminal [r.phase1] 0 r.control r.lengthRPrime r.terminal r.blockScratch) .done).seq ((intervalAddSub (r.remainder w) n w.start w.stop .sub true .work1).seq (AdaptiveCircuit.unitary (rControlNonterminal [r.phase1] 0 r.control r.lengthRPrime r.terminal r.blockScratch) .done))).seq ((AdaptiveCircuit.unitary (blockB2 r) .done).seq ((AdaptiveCircuit.unitary ((([.CCX r.phase2 r.sign r.terminal] ++ rControlNonterminal [r.phase1,r.terminal] 0 r.control r.lengthRPrime (r.blockScratch.getD 0 0) (r.blockScratch.drop 1)) ++ [.CCX r.phase2 r.sign r.terminal])) .done).seq ((intervalAddSub (r.remainder w) n w.start w.stop .add false .work1).seq (AdaptiveCircuit.unitary ((([.CCX r.phase2 r.sign r.terminal] ++ rControlNonterminal [r.phase1,r.terminal] 0 r.control r.lengthRPrime (r.blockScratch.getD 0 0) (r.blockScratch.drop 1)) ++ [.CCX r.phase2 r.sign r.terminal])) .done)))) := by
+  rfl
 
 private theorem inverseAdaptive_source_split (registers : IndexedStepRegisters) (n T : Nat) :
     ((blockHInverse registers n T) ++ (blockGInverse registers) ++ (inverseCoefficientEntry registers n) ++ (coefficientPrefixInverseUnitary (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .add true .work2) ++ (inverseCoefficientMiddle registers) ++ (coefficientPrefixInverseUnitary (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .sub false .work2) ++ (inverseRemainderEntry registers n (certifiedActiveWindows n T).quotientSwap) ++ (intervalAddSubInverseUnitary (registers.remainder (certifiedActiveWindows n T).remainder) n (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .add false .work1) ++ (inverseRemainderMiddle registers) ++ (intervalAddSubInverseUnitary (registers.remainder (certifiedActiveWindows n T).remainder) n (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .sub true .work1) ++ (inverseStepFinish registers))=indexedStepInverseUnitary registers n T := by

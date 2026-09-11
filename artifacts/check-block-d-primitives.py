@@ -22,7 +22,9 @@ def main : IO Unit := do
       let v : PrimitiveResources := ⟨48+4*nodes,0,170+2*leaves+2*nodes,108+leaves+2*nodes,0,0⟩
       unless primitiveResources (.unitary (blockDForward r w) .done) == v do
         throw (IO.userError "indexed quotient block primitive mismatch")
-      checked := checked+1
+      unless primitiveResources (.unitary (blockDInverse r w) .done) == v do
+        throw (IO.userError "inverse quotient block primitive mismatch")
+      checked := checked+2
   IO.println s!"{checked} actual production D blocks passed"
 """
 if __name__ == "__main__":

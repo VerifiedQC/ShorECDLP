@@ -16,7 +16,8 @@ def main : IO Unit := do
       List.range' (offset+522) 9,List.range' (offset+531) 9,
       List.range' (offset+540) 9,List.range' (offset+549) 9,List.range' (offset+558) 22⟩
     for (c,v) in [(blockAForward r,(⟨108,0,1599,906,0,0⟩ : PrimitiveResources)),
-        (blockCForward r,⟨4,0,3,35,0,0⟩)] do
+        (blockCForward r,⟨4,0,3,35,0,0⟩),
+        (blockAInverse r,⟨140,0,1599,906,0,0⟩),(blockCInverse r,⟨4,0,3,35,0,0⟩)] do
       unless primitiveResources (.unitary c .done) == v do
         throw (IO.userError "indexed block primitive mismatch")
       checked := checked+1

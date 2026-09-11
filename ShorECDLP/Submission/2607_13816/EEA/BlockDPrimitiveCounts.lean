@@ -63,4 +63,36 @@ theorem blockDForward9_primitive (r : IndexedStepRegisters) (w : ActiveWindow)
     gidneyToffoliCount,AdaptiveCircuit.measurementCount,primitiveXCost,primitiveHCost,primitivePhaseCost,
     zeroBitCount,Nat.testBit,Nat.shiftRight_eq_div_pow,mcxVChainCnotCost,mcxVChainToffoliCost]
   omega
+/-- Exact production quotient-length and sign-selection block, including explicit decrement masks. -/
+theorem blockDInverse9_primitive (r : IndexedStepRegisters) (w : ActiveWindow)
+    (hl : QuotientSwapLayout (r.quotient w) w.start w.stop)
+    (ht : r.lengthT.length=9) (hq : r.lengthQ.length=9) (hs : 8≤r.sourceScratch.length) :
+    primitiveResources (.unitary (blockDInverse r w) .done)=
+      (⟨48+4*(quotientSwapTree (r.quotient w) w.start w.stop).internalNodes,0,
+        170+2*(quotientSwapTree (r.quotient w) w.start w.stop).leaves+
+          2*(quotientSwapTree (r.quotient w) w.start w.stop).internalNodes,
+        108+(quotientSwapTree (r.quotient w) w.start w.stop).leaves+
+          2*(quotientSwapTree (r.quotient w) w.start w.stop).internalNodes,0,0⟩ : PrimitiveResources) := by
+  have hc : (r.sourceScratch.take (r.lengthQ.length-1)).length=8 := by
+    simp only [List.length_take,hq]; omega
+  change primitiveResources (.unitary (circuit! {
+    computeControl [r.phase1,r.phase2] 1 r.control r.sourceScratch;
+    controlledIncrement r.control r.lengthQ (r.sourceScratch.take (r.lengthQ.length-1));
+    computeControl [r.phase1,r.phase2] 1 r.control r.sourceScratch;
+    gate! Gate.CX r.phase1 r.control; gate! Gate.CX r.phase2 r.control;
+    quotientSwapUnitary (r.quotient w) w.start w.stop;
+    gate! Gate.CX r.phase2 r.control; gate! Gate.CX r.phase1 r.control;
+    computeControl [r.phase1,r.phase2] 2 r.control r.sourceScratch;
+    controlledDecrement r.control r.lengthQ (r.sourceScratch.take (r.lengthQ.length-1));
+    computeControl [r.phase1,r.phase2] 2 r.control r.sourceScratch
+  }) .done)=_
+  simp only [primitiveResources_unitary_append]
+  rw [computeControl_primitive _ _ _ _ (by simp),computeControl_primitive _ _ _ _ (by simp),
+    increment9_primitive _ _ _ hq hc,decrement9_primitive _ _ _ hq hc,
+    quotientSwapUnitary9_primitive _ hl ht]
+  norm_num [primitiveResources,PrimitiveResources.add,gidneyGateCount,gidneyCnotCount,
+    gidneyToffoliCount,AdaptiveCircuit.measurementCount,primitiveXCost,primitiveHCost,primitivePhaseCost,
+    zeroBitCount,Nat.testBit,Nat.shiftRight_eq_div_pow,mcxVChainCnotCost,mcxVChainToffoliCost]
+  omega
+
 end ShorECDLP.Paper2607_13816

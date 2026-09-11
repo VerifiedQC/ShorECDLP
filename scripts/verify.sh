@@ -2005,11 +2005,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedSchedulePrimitiveFormula256_eq_shape
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardPrimitive_sum
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardPrimitive_certificate
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptive_eq_parts
+#print axioms ShorECDLP.Paper2607_13816.blockBAdaptive_eq_parts
+#print axioms ShorECDLP.Paper2607_13816.blockAInverse259_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockCInverse9_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockDInverse9_primitive
+#print axioms ShorECDLP.Paper2607_13816.swapWorkAndLengthUnarySharedInverse_primitive
+#print axioms ShorECDLP.Paper2607_13816.blockHInverse_primitive
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptive256_primitive
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseAdaptive256_primitive
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePrimitive_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1984 ]]; then
-  printf 'expected 1984 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1994 ]]; then
+  printf 'expected 1994 #print axioms results\n' >&2
   exit 1
 fi
 
