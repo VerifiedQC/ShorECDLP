@@ -2394,3 +2394,7 @@ close Phase 9's exact resource-vector and logical-event obligations.
 ### Coordinate primitive propagation
 
 The actual nine-stage coordinate circuit now has conservative componentwise bounds: 100,961,378 X, 50,639,660 H, 156,187,745 CNOT, 79,278,324 Toffoli and 23,217,835 measurements, with exactly zero P gates. This includes both zero-allowed arithmetic calls, the square/subtract pair, all constant stages and negation. Exceptional-point correction and exact primitive totals remain open.
+
+### Complete point primitive bounds
+
+The actual exceptional-point circuit now has exact per-edge primitive vectors from the target-deleted equality masks and conservative whole-program bounds. With `n = (pointCorrectionWordEdges hC).length`, the actual total point program is bounded by 100,961,378 + 3,076n X, 50,639,660 H, 156,187,745 CNOT, 79,278,324 + 3,061n Toffoli, and 23,217,835 measurements, with exactly zero P gates. The correction adds only X and Toffoli gates. These are conservative primitive bounds, not exact totals or a new space claim; Phase 9 exact totals and subsequent phases remain open. The replay artifact checks 930 small selectors and 90 production edges against independently computed vectors.
