@@ -2733,3 +2733,9 @@ The measured correction-table reference now equals the single correction selecte
 16-bit address, on clean decoder and correction scratch. Its coherent contract preserves the full
 frame, restores both scratch banks, and derives the enabled exceptional-point correction result.
 This is the additional correction traversal; composition with signed coordinates remains next.
+
+The five signed coordinate queries now compose with the actual exceptional correction traversal.
+The resulting coherent program implements total addition of the signed table point, preserving
+the full outside-point frame, with a direct same-program bound of 855 physical wires. The
+16-bit correction address is proved to be the 15-bit address plus the sign bit; lower-half
+entries negate the point. Multi-window scheduling and aggregate resources remain open.
