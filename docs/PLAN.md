@@ -2718,3 +2718,8 @@ The physical address and decoder path now contain fifteen wires; wire 854 is the
 ### Five-query signed coordinate composition
 
 The nine-stage coordinate program now uses three positive X queries and two signed Y queries, each with actual measured load/add/clear and sign-conditioned negation. Its complete coherent state map equals the existing constant-coordinate map for the addressed X and signed Y values. Address, sign, the full outside-coordinate frame and readiness are preserved. The same program has physical support and a direct qubit-count certificate within 855 wires. This closes signed coordinate arithmetic only: table-dependent exceptional-point correction, complete total windowed addition, lifetime scheduling and final resources remain open.
+
+
+### Exceptional correction under a selected physical control
+
+The existing exceptional-point circuit can now have its physical control reassigned from wire 836 to any wire outside the point word and clean correction scratch. A bijective gate relabeling adds no gates. Complete classical execution, enabled point-word correction, disabled identity, full outside-point frame, physical well-formedness and ket semantics are proved. T count is unchanged, and any selected control below 855 preserves the 855-wire support bound. This prepares decoder-selected correction; the actual table traversal and its composition with signed coordinates remain open.
