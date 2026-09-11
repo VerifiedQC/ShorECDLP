@@ -1,4 +1,4 @@
-import ShorECDLP.Submission.«2607_13816».Arithmetic.GidneyCarry
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PrimitiveResources
 
 /-!
 # Measurement-assisted constant addition
@@ -979,6 +979,119 @@ private theorem gidneyForward_toffoli (constant : List Bool) :
     | nil => rfl
     | cons l ls => simp [gidneyForwardCost] at ih ⊢; omega
 
+private theorem gidneyForward_zero (constant : List Bool) :
+    gidneyForwardCost (fun _ => 0) (fun _ => 0) constant = 0 := by
+  induction constant with
+  | nil => rfl
+  | cons k ks ih => cases ks with
+    | nil => rfl
+    | cons l ls => simpa only [gidneyForwardCost,Nat.zero_add] using ih
+
+/-- Every valid constant adder uses no dyadic phase rotations, including the zero case. -/
+theorem controlledGidneyAddConst_phase_zero (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1) :
+    (primitiveResources (controlledGidneyAddConst (a :: input) (d :: dirty)
+      (k :: constant) q c r t)).phase = 0 := by
+  change gidneyGateCount primitivePhaseCost _ = 0
+  by_cases hz : (k :: constant).all (fun b => !b) = true
+  · simp [controlledGidneyAddConst,hz,gidneyGateCount]
+  have hroot := gidneyRoot_gateCount primitivePhaseCost (fun _ => 0) (fun _ => 0)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell,primitivePhaseCost])
+    (by intro q c a k; cases k <;> simp [primitivePhaseCost])
+    a d q c r t input dirty k constant hk hd hz
+  rw [hroot,gidneyForward_zero]
+  simp only [Nat.zero_add]
+  apply primitivePhaseCost_of_HPFree
+  apply gidneyCarryXor_HPFree
+  · simp [hk]
+  · simp only [List.length_take,List.length_cons]
+    omega
+
+private theorem gidneyTail_cost_le (cost : Gate → Nat)
+    (hcell : ∀ q c r t a d k, ((gidneyAddCarryCell q c r t a d k).map cost).sum = 0)
+    (htop : ∀ (q c a : Wire) (k : Bool), (((if k then [Gate.CX q a] else []) ++ [Gate.CX c a]).map cost).sum = 0)
+    (input dirty : List Wire) (constant : List Bool) (q c r t : Wire)
+    (callback : List Bool → Circuit) (history : List Bool) (budget : Nat)
+    (hcallback : ∀ outcomes, ((callback outcomes).map cost).sum ≤ budget)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1) :
+    gidneyGateCount cost (gidneyAddTail q c r t callback history input dirty constant) ≤ budget := by
+  induction input generalizing dirty constant c r history with
+  | nil => simp at hd
+  | cons a as ih =>
+    cases constant with
+    | nil => simp at hk
+    | cons k ks =>
+      cases dirty with
+      | nil =>
+        have he : as = [] := List.eq_nil_of_length_eq_zero (by simpa using hd)
+        subst as
+        have he : ks = [] := List.eq_nil_of_length_eq_zero (by simpa using hk.symm)
+        subst ks
+        simp only [gidneyAddTail,gidneyGateCount,htop,Nat.zero_add,Nat.add_zero]
+        exact max_le (hcallback _) (hcallback _)
+      | cons d ds =>
+        simp only [gidneyAddTail,gidneyGateCount,hcell,Nat.zero_add]
+        exact max_le (ih ds ks r c _ (by simpa using hk) (by simpa using hd))
+          (ih ds ks r c _ (by simpa using hk) (by simpa using hd))
+
+private theorem gidneyRoot_plain_cost_le (cost : Gate → Nat) (x h : Nat)
+    (hX : ∀ w, cost (.X w) = x) (hH : ∀ w, cost (.H w) = h)
+    (hcx : ∀ a b, cost (.CX a b) = 0) (hccx : ∀ a b c, cost (.CCX a b c) = 0)
+    (a d q c r t : Wire) (k : Bool) (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1) :
+    gidneyGateCount cost (controlledGidneyAddConst (a :: input) (d :: dirty)
+      (k :: constant) q c r t) ≤
+      2 * (input.length + 1) * x + 2 * (dirty.length + 1) * (2*h+x) := by
+  have hc : ∀ q c r t a d k, ((gidneyAddCarryCell q c r t a d k).map cost).sum = 0 := by
+    intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell,hcx,hccx]
+  have hz (ws : List Wire) (bs : List Bool) :
+      ((Quantum.registerZCorrection ws bs).map cost).sum ≤ ws.length*(2*h+x) := by
+    induction ws generalizing bs with
+    | nil => simp [Quantum.registerZCorrection]
+    | cons w ws ih =>
+      cases bs with
+      | nil => simp [Quantum.registerZCorrection]
+      | cons b bs =>
+        have hi := ih bs
+        cases b <;> simp [Quantum.registerZCorrection,Quantum.pauliZ,List.map_append,
+          List.sum_append,hX,hH,Nat.add_mul] at * <;> omega
+  have hf (ws : List Wire) : ((gidneyFlipWord ws).map cost).sum = ws.length*x := by
+    induction ws with
+    | nil => simp [gidneyFlipWord]
+    | cons w ws ih => simp [gidneyFlipWord] at ih ⊢; rw [hX,ih]; simp [Nat.add_mul,Nat.add_comm]
+  by_cases he : (k :: constant).all (fun b => !b) = true
+  · simp [controlledGidneyAddConst,he,gidneyGateCount]
+  simp only [controlledGidneyAddConst,if_neg he,gidneyGateCount,hc,Nat.zero_add]
+  apply gidneyTail_cost_le cost hc
+    (by intro q c a k; cases k <;> simp [hcx]) input dirty constant q r c t
+  · intro outcomes
+    have hz' := hz (d :: dirty) outcomes
+    simp only [List.map_append,List.sum_append,gidneyAddCleanup,hf,
+      controlledConstCarryXor_cost_zero cost hcx hccx,List.length_cons] at *
+    simp only [Nat.mul_assoc]
+    omega
+  · exact hk
+  · exact hd
+
+/-- Primitive X/H bounds count both copies of every measurement-dependent Z correction. -/
+theorem controlledGidneyAddConst_XH_le (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1) :
+    (primitiveResources (controlledGidneyAddConst (a :: input) (d :: dirty)
+      (k :: constant) q c r t)).x ≤ 4*(input.length+1)-2 ∧
+    (primitiveResources (controlledGidneyAddConst (a :: input) (d :: dirty)
+      (k :: constant) q c r t)).h ≤ 4*input.length := by
+  have hx := gidneyRoot_plain_cost_le primitiveXCost 1 0 (by intro w; rfl)
+    (by intro w; rfl) (by intro a b; rfl) (by intro a b c; rfl)
+    a d q c r t k input dirty constant hk hd
+  have hh := gidneyRoot_plain_cost_le primitiveHCost 0 1 (by intro w; rfl)
+    (by intro w; rfl) (by intro a b; rfl) (by intro a b c; rfl)
+    a d q c r t k input dirty constant hk hd
+  simp only [primitiveResources]
+  constructor <;> omega
+
 /-- An odd, nonzero constant uses exactly `3n - 4` Toffolis at every width
 `n ≥ 2`, independent of its other bits and all wire labels. -/
 theorem controlledGidneyAddConst_toffoli_exact (a d q c r t : Wire)
@@ -1078,6 +1191,19 @@ theorem controlledGidneyAddConst_tCount_nonzero (a d q c r t : Wire) (k : Bool)
   omega
 
 
+
+/-- The exact Toffoli count also holds for every nonzero even constant. -/
+theorem controlledGidneyAddConst_toffoli_nonzero (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length = constant.length) (hd : input.length = dirty.length + 1)
+    (hz : (k :: constant).all (fun b => !b) ≠ true) :
+    gidneyToffoliCount (controlledGidneyAddConst (a :: input) (d :: dirty)
+      (k :: constant) q c r t) = 3*(input.length+1)-4 := by
+  have hp := controlledGidneyAddConst_phase_zero a d q c r t k input dirty constant hk hd
+  have hc := primitiveResources_T_of_no_phase _ hp
+  have ht := controlledGidneyAddConst_tCount_nonzero a d q c r t k input dirty constant hk hd hz
+  simp only [primitiveResources] at hc
+  omega
 
 /-- Exact T count of the odd-constant circuit at every width at least two. -/
 theorem controlledGidneyAddConst_tCount_exact (a d q c r t : Wire)

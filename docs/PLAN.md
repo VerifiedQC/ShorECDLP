@@ -180,6 +180,12 @@ Sequential counts add; adaptive branches use a proved worst case unless a more p
 explicit. A conversion to a fault-tolerant T count is a separate theorem with a stated synthesis
 model. No paper Toffoli number is copied into the existing T-count field.
 
+`PrimitiveResources` now counts the six lowered primitive components with proved sequence/branch
+composition and a separate T-conversion bound, exact when phase count is zero. Constant-adder
+proofs establish zero phase rotations, X/H bounds including both correction copies, and exact
+Toffoli counts for every nonzero constant. Propagation to the full point program, logical
+correction/table events, and the remaining phase contracts are still open.
+
 ## 4. The two submissions
 
 ### 4.1 Naive submission ✓
