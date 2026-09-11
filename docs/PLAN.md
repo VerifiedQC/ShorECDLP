@@ -2324,3 +2324,7 @@ modular and point arithmetic remains open.
 The actual controlled/unconditional modular constant additions and controlled modular
 negation now compose all six primitive upper bounds. Phase count is zero for each.
 Whole-point primitive propagation and logical correction/table events remain open.
+
+Primitive bounds now cover variable modular addition/subtraction and doubling/halving.
+The coherent carry/comparison/shift pieces have exact vectors and adjoint count
+preservation; measured corrections compose separately. Whole-point propagation remains open.
