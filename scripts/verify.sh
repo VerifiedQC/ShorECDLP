@@ -2555,11 +2555,81 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.phaseProduct_eq_amplitude
 #print axioms ShorECDLP.Paper2607_13816.phaseProduct_cons_point
 #print axioms ShorECDLP.Paper2607_13816.phaseProduct_peak_mass
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSchedule
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseRecords
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseRecords_run
+#print axioms ShorECDLP.Paper2607_13816.consumeAdaptiveHistory
+#print axioms ShorECDLP.Paper2607_13816.consumeAdaptiveHistory_run
+#print axioms ShorECDLP.Paper2607_13816.decodePointPhaseSamples
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseRecords_decode
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseRecords_length
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_records
+#print axioms ShorECDLP.Paper2607_13816.pointScheduleCoeff
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_eigenstate
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePowers
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePowers_length
+#print axioms ShorECDLP.Paper2607_13816.pointScheduleCoeff_powers
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_amplitude
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_mass
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_run
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_identity_mass
+#print axioms ShorECDLP.Paper2607_13816.paperPhaseAmplitude_mod
+#print axioms ShorECDLP.Paper2607_13816.pointScheduleCoeff_scaled
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_scaled_eigenstate
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_nsmul
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairProgram
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairSlice
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairSlice_eigenstate
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairSlice_mass
+#print axioms ShorECDLP.Paper2607_13816.decodePointPhasePair
+#print axioms ShorECDLP.Paper2607_13816.decodePointPhasePair_seq
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairSlice_run
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_length
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_word
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass_eq
+#print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass
+#print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass_eq
+#print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass_lower
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_injective
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutput_unique
+#print axioms ShorECDLP.Paper2607_13816.phaseProduct_totalMass
+#print axioms ShorECDLP.Paper2607_13816.paperPhaseAmplitude_totalMass
+#print axioms ShorECDLP.Paper2607_13816.paperPairMass_total
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomeBits_of_word
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSchedule_decode_complete
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePair_decode_complete
+#print axioms ShorECDLP.Paper2607_13816.decodePhysicalPairOutcome
+#print axioms ShorECDLP.Paper2607_13816.decodePhysicalPairOutcome_eq
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass_partition
+#print axioms ShorECDLP.Paper2607_13816.physicalPairOutputMass_total
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePairProgram_normalized
+#print axioms ShorECDLP.Paper2607_13816.physicalPairSuccessMass_le_one
+#print axioms ShorECDLP.Paper2607_13816.windowDigits
+#print axioms ShorECDLP.Paper2607_13816.windowValue
+#print axioms ShorECDLP.Paper2607_13816.signedWindowDigit
+#print axioms ShorECDLP.Paper2607_13816.signedWindowValue
+#print axioms ShorECDLP.Paper2607_13816.windowOffset
+#print axioms ShorECDLP.Paper2607_13816.windowDigits_length
+#print axioms ShorECDLP.Paper2607_13816.windowDigits_bound
+#print axioms ShorECDLP.Paper2607_13816.windowValue_digits
+#print axioms ShorECDLP.Paper2607_13816.signedWindowValue_map
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_reconstruct
+#print axioms ShorECDLP.Paper2607_13816.signedWindowDigit_bounds
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_point
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_doubleScalar
+#print axioms ShorECDLP.Paper2607_13816.windowCount
+#print axioms ShorECDLP.Paper2607_13816.windowCount_257_16
+#print axioms ShorECDLP.Paper2607_13816.windowCount_256_16
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_secp257
+#print axioms ShorECDLP.Paper2607_13816.signedWindow_secp257_count
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2534 ]]; then
-  printf 'expected 2534 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2604 ]]; then
+  printf 'expected 2604 #print axioms results\n' >&2
   exit 1
 fi
 
