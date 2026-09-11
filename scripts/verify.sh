@@ -2905,11 +2905,20 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.initializedScalar_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.initializedScalar_tCount
 #print axioms ShorECDLP.Paper2607_13816.initializedScalar_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.rawWindowDigits_register
+#print axioms ShorECDLP.Paper2607_13816.scalarRegisterValue_input
+#print axioms ShorECDLP.Paper2607_13816.scalarInputValue_bound
+#print axioms ShorECDLP.Paper2607_13816.rawWindowDigits_input
+#print axioms ShorECDLP.Paper2607_13816.initializedScalarState_registers
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_registers_coherent
+#print axioms ShorECDLP.Paper2607_13816.scalarRegisterOutput_frame
+#print axioms ShorECDLP.Paper2607_13816.scalarInputValue_pointWrite
+#print axioms ShorECDLP.Paper2607_13816.scalarRegisterOutput_inputs
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2884 ]]; then
-  printf 'expected 2884 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2893 ]]; then
+  printf 'expected 2893 #print axioms results\n' >&2
   exit 1
 fi
 
