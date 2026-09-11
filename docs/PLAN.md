@@ -2320,3 +2320,7 @@ Primitive upper bounds now also cover the controlled and unconditional GE/LT thr
 comparators, including zero and out-of-range shortcuts. The same emitted circuits have
 zero phase rotations and bounded X/H/CNOT/Toffoli/measurement counts; propagation through
 modular and point arithmetic remains open.
+
+The actual controlled/unconditional modular constant additions and controlled modular
+negation now compose all six primitive upper bounds. Phase count is zero for each.
+Whole-point primitive propagation and logical correction/table events remain open.
