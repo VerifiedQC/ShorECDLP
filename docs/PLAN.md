@@ -2332,3 +2332,7 @@ preservation; measured corrections compose separately. Whole-point propagation r
 All six primitive budgets now follow actual forward/inverse Horner and square loops,
 including copied controls and the n-1 intervening double/halve stages. EEA and whole-point
 primitive propagation, logical correction/table events, and later phases remain open.
+
+Unary and paired adaptive decoders now have exact six-component overhead formulas,
+separate from actual leaf program counts, valid in both visitation orders. EEA leaf
+arithmetic and production totals still need primitive resource propagation.
