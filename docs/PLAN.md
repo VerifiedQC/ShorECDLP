@@ -2402,3 +2402,7 @@ The actual exceptional-point circuit now has exact per-edge primitive vectors fr
 ### Exact constant-adder X/H counts
 
 For every nonzero constant at width `n ≥ 2`, the actual controlled Gidney adder has exactly `4n - 2` X and `4(n - 1)` H gates under the structural worst-history resource definition. A lower-bound proof follows the all-true reset history and counts both copies of the deferred corrections, meeting the existing upper bound. This does not claim that this history has positive probability for every input state. The replay checks all 254 constant/width/layout cases at widths 0–6, including zero constants. Whole-point exact primitive totals remain open.
+
+### Complete exact controlled-adder vector
+
+For a nonzero constant at width `n ≥ 2`, the actual controlled Gidney adder now has exact X/H/CNOT/Toffoli/P/measurement counts in one vector theorem. Its CNOT count is `5(n-2)+6+8b₀+10w+bₙ₋₁`, where `w` counts set interior bits. This handles even constants and retains the zero-constant shortcut separately. The replay now compares all six components of all 254 small cases. Whole-point exact primitive propagation remains open.

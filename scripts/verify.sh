@@ -1887,6 +1887,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.primitiveResources_T_le
 #print axioms ShorECDLP.Paper2607_13816.primitiveResources_T_of_no_phase
 #print axioms ShorECDLP.Paper2607_13816.controlledConstCarryXor_cost_zero
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_cnot_nonzero
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_XH_exact
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_phase_zero
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst_XH_le
@@ -2076,8 +2078,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2052 ]]; then
-  printf 'expected 2052 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2054 ]]; then
+  printf 'expected 2054 #print axioms results\n' >&2
   exit 1
 fi
 
