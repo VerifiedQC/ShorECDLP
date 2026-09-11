@@ -2795,11 +2795,28 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.correctionTableState_correct
 #print axioms ShorECDLP.Paper2607_13816.correctionTableState_ready
 #print axioms ShorECDLP.Paper2607_13816.correctionTableState_address
+#print axioms ShorECDLP.Paper2607_13816.correction_signed_address
+#print axioms ShorECDLP.Paper2607_13816.signedCorrectionX
+#print axioms ShorECDLP.Paper2607_13816.signedCorrectionY
+#print axioms ShorECDLP.Paper2607_13816.signedCorrection_nonsingular
+#print axioms ShorECDLP.Paper2607_13816.signedCorrection_selected
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointProgram
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointState
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointState_eq
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointState_word
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointState_frame
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointProgram_wires
+#print axioms ShorECDLP.Paper2607_13816.signedCorrection_point
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointState_signed_word
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointState_correct
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointState_ready
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2774 ]]; then
-  printf 'expected 2774 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2791 ]]; then
+  printf 'expected 2791 #print axioms results\n' >&2
   exit 1
 fi
 
