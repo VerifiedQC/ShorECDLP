@@ -70,3 +70,78 @@ theorem fig14CoordinateProgram_primitive_bounds (x y : Nat) :
     _ (fig14Negate_primitive_bounds)
     _ (fig14ConstantX_primitive_bounds (x%ShorECDLP.p))
 end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+open Quantum
+/-- Executable constant-stage vector, retaining all zero and threshold shortcuts. -/
+def pointConstantPrimitives (controlled : Bool) (k : Nat) : PrimitiveResources :=
+  (constantAdder256Primitives controlled (constantBits 256 k)).add
+    ((constantLT256Primitives controlled (boolWordToNat (constantBits 256 k))).add
+      ((constantGE256Primitives false ShorECDLP.p).add
+        ((constantAdder256Primitives true secp256k1ReductionConstantBits).add
+          (constantLT256Primitives controlled (boolWordToNat (constantBits 256 k))))))
+attribute [local irreducible] primitiveResources
+theorem fig14ConstantX_primitive_exact (k : Nat) :
+    primitiveResources (fig14ConstantX k)=pointConstantPrimitives false k := by
+  rw [fig14ConstantX,pointConstantPrimitives]
+  apply uncontrolledConstantModularAdd256_primitive_exact <;> simp [secp256k1ReductionConstantBits]
+theorem fig14ControlledConstantX_primitive_exact (k : Nat) :
+    primitiveResources (fig14ControlledConstantX k)=pointConstantPrimitives true k := by
+  rw [fig14ControlledConstantX,pointConstantPrimitives]
+  apply controlledConstantModularAdd256_primitive_exact <;> simp [secp256k1ReductionConstantBits]
+theorem fig14ControlledConstantY_primitive_exact (k : Nat) :
+    primitiveResources (fig14ControlledConstantY k)=pointConstantPrimitives true k := by
+  rw [fig14ControlledConstantY,pointConstantPrimitives]
+  apply controlledConstantModularAdd256_primitive_exact <;> simp [secp256k1ReductionConstantBits]
+theorem fig14Negate_primitive_exact : primitiveResources fig14Negate=
+    (⟨3068,4088,12983,3062,0,1022⟩ : PrimitiveResources) := by
+  rw [fig14Negate]
+  rw [controlledModularNegate256_primitive_exact _ _ _ _ _ _ _ _ (by simp) (by simp) (by simp)]
+  decide +kernel
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+open Quantum
+attribute [local irreducible] primitiveResources squareLoopInverse
+private theorem pointModulusBits : constantBits 256 ShorECDLP.p=secp256k1ModulusBits := by decide +kernel
+private theorem pointGE : constantGE256Primitives false ShorECDLP.p=
+    (⟨573,1024,1537,767,0,256⟩ : PrimitiveResources) := by decide +kernel
+private theorem pointModulus : constantAdder256Primitives true secp256k1ModulusBits=
+    (⟨1022,1020,3765,764,0,255⟩ : PrimitiveResources) := by decide +kernel
+/-- Exact square compute/subtract/uncompute vector on arbitrary width-256 banks. -/
+theorem squareSubtract256_secp_primitive_exact (x y acc : List Wire) (q copied c r t f : Wire)
+    (hx : x.length=256) (hy : y.length=256) (ha : acc.length=256) :
+    primitiveResources (squareSubtract x y acc secp256k1ReductionConstantBits secp256k1ModulusBits
+      ShorECDLP.p q copied c r t f)=
+      (⟨1896393,2091012,5630143,2223879,0,522753⟩ : PrimitiveResources) := by
+  have hp : (2^256-(2^32+977) : Nat)=ShorECDLP.p := by decide +kernel
+  have h1 := squareLoop256_secp_primitive_exact y y acc copied c r t f hy hy ha
+  have h2 := controlledModularSub256_primitive_exact acc x secp256k1ModulusBits ShorECDLP.p q copied f r c ha hx (by decide +kernel)
+  have h3 := squareLoopInverse256_secp_primitive_exact y y acc copied c r t f hy hy ha
+  rw [hp] at h1 h3
+  rw [pointGE,pointModulus] at h2
+  rw [squareSubtract,primitiveResources_seq,primitiveResources_seq,h1,h2,h3]
+  rfl
+theorem fig14SquareSubtract_primitive_exact : primitiveResources fig14SquareSubtract=
+    (⟨1896393,2091012,5630143,2223879,0,522753⟩ : PrimitiveResources) := by
+  unfold fig14SquareSubtract
+  rw [pointModulusBits]
+  apply squareSubtract256_secp_primitive_exact <;> simp
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+/-- Exact nine-stage count formula, parameterized by the classical point coordinates. -/
+def pointCoordinatePrimitives (x y : Nat) : PrimitiveResources :=
+  let a := pointConstantPrimitives false ((ShorECDLP.p-x)%ShorECDLP.p)
+  let b := pointConstantPrimitives true ((ShorECDLP.p-y)%ShorECDLP.p)
+  let field : PrimitiveResources := ⟨41769233,24259500,67286144,38516119,0,11343835⟩
+  ((((((((a.add b).add field).add ⟨1896393,2091012,5630143,2223879,0,522753⟩).add
+    (pointConstantPrimitives true ((3*x)%ShorECDLP.p))).add field).add
+    ⟨3068,4088,12983,3062,0,1022⟩).add (pointConstantPrimitives false (x%ShorECDLP.p))).add b)
+/-- Every literal coordinate stage contributes its exact primitive vector. -/
+theorem fig14CoordinateProgram_primitive_exact (x y : Nat) :
+    primitiveResources (fig14CoordinateProgram x y)=pointCoordinatePrimitives x y := by
+  rw [fig14CoordinateProgram,pointCoordinatePrimitives]
+  simp only [primitiveResources_seq,fig14ConstantX_primitive_exact,
+    fig14ControlledConstantX_primitive_exact,fig14ControlledConstantY_primitive_exact,
+    secp256k1ZeroAllowedDivision_primitive_exact,secp256k1ZeroAllowedMultiplication_primitive_exact,
+    fig14SquareSubtract_primitive_exact,fig14Negate_primitive_exact]
+end ShorECDLP.Paper2607_13816
