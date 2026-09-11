@@ -2517,11 +2517,25 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.cyclicShift
 #print axioms ShorECDLP.Paper2607_13816.cyclicShift_injective
 #print axioms ShorECDLP.Paper2607_13816.cyclicState_shift
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_frame
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_word
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_coordinates
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_valid
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_overwrite
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_injective
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicBasis
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicBasis_orthonormal
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicBasis_shift
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_shift
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_supported
+#print axioms ShorECDLP.Paper2607_13816.pointCyclicState_disabled
+#print axioms ShorECDLP.Paper2607_13816.pointAddProgram_eigenstate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2496 ]]; then
-  printf 'expected 2496 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2510 ]]; then
+  printf 'expected 2510 #print axioms results\n' >&2
   exit 1
 fi
 

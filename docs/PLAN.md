@@ -2568,3 +2568,12 @@ Pure character orthogonality is shared through Math with the Naive theorem
 names preserved. Cyclic translation is proved to multiply each character state by its exact
 eigenphase. The controlled point-oracle action and physical sampling
 refinement remain open.
+
+### Physical point-oracle eigenstates
+
+`OrderFinding/PointEigenstates.lean` proves that writing an encoded point
+preserves clean arithmetic work and the external frame, and constructs
+orthonormal cyclic point states. The actual adaptive point-addition program
+acts on each such state with the correct controlled eigenphase in every
+Kraus branch; its branch coefficients have total squared mass one.
+Interleaved control preparation, measurement and reuse remain to be composed.
