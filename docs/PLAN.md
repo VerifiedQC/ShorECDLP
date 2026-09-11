@@ -2596,3 +2596,15 @@ including the inverse history rotations and least-significant-bit output
 order. It connects each factor to the physical point-step coefficient and
 inherits the nearest-peak lower bound. The full instrument, decoding and
 two-dimensional distribution refinement remain to be composed.
+
+### Physical repeated sampling and decoded mass
+
+`OrderFinding/PhaseSchedule.lean` composes the actual recycled-control point
+oracles and retains their complete internal measurement histories. A
+structural decoder consumes each oracle's history before reading the external
+sample; its fixed-output filter equals the proved slice instrument.
+Descending powers yield the exact phase-sampling amplitude, with one
+normalized internal coefficient list shared across all characters. The Born
+mass is proved for every character superposition, and the identity point
+yields the uniform one-dimensional character mixture. The two-dimensional
+oracle composition and final success theorem remain open.

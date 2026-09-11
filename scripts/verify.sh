@@ -2555,11 +2555,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.phaseProduct_eq_amplitude
 #print axioms ShorECDLP.Paper2607_13816.phaseProduct_cons_point
 #print axioms ShorECDLP.Paper2607_13816.phaseProduct_peak_mass
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSchedule
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseRecords
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseRecords_run
+#print axioms ShorECDLP.Paper2607_13816.consumeAdaptiveHistory
+#print axioms ShorECDLP.Paper2607_13816.consumeAdaptiveHistory_run
+#print axioms ShorECDLP.Paper2607_13816.decodePointPhaseSamples
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseRecords_decode
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseRecords_length
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_records
+#print axioms ShorECDLP.Paper2607_13816.pointScheduleCoeff
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_eigenstate
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePowers
+#print axioms ShorECDLP.Paper2607_13816.pointPhasePowers_length
+#print axioms ShorECDLP.Paper2607_13816.pointScheduleCoeff_powers
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_amplitude
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_mass
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_run
+#print axioms ShorECDLP.Paper2607_13816.pointPhaseSlice_identity_mass
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2534 ]]; then
-  printf 'expected 2534 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2553 ]]; then
+  printf 'expected 2553 #print axioms results\n' >&2
   exit 1
 fi
 
