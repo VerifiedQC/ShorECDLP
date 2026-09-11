@@ -2706,11 +2706,32 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.lookupCoordinateState_eq
 #print axioms ShorECDLP.Paper2607_13816.lookupCoordinateProgram_wires
 #print axioms ShorECDLP.Paper2607_13816.lookupCoordinateProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.signedTableAddress
+#print axioms ShorECDLP.Paper2607_13816.signedTableOdd
+#print axioms ShorECDLP.Paper2607_13816.signedTableAddress_bound
+#print axioms ShorECDLP.Paper2607_13816.signedTableOdd_value
+#print axioms ShorECDLP.Paper2607_13816.signedTable_point
+#print axioms ShorECDLP.Paper2607_13816.signedWindowHalfPoint
+#print axioms ShorECDLP.Paper2607_13816.signedWindowHalfPoint_double
+#print axioms ShorECDLP.Paper2607_13816.signedTable16_address_bound
+#print axioms ShorECDLP.Paper2607_13816.signedTable16_point
+#print axioms ShorECDLP.Paper2607_13816.signedAddressCircuit
+#print axioms ShorECDLP.Paper2607_13816.signedAddressState
+#print axioms ShorECDLP.Paper2607_13816.signedAddressCircuit_run
+#print axioms ShorECDLP.Paper2607_13816.signedAddressState_frame
+#print axioms ShorECDLP.Paper2607_13816.signedAddressState_involution
+#print axioms ShorECDLP.Paper2607_13816.signedAddressState_word
+#print axioms ShorECDLP.Paper2607_13816.signedAddressCircuit_HPFree
+#print axioms ShorECDLP.Paper2607_13816.signedAddressCircuit_ket
+#print axioms ShorECDLP.Paper2607_13816.signedAddressCircuit_tCount
+#print axioms ShorECDLP.Paper2607_13816.signedAddressState_value
+#print axioms ShorECDLP.Paper2607_13816.signedAddressCircuit_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.signedAddressCircuit_length
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2685 ]]; then
-  printf 'expected 2685 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2706 ]]; then
+  printf 'expected 2706 #print axioms results\n' >&2
   exit 1
 fi
 

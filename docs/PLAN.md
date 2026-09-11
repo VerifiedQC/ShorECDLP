@@ -2674,3 +2674,15 @@ state map equals the existing Figure 14 coordinate map at the addressed X/Y
 values, and the same circuit has a direct 855-wire bound. This coordinate
 permutation still requires table-selected exceptional-point correction before
 it becomes total point addition; signed-window and oracle integration remain open.
+
+
+### Signed address reflection and odd-multiple table
+
+`Window/SignedAddress.lean` provides the actual reversible reflection of the
+low address bits, its complete quantum basis-state action, involution, frame,
+zero T count and exact two-CX-per-bit length. An odd-multiple table of a concrete
+half-point represents all centered width-16 digits with 32,768 entries and a
+fixed half-point offset, including both endpoints. The arithmetic identity
+assumes an odd cyclic order annihilating the base point. Physical signed Y
+selection, total table-selected point correction and the complete window
+schedule are still open.
