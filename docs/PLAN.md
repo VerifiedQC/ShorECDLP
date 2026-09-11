@@ -2315,3 +2315,8 @@ Primitive budgets now also cover every 256-bit controlled and unconditional cons
 Fixed-control lowering preserves H/Toffoli/phase/measurement counts, cannot increase CNOT,
 and bounds new X by the original X plus CNOT counts. These are proved pattern-independent
 upper bounds; full point-program propagation remains open.
+
+Primitive upper bounds now also cover the controlled and unconditional GE/LT threshold
+comparators, including zero and out-of-range shortcuts. The same emitted circuits have
+zero phase rotations and bounded X/H/CNOT/Toffoli/measurement counts; propagation through
+modular and point arithmetic remains open.

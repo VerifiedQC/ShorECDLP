@@ -1,4 +1,4 @@
-import ShorECDLP.Submission.«2607_13816».Arithmetic.GidneyCarry
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PrimitiveResources
 
 /-!
 # Measurement-assisted constant comparison
@@ -1193,6 +1193,128 @@ theorem gidneyToffoliCount_constantControl (q : Wire) (program : Quantum.Adaptiv
 private theorem gidneyCompareForwardCost_uniform (constant : List Bool) (weight : Nat) :
     gidneyCompareForwardCost (fun _ _ => weight) constant = weight * constant.length := by
   induction constant <;> simp_all [gidneyCompareForwardCost,Nat.mul_add,Nat.add_comm]
+
+/-- The carry comparator has no dyadic phase rotations on any measurement branch. -/
+theorem controlledGidneyCompareCarry_phase_zero (a d q c r t f : Wire)
+    (input dirty : List Wire) (k : Bool) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length) :
+    (primitiveResources (controlledGidneyCompareCarry (a :: input) (d :: dirty)
+      (k :: constant) q c r t f)).phase=0 := by
+  have hh := gidneyCompareRoot_counts primitivePhaseCost (fun _ _ => 0)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d f k last; cases k <;> cases last <;> simp [gidneyCompareCarryCell,primitivePhaseCost])
+    a d q c r t f input dirty k constant hk hd
+  apply hh.1.trans
+  rw [gidneyCompareForwardCost_uniform]
+  simp only [Nat.zero_mul,Nat.zero_add]
+  apply primitivePhaseCost_of_HPFree
+  exact gidneyCarryXor_HPFree _ _ _ q c (by simp [hk]) (by simp [hd])
+
+private theorem gidneyCompareTail_plain_le (cost : Gate → Nat)
+    (hcell : ∀ q c r t a d f k last, ((gidneyCompareCarryCell q c r t a d f k last).map cost).sum=0)
+    (input dirty : List Wire) (constant : List Bool) (q c r t f : Wire)
+    (callback : List Bool → Circuit) (history : List Bool) (budget : Nat)
+    (hcallback : ∀ outcomes, ((callback outcomes).map cost).sum ≤ budget)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length) :
+    gidneyGateCount cost (gidneyCompareTail q c r t f callback history input dirty constant) ≤ budget := by
+  induction input generalizing dirty constant c r history with
+  | nil =>
+    have he : dirty=[] := List.eq_nil_of_length_eq_zero hd.symm
+    have he' : constant=[] := List.eq_nil_of_length_eq_zero hk.symm
+    subst dirty; subst constant
+    simp only [gidneyCompareTail,gidneyGateCount,Nat.add_zero]
+    exact max_le (hcallback _) (hcallback _)
+  | cons a input ih =>
+    cases dirty with
+    | nil => simp at hd
+    | cons d dirty =>
+      cases constant with
+      | nil => simp at hk
+      | cons k constant =>
+        simp only [gidneyCompareTail,gidneyGateCount,hcell,Nat.zero_add]
+        exact max_le (ih dirty constant r c _ (by simpa using hk) (by simpa using hd))
+          (ih dirty constant r c _ (by simpa using hk) (by simpa using hd))
+
+private theorem gidneyCompareRoot_plain_le (cost : Gate → Nat) (x h : Nat)
+    (hX : ∀ w, cost (.X w)=x) (hH : ∀ w, cost (.H w)=h)
+    (hcx : ∀ a b, cost (.CX a b)=0) (hccx : ∀ a b c, cost (.CCX a b c)=0)
+    (a d q c r t f : Wire) (input dirty : List Wire) (k : Bool) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length) :
+    gidneyGateCount cost (controlledGidneyCompareCarry (a :: input) (d :: dirty)
+      (k :: constant) q c r t f) ≤ 2*(input.length+1)*(2*h+x) := by
+  have hc : ∀ q c r t a d f k last, ((gidneyCompareCarryCell q c r t a d f k last).map cost).sum=0 := by
+    intro q c r t a d f k last; cases k <;> cases last <;> simp [gidneyCompareCarryCell,hcx,hccx]
+  have hz (ws : List Wire) (bs : List Bool) :
+      ((Quantum.registerZCorrection ws bs).map cost).sum ≤ ws.length*(2*h+x) := by
+    induction ws generalizing bs with
+    | nil => simp [Quantum.registerZCorrection]
+    | cons w ws ih =>
+      cases bs with
+      | nil => simp [Quantum.registerZCorrection]
+      | cons b bs =>
+        have hi := ih bs
+        cases b <;> simp [Quantum.registerZCorrection,Quantum.pauliZ,List.map_append,
+          List.sum_append,hX,hH,Nat.add_mul] at * <;> omega
+  simp only [controlledGidneyCompareCarry,gidneyGateCount,hc,Nat.zero_add]
+  apply gidneyCompareTail_plain_le cost hc input dirty constant q r c t f
+  · intro outcomes
+    have hh := hz (d :: dirty) outcomes
+    simp only [List.map_append,List.sum_append,
+      controlledConstCarryXor_cost_zero cost hcx hccx,List.length_cons] at *
+    simp only [hd,Nat.mul_assoc]
+    omega
+  · exact hk
+  · exact hd
+
+/-- Both measurement-dependent Z-correction copies contribute to the X/H budget. -/
+theorem controlledGidneyCompareCarry_XH_le (a d q c r t f : Wire)
+    (input dirty : List Wire) (k : Bool) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length) :
+    (primitiveResources (controlledGidneyCompareCarry (a :: input) (d :: dirty)
+      (k :: constant) q c r t f)).x ≤ 2*(input.length+1) ∧
+    (primitiveResources (controlledGidneyCompareCarry (a :: input) (d :: dirty)
+      (k :: constant) q c r t f)).h ≤ 4*(input.length+1) := by
+  have hx := gidneyCompareRoot_plain_le primitiveXCost 1 0 (by intro w; rfl)
+    (by intro w; rfl) (by intro a b; rfl) (by intro a b c; rfl)
+    a d q c r t f input dirty k constant hk hd
+  have hh := gidneyCompareRoot_plain_le primitiveHCost 0 1 (by intro w; rfl)
+    (by intro w; rfl) (by intro a b; rfl) (by intro a b c; rfl)
+    a d q c r t f input dirty k constant hk hd
+  dsimp only [primitiveResources]
+  constructor <;> omega
+
+private theorem gidneyCompareForward_cnot (constant : List Bool) :
+    gidneyCompareForwardCost (fun k last => 6+2*k.toNat+last.toNat) constant =
+      6*constant.length+2*constantBitWeight constant+(if constant=[] then 0 else 1) := by
+  induction constant with
+  | nil => rfl
+  | cons k ks ih =>
+    rw [gidneyCompareForwardCost,ih]
+    cases ks <;> cases k <;> simp [constantBitWeight] <;> omega
+
+/-- Pattern-independent CNOT budget for the full carry comparator. -/
+theorem controlledGidneyCompareCarry_cnot_le (a d q c r t f : Wire)
+    (input dirty : List Wire) (k : Bool) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length) :
+    gidneyCnotCount (controlledGidneyCompareCarry (a :: input) (d :: dirty)
+      (k :: constant) q c r t f) ≤ 15*(input.length+1)-1 := by
+  have hh := gidneyCompareRoot_counts (fun g => match g with | .CX _ _ => 1 | _ => 0)
+    (fun k last => 6+2*k.toNat+last.toNat)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d f k last; cases k <;> cases last <;> simp [gidneyCompareCarryCell])
+    a d q c r t f input dirty k constant hk hd
+  have hc := (controlledConstCarryXor_counts a input (d :: dirty) k constant q c hk (by simp [hd])).2.2.1
+  have hw (ks : List Bool) : constantBitWeight ks ≤ ks.length := by
+    induction ks with
+    | nil => rfl
+    | cons b bs ih => cases b <;> simp [constantBitWeight] at * <;> omega
+  have ht := hw constant
+  apply hh.1.le.trans
+  rw [gidneyCompareForward_cnot]
+  change 6*(constant.length+1)+2*constantBitWeight (k :: constant)+1+
+    eeaCnotCount (controlledConstCarryXor (a :: input) (d :: dirty) (k :: constant) q c) ≤ _
+  rw [hc]
+  cases k <;> simp [constantBitWeight] at * <;> omega
 
 /-- Symbolic Toffoli, T, and measurement counts of the nonempty carry core. -/
 theorem controlledGidneyCompareCarry_metrics (a d q c r t f : Wire) (input dirty : List Wire)
