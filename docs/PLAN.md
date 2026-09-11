@@ -2539,3 +2539,14 @@ and spectator entanglement, both phase signs, standard normalization and explici
 MSB-input/LSB-output encodings. Output words are bijective with integers below
 the dimension. Phase 10 still requires its two-dimensional sampling/postprocessing
 lower bound and the interleaved one-wire oracle schedule.
+
+### Independent phase peaks and classical recovery
+
+The paper chooses 257 exponent bits and proves the curve order lies strictly below
+that dimension. Integer nearest-bin samples are in range, injective in the character
+numerator, and round back exactly; two matching nonzero-character samples recover
+the discrete logarithm through the canonical postprocessor. Their one-dimensional
+geometric-sum mass is at least `4/π²`. Pure phase approximation analysis now lives
+in `Math/PhaseApproximation`; Naive retains its existing theorem names and import
+path, while the paper imports no Naive circuit or order-finding implementation.
+The two-dimensional mixture and its actual oracle connection remain open.

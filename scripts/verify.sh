@@ -2477,11 +2477,28 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fourierNormalization
 #print axioms ShorECDLP.Paper2607_13816.fourierWordLSB_injective
 #print axioms ShorECDLP.Paper2607_13816.fourierWordLSB_surjective
+#print axioms ShorECDLP.Quantum.PhaseEstimation.eigenvalue
+#print axioms ShorECDLP.Quantum.PhaseEstimation.circularDistance
+#print axioms ShorECDLP.Quantum.PhaseEstimation.eigenvalue_pow_eq_eigenvalue_mul
+#print axioms ShorECDLP.Quantum.PhaseEstimation.exists_nearest_phase_value
+#print axioms ShorECDLP.Quantum.PhaseEstimation.geometric_phase_average_lower_bound
+#print axioms ShorECDLP.Paper2607_13816.NearNumerator
+#print axioms ShorECDLP.Paper2607_13816.nearNumerator_round
+#print axioms ShorECDLP.Paper2607_13816.paperPostprocess_correct
+#print axioms ShorECDLP.Paper2607_13816.paperExponentPrecision
+#print axioms ShorECDLP.Paper2607_13816.paperExponentPrecision_order
+#print axioms ShorECDLP.Paper2607_13816.paperPeak
+#print axioms ShorECDLP.Paper2607_13816.paperPeak_near
+#print axioms ShorECDLP.Paper2607_13816.paperPeak_round
+#print axioms ShorECDLP.Paper2607_13816.paperPeak_injective
+#print axioms ShorECDLP.Paper2607_13816.nearNumerator_abs
+#print axioms ShorECDLP.Paper2607_13816.paperPhaseAmplitude
+#print axioms ShorECDLP.Paper2607_13816.paperPhasePeak_mass
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2456 ]]; then
-  printf 'expected 2456 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2473 ]]; then
+  printf 'expected 2473 #print axioms results\n' >&2
   exit 1
 fi
 

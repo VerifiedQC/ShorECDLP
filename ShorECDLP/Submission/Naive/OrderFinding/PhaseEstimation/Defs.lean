@@ -1,3 +1,4 @@
+import ShorECDLP.Math.PhaseApproximation
 import ShorECDLP.Framework.Quantum.InnerProduct
 import ShorECDLP.Submission.Naive.QFT.Defs
 
@@ -39,18 +40,6 @@ def labelState
     (value : Nat) : State →ₗ[ℂ] State :=
   Finsupp.linearCombination ℂ
     (fun s => ket (writeReg phaseReg value s))
-
-/-- The unit complex eigenvalue `exp(2πi·phase)`. -/
-def eigenvalue (phase : ℝ) : ℂ :=
-  Complex.exp (Complex.I * ((2 * Real.pi * phase : ℝ) : ℂ))
-
-/-- Circular distance between `phase` and the grid point encoded by `value`. -/
-def circularDistance
-    (precision : Nat)
-    (phase : ℝ)
-    (value : Fin (2 ^ precision)) : ℝ :=
-  let delta := |phase - (value.val : ℝ) / (2 ^ precision : Nat)|
-  min delta |1 - delta|
 
 /--
 Born probability that a computational-basis measurement of `phaseReg` returns

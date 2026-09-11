@@ -19,16 +19,6 @@ theorem linearMap_pow_apply_eigenstate
       rw [pow_succ, Module.End.mul_apply, h, map_smul, ih]
       simp [pow_succ, smul_smul, mul_comm]
 
-theorem eigenvalue_pow_eq_eigenvalue_mul
-    (phase : ℝ)
-    (n : Nat) :
-    eigenvalue phase ^ n = eigenvalue (n * phase) := by
-  unfold eigenvalue
-  rw [← Complex.exp_nat_mul]
-  congr 1
-  push_cast
-  ring
-
 theorem eigenvalue_exact_pow_eq_qftPhase
     (precision x y : Nat) :
     eigenvalue ((x : ℝ) / (2 ^ precision : Nat)) ^ y =
