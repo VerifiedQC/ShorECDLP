@@ -1407,7 +1407,7 @@ theorem endIteration_cuccaroSub_xCount
     eeaXCount (cuccaroSub addends targets carry) = 0 := by
   rw [cuccaroSub, eeaXCount_adjoint, endIteration_cuccaroAdd_xCount]
 
-private theorem endIteration_xorConstant_xCount :
+theorem xorConstant_xCount :
     ∀ (register : List Wire) (value : Nat),
       eeaXCount (xorConstant register value) =
         (constantBits register.length value).count true := by
@@ -1477,7 +1477,7 @@ theorem endIteration_addConstant_xCount
     (register constants : List Wire) (carry : Wire) (value : Nat) :
     eeaXCount (addConstant register constants carry value) =
       2 * (constantBits constants.length value).count true := by
-  simp [addConstant, eeaXCount_append, endIteration_xorConstant_xCount,
+  simp [addConstant, eeaXCount_append, xorConstant_xCount,
     endIteration_cuccaroAdd_xCount]
   omega
 
@@ -1485,7 +1485,7 @@ theorem endIteration_subConstant_xCount
     (register constants : List Wire) (carry : Wire) (value : Nat) :
     eeaXCount (subConstant register constants carry value) =
       2 * (constantBits constants.length value).count true := by
-  simp [subConstant, eeaXCount_append, endIteration_xorConstant_xCount,
+  simp [subConstant, eeaXCount_append, xorConstant_xCount,
     endIteration_cuccaroSub_xCount]
   omega
 
@@ -1505,7 +1505,7 @@ theorem endIteration_constMinus_xCount
     endIteration_addConstant_xCount]
   omega
 
-private theorem endIteration_controlledXorConstant_xCount :
+theorem controlledXorConstant_xCount :
     ∀ (control : Wire) (targets : List Wire) (value : Nat),
       eeaXCount (controlledXorConstant control targets value) = 0 := by
   intro control targets
@@ -1529,7 +1529,7 @@ private theorem endIteration_dirtyConstantWrites_xCount
   | nil => rfl
   | cons label labels ih =>
       rw [dirtyConstantWrites, eeaXCount_append,
-        endIteration_controlledXorConstant_xCount, ih]
+        controlledXorConstant_xCount, ih]
 
 private theorem endIteration_highestPositionXorWrite_xCount
     (k K : Nat) (tree : UnaryActionTree)
@@ -1542,7 +1542,7 @@ private theorem endIteration_highestPositionXorWrite_xCount
         (upperZeroMapUnitary k K tree control rangeAccumulator temporary path
           bitAt dirtyAt) := by
   simp [highestPositionXorWrite, highestPositionDirtyWrites,
-    eeaXCount_append, endIteration_controlledXorConstant_xCount,
+    eeaXCount_append, controlledXorConstant_xCount,
     endIteration_dirtyConstantWrites_xCount]
   omega
 
@@ -1557,7 +1557,7 @@ private theorem endIteration_rightLengthXorWrite_xCount
         (lowerZeroMapUnitary k K tree control rangeAccumulator temporary path
           bitAt dirtyAt) := by
   simp [rightLengthXorWrite, rightLengthDirtyWrites, eeaXCount_append,
-    endIteration_controlledXorConstant_xCount,
+    controlledXorConstant_xCount,
     endIteration_dirtyConstantWrites_xCount]
   omega
 

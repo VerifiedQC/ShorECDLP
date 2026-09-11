@@ -2369,3 +2369,14 @@ and 5,278,832 measurements. Its finite sum is kernel-checked using source-window
 without constructing physical decoder trees or adaptive circuits. The explicit reverse adds 51,840 X gates to that vector; its other five components
 are identical, proved from the emitted inverse blocks and descending schedule.
 Whole-wrapper and whole-point primitive propagation remain open.
+
+
+The complete EEA wrappers now have six-component primitive upper bounds, including
+centering, all first-one length-table rows, canonical rotations, epoch compression,
+parity correction and Work1 cleanup. Forward is bounded by 19,441,121 X, 10,562,768 H,
+29,743,147 CNOT, 17,591,751 Toffoli and 5,280,108 measurements; reverse has the same
+bounds except 19,492,961 X. Both have exactly zero P gates. These are conservative
+componentwise budgets because constant arithmetic uses pattern-independent bounds;
+existing exact T/measurement certificates remain unchanged. All 257 production
+length rows are replayed at two wire offsets, plus both totals and six fixed streams.
+Whole-point primitive propagation and logical correction/table events remain open.
