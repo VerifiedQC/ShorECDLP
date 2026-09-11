@@ -2351,3 +2351,7 @@ including the masked zero endpoint. Whole-interval and indexed-step totals remai
 The actual 9-bit endpoint preparation/restoration streams now have exact six-component
 primitive vectors, including constant-dependent X masks. Existing X-count proofs are reused;
 whole intervals, EEA steps and the full point vector remain open.
+
+Full 9-bit interval circuits now have exact primitive vectors from scalar endpoint,
+decoder and ripple counts, including both top leaves and optional sign update. Indexed
+EEA steps and whole-point primitive propagation remain open.
