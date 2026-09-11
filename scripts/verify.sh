@@ -2352,11 +2352,41 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedScheduleInverseSource256_events
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseSource
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.controlledConstMinusSource
+#print axioms ShorECDLP.Paper2607_13816.controlledConstMinusSource_erase
+#print axioms ShorECDLP.Paper2607_13816.controlledConstMinusSource_events
+#print axioms ShorECDLP.Paper2607_13816.eeaCenterSource
+#print axioms ShorECDLP.Paper2607_13816.eeaUncenterSource
+#print axioms ShorECDLP.Paper2607_13816.eeaCenterSource_erase
+#print axioms ShorECDLP.Paper2607_13816.eeaUncenterSource_erase
+#print axioms ShorECDLP.Paper2607_13816.eeaCenterSource_events
+#print axioms ShorECDLP.Paper2607_13816.eeaUncenterSource_events
+#print axioms ShorECDLP.Paper2607_13816.eeaParityCorrectionSource
+#print axioms ShorECDLP.Paper2607_13816.eeaParityCorrectionSource_erase
+#print axioms ShorECDLP.Paper2607_13816.eeaParityCorrectionSource_events
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocessSource
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocessSource_erase
+#print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocessSource
+#print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocessSource_erase
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParitySource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParitySource_erase
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapperSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapperSource_erase
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessingSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessingSource_erase
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapperSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapperSource_erase
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocessSource_events
+#print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocessSource_events
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParitySource_events
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapperSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessingSource_events
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapperSource_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2331 ]]; then
-  printf 'expected 2331 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2361 ]]; then
+  printf 'expected 2361 #print axioms results\n' >&2
   exit 1
 fi
 

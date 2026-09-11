@@ -2493,3 +2493,7 @@ The phase update and its inverse, both remainder and coefficient blocks, the com
 ### Source correction events: production EEA schedules
 
 Both actual 1,620-step EEA schedules erase from explicit source annotations and have exactly 5,278,832 selected correction events. The descending inverse uses its literal H-to-A stages; it is not inferred from semantic inversion. The forward and inverse certificates derive from per-step annotations and physical layouts. Wrapper preprocessing and parity corrections remain to compose.
+
+### Source correction events: complete EEA wrappers
+
+Both physical EEA wrappers now erase from source annotations and have exactly 5,281,384 selected correction events. Preprocessing contributes 1,532 and parity correction contributes 1,020; the ordinary preparation, canonicalization, epoch and clearing stages contribute zero. Both copies of each Gidney correction are retained, so source-event totals differ from measurement counts. Figure 15 and total point source-event composition remain open.
