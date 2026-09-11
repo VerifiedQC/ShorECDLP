@@ -2485,3 +2485,7 @@ preparation, optional top lanes, both traversal orders, sign updates and cleanup
 Exact formulas include all selected-correction blocks: one per ripple leaf,
 two per paired decoder node, and both equality selectors on each special lane.
 Indexed block/phase/schedule and whole EEA/point composition remain open.
+
+### Source correction events: complete EEA step
+
+The phase update and its inverse, both remainder and coefficient blocks, the complete eight-block forward EEA step, and its chronological schedule now carry explicit source annotations. Erasure recovers the literal existing adaptive circuits. Exact selected-event formulas follow from component annotations and physical layouts; ordinary unitary blocks contribute zero. Reverse schedule and full-wrapper source-event certificates remain open.

@@ -2322,11 +2322,30 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig15ZeroRestore_primitive
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochSource
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochSource_erase
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochSource_events
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseSource
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.phaseUpdateEpochInverseSource_events
+#print axioms ShorECDLP.Paper2607_13816.blockBSource
+#print axioms ShorECDLP.Paper2607_13816.blockBSource_erase
+#print axioms ShorECDLP.Paper2607_13816.blockBSource_events
+#print axioms ShorECDLP.Paper2607_13816.blockESource
+#print axioms ShorECDLP.Paper2607_13816.blockESource_erase
+#print axioms ShorECDLP.Paper2607_13816.blockESource_events
+#print axioms ShorECDLP.Paper2607_13816.indexedStepSource256
+#print axioms ShorECDLP.Paper2607_13816.indexedStepSource256_erase
+#print axioms ShorECDLP.Paper2607_13816.indexedStepSourceEvents256
+#print axioms ShorECDLP.Paper2607_13816.indexedStepSource256_events
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleSource256
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleSource256_erase
+#print axioms ShorECDLP.Paper2607_13816.indexedScheduleSource256_events
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2301 ]]; then
-  printf 'expected 2301 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2320 ]]; then
+  printf 'expected 2320 #print axioms results\n' >&2
   exit 1
 fi
 
