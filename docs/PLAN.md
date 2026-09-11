@@ -2456,3 +2456,10 @@ widths, the carry comparator has exactly 2n selected-correction events in the wo
 history: both deferred Z copies are counted. The GE zero/out-of-range shortcuts
 have zero events. The proof follows the actual alternating-carry reset recursion,
 including arbitrary accumulated histories. Other arithmetic adapters remain open.
+
+Source correction annotations now cover controlled and uncontrolled Gidney adders
+and every controlled/uncontrolled GE/LT interface. Erasure preserves the original
+program including width-one, all-zero constant, and threshold shortcuts. Fixed
+control elimination preserves the markers and their event count. Nonzero n-bit
+adders have 2(n-1) events; nontrivial comparators have 2n. These formulas count both
+selected Z copies. Modular arithmetic and EEA composition remain next.
