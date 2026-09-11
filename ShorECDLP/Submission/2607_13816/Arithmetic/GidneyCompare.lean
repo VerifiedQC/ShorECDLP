@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.SourceCorrections
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PrimitiveTransforms
 
 /-!
@@ -1730,4 +1731,145 @@ theorem controlledGidneyCompareCarry_lowered_primitive_exact (a d q c r t f : Wi
     simp only [he] at hx hp hcx
     simp only [PrimitiveResources.mk.injEq]
     exact ⟨hx,hp.1,hcx,hp.2.1,hp.2.2.1,hp.2.2.2⟩
+end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+private def gidneyCompareSourceTail (q current spare ancilla flag : Wire)
+    (callback : List Bool → List CorrectionFragment) (outcomes : List Bool) :
+    List Wire → List Wire → List Bool → CorrectionProgram
+  | [], [], [] => .reset current
+      (.unitary (callback (outcomes ++ [false])) .done)
+      (.unitary (callback (outcomes ++ [true])) .done)
+  | a::input, d::dirty, k::constant =>
+      .unitary [.ordinary (gidneyCompareCarryCell q current spare ancilla a d flag k input.isEmpty)]
+        (.reset current
+          (gidneyCompareSourceTail q spare current ancilla flag callback (outcomes++[false]) input dirty constant)
+          (gidneyCompareSourceTail q spare current ancilla flag callback (outcomes++[true]) input dirty constant))
+  | _, _, _ => .done
+private theorem gidneyCompareSourceTail_erase (q current spare ancilla flag : Wire)
+    (callback : List Bool → List CorrectionFragment) (outcomes : List Bool) (input dirty : List Wire) (constant : List Bool) :
+    (gidneyCompareSourceTail q current spare ancilla flag callback outcomes input dirty constant).erase=
+      gidneyCompareTail q current spare ancilla flag (fun bs => correctionBlockErase (callback bs)) outcomes input dirty constant := by
+  induction input generalizing current spare outcomes dirty constant with
+  | nil => cases dirty <;> cases constant <;> rfl
+  | cons a input ih =>
+    cases dirty <;> cases constant <;>
+      simp [gidneyCompareSourceTail,gidneyCompareTail,CorrectionProgram.erase,
+        correctionBlockErase,CorrectionFragment.erase,ih]
+/-- The actual comparator with source markers on both selected correction copies. -/
+def controlledGidneyCompareCarrySource (input dirty : List Wire) (constant : List Bool)
+    (q carry spare ancilla flag : Wire) : CorrectionProgram :=
+  match input,dirty,constant with
+  | a::input,d::dirty,k::constant =>
+      let callback := fun bs => doubleZCorrectionFragments (d::dirty) bs
+        (controlledConstCarryXor (a::input) (d::dirty) (k::constant) q carry)
+      .unitary [.ordinary (gidneyCompareCarryCell q carry spare ancilla a d flag k input.isEmpty)]
+        (gidneyCompareSourceTail q spare carry ancilla flag callback (List.nil : List Bool) input dirty constant)
+  | _,_,_ => .done
+theorem controlledGidneyCompareCarrySource_erase (input dirty : List Wire) (constant : List Bool)
+    (q carry spare ancilla flag : Wire) :
+    (controlledGidneyCompareCarrySource input dirty constant q carry spare ancilla flag).erase=
+      controlledGidneyCompareCarry input dirty constant q carry spare ancilla flag := by
+  have hz (ws : List Wire) (bs : List Bool) (middle : Circuit) := doubleZCorrectionFragments_erase ws bs middle
+  simp only [correctionBlockErase] at hz
+  cases input <;> cases dirty <;> cases constant <;>
+    simp [controlledGidneyCompareCarrySource,controlledGidneyCompareCarry,CorrectionProgram.erase,
+      correctionBlockErase,CorrectionFragment.erase,gidneyCompareSourceTail_erase,
+      hz,List.append_assoc]
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+private theorem gidneyCompareSourceTail_events (q current spare ancilla flag : Wire)
+    (callback : List Bool → List CorrectionFragment) (outcomes : List Bool)
+    (input dirty : List Wire) (constant : List Bool) (N base perTrue : Nat)
+    (hd : dirty.length=input.length) (hk : constant.length=input.length)
+    (hp : outcomes.length+input.length+1=N)
+    (hc : ∀ bs, bs.length=N → correctionBlockEvents (callback bs)=base+perTrue*bs.count true) :
+    (gidneyCompareSourceTail q current spare ancilla flag callback outcomes input dirty constant).events=
+      base+perTrue*(outcomes.count true+input.length+1) := by
+  induction input generalizing current spare outcomes dirty constant with
+  | nil =>
+    have hd0 : dirty=[] := by simpa using hd
+    have hk0 : constant=[] := by simpa using hk
+    subst dirty; subst constant
+    have hf := hc (outcomes++[false]) (by simpa using hp)
+    have ht := hc (outcomes++[true]) (by simpa using hp)
+    simp only [gidneyCompareSourceTail,CorrectionProgram.events, hf,ht,List.length_nil]
+    simp only [List.count_append,List.count_cons,List.count_nil] at *
+    simp at *
+  | cons a input ih =>
+    cases dirty with
+    | nil => simp at hd
+    | cons d dirty =>
+      cases constant with
+      | nil => simp at hk
+      | cons k constant =>
+        have hdt : dirty.length=input.length := by simpa using hd
+        have hkt : constant.length=input.length := by simpa using hk
+        have hf := ih spare current (outcomes++[false]) dirty constant hdt hkt (by simp only [List.length_append,List.length_cons,List.length_nil] at *; omega)
+        have ht := ih spare current (outcomes++[true]) dirty constant hdt hkt (by simp only [List.length_append,List.length_cons,List.length_nil] at *; omega)
+        simp only [gidneyCompareSourceTail,CorrectionProgram.events,correctionBlockEvents,
+          List.map_cons,List.map_nil,List.sum_cons,List.sum_nil,CorrectionFragment.events,
+          Nat.zero_add,hf,ht]
+        simp only [List.count_append,List.count_cons,List.count_nil,List.length_cons]
+        simp
+        omega
+/-- Both deferred Z copies contribute one event per selected carry outcome. -/
+theorem controlledGidneyCompareCarrySource_events (input dirty : List Wire) (constant : List Bool)
+    (q carry spare ancilla flag : Wire) (hd : dirty.length=input.length) (hk : constant.length=input.length) :
+    (controlledGidneyCompareCarrySource input dirty constant q carry spare ancilla flag).events=2*input.length := by
+  cases input with
+  | nil =>
+    have hd0 : dirty=[] := by simpa using hd
+    subst dirty
+    cases constant <;> rfl
+  | cons a input =>
+    cases dirty with
+    | nil => simp at hd
+    | cons d dirty =>
+      cases constant with
+      | nil => simp at hk
+      | cons k constant =>
+        simp only [controlledGidneyCompareCarrySource,CorrectionProgram.events,correctionBlockEvents,
+          List.map_cons,List.map_nil,List.sum_cons,List.sum_nil,CorrectionFragment.events,Nat.zero_add]
+        have hh := gidneyCompareSourceTail_events q spare carry ancilla flag
+          (fun bs => doubleZCorrectionFragments (d::dirty) bs
+            (controlledConstCarryXor (a::input) (d::dirty) (k::constant) q carry)) (List.nil : List Bool) input dirty constant
+          (input.length+1) 0 2 (by simpa using hd) (by simpa using hk) (by simp) (by
+            intro bs hb
+            simpa using doubleZCorrectionFragments_events (d::dirty) bs _ (by simpa [hd] using hb))
+        simpa using hh
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+/-- Threshold shortcuts contain no selected classical correction events. -/
+def controlledGidneyCompareGESource (input dirty : List Wire) (threshold : Nat)
+    (q carry spare ancilla flag : Wire) : CorrectionProgram :=
+  if threshold=0 then .unitary [.ordinary [.CX q flag]] .done
+  else if 2^input.length≤threshold then .done
+  else controlledGidneyCompareCarrySource input dirty
+    ((List.range input.length).map (Nat.testBit (2^input.length-threshold))) q carry spare ancilla flag
+theorem controlledGidneyCompareGESource_erase (input dirty : List Wire) (threshold : Nat)
+    (q carry spare ancilla flag : Wire) :
+    (controlledGidneyCompareGESource input dirty threshold q carry spare ancilla flag).erase=
+      controlledGidneyCompareGE input dirty threshold q carry spare ancilla flag := by
+  unfold controlledGidneyCompareGESource controlledGidneyCompareGE
+  split
+  · rfl
+  · split
+    · rfl
+    · exact controlledGidneyCompareCarrySource_erase _ _ _ _ _ _ _ _
+theorem controlledGidneyCompareGESource_events (input dirty : List Wire) (threshold : Nat)
+    (q carry spare ancilla flag : Wire) (hd : dirty.length=input.length) :
+    (controlledGidneyCompareGESource input dirty threshold q carry spare ancilla flag).events=
+      if threshold=0 ∨ 2^input.length≤threshold then 0 else 2*input.length := by
+  unfold controlledGidneyCompareGESource
+  split
+  · rename_i h
+    simp [h,CorrectionProgram.events,correctionBlockEvents,CorrectionFragment.events]
+  · rename_i h
+    split
+    · rename_i h'
+      simp [h',CorrectionProgram.events]
+    · rename_i h'
+      rw [controlledGidneyCompareCarrySource_events _ _ _ _ _ _ _ _ hd (by simp)]
+      simp [h,h']
 end ShorECDLP.Paper2607_13816

@@ -2440,3 +2440,19 @@ exceptional edge masks after deleting each target wire. Their sum is proved equa
 to `primitiveResources (totalPointProgram hC)`, with no surrogate circuit. This closes
 exact X/H/CNOT/CCX/P/measurement composition. Logical correction and table-event
 accounting remain open, as do Phases 10–12 and the separately recorded 839/835 gap.
+
+Source correction accounting now retains selected correction fragments separately
+from ordinary gates and proves erasure to the existing adaptive syntax. A selected
+source block is one logical event, regardless of its lowered gate count. Register Z
+corrections use one block per selected bit; their two-copy carry-recomputation form
+counts both copies. Sequence adds and reset branches take a proved maximum. Literal
+erasure and exact n / 2n maxima are proved for complete reset/correction programs.
+This is the source-accounting foundation; integration through arithmetic and total
+point addition remains open, and table lookup events enter with Phase 11.
+
+The Gidney carry comparator and its controlled GE interface now have source
+correction annotations with literal erasure to the unchanged circuits. For matching
+widths, the carry comparator has exactly 2n selected-correction events in the worst
+history: both deferred Z copies are counted. The GE zero/out-of-range shortcuts
+have zero events. The proof follows the actual alternating-carry reset recursion,
+including arbitrary accumulated histories. Other arithmetic adapters remain open.
