@@ -2494,11 +2494,20 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.nearNumerator_abs
 #print axioms ShorECDLP.Paper2607_13816.paperPhaseAmplitude
 #print axioms ShorECDLP.Paper2607_13816.paperPhasePeak_mass
+#print axioms ShorECDLP.Paper2607_13816.paperCharacterProduct
+#print axioms ShorECDLP.Paper2607_13816.paperPairPeak
+#print axioms ShorECDLP.Paper2607_13816.paperPairMass
+#print axioms ShorECDLP.Paper2607_13816.paperPairMass_nonneg
+#print axioms ShorECDLP.Paper2607_13816.paperPairPeak_injective
+#print axioms ShorECDLP.Paper2607_13816.paperPairPeak_postprocess
+#print axioms ShorECDLP.Paper2607_13816.paperPairPeak_mass
+#print axioms ShorECDLP.Paper2607_13816.paperSuccessMass
+#print axioms ShorECDLP.Paper2607_13816.paperSuccessMass_lower
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2473 ]]; then
-  printf 'expected 2473 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2482 ]]; then
+  printf 'expected 2482 #print axioms results\n' >&2
   exit 1
 fi
 

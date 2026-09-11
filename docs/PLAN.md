@@ -2550,3 +2550,11 @@ geometric-sum mass is at least `4/π²`. Pure phase approximation analysis now l
 in `Math/PhaseApproximation`; Naive retains its existing theorem names and import
 path, while the paper imports no Naive circuit or order-finding implementation.
 The two-dimensional mixture and its actual oracle connection remain open.
+
+### Two-sample character-mixture bound
+
+`OrderFinding/PairSampling.lean` proves that the uniform cyclic-character mixture
+assigns successful classical recovery mass at least `((r-1)/r)*(4/pi^2)^2`
+for prime order below the sampling dimension. The selected peak pairs are
+injective and the zero character is excluded explicitly. Connecting this
+mathematical mixture to the actual recycled-control oracle remains open.
