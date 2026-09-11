@@ -274,3 +274,29 @@ theorem secp256k1UncontrolledGidneyCompare_correct_resources (s : BasisState)
   · exact Quantum.AdaptiveCircuit.run_bornMass_eq_one _ hw _ (Quantum.normSq_ket s)
 
 end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+/-- The actual uncontrolled nontrivial threshold comparator has an exact primitive vector. -/
+theorem gidneyCompareGE_primitive_exact (a : Wire) (input dirty : List Wire) (p : Nat)
+    (c r t f : Wire) (hd : (a::input).length=dirty.length)
+    (hp0 : 0<p) (hp : p<2^(a::input).length) :
+    let bits := (List.range (a::input).length).map (Nat.testBit (2^(a::input).length-p))
+    primitiveResources (gidneyCompareGE (a::input) dirty p c r t f)=
+      (⟨2*(input.length+1)+7*(bits.headD false).toNat+9*constantBitWeight bits.tail,
+        4*(input.length+1),6*(input.length+1)+1,3*input.length+2,0,input.length+1⟩ : PrimitiveResources) := by
+  cases dirty with
+  | nil => simp at hd
+  | cons d ds =>
+    let q := gidneyCompareVirtualControl (a::input) (d::ds) c r t f
+    have hq : q ∉ [c,r,t,f]++(a::input)++d::ds := gidneyCompareVirtualControl_fresh _ _ _ _ _ _
+    dsimp only
+    change primitiveResources (constantControlProgram q (controlledGidneyCompareGE (a::input) (d::ds) p q c r t f))=_
+    rw [controlledGidneyCompareGE,if_neg (by omega : p≠0),if_neg (by omega : ¬2^(a::input).length≤p)]
+    generalize he : (List.range (a::input).length).map (Nat.testBit (2^(a::input).length-p))=bits
+    have hl : bits.length=(a::input).length := by rw [← he,List.length_map,List.length_range]
+    cases bits with
+    | nil => simp at hl
+    | cons k ks =>
+      exact controlledGidneyCompareCarry_lowered_primitive_exact a d q c r t f k input ds ks
+        (by simpa using hl.symm) (by simpa using hd) hq
+end ShorECDLP.Paper2607_13816

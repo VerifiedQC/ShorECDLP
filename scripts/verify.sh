@@ -1908,6 +1908,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.secp256k1GidneyCompare_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_lowered_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConst256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.gidneyAddConst256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.gidneyCompareGE256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareLT256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.gidneyCompareLT256_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_cnot_le
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE256_primitive_bounds
@@ -2084,8 +2092,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2060 ]]; then
-  printf 'expected 2060 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2068 ]]; then
+  printf 'expected 2068 #print axioms results\n' >&2
   exit 1
 fi
 
