@@ -2471,3 +2471,10 @@ formulas. Forward/inverse Horner multiplication and copied-control squaring each
 have exact source-event formulas; their four production certificates tie erasure
 to the existing circuit and give 522,242 selected-correction events. This does not
 yet close EEA/point source-event composition or table-event accounting.
+
+EEA source annotations now cover measured AND erasure, v-chains, equality
+selectors and controlled ripple cells, plus both traversal orders of unary and
+paired adaptive decoders. Exact erasure preserves all original unitary boundaries;
+a whole selected controlled-Z correction contributes one event. Decoder events
+are the actual leaf sum plus one per unary internal node or two per paired node.
+The interval/coefficient/phase schedule and full EEA/point composition remain open.
