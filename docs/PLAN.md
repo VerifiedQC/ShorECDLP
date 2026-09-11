@@ -2790,3 +2790,13 @@ state is `pointWrite (a • P + b • Q) s`. It proves coherent execution, readi
 and direct support/count at 1,383 wires including all 544 retained bank bits.
 The initial-point preparation circuit, phase-register binding/lifetimes,
 and final aggregate resource and success contracts remain open.
+
+### Physical fixed-point initialization
+
+`Window/PointInitialize` emits an actual X-only circuit into the 513 clean
+point bits. It prepares the combined fixed offset and composes with the
+two-axis scalar circuit, proving complete output `pointWrite (a • P + b • Q) s`
+from a clean point word under the original digit bindings. Coherent execution
+and the direct 1,383-wire bound apply to this initialized circuit; T and
+measurement costs are unchanged. Phase-register binding/lifetimes and the
+full resource/success contract remain open.
