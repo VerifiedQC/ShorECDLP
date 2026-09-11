@@ -2336,3 +2336,7 @@ primitive propagation, logical correction/table events, and later phases remain 
 Unary and paired adaptive decoders now have exact six-component overhead formulas,
 separate from actual leaf program counts, valid in both visitation orders. EEA leaf
 arithmetic and production totals still need primitive resource propagation.
+
+Measured v-chains and both equality selectors now have exact primitive vectors with
+constant-dependent X-mask counts. Empty and single-control cases are explicit. These
+feed EEA endpoint/phase selectors; full EEA and point primitive totals remain open.
