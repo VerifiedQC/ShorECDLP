@@ -91,6 +91,7 @@ jobs:
           lake --wfail build 'ShorECDLP.Submission.«2607_13816».EEA.CoefficientPrefixInverse'
           lake --wfail build 'ShorECDLP.Submission.«2607_13816».EEA.EndIteration'
           lake --wfail build 'ShorECDLP.Submission.«2607_13816».EEA.IndexedStep'
+          lake --wfail build 'ShorECDLP.Submission.«2607_13816».EEA.SchedulePrimitiveCounts'
           lake --wfail build 'ShorECDLP.Submission.«2607_13816».Arithmetic.GidneyCompare'
           lake --wfail build 'ShorECDLP.Submission.«2607_13816».Arithmetic.GidneyAdd'
 
