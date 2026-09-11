@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.RipplePrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.SelectorPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».EEA.DecoderPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».Arithmetic.LoopPrimitiveCounts

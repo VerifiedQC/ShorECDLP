@@ -2340,3 +2340,7 @@ arithmetic and production totals still need primitive resource propagation.
 Measured v-chains and both equality selectors now have exact primitive vectors with
 constant-dependent X-mask counts. Empty and single-control cases are explicit. These
 feed EEA endpoint/phase selectors; full EEA and point primitive totals remain open.
+
+Both adaptive ripple cells and main/special interval leaves now have exact primitive
+vectors. Masked zero labels and both 9-bit top equality selectors are counted. Full
+EEA traversal/step totals and whole-point primitive propagation remain open.
