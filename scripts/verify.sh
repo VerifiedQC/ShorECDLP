@@ -2094,6 +2094,42 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.rippleSecondCellSource
 #print axioms ShorECDLP.Paper2607_13816.rippleSecondCellSource_erase
 #print axioms ShorECDLP.Paper2607_13816.rippleSecondCellSource_events
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeafSource
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstLeafSource_events
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafSource
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafSource_events
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafSource
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafSource_events
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafSource
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafSource_events
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalSource
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalSource_erase
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalSource_events
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalSource
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalSource_erase
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalSource_events
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubSource
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubSource_erase
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubSource_events
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseSource
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.intervalAddSubInverseSource_events
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixFirstLeafSource
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixFirstLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixFirstLeafSource_events
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSecondLeafSource
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSecondLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSecondLeafSource_events
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSource
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSource_erase
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixSource_events
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseSource
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.coefficientPrefixInverseSource_events
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource_erase
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyAddConstSource_events
@@ -2289,8 +2325,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2265 ]]; then
-  printf 'expected 2265 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2301 ]]; then
+  printf 'expected 2301 #print axioms results\n' >&2
   exit 1
 fi
 
