@@ -2511,3 +2511,12 @@ stages and is bounded by 25,319,830. The annotation erases to `pointAddProgram C
 including the empty infinity case. This completes Phase 9 source accounting alongside
 the exact primitive vector, total coherent semantics, cleanup and honest 839-wire bound.
 The 835-wire target and Phases 10–12 remain unproved.
+
+### Semiclassical Fourier feed-forward
+
+`Fourier.FeedForward` implements dyadic controlled phases and classically selected
+rotations using the existing gates. Measuring the control before the rotation
+preserves each unnormalised branch on every entangled state with clean ancilla.
+The most-recent-first history rotation list has its exact summed phase theorem.
+This is the local measurement-commutation step; the complete Fourier schedule,
+bit-ordering equivalence and sampling lower bound remain open.

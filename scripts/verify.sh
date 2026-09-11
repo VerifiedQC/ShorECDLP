@@ -2433,11 +2433,20 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointAddSource
 #print axioms ShorECDLP.Paper2607_13816.pointAddSourceEvents
 #print axioms ShorECDLP.Paper2607_13816.pointAddSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fourierControlledPhase
+#print axioms ShorECDLP.Paper2607_13816.fourierFeedForward
+#print axioms ShorECDLP.Paper2607_13816.fourierControlledPhase_ket
+#print axioms ShorECDLP.Paper2607_13816.fourierFeedForward_ket
+#print axioms ShorECDLP.Paper2607_13816.fourierFeedForward_projectZ_ket
+#print axioms ShorECDLP.Paper2607_13816.fourierFeedForward_projectZ
+#print axioms ShorECDLP.Paper2607_13816.fourierHistoryRotations
+#print axioms ShorECDLP.Paper2607_13816.fourierHistoryAngle
+#print axioms ShorECDLP.Paper2607_13816.fourierHistoryRotations_ket
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2412 ]]; then
-  printf 'expected 2412 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2421 ]]; then
+  printf 'expected 2421 #print axioms results\n' >&2
   exit 1
 fi
 
