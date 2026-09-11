@@ -2344,3 +2344,6 @@ feed EEA endpoint/phase selectors; full EEA and point primitive totals remain op
 Both adaptive ripple cells and main/special interval leaves now have exact primitive
 vectors. Masked zero labels and both 9-bit top equality selectors are counted. Full
 EEA traversal/step totals and whole-point primitive propagation remain open.
+
+Both main EEA traversals now have exact primitive formulas over their labels and decoder nodes,
+including the masked zero endpoint. Whole-interval and indexed-step totals remain open.
