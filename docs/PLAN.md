@@ -2489,3 +2489,7 @@ Indexed block/phase/schedule and whole EEA/point composition remain open.
 ### Source correction events: complete EEA step
 
 The phase update and its inverse, both remainder and coefficient blocks, the complete eight-block forward EEA step, and its chronological schedule now carry explicit source annotations. Erasure recovers the literal existing adaptive circuits. Exact selected-event formulas follow from component annotations and physical layouts; ordinary unitary blocks contribute zero. Reverse schedule and full-wrapper source-event certificates remain open.
+
+### Source correction events: production EEA schedules
+
+Both actual 1,620-step EEA schedules erase from explicit source annotations and have exactly 5,278,832 selected correction events. The descending inverse uses its literal H-to-A stages; it is not inferred from semantic inversion. The forward and inverse certificates derive from per-step annotations and physical layouts. Wrapper preprocessing and parity corrections remain to compose.
