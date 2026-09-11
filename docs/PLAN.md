@@ -6,9 +6,10 @@ The Naive submission is complete. The independent space-efficient submission imp
 
 **Status snapshot.** The paper's EEA and in-place arithmetic through Phase 8 are proved.
 Phase 9 has total controlled point-addition correctness and cleanup, with a proved upper
-bound of 839 physical wires; its complete primitive resource vector remains unfinished.
-The current arithmetic and EEA block certificates count the actual circuits, including
-measurement cleanup and explicit inverse costs. They still need whole-program propagation.
+bound of 839 physical wires. Its exact six-component primitive vector and selected
+correction-event formula now refer to the complete circuit, including exceptional cases.
+The source annotation erases to that same program; its correction-event upper bound is
+25,319,830, with zero events for addition by infinity.
 Phases 10–12 (semiclassical order finding, signed-window/QROM scheduling, and the final
 adaptive submission contract) remain open. Neither the paper's 835-wire target nor its
 complete end-to-end estimate is a verified claim.
@@ -173,8 +174,8 @@ model. No paper Toffoli number is copied into the existing T-count field.
 `PrimitiveResources` now counts the six lowered primitive components with proved sequence/branch
 composition and a separate T-conversion bound, exact when phase count is zero. Constant-adder
 proofs establish zero phase rotations, X/H bounds including both correction copies, and exact
-Toffoli counts for every nonzero constant. Propagation to the full point program, logical
-correction/table events, and the remaining phase contracts are still open.
+Toffoli counts for every nonzero constant. The complete point program now has exact primitive and selected-correction formulas.
+Table-lookup events belong to the still-open Phase 11 schedule; Phases 10–12 remain open.
 
 ## 4. The two submissions
 
@@ -2501,3 +2502,12 @@ Both physical EEA wrappers now erase from source annotations and have exactly 5,
 ### Source correction events: Figure 15
 
 Both actual Figure 15 operations and their zero-input extensions now have source-erasure certificates with exactly 12,129,750 selected events. Wire relabeling preserves each event, all three Horner calls retain both correction copies, and the retained 256 reset outcomes each select at most one final Z event. Ordinary bank swaps and zero-input preparation/restoration contribute zero. Total point source-event composition remains open.
+
+### Complete point source accounting
+
+`SourcePoint` composes the literal nine coordinate stages with the unchanged ordinary
+exceptional correction. Its exact selected-event formula includes all five constant
+stages and is bounded by 25,319,830. The annotation erases to `pointAddProgram C`,
+including the empty infinity case. This completes Phase 9 source accounting alongside
+the exact primitive vector, total coherent semantics, cleanup and honest 839-wire bound.
+The 835-wire target and Phases 10–12 remain unproved.

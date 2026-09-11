@@ -2410,11 +2410,34 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivisionSource_certificate
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplicationSource
 #print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplicationSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.pointConstantSourceEvents
+#print axioms ShorECDLP.Paper2607_13816.pointConstantSourceEvents_le
+#print axioms ShorECDLP.Paper2607_13816.fig14ConstantXSource
+#print axioms ShorECDLP.Paper2607_13816.fig14ConstantXSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantXSource
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantXSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantYSource
+#print axioms ShorECDLP.Paper2607_13816.fig14ControlledConstantYSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig14NegateSource
+#print axioms ShorECDLP.Paper2607_13816.fig14NegateSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.squareSubtractSource
+#print axioms ShorECDLP.Paper2607_13816.squareSubtractSource_erase
+#print axioms ShorECDLP.Paper2607_13816.fig14SquareSubtractSource
+#print axioms ShorECDLP.Paper2607_13816.fig14SquareSubtractSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateSource
+#print axioms ShorECDLP.Paper2607_13816.pointCoordinateSourceEvents
+#print axioms ShorECDLP.Paper2607_13816.fig14CoordinateSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.pointCoordinateSourceEvents_le
+#print axioms ShorECDLP.Paper2607_13816.totalPointSource
+#print axioms ShorECDLP.Paper2607_13816.totalPointSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.pointAddSource
+#print axioms ShorECDLP.Paper2607_13816.pointAddSourceEvents
+#print axioms ShorECDLP.Paper2607_13816.pointAddSource_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2389 ]]; then
-  printf 'expected 2389 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2412 ]]; then
+  printf 'expected 2412 #print axioms results\n' >&2
   exit 1
 fi
 
