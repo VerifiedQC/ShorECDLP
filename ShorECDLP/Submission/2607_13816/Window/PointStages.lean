@@ -5,9 +5,9 @@ namespace ShorECDLP.Paper2607_13816
 open Classical Quantum
 noncomputable section
 /-- Persistent address bank outside the 839-wire point core. -/
-def pointLookupAddress : List Wire := List.range' 839 16
+def pointLookupAddress : List Wire := List.range' 839 15
 /-- Decoder path borrows clean point work and is cleared before the arithmetic core resumes. -/
-def pointLookupPath : List Wire := List.range' 519 16
+def pointLookupPath : List Wire := List.range' 519 15
 
 def fig14LookupX (table : Nat → Nat) : AdaptiveCircuit :=
   lookupModularAddProgram table pointLookupAddress pointLookupPath

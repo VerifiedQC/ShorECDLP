@@ -2708,3 +2708,8 @@ complete coherent proof restores every non-accumulator wire, including sign,
 address, loaded word and paths, and preserves readiness. Exact resource formulas
 include both measured negators and both lookups. The optimized physical
 15-address-bit point stages and total point/window composition remain open.
+
+
+### Physical signed Y lookup and fifteen address bits
+
+The physical address and decoder path now contain fifteen wires; wire 854 is the separate sign. Existing positive X/Y lookup and coordinate proofs use the refined address directly. The signed Y stage composes actual negative-controlled negation, measured lookup/add/clear, and negative-controlled negation. Its coherent and numeric contracts preserve the complete outside-Y frame, including address and sign, and restore readiness. It equals the existing controlled constant-Y map at the signed addressed value. Support remains within 855 wires. The two actual decoder traversals contribute 458,738 T and 65,534 measurements, in addition to the two negators and modular adder. Full signed coordinate composition, exceptional-point correction, and window lifetime scheduling remain open; this is not a total windowed point-addition certificate.
