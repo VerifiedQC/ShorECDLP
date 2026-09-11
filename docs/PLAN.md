@@ -2355,3 +2355,7 @@ whole intervals, EEA steps and the full point vector remain open.
 Full 9-bit interval circuits now have exact primitive vectors from scalar endpoint,
 decoder and ripple counts, including both top leaves and optional sign update. Indexed
 EEA steps and whole-point primitive propagation remain open.
+
+Both epoch-aware phase/sign updates have exact production primitive vector
+8 X, 88 H, 50 CX, 54 CCX, zero P and 44 measurements. Coefficient-prefix and other
+indexed-step components remain before the full EEA/point primitive vector.
