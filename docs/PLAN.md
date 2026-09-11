@@ -2739,3 +2739,23 @@ The resulting coherent program implements total addition of the signed table poi
 the full outside-point frame, with a direct same-program bound of 855 physical wires. The
 16-bit correction address is proved to be the 15-bit address plus the sign bit; lower-half
 entries negate the point. Multi-window scheduling and aggregate resources remain open.
+
+Physical signed-window calls can now read a disjoint parked 16-bit address bank while
+reusing the arithmetic core. A wire bijection preserves coherent execution and exact gate/measurement
+counts; full-state correctness reads the parked 15-bit address and sign, with support below start+16.
+This establishes the primitive needed to count all parked address bits in the multi-window schedule.
+
+An actual sequential window schedule now reuses the arithmetic core across disjoint parked
+address banks. Its coherent contract preserves valid point encoding, and complete-state correctness
+adds the sum of entries selected by the original bank contents. The 34-call baseline has a
+direct 1,383-wire bound (839 core plus 544 parked address bits). This does not yet identify the
+tables with scalar windows or connect their input lifetime to phase estimation.
+
+### Rotation certificate verification cost
+
+The forward and inverse canonical rotations now each check ten literal swap lists once
+and reuse those private equalities in the value, bounds, and length certificates.
+All lists are checked by the Lean kernel against `sourceRotationSwaps`; the circuit,
+public theorem statements, axiom allowlist, verification limits, and CI gate are unchanged.
+A local single-offset comparison of the three certificates took 44.47 seconds before
+and 25.96 seconds after; this is local timing evidence, not a hosted-CI success claim.
