@@ -2750,3 +2750,12 @@ address banks. Its coherent contract preserves valid point encoding, and complet
 adds the sum of entries selected by the original bank contents. The 34-call baseline has a
 direct 1,383-wire bound (839 core plus 544 parked address bits). This does not yet identify the
 tables with scalar windows or connect their input lifetime to phase estimation.
+
+### Rotation certificate verification cost
+
+The forward and inverse canonical rotations now each check ten literal swap lists once
+and reuse those private equalities in the value, bounds, and length certificates.
+All lists are checked by the Lean kernel against `sourceRotationSwaps`; the circuit,
+public theorem statements, axiom allowlist, verification limits, and CI gate are unchanged.
+A local single-offset comparison of the three certificates took 44.47 seconds before
+and 25.96 seconds after; this is local timing evidence, not a hosted-CI success claim.
