@@ -51,3 +51,22 @@ theorem secp256k1ZeroAllowedMultiplication_primitive_bounds :
   simp only [primitiveResources_seq,fig15ZeroPrepare_primitive,fig15ZeroRestore_primitive]
   exact zeroAllowed_primitive_sum _ secp256k1InPlaceMultiplication_primitive_bounds
 end ShorECDLP.Paper2607_13816
+
+namespace ShorECDLP.Paper2607_13816
+/-- The exact zero-allowed division vector includes both equality masks. -/
+theorem secp256k1ZeroAllowedDivision_primitive_exact :
+    primitiveResources secp256k1ZeroAllowedDivision =
+      (⟨41769233,24259500,67286144,38516119,0,11343835⟩ : PrimitiveResources) := by
+  rw [secp256k1ZeroAllowedDivision]
+  simp only [primitiveResources_seq,fig15ZeroPrepare_primitive,fig15ZeroRestore_primitive,
+    secp256k1InPlaceDivision_primitive_exact]
+  rfl
+/-- The exact zero-allowed multiplication vector includes both equality masks. -/
+theorem secp256k1ZeroAllowedMultiplication_primitive_exact :
+    primitiveResources secp256k1ZeroAllowedMultiplication =
+      (⟨41769233,24259500,67286144,38516119,0,11343835⟩ : PrimitiveResources) := by
+  rw [secp256k1ZeroAllowedMultiplication]
+  simp only [primitiveResources_seq,fig15ZeroPrepare_primitive,fig15ZeroRestore_primitive,
+    secp256k1InPlaceMultiplication_primitive_exact]
+  rfl
+end ShorECDLP.Paper2607_13816

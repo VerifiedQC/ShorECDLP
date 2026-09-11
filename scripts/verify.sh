@@ -1937,6 +1937,27 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.hornerMulInverse256_secp_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.squareLoop256_secp_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.squareLoopInverse256_secp_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.controlledConstMinus256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.eeaCenter256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.eeaUncenter256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.eeaParityCorrection256_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.eeaPreprocess_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocess_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBank_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBank_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig15DivisionAfterReset_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.fig15MultiplicationAfterReset_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedDivision_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1ZeroAllowedMultiplication_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry_cnot_le
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareCarry256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.controlledGidneyCompareGE256_primitive_bounds
@@ -2113,8 +2134,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2089 ]]; then
-  printf 'expected 2089 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2110 ]]; then
+  printf 'expected 2110 #print axioms results\n' >&2
   exit 1
 fi
 
