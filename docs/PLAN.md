@@ -2529,3 +2529,42 @@ of all distinct output strings of the required length, with explicit Kraus maps.
 Each map has an exact basis-state amplitude and resets all input wires; the
 well-formed schedule preserves total Born mass and makes one measurement per wire.
 The closed mathematical Fourier-kernel comparison and sampling theorem remain open.
+
+### Complete measured Fourier-kernel equality
+
+`Fourier.Kernel` identifies the actual adaptive Fourier instrument with the
+mathematical dyadic Fourier rows followed by measurement/reset, as equality of
+linear Kraus maps for every output. The result covers arbitrary superpositions
+and spectator entanglement, both phase signs, standard normalization and explicit
+MSB-input/LSB-output encodings. Output words are bijective with integers below
+the dimension. Phase 10 still requires its two-dimensional sampling/postprocessing
+lower bound and the interleaved one-wire oracle schedule.
+
+### Independent phase peaks and classical recovery
+
+The paper chooses 257 exponent bits and proves the curve order lies strictly below
+that dimension. Integer nearest-bin samples are in range, injective in the character
+numerator, and round back exactly; two matching nonzero-character samples recover
+the discrete logarithm through the canonical postprocessor. Their one-dimensional
+geometric-sum mass is at least `4/π²`. Pure phase approximation analysis now lives
+in `Math/PhaseApproximation`; Naive retains its existing theorem names and import
+path, while the paper imports no Naive circuit or order-finding implementation.
+The two-dimensional mixture and its actual oracle connection remain open.
+
+### Two-sample character-mixture bound
+
+`OrderFinding/PairSampling.lean` proves that the uniform cyclic-character mixture
+assigns successful classical recovery mass at least `((r-1)/r)*(4/pi^2)^2`
+for prime order below the sampling dimension. The selected peak pairs are
+injective and the zero character is excluded explicitly. Connecting this
+mathematical mixture to the actual recycled-control oracle remains open.
+
+### Cyclic-character states
+
+`OrderFinding/CyclicStates.lean` constructs cyclic Fourier states from any
+orthonormal family and proves their orthonormality, uniform decomposition of
+the zero-index state, and exact squared norm of every linear combination.
+Pure character orthogonality is shared through Math with the Naive theorem
+names preserved. Cyclic translation is proved to multiply each character state by its exact
+eigenphase. The controlled point-oracle action and physical sampling
+refinement remain open.
