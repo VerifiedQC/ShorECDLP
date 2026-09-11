@@ -1921,11 +1921,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.controlledModularSub256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.modularDouble256_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.modularHalve256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.hornerMul256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.hornerMulInverse256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.hornerMul256_full_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.hornerMulInverse256_full_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.squareAdd256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.squareSub256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.squareLoop256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverse256_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.squareLoop256_full_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.squareLoopInverse256_full_primitive_bounds
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1900 ]]; then
-  printf 'expected 1900 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1910 ]]; then
+  printf 'expected 1910 #print axioms results\n' >&2
   exit 1
 fi
 
