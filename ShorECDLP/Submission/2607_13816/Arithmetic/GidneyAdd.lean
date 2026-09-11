@@ -1993,3 +1993,70 @@ theorem controlledGidneyAddConst_XH_exact (a d q c r t : Wire) (k : Bool)
   simp only [primitiveResources] at hu ⊢
   constructor <;> omega
 end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+private theorem gidneyForward_cnot_exact (ks : List Bool) (hn : ks≠[]) :
+    gidneyForwardCost (fun k => 5+3*k.toNat) (fun k => 1+k.toNat) ks=
+      5*(ks.length-1)+3*constantBitWeight ks.dropLast+1+(ks.getLastD false).toNat := by
+  induction ks with
+  | nil => contradiction
+  | cons k ks ih =>
+    cases ks with
+    | nil => cases k <;> simp [gidneyForwardCost,constantBitWeight]
+    | cons l ls =>
+      have hh := ih (by simp)
+      cases k <;> simp [gidneyForwardCost,constantBitWeight] at * <;> omega
+/-- The exact CNOT count depends on the first bit, interior weight and last bit. -/
+theorem controlledGidneyAddConst_cnot_nonzero (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) :
+    gidneyCnotCount (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)=
+      5*(input.length-1)+6+8*k.toNat+10*constantBitWeight (constant.take dirty.length)+
+        (constant.getLastD false).toNat := by
+  have hroot := gidneyRoot_gateCount (fun g => match g with | .CX _ _ => 1 | _ => 0)
+    (fun k => 5+3*k.toNat) (fun k => 1+k.toNat)
+    (by intro w; rfl) (by intro w; rfl)
+    (by intro q c r t a d k; cases k <;> simp [gidneyAddCarryCell])
+    (by intro q c a k; cases k <;> simp) a d q c r t input dirty k constant hk hd hn
+  have hki : (input.take dirty.length).length=(constant.take dirty.length).length := by simp [hk]
+  have hdi : (a::input.take dirty.length).length=(d::dirty).length := by
+    simp only [List.length_cons,List.length_take]; omega
+  have hcleanup := (controlledConstCarryXor_counts a (input.take dirty.length) (d::dirty) k
+    (constant.take dirty.length) q c hki hdi).2.2.1
+  apply hroot.trans
+  simp only [List.length_cons,List.take_succ_cons]
+  change 5+3*k.toNat+gidneyForwardCost _ _ constant+
+    eeaCnotCount (controlledConstCarryXor (a::input.take dirty.length) (d::dirty)
+      (k::constant.take dirty.length) q c)=_
+  rw [hcleanup,gidneyForward_cnot_exact constant (by
+    intro he
+    have hz : constant.length=0 := by simp only [he,List.length_nil]
+    omega)]
+  have he : constant.dropLast=constant.take dirty.length := by
+    rw [List.dropLast_eq_take]
+    congr 1
+    omega
+  rw [he]
+  omega
+end ShorECDLP.Paper2607_13816
+namespace ShorECDLP.Paper2607_13816
+/-- A complete exact primitive vector for every nonzero constant at width at least two. -/
+theorem controlledGidneyAddConst_primitive_exact (a d q c r t : Wire) (k : Bool)
+    (input dirty : List Wire) (constant : List Bool)
+    (hk : input.length=constant.length) (hd : input.length=dirty.length+1)
+    (hn : (k::constant).all (fun b => !b)≠true) :
+    primitiveResources (controlledGidneyAddConst (a::input) (d::dirty) (k::constant) q c r t)=
+      (⟨4*(input.length+1)-2,4*input.length,
+        5*(input.length-1)+6+8*k.toNat+10*constantBitWeight (constant.take dirty.length)+
+          (constant.getLastD false).toNat,
+        3*(input.length+1)-4,0,input.length⟩ : PrimitiveResources) := by
+  have hx := controlledGidneyAddConst_XH_exact a d q c r t k input dirty constant hk hd hn
+  have hc := controlledGidneyAddConst_cnot_nonzero a d q c r t k input dirty constant hk hd hn
+  have ht := controlledGidneyAddConst_toffoli_nonzero a d q c r t k input dirty constant hk hd hn
+  have hp := controlledGidneyAddConst_phase_zero a d q c r t k input dirty constant hk hd
+  have hm := controlledGidneyAddConst_measurementCount (a::input) (d::dirty) (k::constant) q c r t
+    (by simp [hk]) (by simp [hd])
+  simp only [hn,Bool.false_eq_true,if_false,List.length_cons] at hm
+  simp only [primitiveResources] at hx hp ⊢
+  rw [hx.1,hx.2,hc,ht,hp,hm,hd]
+end ShorECDLP.Paper2607_13816
