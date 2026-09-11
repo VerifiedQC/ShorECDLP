@@ -1945,11 +1945,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.intervalSecondLeafAdaptive_primitive
 #print axioms ShorECDLP.Paper2607_13816.topSpecialFirstLeafAdaptive9_primitive
 #print axioms ShorECDLP.Paper2607_13816.topSpecialSecondLeafAdaptive9_primitive
+#print axioms ShorECDLP.Paper2607_13816.DualUnaryActionTree.leafCostSum_labels
+#print axioms ShorECDLP.Paper2607_13816.intervalFirstTraversalAdaptive_primitive
+#print axioms ShorECDLP.Paper2607_13816.intervalSecondTraversalAdaptive_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1924 ]]; then
-  printf 'expected 1924 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 1927 ]]; then
+  printf 'expected 1927 #print axioms results\n' >&2
   exit 1
 fi
 
