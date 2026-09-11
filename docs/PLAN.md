@@ -2418,3 +2418,7 @@ The nonempty carry comparator now has exact `2n` X, `4n` H, `6n+1+7b₀+9w` CNOT
 ### Exact unconditional comparators and width-256 adapters
 
 Fixed-control compilation now proves the actual unconditional nontrivial comparator has `2n+7b₀+9w` X, `4n` H, `6n+1` CNOT, `3n−1` Toffoli, zero P and `n` resets. It reuses the existing retained-CNOT proof and proves combined X/CNOT maximum preservation using history-independent CNOT counts. The replay checks 282 actual thresholds plus alternate virtual controls. Six width-256 adder/GE/LT adapters give complete formulas with zero-constant, zero-threshold and out-of-range branches intact. Exact modular-stage and whole-point propagation remain open.
+
+### Exact modular and Horner/square vectors
+
+The actual constant addition, negation, variable addition/subtraction and doubling/halving stages now have exact primitive formulas, including every constant shortcut. Forward/inverse Horner and square loops compose these formulas with the exact number of inter-bit shifts. At width 256, Horner has `(947141,1044484,2192319,1110533,0,261121)` and inverse Horner has 3429450 CNOT with the other components unchanged. Squaring adds 512 CNOT in either direction. The replay checks all six counts on 168 actual small modular, constant, negation and loop circuits. Exact EEA-wrapper and whole-point propagation plus logical-event accounting remain open.
