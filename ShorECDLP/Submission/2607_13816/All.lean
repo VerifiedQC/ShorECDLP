@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.CharacterExpansion
 import ShorECDLP.Submission.«2607_13816».Window.Kernel
 import ShorECDLP.Submission.«2607_13816».Window.Uniform
 import ShorECDLP.Submission.«2607_13816».Window.Outcomes

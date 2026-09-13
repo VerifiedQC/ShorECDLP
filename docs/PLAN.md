@@ -2862,3 +2862,11 @@ the encoded scalar point sum. Each observed output mass is now the norm square
 of an explicit double Fourier sum of point kets; no internal-history or physical
 wire assumption remains hidden in that expression. Relating this sum to the
 character mixture and closing final resources remain open.
+
+### Character expansion and normalized word sums
+
+`Window/CharacterExpansion` expands each point ket in its prime-order cyclic
+character basis and identifies the normalized weighted bit-word sum with
+`paperPhaseAmplitude`. These are exact amplitude identities; identifying the
+complete physical output mass with the character mixture and proving the
+success bound remain subsequent steps.
