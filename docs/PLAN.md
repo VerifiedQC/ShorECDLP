@@ -2843,3 +2843,13 @@ branches. The all-zero input satisfies the preparation conditions, and each deco
 output probability is therefore exactly the corresponding measured Fourier kernel
 mass on the prepared physical scalar oracle. The character-mixture success bound
 and final resource closure remain open.
+
+### Uniform phase-input amplitude expansion
+
+`Window/Uniform` expands the actual 514 input Hadamards into their normalized
+finite sum of physical bit assignments. Assignment preserves other wires, reads
+back the assigned words, and splits across the two input registers. The decoded
+output mass equals the norm square of the resulting explicit Fourier amplitude
+sum, with interference retained. The two physical scalar values are exactly the
+little-endian values of their assigned words. Relating this sum to the character
+mixture and closing final resources remain open.

@@ -2942,11 +2942,19 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.windowTrialSlice_filter
 #print axioms ShorECDLP.Paper2607_13816.windowTrial_zero_initial
 #print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_kernel
+#print axioms ShorECDLP.Paper2607_13816.phaseWordState_frame
+#print axioms ShorECDLP.Paper2607_13816.phaseWordState_word
+#print axioms ShorECDLP.Paper2607_13816.phaseWordState_append
+#print axioms ShorECDLP.Paper2607_13816.phaseHadamards_uniform
+#print axioms ShorECDLP.Paper2607_13816.scalarPhasePrepare_uniform
+#print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_uniform
+#print axioms ShorECDLP.Paper2607_13816.phaseUniformSum_append
+#print axioms ShorECDLP.Paper2607_13816.scalarPhaseWord_inputs
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2921 ]]; then
-  printf 'expected 2921 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2929 ]]; then
+  printf 'expected 2929 #print axioms results\n' >&2
   exit 1
 fi
 
