@@ -2759,3 +2759,54 @@ All lists are checked by the Lean kernel against `sourceRotationSwaps`; the circ
 public theorem statements, axiom allowlist, verification limits, and CI gate are unchanged.
 A local single-offset comparison of the three certificates took 44.47 seconds before
 and 25.96 seconds after; this is local timing evidence, not a hosted-CI success claim.
+
+### Physical raw-digit preparation
+
+`Window/Preparation` surrounds an actual parked signed-point call with the
+30-CX address reflection and its inverse. It proves selection from the original
+16-bit raw digit, full-state correctness, restored address/sign bits and every
+other non-point wire, and readiness for another call. The circuit keeps the
+same T/measurement counts and core-plus-16-bit support. Its coherent theorem
+covers the actual prepare/call/unprepare program. Scalar-table assignment and
+the prepared multi-window recoding theorem remain open.
+
+### Prepared schedule and concrete odd-point tables
+
+`Window/PreparedSchedule` composes actual prepare/call/unprepare windows, proving
+coherence, complete-state addition from the original banks, and the 34-call
+1,383-wire bound with all addresses retained. `Window/OddTables` constructs
+affine odd-multiple tables for any nonzero order-torsion point. Primality of the
+secp256k1 order proves every table entry is finite, including arbitrary window
+indices. The actual prepared call adds the centered raw digit times its radix
+weight plus the fixed half-point offset. Binding all banks to the scalar digits
+and discharging the aggregate offsets remain the next boundary.
+
+### Two scalar axes from original raw banks
+
+`Window/ScalarWindows` composes the actual prepared calls into two 17-window
+axes. Under explicit original-bank bindings to the two 257-bit scalars and
+an initial point equal to the sum of the fixed offsets, the complete output
+state is `pointWrite (a • P + b • Q) s`. It proves coherent execution, readiness,
+and direct support/count at 1,383 wires including all 544 retained bank bits.
+The initial-point preparation circuit, phase-register binding/lifetimes,
+and final aggregate resource and success contracts remain open.
+
+### Physical fixed-point initialization
+
+`Window/PointInitialize` emits an actual X-only circuit into the 513 clean
+point bits. It prepares the combined fixed offset and composes with the
+two-axis scalar circuit, proving complete output `pointWrite (a • P + b • Q) s`
+from a clean point word under the original digit bindings. Coherent execution
+and the direct 1,383-wire bound apply to this initialized circuit; T and
+measurement costs are unchanged. Phase-register binding/lifetimes and the
+full resource/success contract remain open.
+
+### Physical scalar-register binding
+
+`Window/ScalarRegisters` derives the raw digit lists from the physical
+register words. Each axis reads 257 input bits followed by 15 clean padding
+bits. The initialized actual circuit coherently computes the combination of
+these two input values and preserves both registers and all external wires;
+no separate scalar-digit binding assumptions remain. Root setup/cleanup,
+phase preparation and Fourier sampling, aggregate resources and final
+success-contract composition remain open.

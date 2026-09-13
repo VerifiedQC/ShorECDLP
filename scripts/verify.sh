@@ -2842,11 +2842,83 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.windowSchedule_support
 #print axioms ShorECDLP.Paper2607_13816.windowSchedule_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.windowSchedule_34_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.windowAddressBits
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState_ready
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_ket
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState_involution
+#print axioms ShorECDLP.Paper2607_13816.windowRawDigit
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState_address
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_tCount
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareState_pointWrite
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_correct
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_coherent
+#print axioms ShorECDLP.Paper2607_13816.windowRawDigit_bound
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_ready
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_frame
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_tCount
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_measurements
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_selected
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_support
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowDelta
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowScheduleState
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowScheduleState_ready
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_coherent
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSum
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowScheduleState_correct
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_support
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_34_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.oddWindowPoint
+#print axioms ShorECDLP.Paper2607_13816.oddWindowPoint_ne_zero
+#print axioms ShorECDLP.Paper2607_13816.oddWindowX
+#print axioms ShorECDLP.Paper2607_13816.oddWindowY
+#print axioms ShorECDLP.Paper2607_13816.oddWindowTable_valid
+#print axioms ShorECDLP.Paper2607_13816.oddWindowTable_point
+#print axioms ShorECDLP.Paper2607_13816.preparedOddWindowCall_correct
+#print axioms ShorECDLP.Paper2607_13816.preparedOddWindowCallAt_correct
+#print axioms ShorECDLP.Paper2607_13816.axisWindowState_correct
+#print axioms ShorECDLP.Paper2607_13816.axisWindow_coherent
+#print axioms ShorECDLP.Paper2607_13816.axisWindowState_ready
+#print axioms ShorECDLP.Paper2607_13816.axisWindowState_scalar
+#print axioms ShorECDLP.Paper2607_13816.rawWindowDigits_pointWrite
+#print axioms ShorECDLP.Paper2607_13816.scalarWindows_coherent
+#print axioms ShorECDLP.Paper2607_13816.scalarWindowsState_correct
+#print axioms ShorECDLP.Paper2607_13816.scalarWindowsState_ready
+#print axioms ShorECDLP.Paper2607_13816.scalarWindows_support
+#print axioms ShorECDLP.Paper2607_13816.scalarWindows_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_correct
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_HPFree
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_tCount
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_coherent
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_ready
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_coherent
+#print axioms ShorECDLP.Paper2607_13816.initializedScalarState_correct
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_support
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_support
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_tCount
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.rawWindowDigits_register
+#print axioms ShorECDLP.Paper2607_13816.scalarRegisterValue_input
+#print axioms ShorECDLP.Paper2607_13816.scalarInputValue_bound
+#print axioms ShorECDLP.Paper2607_13816.rawWindowDigits_input
+#print axioms ShorECDLP.Paper2607_13816.initializedScalarState_registers
+#print axioms ShorECDLP.Paper2607_13816.initializedScalar_registers_coherent
+#print axioms ShorECDLP.Paper2607_13816.scalarRegisterOutput_frame
+#print axioms ShorECDLP.Paper2607_13816.scalarInputValue_pointWrite
+#print axioms ShorECDLP.Paper2607_13816.scalarRegisterOutput_inputs
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2821 ]]; then
-  printf 'expected 2821 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2893 ]]; then
+  printf 'expected 2893 #print axioms results\n' >&2
   exit 1
 fi
 
