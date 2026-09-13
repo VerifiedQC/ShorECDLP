@@ -2822,3 +2822,14 @@ composes the same circuit's coherent semantics. Direct support remains
 1,383 wires; the added preparation does not change T or measurement counts.
 The final Fourier sampling, aggregate resource/success contract, and tighter
 lifetime allocation remain open.
+
+### Window trial Fourier measurements
+
+`Window/Trial` appends two actual 257-bit semiclassical inverse Fourier measurements
+to the prepared physical scalar circuit. Its full instrument explicitly enumerates
+both output strings. For each pair, summing all internal arithmetic histories gives
+the Born mass of the two mathematical measured Fourier rows after the coherent
+scalar oracle and input Hadamards. Output bit order and wire order follow the
+existing Fourier kernel convention. The same executable circuit has a direct
+1,383-wire upper bound and adds exactly 514 measurements. This is not yet a
+success-probability or final paper-resource contract; those remain open.
