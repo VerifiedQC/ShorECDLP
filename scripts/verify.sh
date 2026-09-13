@@ -2950,11 +2950,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_uniform
 #print axioms ShorECDLP.Paper2607_13816.phaseUniformSum_append
 #print axioms ShorECDLP.Paper2607_13816.scalarPhaseWord_inputs
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierKernel_ket
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierClear_point
+#print axioms ShorECDLP.Paper2607_13816.fourierWordMSB_reverse
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierKernel_assigned
+#print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_point_sum
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2929 ]]; then
-  printf 'expected 2929 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2934 ]]; then
+  printf 'expected 2934 #print axioms results\n' >&2
   exit 1
 fi
 

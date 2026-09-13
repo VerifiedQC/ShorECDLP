@@ -2853,3 +2853,12 @@ output mass equals the norm square of the resulting explicit Fourier amplitude
 sum, with interference retained. The two physical scalar values are exactly the
 little-endian values of their assigned words. Relating this sum to the character
 mixture and closing final resources remain open.
+
+### Point-valued window Fourier kernel
+
+`Window/Kernel` identifies each physical assignment's two Fourier coefficients
+with the two scalar word values. Both measurements clear all phase bits and leave
+the encoded scalar point sum. Each observed output mass is now the norm square
+of an explicit double Fourier sum of point kets; no internal-history or physical
+wire assumption remains hidden in that expression. Relating this sum to the
+character mixture and closing final resources remain open.
