@@ -2938,11 +2938,15 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_support
 #print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.windowTrialSlice_kernel_mass
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierSlice_filter
+#print axioms ShorECDLP.Paper2607_13816.windowTrialSlice_filter
+#print axioms ShorECDLP.Paper2607_13816.windowTrial_zero_initial
+#print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_kernel
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2917 ]]; then
-  printf 'expected 2917 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2921 ]]; then
+  printf 'expected 2921 #print axioms results\n' >&2
   exit 1
 fi
 

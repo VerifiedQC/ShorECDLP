@@ -2833,3 +2833,13 @@ scalar oracle and input Hadamards. Output bit order and wire order follow the
 existing Fourier kernel convention. The same executable circuit has a direct
 1,383-wire upper bound and adds exactly 514 measurements. This is not yet a
 success-probability or final paper-resource contract; those remain open.
+
+### Decoded window-trial outcomes
+
+`Window/Outcomes` consumes the actual arithmetic measurement history before splitting
+the final two 257-bit output strings. Filtering the complete instrument with this
+decoder equals the previously certified Fourier slice, retaining all arithmetic
+branches. The all-zero input satisfies the preparation conditions, and each decoded
+output probability is therefore exactly the corresponding measured Fourier kernel
+mass on the prepared physical scalar oracle. The character-mixture success bound
+and final resource closure remain open.
