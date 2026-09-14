@@ -2810,3 +2810,63 @@ these two input values and preserves both registers and all external wires;
 no separate scalar-digit binding assumptions remain. Root setup/cleanup,
 phase preparation and Fourier sampling, aggregate resources and final
 success-contract composition remain open.
+
+### Clean control and physical phase preparation
+
+`Window/PhasePrepare` wraps scalar computation with actual X gates that set
+and restore control 836. From clean work and padding, its coherent output
+replaces only the point word by the physical input scalars' combination.
+It then prepends 514 actual Hadamards on the two 257-bit input registers;
+a support proof establishes readiness of the resulting superposition and
+composes the same circuit's coherent semantics. Direct support remains
+1,383 wires; the added preparation does not change T or measurement counts.
+The final Fourier sampling, aggregate resource/success contract, and tighter
+lifetime allocation remain open.
+
+### Window trial Fourier measurements
+
+`Window/Trial` appends two actual 257-bit semiclassical inverse Fourier measurements
+to the prepared physical scalar circuit. Its full instrument explicitly enumerates
+both output strings. For each pair, summing all internal arithmetic histories gives
+the Born mass of the two mathematical measured Fourier rows after the coherent
+scalar oracle and input Hadamards. Output bit order and wire order follow the
+existing Fourier kernel convention. The same executable circuit has a direct
+1,383-wire upper bound and adds exactly 514 measurements. This is not yet a
+success-probability or final paper-resource contract; those remain open.
+
+### Decoded window-trial outcomes
+
+`Window/Outcomes` consumes the actual arithmetic measurement history before splitting
+the final two 257-bit output strings. Filtering the complete instrument with this
+decoder equals the previously certified Fourier slice, retaining all arithmetic
+branches. The all-zero input satisfies the preparation conditions, and each decoded
+output probability is therefore exactly the corresponding measured Fourier kernel
+mass on the prepared physical scalar oracle. The character-mixture success bound
+and final resource closure remain open.
+
+### Uniform phase-input amplitude expansion
+
+`Window/Uniform` expands the actual 514 input Hadamards into their normalized
+finite sum of physical bit assignments. Assignment preserves other wires, reads
+back the assigned words, and splits across the two input registers. The decoded
+output mass equals the norm square of the resulting explicit Fourier amplitude
+sum, with interference retained. The two physical scalar values are exactly the
+little-endian values of their assigned words. Relating this sum to the character
+mixture and closing final resources remain open.
+
+### Point-valued window Fourier kernel
+
+`Window/Kernel` identifies each physical assignment's two Fourier coefficients
+with the two scalar word values. Both measurements clear all phase bits and leave
+the encoded scalar point sum. Each observed output mass is now the norm square
+of an explicit double Fourier sum of point kets; no internal-history or physical
+wire assumption remains hidden in that expression. Relating this sum to the
+character mixture and closing final resources remain open.
+
+### Character expansion and normalized word sums
+
+`Window/CharacterExpansion` expands each point ket in its prime-order cyclic
+character basis and identifies the normalized weighted bit-word sum with
+`paperPhaseAmplitude`. These are exact amplitude identities; identifying the
+complete physical output mass with the character mixture and proving the
+success bound remain subsequent steps.

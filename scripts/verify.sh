@@ -2914,11 +2914,55 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.scalarRegisterOutput_frame
 #print axioms ShorECDLP.Paper2607_13816.scalarInputValue_pointWrite
 #print axioms ShorECDLP.Paper2607_13816.scalarRegisterOutput_inputs
+#print axioms ShorECDLP.Paper2607_13816.scalarRootFlip_ready
+#print axioms ShorECDLP.Paper2607_13816.scalarCompute_coherent
+#print axioms ShorECDLP.Paper2607_13816.scalarCompute_support
+#print axioms ShorECDLP.Paper2607_13816.scalarCompute_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.scalarCompute_tCount
+#print axioms ShorECDLP.Paper2607_13816.scalarCompute_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.scalarPhasePrepare_supported
+#print axioms ShorECDLP.Paper2607_13816.preparedScalar_coherent
+#print axioms ShorECDLP.Paper2607_13816.scalarPhasePrepare_support
+#print axioms ShorECDLP.Paper2607_13816.preparedScalar_support
+#print axioms ShorECDLP.Paper2607_13816.preparedScalar_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.scalarPhasePrepare_length
+#print axioms ShorECDLP.Paper2607_13816.scalarPhasePrepare_tCount
+#print axioms ShorECDLP.Paper2607_13816.preparedScalar_tCount
+#print axioms ShorECDLP.Paper2607_13816.preparedScalar_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_run
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_measurements
+#print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_measurements
+#print axioms ShorECDLP.Paper2607_13816.windowTrialSlice_mass
+#print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_run
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_support
+#print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_support
+#print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.windowTrialSlice_kernel_mass
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierSlice_filter
+#print axioms ShorECDLP.Paper2607_13816.windowTrialSlice_filter
+#print axioms ShorECDLP.Paper2607_13816.windowTrial_zero_initial
+#print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_kernel
+#print axioms ShorECDLP.Paper2607_13816.phaseWordState_frame
+#print axioms ShorECDLP.Paper2607_13816.phaseWordState_word
+#print axioms ShorECDLP.Paper2607_13816.phaseWordState_append
+#print axioms ShorECDLP.Paper2607_13816.phaseHadamards_uniform
+#print axioms ShorECDLP.Paper2607_13816.scalarPhasePrepare_uniform
+#print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_uniform
+#print axioms ShorECDLP.Paper2607_13816.phaseUniformSum_append
+#print axioms ShorECDLP.Paper2607_13816.scalarPhaseWord_inputs
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierKernel_ket
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierClear_point
+#print axioms ShorECDLP.Paper2607_13816.fourierWordMSB_reverse
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierKernel_assigned
+#print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_point_sum
+#print axioms ShorECDLP.Paper2607_13816.pointKet_character_expansion
+#print axioms ShorECDLP.Paper2607_13816.phaseWord_geometric_sum
+#print axioms ShorECDLP.Paper2607_13816.phaseWord_weighted_sum
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2893 ]]; then
-  printf 'expected 2893 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2937 ]]; then
+  printf 'expected 2937 #print axioms results\n' >&2
   exit 1
 fi
 
