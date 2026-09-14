@@ -2911,3 +2911,7 @@ reset/reuse and aggregate repeated-run resource accounting remain open.
 ### Physical trial reset
 
 `Window/Reset.lean` appends actual measurement/reset of every allocated wire. Every resulting branch is clean on the full 1,383-wire allocation for arbitrary input states; the same program stays within that allocation and adds 1,383 measurements with no additional unitary T cost. This does not yet establish the independent retry distribution or preservation/identification of successful decoded candidates. The unused label gap is outside the reset allocation; its initial-state frame must be retained when proving readiness for another run.
+
+### Complete reset-state restoration
+
+`Framework/Quantum/AdaptiveFrame.lean` proves that every adaptive branch preserves each basis bit outside its physical support, including superpositions and measurement/reset. `Window/ResetFrame.lean` combines this with allocated-wire cleanup: starting at the zero state, every trial-plus-reset branch returns a scalar multiple of that same complete zero state. This closes the unused-label frame boundary. Independent repeated-output probabilities and candidate selection remain subsequent work.

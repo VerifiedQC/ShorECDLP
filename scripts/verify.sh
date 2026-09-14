@@ -2988,11 +2988,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.resetWindowTrial_support
 #print axioms ShorECDLP.Paper2607_13816.resetWindowTrial_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.resetWindowTrial_resources
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.branch_frame
+#print axioms ShorECDLP.Paper2607_13816.resetWindowTrial_zero_support
+#print axioms ShorECDLP.Paper2607_13816.resetWindowTrial_zero_branch
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2967 ]]; then
-  printf 'expected 2967 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2970 ]]; then
+  printf 'expected 2970 #print axioms results\n' >&2
   exit 1
 fi
 
