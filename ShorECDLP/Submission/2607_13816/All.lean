@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.PointLookupPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».Window.LookupPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».Window.PhysicalRepetition
 import ShorECDLP.Submission.«2607_13816».Window.Candidate

@@ -2931,3 +2931,7 @@ The actual reset history decodes to two finite little-endian words and then to a
 ### Exact signed-coordinate primitive counts
 
 `Window/LookupPrimitiveCounts` gives the exact six-component resource vector for measured QROM, including table-dependent data CNOTs and all decoder erasure costs. It composes both load/clear traversals with the 256-bit modular adder, includes negative-control masks, and derives the exact nine-stage signed coordinate vector with all five field queries. The exceptional-point correction traversal and complete window schedule remain separate aggregation steps.
+
+The signed point lookup now has an exact same-program primitive vector, including
+the separate 16-bit exceptional-point correction decoder and its selected payloads.
+Whole-schedule aggregation and the tighter paper allocation remain open.

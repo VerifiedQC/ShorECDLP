@@ -3018,11 +3018,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig14LookupY_primitive
 #print axioms ShorECDLP.Paper2607_13816.signedPointLookupY_primitive
 #print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointProgram_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2997 ]]; then
-  printf 'expected 2997 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2999 ]]; then
+  printf 'expected 2999 #print axioms results\n' >&2
   exit 1
 fi
 
