@@ -3023,11 +3023,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_primitive
 #print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_primitive
 #print axioms ShorECDLP.Paper2607_13816.scalarWindowsProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_primitive_exact
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3002 ]]; then
-  printf 'expected 3002 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3004 ]]; then
+  printf 'expected 3004 #print axioms results\n' >&2
   exit 1
 fi
 

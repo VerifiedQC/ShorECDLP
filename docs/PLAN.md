@@ -2939,3 +2939,8 @@ Whole-schedule aggregation and the tighter paper allocation remain open.
 Exact primitive vectors now compose across both actual 17-window schedules,
 including 30 CX gates for each address preparation and cleanup. This certifies
 the current 34-window schedule; it does not assert the paper-specific omissions.
+
+The two actual 257-bit semiclassical Fourier measurements now have exact
+componentwise worst-case counts: 65,792 phase primitives and 514 measurements,
+with zero X/H/CX/CCX gates. Phase primitives retain the unit-cost-P convention;
+this is not a synthesized Clifford+T cost.
