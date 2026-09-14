@@ -2870,3 +2870,19 @@ character basis and identifies the normalized weighted bit-word sum with
 `paperPhaseAmplitude`. These are exact amplitude identities; identifying the
 complete physical output mass with the character mixture and proving the
 success bound remain subsequent steps.
+
+### Actual windowed output distribution
+
+`Window/CharacterMixture` proves that the actual windowed circuit output mass
+equals `paperPairMass` for Q = dP and prime-order P. The proof factors the
+point-valued Fourier sum through the cyclic character basis and applies its
+orthogonality. The physical output distribution is now connected; the classical
+postprocessor success theorem and final resource contract remain next.
+
+### Physical windowed success certificate
+
+`Window/Success` proves total decoded output mass one and the canonical
+postprocessor success lower bound ((r−1)/r)(4/π²)² for the actual windowed
+circuit, under its explicit nonzero-point, prime-order and precision premises.
+The same-program certificate includes the direct 1,383-wire bound. This does
+not establish the paper’s tighter space target or close aggregate resources.
