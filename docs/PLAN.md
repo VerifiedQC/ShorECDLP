@@ -2927,3 +2927,7 @@ The actual reset history decodes to two finite little-endian words and then to a
 ### Physical repeated execution
 
 `Window/PhysicalRepetition` derives independence from the actual sequential Kraus branches, complete zero-state reset, and unit total mass. Twenty-six actual reset trials return the first publicly verified candidate with probability at least 99 percent. Every returned candidate is correct; every final branch restores the full zero state, and the direct support bound remains 1,383 wires. T and measurement counts multiply by 26, including 1,383 reset measurements per run. The aggregate arithmetic primitive vector and paper-specific omitted-window resource target remain open.
+
+### Exact signed-coordinate primitive counts
+
+`Window/LookupPrimitiveCounts` gives the exact six-component resource vector for measured QROM, including table-dependent data CNOTs and all decoder erasure costs. It composes both load/clear traversals with the 256-bit modular adder, includes negative-control masks, and derives the exact nine-stage signed coordinate vector with all five field queries. The exceptional-point correction traversal and complete window schedule remain separate aggregation steps.
