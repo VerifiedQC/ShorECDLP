@@ -2895,3 +2895,11 @@ decoder defines the same output distribution used by the success theorem.
 The distribution is normalized and the concrete success lower bound holds for
 all Q = dG, including zero. The direct program support remains at most 1,383
 wires. Repeated-run semantics and aggregate resource closure remain open.
+
+### Independent retry probability
+
+`Window/Repetition` derives a concrete one-run lower bound of 163/1000 and
+proves that 26 independent measured runs exceed 99 percent success, using
+`Framework/Repetition`. The probability is the actual public-input windowed
+trial success mass. This is an independent-retry model theorem; physical
+reset/reuse and aggregate repeated-run resource accounting remain open.

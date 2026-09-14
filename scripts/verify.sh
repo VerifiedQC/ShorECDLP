@@ -2976,11 +2976,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secpWindowOutputMass_total
 #print axioms ShorECDLP.Paper2607_13816.secpWindowSuccessMass_lower
 #print axioms ShorECDLP.Paper2607_13816.secpWindowOutputMass_physical
+#print axioms ShorECDLP.Paper2607_13816.secpWindowSuccessMass_le_one
+#print axioms ShorECDLP.Paper2607_13816.secpWindowSuccessMass_numeric
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRetrySuccess
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2955 ]]; then
-  printf 'expected 2955 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2958 ]]; then
+  printf 'expected 2958 #print axioms results\n' >&2
   exit 1
 fi
 
