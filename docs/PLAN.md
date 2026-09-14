@@ -2886,3 +2886,12 @@ postprocessor success lower bound ((r−1)/r)(4/π²)² for the actual windowed
 circuit, under its explicit nonzero-point, prime-order and precision premises.
 The same-program certificate includes the direct 1,383-wire bound. This does
 not establish the paper’s tighter space target or close aggregate resources.
+
+### Concrete secp256k1 public-input wrapper
+
+`Window/Secp` specializes the physical trial to the certified generator and
+handles the zero public point with a gate-free classical result. Its transcript
+decoder defines the same output distribution used by the success theorem.
+The distribution is normalized and the concrete success lower bound holds for
+all Q = dG, including zero. The direct program support remains at most 1,383
+wires. Repeated-run semantics and aggregate resource closure remain open.

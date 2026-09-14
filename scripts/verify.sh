@@ -2967,11 +2967,20 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.windowTrialSuccessMass_eq
 #print axioms ShorECDLP.Paper2607_13816.windowTrialSuccessMass_lower
 #print axioms ShorECDLP.Paper2607_13816.windowTrial_success_certificate
+#print axioms ShorECDLP.Paper2607_13816.secpWindow_zero_input
+#print axioms ShorECDLP.Paper2607_13816.secpWindow_zero_success
+#print axioms ShorECDLP.Paper2607_13816.secpWindow_nonzero_success
+#print axioms ShorECDLP.Paper2607_13816.secpWindowProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.secpWindowProgram_zero
+#print axioms ShorECDLP.Paper2607_13816.secpWindowProgram_nonzero
+#print axioms ShorECDLP.Paper2607_13816.secpWindowOutputMass_total
+#print axioms ShorECDLP.Paper2607_13816.secpWindowSuccessMass_lower
+#print axioms ShorECDLP.Paper2607_13816.secpWindowOutputMass_physical
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2946 ]]; then
-  printf 'expected 2946 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2955 ]]; then
+  printf 'expected 2955 #print axioms results\n' >&2
   exit 1
 fi
 
