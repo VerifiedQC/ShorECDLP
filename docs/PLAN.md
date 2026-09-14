@@ -809,6 +809,15 @@ sequential repetition multiplies time but reuses qubits.
 live qubits for one executable adaptive program. Only then is replacing the default submission a
 separate reviewed decision.
 
+**Current baseline certificate:** `secpWindowContract` collects actual decoded sampling,
+the ideal Fourier distribution, correct candidate output, complete physical reset,
+exact componentwise resources and exact T-model counts. One reset trial has success
+at least 16.3%; the fixed 26-run program has success at least 99%, with the same
+1,383-wire bound. This certifies the current 34-window baseline. The paper's four
+omitted windows remain unproved; classical decoding is a mathematical specification,
+and phase primitives retain the unit-cost-P convention. These limitations remain
+explicit rather than being discharged by the certificate.
+
 ## 7. Paper targets that are not yet claims
 
 | Item | Printed target | Required Lean evidence |
