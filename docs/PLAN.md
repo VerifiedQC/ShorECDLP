@@ -2919,3 +2919,7 @@ reset/reuse and aggregate repeated-run resource accounting remain open.
 ### Reset output distribution and candidate validation
 
 `Window/Total.lean` proves that every actual secp trial transcript decodes and that total instrument mass is one, with no unaccounted decoder failures. Classical candidates are checked against the public group relation; acceptance is sound and preserves the original correct-candidate event. `Window/ResetOutcomes.lean` decodes the original trial prefix before reset measurements and proves its exact output mass is unchanged after physical reset; the reset trial also has total mass one. The repeated-execution decoder and product probability still remain open.
+
+### Checked finite reset outputs
+
+The actual reset history decodes to two finite little-endian words and then to a publicly verified scalar candidate. Every accepted candidate equals the discrete logarithm modulo the generator order; the actual acceptance mass equals the established single-trial success mass. Repeated physical execution and its resource aggregation remain the next contract boundary.
