@@ -3000,11 +3000,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.resetWindowFiniteOutputMass
 #print axioms ShorECDLP.Paper2607_13816.resetWindowCandidate_sound
 #print axioms ShorECDLP.Paper2607_13816.resetWindowCandidate_mass
+#print axioms ShorECDLP.Paper2607_13816.repeatWindowFailed_mass
+#print axioms ShorECDLP.Paper2607_13816.repeatWindowSuccess_mass
+#print axioms ShorECDLP.Paper2607_13816.repeatWindowProgram_resources
+#print axioms ShorECDLP.Paper2607_13816.repeatWindowProgram_support
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedCandidate_sound
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedCandidate_mass
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedCandidate_success
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedProgram_clean
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedProgram_resources
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedProgram_qubitCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2979 ]]; then
-  printf 'expected 2979 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2989 ]]; then
+  printf 'expected 2989 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -58,7 +58,7 @@ theorem resetWindowFiniteOutputMass (Q : Point) (hrQ : order • Q=0)
     exact finite_decode_iff Q hrQ b hb out
   rw [he]
   exact resetWindowOutputMass_physical Q hrQ out
-/-- The executable classical decoder checks the candidate against the public point. -/
+/-- The classical decoder specification checks the candidate against the public point. -/
 def resetWindowCandidate (Q : Point) (hrQ : order • Q=0) (hist : List Bool) : Option (ZMod order) :=
   (resetWindowFiniteDecode Q hrQ hist).bind (secpWindowVerifiedCandidate Q)
 
