@@ -2958,11 +2958,15 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.pointKet_character_expansion
 #print axioms ShorECDLP.Paper2607_13816.phaseWord_geometric_sum
 #print axioms ShorECDLP.Paper2607_13816.phaseWord_weighted_sum
+#print axioms ShorECDLP.Paper2607_13816.weighted_point_character_sum
+#print axioms ShorECDLP.Paper2607_13816.normalized_point_character_sum
+#print axioms ShorECDLP.Paper2607_13816.normalized_point_character_mass
+#print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_character_mixture
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2937 ]]; then
-  printf 'expected 2937 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2941 ]]; then
+  printf 'expected 2941 #print axioms results\n' >&2
   exit 1
 fi
 
