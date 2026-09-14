@@ -2886,3 +2886,24 @@ postprocessor success lower bound ((r−1)/r)(4/π²)² for the actual windowed
 circuit, under its explicit nonzero-point, prime-order and precision premises.
 The same-program certificate includes the direct 1,383-wire bound. This does
 not establish the paper’s tighter space target or close aggregate resources.
+
+### Concrete secp256k1 public-input wrapper
+
+`Window/Secp` specializes the physical trial to the certified generator and
+handles the zero public point with a gate-free classical result. Its transcript
+decoder defines the same output distribution used by the success theorem.
+The distribution is normalized and the concrete success lower bound holds for
+all Q = dG, including zero. The direct program support remains at most 1,383
+wires. Repeated-run semantics and aggregate resource closure remain open.
+
+### Independent retry probability
+
+`Window/Repetition` derives a concrete one-run lower bound of 163/1000 and
+proves that 26 independent measured runs exceed 99 percent success, using
+`Framework/Repetition`. The probability is the actual public-input windowed
+trial success mass. This is an independent-retry model theorem; physical
+reset/reuse and aggregate repeated-run resource accounting remain open.
+
+### Fourier suffix primitive resources
+
+`Window/FourierResources.lean` proves that both physical Fourier measurements add at most 65,792 dyadic phase gates and exactly 514 measurements, with no explicit X, H, CX or CCX gates. The whole trial's existing unit-cost-P T metric is bounded by the scalar-window metric plus 65,792. This does not price synthesized dyadic phases or measurement implementation; aggregate arithmetic and reset/retry resources remain open.
