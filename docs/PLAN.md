@@ -2907,3 +2907,7 @@ reset/reuse and aggregate repeated-run resource accounting remain open.
 ### Fourier suffix primitive resources
 
 `Window/FourierResources.lean` proves that both physical Fourier measurements add at most 65,792 dyadic phase gates and exactly 514 measurements, with no explicit X, H, CX or CCX gates. The whole trial's existing unit-cost-P T metric is bounded by the scalar-window metric plus 65,792. This does not price synthesized dyadic phases or measurement implementation; aggregate arithmetic and reset/retry resources remain open.
+
+### Physical trial reset
+
+`Window/Reset.lean` appends actual measurement/reset of every allocated wire. Every resulting branch is clean on the full 1,383-wire allocation for arbitrary input states; the same program stays within that allocation and adds 1,383 measurements with no additional unitary T cost. This does not yet establish the independent retry distribution or preservation/identification of successful decoded candidates. The unused label gap is outside the reset allocation; its initial-state frame must be retained when proving readiness for another run.
