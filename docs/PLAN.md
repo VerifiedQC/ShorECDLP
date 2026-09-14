@@ -2903,3 +2903,7 @@ proves that 26 independent measured runs exceed 99 percent success, using
 `Framework/Repetition`. The probability is the actual public-input windowed
 trial success mass. This is an independent-retry model theorem; physical
 reset/reuse and aggregate repeated-run resource accounting remain open.
+
+### Fourier suffix primitive resources
+
+`Window/FourierResources.lean` proves that both physical Fourier measurements add at most 65,792 dyadic phase gates and exactly 514 measurements, with no explicit X, H, CX or CCX gates. The whole trial's existing unit-cost-P T metric is bounded by the scalar-window metric plus 65,792. This does not price synthesized dyadic phases or measurement implementation; aggregate arithmetic and reset/retry resources remain open.

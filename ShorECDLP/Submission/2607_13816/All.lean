@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.FourierResources
 import ShorECDLP.Submission.«2607_13816».Window.Repetition
 import ShorECDLP.Submission.«2607_13816».Window.Secp
 import ShorECDLP.Submission.«2607_13816».Window.Success
