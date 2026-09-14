@@ -2962,11 +2962,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.normalized_point_character_sum
 #print axioms ShorECDLP.Paper2607_13816.normalized_point_character_mass
 #print axioms ShorECDLP.Paper2607_13816.windowTrialOutputMass_character_mixture
+#print axioms ShorECDLP.Paper2607_13816.windowTrialFiniteOutputMass_eq
+#print axioms ShorECDLP.Paper2607_13816.windowTrialFiniteOutputMass_total
+#print axioms ShorECDLP.Paper2607_13816.windowTrialSuccessMass_eq
+#print axioms ShorECDLP.Paper2607_13816.windowTrialSuccessMass_lower
+#print axioms ShorECDLP.Paper2607_13816.windowTrial_success_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2941 ]]; then
-  printf 'expected 2941 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2946 ]]; then
+  printf 'expected 2946 #print axioms results\n' >&2
   exit 1
 fi
 
