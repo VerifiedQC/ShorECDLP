@@ -2944,3 +2944,9 @@ The two actual 257-bit semiclassical Fourier measurements now have exact
 componentwise worst-case counts: 65,792 phase primitives and 514 measurements,
 with zero X/H/CX/CCX gates. Phase primitives retain the unit-cost-P convention;
 this is not a synthesized Clifford+T cost.
+
+The actual full trial now has an exact componentwise primitive vector covering
+point initialization, both root flips, 514 preparation Hadamards, all 34 signed
+windows and both Fourier measurements. Physical reset adds 1,383 measurements;
+the actual 26-run program scales every component by 26 while reusing its wires.
+The zero public-point branch is accounted for separately.

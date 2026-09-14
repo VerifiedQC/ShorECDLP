@@ -3025,11 +3025,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.scalarWindowsProgram_primitive
 #print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_tCount_exact
 #print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.scalarPhasePrepare_primitive
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_primitive
+#print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.windowResetProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.repeatWindowProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.secpWindowProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedProgram_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3004 ]]; then
-  printf 'expected 3004 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3011 ]]; then
+  printf 'expected 3011 #print axioms results\n' >&2
   exit 1
 fi
 
