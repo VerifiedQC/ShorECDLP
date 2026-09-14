@@ -3020,11 +3020,14 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_primitive
 #print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_primitive
 #print axioms ShorECDLP.Paper2607_13816.signedLookupPointProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_primitive
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_primitive
+#print axioms ShorECDLP.Paper2607_13816.scalarWindowsProgram_primitive
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2999 ]]; then
-  printf 'expected 2999 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3002 ]]; then
+  printf 'expected 3002 #print axioms results\n' >&2
   exit 1
 fi
 

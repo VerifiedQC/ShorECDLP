@@ -2935,3 +2935,7 @@ The actual reset history decodes to two finite little-endian words and then to a
 The signed point lookup now has an exact same-program primitive vector, including
 the separate 16-bit exceptional-point correction decoder and its selected payloads.
 Whole-schedule aggregation and the tighter paper allocation remain open.
+
+Exact primitive vectors now compose across both actual 17-window schedules,
+including 30 CX gates for each address preparation and cleanup. This certifies
+the current 34-window schedule; it does not assert the paper-specific omissions.
