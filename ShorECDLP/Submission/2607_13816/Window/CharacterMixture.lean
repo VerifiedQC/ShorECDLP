@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».OrderFinding.AsymmetricPair
 import ShorECDLP.Submission.«2607_13816».Window.CharacterExpansion
 import ShorECDLP.Submission.«2607_13816».OrderFinding.PhysicalPair
 namespace ShorECDLP.Paper2607_13816
@@ -60,6 +61,63 @@ theorem weighted_point_character_sum {r : Nat} (hr : Nat.Prime r) (P : Point)
   simp only [←mul_assoc, list_sum_mul]
 
 /-- The normalized double Fourier sum has the product phase amplitudes. -/
+theorem asymmetric_point_character_sum {r : Nat} (hr : Nat.Prime r) (P : Point)
+    (horder : addOrderOf P = r) (s : BasisState) (n m d : Nat) (x y : List Bool)
+    (hx : x.length=n) (hy : y.length=m) :
+    let N : ℂ := ((((Real.sqrt 2)⁻¹:ℝ):ℂ)^n) * ((((Real.sqrt 2)⁻¹:ℝ):ℂ)^m)
+    (N*N) • ((fourierOutcomes n).map (fun a => ((fourierOutcomes m).map (fun b =>
+      (dyadicFourierKernel .inverse n (boolWordToNat a) (fourierWordLSB x) *
+       dyadicFourierKernel .inverse m (boolWordToNat b) (fourierWordLSB y)) •
+       ket (pointWrite ((boolWordToNat a+d*boolWordToNat b) • P) s))).sum)).sum =
+    (((Real.sqrt r)⁻¹:ℝ):ℂ) • ∑ k : Fin r,
+      (paperPhaseAmplitude n ((k.val:ℝ)/(r:ℝ)) (fourierWordLSB x) *
+       paperPhaseAmplitude m (((k.val*d:Nat):ℝ)/(r:ℝ)) (fourierWordLSB y)) •
+        pointCyclicState P s k := by
+  dsimp only
+  have hw := weighted_point_character_sum hr P horder s
+    ((fourierOutcomes n).map boolWordToNat) ((fourierOutcomes m).map boolWordToNat)
+    (fun a => dyadicFourierKernel .inverse n a (fourierWordLSB x))
+    (fun b => dyadicFourierKernel .inverse m b (fourierWordLSB y)) d
+  simp only [List.map_map, Function.comp_def] at hw
+  rw [hw, smul_comm]
+  apply congrArg (fun v : State => (((Real.sqrt r)⁻¹:ℝ):ℂ) • v)
+  rw [Finset.smul_sum]
+  apply Finset.sum_congr rfl
+  intro k hk
+  rw [smul_smul]
+  have ha := phaseWord_weighted_sum ((k.val:ℝ)/(r:ℝ)) n x hx
+  have hb := phaseWord_weighted_sum (((k.val*d:Nat):ℝ)/(r:ℝ)) m y hy
+  rw [←ha, ←hb]
+  congr 1
+  ring
+
+/-- The normalized point Fourier sum has exactly the uniform character-mixture mass. -/
+theorem asymmetric_point_character_mass {r : Nat} (hr : Nat.Prime r) (P : Point)
+    (horder : addOrderOf P=r) (s : BasisState) (n m d : Nat) (x y : List Bool)
+    (hx : x.length=n) (hy : y.length=m)
+    (out : Fin (2^n) × Fin (2^m)) (hox : fourierWordLSB x=out.1.val)
+    (hoy : fourierWordLSB y=out.2.val) :
+    let N : ℂ := ((((Real.sqrt 2)⁻¹:ℝ):ℂ)^n) * ((((Real.sqrt 2)⁻¹:ℝ):ℂ)^m)
+    normSq ((N*N) • ((fourierOutcomes n).map (fun a => ((fourierOutcomes m).map (fun b =>
+      (dyadicFourierKernel .inverse n (boolWordToNat a) (fourierWordLSB x) *
+       dyadicFourierKernel .inverse m (boolWordToNat b) (fourierWordLSB y)) •
+       ket (pointWrite ((boolWordToNat a+d*boolWordToNat b) • P) s))).sum)).sum) =
+    asymmetricPairMass r n m d out := by
+  dsimp only
+  rw [asymmetric_point_character_sum hr P horder s n m d x y hx hy]
+  rw [Finset.smul_sum]
+  simp only [smul_smul, pointCyclicState]
+  rw [cyclicState_mass hr _ (pointCyclicBasis_orthonormal P s horder)]
+  have hn : Complex.normSq ((((Real.sqrt r)⁻¹:ℝ):ℂ))=1/(r:ℝ) := by
+    simp [Complex.normSq_ofReal]
+  have he (k : Fin r) : paperPhaseAmplitude m (((k.val*d:Nat):ℝ)/(r:ℝ)) out.2.val =
+      paperPhaseAmplitude m ((((d*k.val)%r:Nat):ℝ)/(r:ℝ)) out.2.val := by
+    rw [Nat.mul_comm k.val d]
+    exact paperPhaseAmplitude_mod m r (d*k.val) out.2.val hr.pos
+  simp_rw [Complex.normSq_mul, hn, hox, hoy, he]
+  rw [←Finset.mul_sum]
+  rfl
+
 theorem normalized_point_character_sum {r : Nat} (hr : Nat.Prime r) (P : Point)
     (horder : addOrderOf P = r) (s : BasisState) (n d : Nat) (x y : List Bool)
     (hx : x.length=n) (hy : y.length=n) :
@@ -71,26 +129,9 @@ theorem normalized_point_character_sum {r : Nat} (hr : Nat.Prime r) (P : Point)
     (((Real.sqrt r)⁻¹:ℝ):ℂ) • ∑ k : Fin r,
       (paperPhaseAmplitude n ((k.val:ℝ)/(r:ℝ)) (fourierWordLSB x) *
        paperPhaseAmplitude n (((k.val*d:Nat):ℝ)/(r:ℝ)) (fourierWordLSB y)) •
-        pointCyclicState P s k := by
-  dsimp only
-  have hw := weighted_point_character_sum hr P horder s
-    ((fourierOutcomes n).map boolWordToNat) ((fourierOutcomes n).map boolWordToNat)
-    (fun a => dyadicFourierKernel .inverse n a (fourierWordLSB x))
-    (fun b => dyadicFourierKernel .inverse n b (fourierWordLSB y)) d
-  simp only [List.map_map, Function.comp_def] at hw
-  rw [hw, smul_comm]
-  apply congrArg (fun v : State => (((Real.sqrt r)⁻¹:ℝ):ℂ) • v)
-  rw [Finset.smul_sum]
-  apply Finset.sum_congr rfl
-  intro k hk
-  rw [smul_smul]
-  have ha := phaseWord_weighted_sum ((k.val:ℝ)/(r:ℝ)) n x hx
-  have hb := phaseWord_weighted_sum (((k.val*d:Nat):ℝ)/(r:ℝ)) n y hy
-  rw [←ha, ←hb]
-  congr 1
-  ring
+        pointCyclicState P s k :=
+  asymmetric_point_character_sum hr P horder s n n d x y hx hy
 
-/-- The normalized point Fourier sum has exactly the uniform character-mixture mass. -/
 theorem normalized_point_character_mass {r : Nat} (hr : Nat.Prime r) (P : Point)
     (horder : addOrderOf P=r) (s : BasisState) (n d : Nat) (x y : List Bool)
     (hx : x.length=n) (hy : y.length=n)
@@ -102,22 +143,9 @@ theorem normalized_point_character_mass {r : Nat} (hr : Nat.Prime r) (P : Point)
        dyadicFourierKernel .inverse n (boolWordToNat b) (fourierWordLSB y)) •
        ket (pointWrite ((boolWordToNat a+d*boolWordToNat b) • P) s))).sum)).sum) =
     paperPairMass r n d out := by
-  dsimp only
-  rw [normalized_point_character_sum hr P horder s n d x y hx hy]
-  rw [Finset.smul_sum]
-  simp only [smul_smul, pointCyclicState]
-  rw [cyclicState_mass hr _ (pointCyclicBasis_orthonormal P s horder)]
-  have hn : Complex.normSq ((((Real.sqrt r)⁻¹:ℝ):ℂ))=1/(r:ℝ) := by
-    simp [Complex.normSq_ofReal]
-  have he (k : Fin r) : paperPhaseAmplitude n (((k.val*d:Nat):ℝ)/(r:ℝ)) out.2.val =
-      paperPhaseAmplitude n ((((d*k.val)%r:Nat):ℝ)/(r:ℝ)) out.2.val := by
-    rw [Nat.mul_comm k.val d]
-    exact paperPhaseAmplitude_mod n r (d*k.val) out.2.val hr.pos
-  simp_rw [Complex.normSq_mul, hn, hox, hoy, he]
-  rw [←Finset.mul_sum]
-  rfl
+  simpa only [asymmetricPairMass,paperPairMass] using asymmetric_point_character_mass hr P horder s n n d x y hx hy out hox hoy
 
-private theorem double_sum_normalize (xs ys : List (List Bool)) (f g : List Bool → ℂ)
+theorem pointDoubleSum_normalize (xs ys : List (List Bool)) (f g : List Bool → ℂ)
     (c : ℂ) (P Q : Point) (d : Nat) (hQ : Q=d • P) (s : BasisState) :
     c • (xs.map (fun a => (ys.map (fun b => (c*f a*g b) •
       ket (pointWrite (boolWordToNat a • P+boolWordToNat b • Q) s))).sum)).sum =
@@ -148,7 +176,7 @@ theorem windowTrialOutputMass_character_mixture {r : Nat} (hr : Nat.Prime r)
     (hoy : fourierWordLSB y=out.2.val) :
     windowTrialOutputMass P Q hP hQ hrP hrQ x y=paperPairMass r 257 d out := by
   rw [windowTrialOutputMass_point_sum P Q hP hQ hrP hrQ x y hx hy]
-  rw [double_sum_normalize _ _ _ _ _ P Q d hQd zeroBasisState]
+  rw [pointDoubleSum_normalize _ _ _ _ _ P Q d hQd zeroBasisState]
   have hp : ((((Real.sqrt 2)⁻¹:ℝ):ℂ)^514)=
       ((((Real.sqrt 2)⁻¹:ℝ):ℂ)^257)*((((Real.sqrt 2)⁻¹:ℝ):ℂ)^257) := by
     rw [←pow_add]
