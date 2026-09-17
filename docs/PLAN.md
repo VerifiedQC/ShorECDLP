@@ -3148,3 +3148,12 @@ existing window validity support conditions; no arithmetic transcript is
 discarded. This is a local reordering result, not yet the complete reusable-bank
 sampling equivalence. The 855-wire constructor remains allocation-only and the
 established full success contract still uses 1,303 wires.
+
+### Validity under address Fourier measurement
+
+Fourier branches supported on address wires above the arithmetic core preserve
+window validity. Consequently each prepared arithmetic branch commutes with a
+Fourier branch on any other physical window bank, using only the original
+input-validity premise. This includes arbitrary entangled input states and
+retains the same arithmetic branch. Whole-schedule reordering, bank reuse, and
+the complete 855-wire sampling equivalence remain open.

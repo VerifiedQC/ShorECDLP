@@ -51,10 +51,15 @@ private theorem core_coordinates (s t : BasisState) (he : ∀ w, w<839 → t w=s
     intro w hw; simp only [List.mem_range'_1] at hw; dsimp only [Wire] at *; omega)
   simp only [pointStateCoordinates,hx,hy,he 838 (by decide)]
 
+/-- Window readiness depends only on the arithmetic core. -/
+theorem windowPointValid_core (s t : BasisState) (he : ∀ w, w<839 → t w=s w)
+    (hs : WindowPointValid s) : WindowPointValid t := by
+  obtain ⟨hv,P,hp⟩ := hs
+  exact ⟨core_valid s t he hv,P,(core_coordinates s t he).trans hp⟩
+
 theorem windowPrepareState_ready (j : Nat) (s : BasisState) (hs : WindowPointValid s) :
     WindowPointValid (windowPrepareState j s) := by
-  obtain ⟨hv,P,hp⟩ := hs
-  exact ⟨core_valid s _ (prepare_core j s) hv,P,(core_coordinates s _ (prepare_core j s)).trans hp⟩
+  exact windowPointValid_core s _ (prepare_core j s) hs
 theorem windowPrepareCircuit_ket (j : Nat) (s : BasisState) :
     Quantum.run (windowPrepareCircuit j) (ket s)=ket (windowPrepareState j s) :=
   signedAddressCircuit_ket _ _ _ (List.nodup_range' _ (by decide)) (prepare_root j) (prepare_sign j) s
