@@ -3092,3 +3092,26 @@ upper bound. Selection remains a noncomputable finite-choice specification,
 with conservative `2^49 + 2` candidate bound. No executable search-cost or
 Clifford+T synthesis claim follows. Zero-point dispatch, reset/repetition,
 exact reduced primitive counts, and the 835-wire target remain open.
+
+
+### Complete reduced trial: zero input, physical retries, and resources
+
+`Window/ReducedSecp.lean` through `ReducedTCounts.lean` extend the reduced
+256+208-bit trial to arbitrary valid public points. Zero public input takes
+the gate-free classical branch. The finite decoder consumes the actual
+adaptive transcript and checks the public point; any returned scalar is
+correct modulo the group order.
+
+Reset measures exactly the reduced allocation and restores the entire basis
+state, including its frame, before the next trial. Twenty-six actual repeated
+trials with the first verified candidate have success at least 99%, using at
+most 1,303 distinct wires. The single-run success bound is at least 16.3%.
+The primitive vectors include direct lookup, all 28 subsequent additions,
+preparation, Fourier measurements, and reset. The Fourier suffix contributes
+exactly 54,168 phase gates and 464 measurements; repeated reset contributes
+26 * 1,303 measurements, including on the zero-input branch. T accounting
+remains seven per CCX plus unit cost per P; no phase synthesis cost is implied.
+
+These results close the physical reduced-trial success/reset/repetition
+boundary. The candidate search is still a noncomputable specification with a
+conservative finite bound, and the 835-wire paper target remains unproved.

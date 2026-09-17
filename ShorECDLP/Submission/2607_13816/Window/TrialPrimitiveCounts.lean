@@ -4,7 +4,7 @@ import ShorECDLP.Submission.«2607_13816».Window.PhysicalRepetition
 namespace ShorECDLP.Paper2607_13816
 open Quantum
 noncomputable section
-private theorem hadamards_primitive (ws : List Wire) :
+theorem hadamards_primitiveResources (ws : List Wire) :
     primitiveResources (.unitary (ws.map Gate.H) .done)=⟨0,ws.length,0,0,0,0⟩ := by
   induction ws with
   | nil => rfl
@@ -16,7 +16,7 @@ private theorem hadamards_primitive (ws : List Wire) :
 theorem scalarPhasePrepare_primitive :
     primitiveResources (.unitary scalarPhasePrepare .done)=⟨0,514,0,0,0,0⟩ := by
   change primitiveResources (.unitary (scalarPhaseWires.map Gate.H) .done)=_
-  rw [hadamards_primitive]
+  rw [hadamards_primitiveResources]
   simp [scalarPhaseWires]
 
 def pointInitializePrimitives (P : ShorECDLP.Secp256k1.Point) : PrimitiveResources :=
@@ -52,7 +52,7 @@ theorem windowTrialProgram_primitive (P Q : ShorECDLP.Secp256k1.Point) (hP : P�
     pointInitialize_primitive,scalarWindowsProgram_primitive,scalarFourierProgram_primitive_exact]
   rfl
 
-private theorem reset_primitive (ws : List Wire) :
+theorem resetRegister_primitiveResources (ws : List Wire) :
     primitiveResources (measureResetWithCorrection ws (fun _ => []))=⟨0,0,0,0,0,ws.length⟩ := by
   induction ws with
   | nil => rfl
@@ -62,7 +62,7 @@ private theorem reset_primitive (ws : List Wire) :
 
 theorem windowResetProgram_primitive :
     primitiveResources windowResetProgram=⟨0,0,0,0,0,1383⟩ := by
-  rw [windowResetProgram,reset_primitive]
+  rw [windowResetProgram,resetRegister_primitiveResources]
   simp [windowResetWires]
 
 def scalePrimitives (n : Nat) (r : PrimitiveResources) : PrimitiveResources :=

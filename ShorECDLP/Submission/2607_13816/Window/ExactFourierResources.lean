@@ -8,19 +8,19 @@ private theorem history_exact (dir : PhaseDir) (w : Wire) (bs : List Bool) (k : 
   | cons b bs ih =>
     unfold tCount at ih
     cases b <;> simp [fourierHistoryRotations,fourierFeedForward,tCount,tCost,ih,Nat.add_comm]
-private def phaseCount : Nat → Nat → Nat
+def fourierPhaseCount : Nat → Nat → Nat
   | 0, _ => 0
-  | n+1, k => k+phaseCount n (k+1)
-private theorem phase_mono (n : Nat) {k l : Nat} (h : k≤l) : phaseCount n k≤phaseCount n l := by
+  | n+1, k => k+fourierPhaseCount n (k+1)
+private theorem phase_mono (n : Nat) {k l : Nat} (h : k≤l) : fourierPhaseCount n k≤fourierPhaseCount n l := by
   induction n generalizing k l with
   | zero => exact le_rfl
   | succ n ih => exact Nat.add_le_add h (ih (by omega))
-private theorem fourier_exact (dir : PhaseDir) (ws : List Wire) (prior : List Bool) :
-    (semiclassicalFourier dir ws prior).tCount=phaseCount ws.length (prior.count true) := by
+theorem semiclassicalFourier_tCount_exact (dir : PhaseDir) (ws : List Wire) (prior : List Bool) :
+    (semiclassicalFourier dir ws prior).tCount=fourierPhaseCount ws.length (prior.count true) := by
   induction ws generalizing prior with
   | nil => rfl
   | cons w ws ih =>
-    simp only [semiclassicalFourier,AdaptiveCircuit.tCount,history_exact,ih,List.length_cons,phaseCount]
+    simp only [semiclassicalFourier,AdaptiveCircuit.tCount,history_exact,ih,List.length_cons,fourierPhaseCount]
     simp only [List.count_cons,show (false == true)=false from rfl,show (true == true)=true from rfl,
       Bool.false_eq_true,ite_false,ite_true,Nat.add_zero]
     rw [max_eq_right (phase_mono ws.length (by omega))]
@@ -30,9 +30,9 @@ theorem scalarFourierProgram_tCount_exact : scalarFourierProgram.tCount=65792 :=
   have h := modularGateCount_seq tCost
     (semiclassicalFourier .inverse scalarFourierLeft List.nil)
     (semiclassicalFourier .inverse scalarFourierRight List.nil)
-  simp only [gidneyGateCount_tCount,fourier_exact,scalarFourierLeft,scalarFourierRight,
+  simp only [gidneyGateCount_tCount,semiclassicalFourier_tCount_exact,scalarFourierLeft,scalarFourierRight,
     List.length_reverse,List.length_range',List.count_nil] at h
-  have hv : phaseCount 257 0=32896 := by decide +kernel
+  have hv : fourierPhaseCount 257 0=32896 := by decide +kernel
   rw [hv] at h
   exact h
 private theorem exact_vector (r : PrimitiveResources)

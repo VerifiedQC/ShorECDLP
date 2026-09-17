@@ -5,7 +5,7 @@ namespace ShorECDLP.Paper2607_13816
 open Classical Quantum ShorECDLP.Secp256k1 Quantum.PhaseEstimation Quantum.OrderFinding
 open scoped BigOperators
 noncomputable section
-private theorem generator_ne_zero : G≠0 := by
+theorem secpGenerator_ne_zero : G≠0 := by
   intro h
   have hg := generator_order
   rw [h,addOrderOf_zero] at hg
@@ -22,7 +22,7 @@ theorem secpWindow_zero_input (d : Nat) (h : d • G=0) : (d : ZMod order)=0 := 
 def secpWindowProgram (Q : Point) (hrQ : order • Q=0) : AdaptiveCircuit := by
   classical
   exact if hQ : Q=0 then .done else
-    windowTrialProgram G Q generator_ne_zero hQ generator_nsmul_eq_zero hrQ
+    windowTrialProgram G Q secpGenerator_ne_zero hQ generator_nsmul_eq_zero hrQ
 /-- Public-input classical postprocessing, including the zero-point case. -/
 def secpWindowPostprocess (Q : Point) (out : Fin (2^257) × Fin (2^257)) : Option (ZMod order) := by
   classical
@@ -32,7 +32,7 @@ def secpWindowOutputMass (Q : Point) (hrQ : order • Q=0)
     (out : Fin (2^257) × Fin (2^257)) : ℝ := by
   classical
   exact if hQ : Q=0 then if out=(0,0) then 1 else 0 else
-    windowTrialFiniteOutputMass G Q generator_ne_zero hQ generator_nsmul_eq_zero hrQ out
+    windowTrialFiniteOutputMass G Q secpGenerator_ne_zero hQ generator_nsmul_eq_zero hrQ out
 /-- Success event of the public-input program and its classical postprocessor. -/
 def secpWindowSuccessMass (Q : Point) (hrQ : order • Q=0) (d : Nat) : ℝ :=
   ∑ out : Fin (2^257) × Fin (2^257),
@@ -45,7 +45,7 @@ theorem secpWindow_zero_success (Q : Point) (hrQ : order • Q=0) (hQ : Q=0)
     dif_pos hQ,if_pos hQ,ite_true,Finset.sum_ite_eq',Finset.mem_univ]
 theorem secpWindow_nonzero_success (Q : Point) (hQ : Q≠0) (hrQ : order • Q=0) (d : Nat) :
     secpWindowSuccessMass Q hrQ d=
-      windowTrialSuccessMass order order_prime G Q generator_ne_zero hQ generator_nsmul_eq_zero hrQ d := by
+      windowTrialSuccessMass order order_prime G Q secpGenerator_ne_zero hQ generator_nsmul_eq_zero hrQ d := by
   simp only [secpWindowSuccessMass,secpWindowPostprocess,secpWindowOutputMass,if_neg hQ,dif_neg hQ,
     windowTrialSuccessMass]
 theorem secpWindowProgram_qubitCount (Q : Point) (hrQ : order • Q=0) :
@@ -53,20 +53,20 @@ theorem secpWindowProgram_qubitCount (Q : Point) (hrQ : order • Q=0) :
   by_cases hQ : Q=0
   · simp [secpWindowProgram,hQ,AdaptiveCircuit.qubitCount,AdaptiveCircuit.wires]
   · simpa only [secpWindowProgram,dif_neg hQ] using
-      windowTrialProgram_qubitCount G Q generator_ne_zero hQ generator_nsmul_eq_zero hrQ
+      windowTrialProgram_qubitCount G Q secpGenerator_ne_zero hQ generator_nsmul_eq_zero hrQ
 theorem secpWindowProgram_zero (hrQ : order • (0:Point)=0) : secpWindowProgram 0 hrQ=.done := by
   simp [secpWindowProgram]
 theorem secpWindowProgram_nonzero (Q : Point) (hrQ : order • Q=0) (hQ : Q≠0) :
-    secpWindowProgram Q hrQ=windowTrialProgram G Q generator_ne_zero hQ generator_nsmul_eq_zero hrQ := by
+    secpWindowProgram Q hrQ=windowTrialProgram G Q secpGenerator_ne_zero hQ generator_nsmul_eq_zero hrQ := by
   simp only [secpWindowProgram,dif_neg hQ]
 theorem secpWindowOutputMass_total (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd : Q=d • G) :
     ∑ out : Fin (2^257) × Fin (2^257), secpWindowOutputMass Q hrQ out=1 := by
   by_cases hQ : Q=0
   · simp only [secpWindowOutputMass,dif_pos hQ,Finset.sum_ite_eq',Finset.mem_univ,ite_true]
   · simp only [secpWindowOutputMass,dif_neg hQ]
-    exact windowTrialFiniteOutputMass_total order_prime G Q generator_ne_zero hQ
+    exact windowTrialFiniteOutputMass_total order_prime G Q secpGenerator_ne_zero hQ
       generator_nsmul_eq_zero hrQ generator_order d hQd
-private theorem secp_success_bound_le_one :
+theorem secpSuccessBound_le_one :
     (((order-1:Nat):ℝ)/(order:ℝ))*((4:ℝ)/Real.pi^2)^2 ≤ 1 := by
   have ho : (0:ℝ)<order := by exact_mod_cast order_prime.pos
   have hratio : (0:ℝ)≤((order-1:Nat):ℝ)/(order:ℝ) := by positivity
@@ -84,8 +84,8 @@ private theorem secp_success_bound_le_one :
 theorem secpWindowSuccessMass_lower (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd : Q=d • G) :
     (((order-1:Nat):ℝ)/(order:ℝ))*((4:ℝ)/Real.pi^2)^2 ≤ secpWindowSuccessMass Q hrQ d := by
   by_cases hQ : Q=0
-  · exact secp_success_bound_le_one.trans_eq (secpWindow_zero_success Q hrQ hQ d hQd).symm
-  · exact (windowTrialSuccessMass_lower order_prime G Q generator_ne_zero hQ generator_nsmul_eq_zero hrQ
+  · exact secpSuccessBound_le_one.trans_eq (secpWindow_zero_success Q hrQ hQ d hQd).symm
+  · exact (windowTrialSuccessMass_lower order_prime G Q secpGenerator_ne_zero hQ generator_nsmul_eq_zero hrQ
       generator_order d hQd order_precision).trans_eq (secpWindow_nonzero_success Q hQ hrQ d).symm
 /-- Decode the public-input program's actual transcript; the gate-free case emits the classical zero pair. -/
 def secpWindowDecode (Q : Point) (hrQ : order • Q=0) (hist : List Bool) :
@@ -93,18 +93,18 @@ def secpWindowDecode (Q : Point) (hrQ : order • Q=0) (hist : List Bool) :
   classical
   exact if hQ : Q=0 then
     if hist=[] then some (paperOutcomeBits 257 0,paperOutcomeBits 257 0) else none
-  else decodeWindowTrial G Q generator_ne_zero hQ generator_nsmul_eq_zero hrQ hist
-private theorem done_filtered_mass (f : List Bool → Bool) :
+  else decodeWindowTrial G Q secpGenerator_ne_zero hQ generator_nsmul_eq_zero hrQ hist
+theorem doneFiltered_mass (f : List Bool → Bool) :
     Instrument.bornMass (AdaptiveCircuit.done.run.filter (fun b => f b.history)) (ket zeroBasisState)=
       if f [] then 1 else 0 := by
   cases h : f [] <;> simp [AdaptiveCircuit.run,List.filter,Instrument.bornMass,h,normSq_ket]
-private theorem zero_bits_pair (n : Nat) (out : Fin (2^n) × Fin (2^n)) :
-    (paperOutcomeBits n 0,paperOutcomeBits n 0)=(paperOutcomeBits n out.1,paperOutcomeBits n out.2) ↔
+theorem zeroOutcomeBits_pair (n m : Nat) (out : Fin (2^n) × Fin (2^m)) :
+    (paperOutcomeBits n 0,paperOutcomeBits m 0)=(paperOutcomeBits n out.1,paperOutcomeBits m out.2) ↔
       out=(0,0) := by
   constructor
   · intro h
     have h1 := paperOutcomeBits_injective n (congrArg Prod.fst h)
-    have h2 := paperOutcomeBits_injective n (congrArg Prod.snd h)
+    have h2 := paperOutcomeBits_injective m (congrArg Prod.snd h)
     exact Prod.ext h1.symm h2.symm
   · intro h
     rw [h]
@@ -117,9 +117,9 @@ theorem secpWindowOutputMass_physical (Q : Point) (hrQ : order • Q=0)
       secpWindowOutputMass Q hrQ out := by
   by_cases hQ : Q=0
   · simp only [secpWindowProgram,dif_pos hQ,secpWindowOutputMass]
-    rw [done_filtered_mass (fun hist => secpWindowDecode Q hrQ hist==
+    rw [doneFiltered_mass (fun hist => secpWindowDecode Q hrQ hist==
       some (paperOutcomeBits 257 out.1,paperOutcomeBits 257 out.2))]
-    simp only [secpWindowDecode,dif_pos hQ,ite_true,beq_iff_eq,Option.some.injEq,zero_bits_pair]
+    simp only [secpWindowDecode,dif_pos hQ,ite_true,beq_iff_eq,Option.some.injEq,zeroOutcomeBits_pair]
   · simp only [secpWindowProgram,secpWindowDecode,secpWindowOutputMass,dif_neg hQ]
     rfl
 end
