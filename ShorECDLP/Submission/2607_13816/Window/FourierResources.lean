@@ -44,7 +44,7 @@ private theorem history_cost (cost : Gate → Nat) (v : Nat)
   | nil => simp [fourierHistoryRotations, tCount]
   | cons b bs ih =>
     cases b <;> simp [fourierHistoryRotations, fourierFeedForward, tCount, tCost, hc, ih, mul_add]
-private theorem fourier_cost (cost : Gate → Nat) (v : Nat)
+theorem semiclassicalFourier_gateCount (cost : Gate → Nat) (v : Nat)
     (hc : ∀ dir k w, cost (.P dir k w)=v) (dir : PhaseDir) (ws : List Wire) (prior : List Bool) :
     gidneyGateCount cost (semiclassicalFourier dir ws prior)=
       v*(semiclassicalFourier dir ws prior).tCount := by
@@ -57,7 +57,7 @@ private theorem scalar_cost (cost : Gate → Nat) (v : Nat)
     (hc : ∀ dir k w, cost (.P dir k w)=v) :
     gidneyGateCount cost scalarFourierProgram=v*scalarFourierProgram.tCount := by
   rw [scalarFourierProgram,modularGateCount_seq]
-  simp only [fourier_cost cost v hc]
+  simp only [semiclassicalFourier_gateCount cost v hc]
   have h := modularGateCount_seq tCost
     (semiclassicalFourier .inverse scalarFourierLeft List.nil)
     (semiclassicalFourier .inverse scalarFourierRight List.nil)

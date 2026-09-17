@@ -1,3 +1,11 @@
+import ShorECDLP.Submission.«2607_13816».Window.ReducedSecp
+import ShorECDLP.Submission.«2607_13816».Window.ReducedTotal
+import ShorECDLP.Submission.«2607_13816».Window.ReducedReset
+import ShorECDLP.Submission.«2607_13816».Window.ReducedResetOutcomes
+import ShorECDLP.Submission.«2607_13816».Window.ReducedCandidate
+import ShorECDLP.Submission.«2607_13816».Window.ReducedRepetition
+import ShorECDLP.Submission.«2607_13816».Window.ReducedPrimitives
+import ShorECDLP.Submission.«2607_13816».Window.ReducedTCounts
 import ShorECDLP.Submission.«2607_13816».Window.ReducedUniform
 import ShorECDLP.Submission.«2607_13816».Window.ReducedKernel
 import ShorECDLP.Submission.«2607_13816».Window.ReducedMixture

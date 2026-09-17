@@ -21,6 +21,67 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindow_zero_success
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindow_nonzero_success
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowProgram_zero
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowProgram_nonzero
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowOutputMass_total
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowSuccessMass_lower
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowOutputMass_physical
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowPostprocess_sound
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierDecode_total
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowDecode_total
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowProgram_total
+#print axioms ShorECDLP.Paper2607_13816.reducedReset_support
+#print axioms ShorECDLP.Paper2607_13816.reducedReset_clean
+#print axioms ShorECDLP.Paper2607_13816.reducedReset_resources
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowTrial_clean
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowTrial_support
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowTrial_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowTrial_resources
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowTrial_zero_support
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowTrial_zero_branch
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowOutputMass_physical
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowTrial_total
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowFiniteOutputMass
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowCandidate_sound
+#print axioms ShorECDLP.Paper2607_13816.resetReducedWindowCandidate_mass
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowSuccessMass_le_one
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowSuccessMass_numeric
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRetrySuccess
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeatedCandidate_sound
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeatedCandidate_mass
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeatedCandidate_success
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeatedProgram_clean
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeatedProgram_resources
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeatedProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.reducedPhasePrepare_primitive
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierProgram_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.reducedScalarProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.reducedResetProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeatedProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeatedProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.secpGenerator_ne_zero
+#print axioms ShorECDLP.Paper2607_13816.secpSuccessBound_le_one
+#print axioms ShorECDLP.Paper2607_13816.doneFiltered_mass
+#print axioms ShorECDLP.Paper2607_13816.zeroOutcomeBits_pair
+#print axioms ShorECDLP.Paper2607_13816.resetRegister_clean
+#print axioms ShorECDLP.Paper2607_13816.resetRegister_support
+#print axioms ShorECDLP.Paper2607_13816.resetRegister_measurements
+#print axioms ShorECDLP.Paper2607_13816.resetRegister_tCount
+#print axioms ShorECDLP.Paper2607_13816.secpSuccessBound_numeric
+#print axioms ShorECDLP.Paper2607_13816.selectedMass_le_total
+#print axioms ShorECDLP.Paper2607_13816.unequalOutcomePair_injective
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_gateCount
+#print axioms ShorECDLP.Paper2607_13816.hadamards_primitiveResources
+#print axioms ShorECDLP.Paper2607_13816.resetRegister_primitiveResources
 #print axioms ShorECDLP.Paper2607_13816.reducedPhasePrepare_uniform
 #print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialOutputMass_uniform
 #print axioms ShorECDLP.Paper2607_13816.reducedPhaseWord_inputs
@@ -3209,8 +3270,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3185 ]]; then
-  printf 'expected 3185 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3246 ]]; then
+  printf 'expected 3246 #print axioms results\n' >&2
   exit 1
 fi
 

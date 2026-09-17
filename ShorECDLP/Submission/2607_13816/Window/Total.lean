@@ -62,13 +62,17 @@ theorem instrumentPartitionMass {α β : Type} [Fintype α] [BEq β] [LawfulBEq 
         simp [Instrument.bornMass,hn,he]
     simp only [hfilter,Finset.sum_add_distrib,Finset.sum_ite_eq',Finset.mem_univ,ite_true,ih htail]
     rfl
-theorem paperOutcomePair_injective (n : Nat) :
-    Function.Injective (fun out : Fin (2^n) × Fin (2^n) =>
-      some (paperOutcomeBits n out.1,paperOutcomeBits n out.2)) := by
+theorem unequalOutcomePair_injective (n m : Nat) :
+    Function.Injective (fun out : Fin (2^n) × Fin (2^m) =>
+      some (paperOutcomeBits n out.1,paperOutcomeBits m out.2)) := by
   intro a b h
   have h' := Option.some.inj h
   exact Prod.ext (paperOutcomeBits_injective n (congrArg Prod.fst h'))
-    (paperOutcomeBits_injective n (congrArg Prod.snd h'))
+    (paperOutcomeBits_injective m (congrArg Prod.snd h'))
+
+theorem paperOutcomePair_injective (n : Nat) :
+    Function.Injective (fun out : Fin (2^n) × Fin (2^n) =>
+      some (paperOutcomeBits n out.1,paperOutcomeBits n out.2)) := unequalOutcomePair_injective n n
 
 theorem secpWindowProgram_total (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd : Q=d • G) :
     Instrument.bornMass (secpWindowProgram Q hrQ).run (ket zeroBasisState)=1 := by

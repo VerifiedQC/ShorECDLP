@@ -5,14 +5,14 @@ noncomputable section
 /-- Reset the complete physical allocation between trials. -/
 def windowResetWires : List Wire := List.range 839++List.range' 855 544
 def windowResetProgram : AdaptiveCircuit := measureResetWithCorrection windowResetWires (fun _ => [])
-private theorem reset_clean (ws : List Wire) (hn : ws.Nodup) (b : InstrumentBranch)
+theorem resetRegister_clean (ws : List Wire) (hn : ws.Nodup) (b : InstrumentBranch)
     (hb : b∈(measureResetWithCorrection ws (fun _ => [])).run) (ψ : State) :
     SupportedOn (Clean ws) (b.kraus ψ) := by
   rw [run_measureResetWithCorrection] at hb
   obtain ⟨out,ho,rfl⟩ := List.mem_map.mp hb
   have h := xResetRegisterKraus_clean ws out ψ (mem_boolTranscripts_length ho) hn
   exact h
-private theorem reset_wires (ws : List Wire) :
+theorem resetRegister_support (ws : List Wire) :
     (measureResetWithCorrection ws (fun _ => [])).wires ⊆ ws := by
   induction ws with
   | nil => exact List.Subset.refl _
@@ -23,12 +23,12 @@ private theorem reset_wires (ws : List Wire) :
     · exact List.mem_cons_self
     · exact List.mem_cons_of_mem _ (ih hv)
     · exact List.mem_cons_of_mem _ (ih hv)
-private theorem reset_measurements (ws : List Wire) :
+theorem resetRegister_measurements (ws : List Wire) :
     (measureResetWithCorrection ws (fun _ => [])).measurementCount=ws.length := by
   induction ws with
   | nil => rfl
   | cons w ws ih => simp [measureResetWithCorrection,AdaptiveCircuit.measurementCount,ih,Nat.add_comm]
-private theorem reset_T (ws : List Wire) :
+theorem resetRegister_tCount (ws : List Wire) :
     (measureResetWithCorrection ws (fun _ => [])).tCount=0 := by
   induction ws with
   | nil => rfl
@@ -42,11 +42,11 @@ private theorem reset_nodup : windowResetWires.Nodup := by
   omega
 
 theorem windowReset_support : windowResetProgram.wires ⊆ windowResetWires :=
-  reset_wires windowResetWires
+  resetRegister_support windowResetWires
 
 theorem windowReset_clean (b : InstrumentBranch) (hb : b∈windowResetProgram.run) (ψ : State) :
     SupportedOn (Clean windowResetWires) (b.kraus ψ) :=
-  reset_clean windowResetWires reset_nodup b hb ψ
+  resetRegister_clean windowResetWires reset_nodup b hb ψ
 
 def resetWindowTrial (Q : Point) (hrQ : order • Q=0) : AdaptiveCircuit :=
   (secpWindowProgram Q hrQ).seq windowResetProgram
@@ -61,7 +61,7 @@ theorem resetWindowTrial_clean (Q : Point) (hrQ : order • Q=0) (b : Instrument
 
 theorem windowReset_resources : windowResetProgram.tCount=0 ∧
     windowResetProgram.measurementCount=1383 := by
-  exact ⟨reset_T windowResetWires, (reset_measurements windowResetWires).trans (by decide +kernel)⟩
+  exact ⟨resetRegister_tCount windowResetWires, (resetRegister_measurements windowResetWires).trans (by decide +kernel)⟩
 private theorem secp_support (Q : Point) (hrQ : order • Q=0) :
     (secpWindowProgram Q hrQ).wires ⊆ windowResetWires := by
   unfold secpWindowProgram

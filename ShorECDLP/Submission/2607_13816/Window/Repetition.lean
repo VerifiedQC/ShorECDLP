@@ -4,7 +4,7 @@ namespace ShorECDLP.Paper2607_13816
 open Classical Quantum ShorECDLP.Secp256k1 Quantum.PhaseEstimation Quantum.OrderFinding
 open scoped BigOperators
 noncomputable section
-private theorem concrete_success_lower :
+theorem secpSuccessBound_numeric :
     (163:ℝ)/1000 ≤ (((order-1:Nat):ℝ)/(order:ℝ))*((4:ℝ)/Real.pi^2)^2 := by
   have ho : (1000:ℝ)≤order := by exact_mod_cast (show 1000≤order by decide +kernel)
   have hop : (0:ℝ)<order := by linarith
@@ -32,7 +32,7 @@ private theorem output_nonneg (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd :
   · split <;> norm_num
   · rw [windowTrialFiniteOutputMass_eq order_prime G Q _ _ _ _ generator_order d hQd]
     exact paperPairMass_nonneg order 257 d out
-private theorem selected_mass_le_total {α : Type} [Fintype α] (p : α → Prop) [DecidablePred p]
+theorem selectedMass_le_total {α : Type} [Fintype α] (p : α → Prop) [DecidablePred p]
     (mass : α → ℝ) (hn : ∀ a, 0≤mass a) :
     (∑ a, if p a then mass a else 0) ≤ ∑ a, mass a := by
   apply Finset.sum_le_sum
@@ -43,13 +43,13 @@ private theorem selected_mass_le_total {α : Type} [Fintype α] (p : α → Prop
 
 theorem secpWindowSuccessMass_le_one (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd : Q=d • G) :
     secpWindowSuccessMass Q hrQ d≤1 :=
-  (selected_mass_le_total (fun out => secpWindowPostprocess Q out=some (d:ZMod order))
+  (selectedMass_le_total (fun out => secpWindowPostprocess Q out=some (d:ZMod order))
     (secpWindowOutputMass Q hrQ) (output_nonneg Q hrQ d hQd)).trans_eq
       (secpWindowOutputMass_total Q hrQ d hQd)
 /-- At least 16.3 percent success in one concrete run. -/
 theorem secpWindowSuccessMass_numeric (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd : Q=d • G) :
     (163:ℝ)/1000≤secpWindowSuccessMass Q hrQ d :=
-  concrete_success_lower.trans (secpWindowSuccessMass_lower Q hrQ d hQd)
+  secpSuccessBound_numeric.trans (secpWindowSuccessMass_lower Q hrQ d hQd)
 /-- Twenty-six independent measured runs exceed 99 percent success. -/
 theorem secpWindowRetrySuccess (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd : Q=d • G) :
     (99:ℝ)/100 ≤ independentRetrySuccessProbability (secpWindowSuccessMass Q hrQ d) 26 := by
