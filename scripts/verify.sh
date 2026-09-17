@@ -21,6 +21,21 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.streamScalarTrial_measurements
+#print axioms ShorECDLP.Paper2607_13816.fourierContinue_done
+#print axioms ShorECDLP.Paper2607_13816.fourierContinue_append
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_append
+#print axioms ShorECDLP.Paper2607_13816.fourierContinue_run
+#print axioms ShorECDLP.Paper2607_13816.fourierContinue_support
+#print axioms ShorECDLP.Paper2607_13816.fourierContinue_measurements
+#print axioms ShorECDLP.Paper2607_13816.streamAxis_support
+#print axioms ShorECDLP.Paper2607_13816.streamAxis_measurements
+#print axioms ShorECDLP.Paper2607_13816.streamPointCall_support
+#print axioms ShorECDLP.Paper2607_13816.streamScalarTrial_support
+#print axioms ShorECDLP.Paper2607_13816.streamScalarTrial_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.streamLeftCalls_length
+#print axioms ShorECDLP.Paper2607_13816.streamRightCalls_length
+#print axioms ShorECDLP.Paper2607_13816.streamFourier_clean
 #print axioms ShorECDLP.Paper2607_13816.reducedSecpWindow_zero_success
 #print axioms ShorECDLP.Paper2607_13816.reducedSecpWindow_nonzero_success
 #print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowProgram_qubitCount
@@ -3270,8 +3285,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3246 ]]; then
-  printf 'expected 3246 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3261 ]]; then
+  printf 'expected 3261 #print axioms results\n' >&2
   exit 1
 fi
 
