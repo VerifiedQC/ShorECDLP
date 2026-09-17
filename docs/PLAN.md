@@ -809,6 +809,15 @@ sequential repetition multiplies time but reuses qubits.
 live qubits for one executable adaptive program. Only then is replacing the default submission a
 separate reviewed decision.
 
+**Current baseline certificate:** `secpWindowContract` collects actual decoded sampling,
+the ideal Fourier distribution, correct candidate output, complete physical reset,
+exact componentwise resources and exact T-model counts. One reset trial has success
+at least 16.3%; the fixed 26-run program has success at least 99%, with the same
+1,383-wire bound. This certifies the current 34-window baseline. The paper's four
+omitted windows remain unproved; classical decoding is a mathematical specification,
+and phase primitives retain the unit-cost-P convention. These limitations remain
+explicit rather than being discharged by the certificate.
+
 ## 7. Paper targets that are not yet claims
 
 | Item | Printed target | Required Lean evidence |
@@ -2931,3 +2940,22 @@ The actual reset history decodes to two finite little-endian words and then to a
 ### Exact signed-coordinate primitive counts
 
 `Window/LookupPrimitiveCounts` gives the exact six-component resource vector for measured QROM, including table-dependent data CNOTs and all decoder erasure costs. It composes both load/clear traversals with the 256-bit modular adder, includes negative-control masks, and derives the exact nine-stage signed coordinate vector with all five field queries. The exceptional-point correction traversal and complete window schedule remain separate aggregation steps.
+
+The signed point lookup now has an exact same-program primitive vector, including
+the separate 16-bit exceptional-point correction decoder and its selected payloads.
+Whole-schedule aggregation and the tighter paper allocation remain open.
+
+Exact primitive vectors now compose across both actual 17-window schedules,
+including 30 CX gates for each address preparation and cleanup. This certifies
+the current 34-window schedule; it does not assert the paper-specific omissions.
+
+The two actual 257-bit semiclassical Fourier measurements now have exact
+componentwise worst-case counts: 65,792 phase primitives and 514 measurements,
+with zero X/H/CX/CCX gates. Phase primitives retain the unit-cost-P convention;
+this is not a synthesized Clifford+T cost.
+
+The actual full trial now has an exact componentwise primitive vector covering
+point initialization, both root flips, 514 preparation Hadamards, all 34 signed
+windows and both Fourier measurements. Physical reset adds 1,383 measurements;
+the actual 26-run program scales every component by 26 while reusing its wires.
+The zero public-point branch is accounted for separately.

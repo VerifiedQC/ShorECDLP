@@ -3018,11 +3018,29 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig14LookupY_primitive
 #print axioms ShorECDLP.Paper2607_13816.signedPointLookupY_primitive
 #print axioms ShorECDLP.Paper2607_13816.signedLookupCoordinateProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.correctionTableProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.signedLookupPointProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_primitive
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_primitive
+#print axioms ShorECDLP.Paper2607_13816.scalarWindowsProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierProgram_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.scalarPhasePrepare_primitive
+#print axioms ShorECDLP.Paper2607_13816.pointInitialize_primitive
+#print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.windowResetProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.repeatWindowProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.secpWindowProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.windowTrialProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.secpWindowProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedProgram_tCount_exact
+#print axioms ShorECDLP.Paper2607_13816.secpWindowContract
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 2997 ]]; then
-  printf 'expected 2997 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3015 ]]; then
+  printf 'expected 3015 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -1,3 +1,8 @@
+import ShorECDLP.Submission.«2607_13816».Contract
+import ShorECDLP.Submission.«2607_13816».Window.TrialPrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».Window.ExactFourierResources
+import ShorECDLP.Submission.«2607_13816».Window.SchedulePrimitiveCounts
+import ShorECDLP.Submission.«2607_13816».Window.PointLookupPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».Window.LookupPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».Window.PhysicalRepetition
 import ShorECDLP.Submission.«2607_13816».Window.Candidate
