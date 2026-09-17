@@ -1,3 +1,5 @@
+import ShorECDLP.Submission.«2607_13816».Fourier.Continuation
+import ShorECDLP.Submission.«2607_13816».Window.StreamAllocation
 import ShorECDLP.Submission.«2607_13816».Window.ReducedSecp
 import ShorECDLP.Submission.«2607_13816».Window.ReducedTotal
 import ShorECDLP.Submission.«2607_13816».Window.ReducedReset

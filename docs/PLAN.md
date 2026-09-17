@@ -3115,3 +3115,26 @@ remains seven per CCX plus unit cost per P; no phase synthesis cost is implied.
 These results close the physical reduced-trial success/reset/repetition
 boundary. The candidate search is still a noncomputable specification with a
 conservative finite bound, and the 835-wire paper target remains unproved.
+
+
+### Reusable window-address allocation (sampling equivalence still open)
+
+`Fourier/Continuation.lean` retains the classical Fourier history across a
+window boundary. Its branch theorem exposes the exact transcript concatenation,
+reverse-history update and composed Kraus maps; splitting a Fourier pass into
+windows is an equality of actual adaptive circuits.
+
+`Window/StreamAllocation.lean` constructs an MSB-first schedule with a single
+16-bit address bank, one direct point load and 28 subsequent point additions.
+The left and right axes retain separate Fourier histories. Every address
+Fourier branch clears that bank even on entangled input. The concrete
+constructor has a proved upper bound of 855 distinct wires: 839 arithmetic
+wires plus the same 16 address wires throughout. Its measurement expression
+includes all arithmetic measurements and 464 Fourier measurements.
+
+This is an allocation and local measurement certificate, not a smaller
+end-to-end ECDLP certificate. Moving each measurement before the remaining
+point additions and changing the direct-load order still require the full
+sampling-equivalence proof. The established success/reset contract therefore
+continues to use 1,303 wires. Neither this constructor nor that contract proves
+the paper's 835-wire target.
