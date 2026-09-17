@@ -3126,11 +3126,29 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.directSecpWindowProgram_tCount_exact
 #print axioms ShorECDLP.Paper2607_13816.directSecpWindowRepeatedProgram_tCount_exact
 #print axioms ShorECDLP.Paper2607_13816.directSecpWindowContract
+#print axioms ShorECDLP.Paper2607_13816.nearNumerator_mem_candidates
+#print axioms ShorECDLP.Paper2607_13816.numeratorCandidates_card
+#print axioms ShorECDLP.Paper2607_13816.secp_numeratorCandidates_card
+#print axioms ShorECDLP.Paper2607_13816.nearNumerator_shift_mem
+#print axioms ShorECDLP.Paper2607_13816.reducedPeakRaw_near
+#print axioms ShorECDLP.Paper2607_13816.reducedPeakRaw_le
+#print axioms ShorECDLP.Paper2607_13816.reducedPeak_mass
+#print axioms ShorECDLP.Paper2607_13816.reducedPeak_mem_candidates
+#print axioms ShorECDLP.Paper2607_13816.wrappedNumeratorCandidates_card
+#print axioms ShorECDLP.Paper2607_13816.secp_wrappedNumeratorCandidates_card
+#print axioms ShorECDLP.Paper2607_13816.reducedShiftCandidates_card
+#print axioms ShorECDLP.Paper2607_13816.reducedShiftCandidates_correct
+#print axioms ShorECDLP.Paper2607_13816.asymmetricPairPeak_injective
+#print axioms ShorECDLP.Paper2607_13816.asymmetricPairPeak_mass
+#print axioms ShorECDLP.Paper2607_13816.asymmetricPairMass_total
+#print axioms ShorECDLP.Paper2607_13816.asymmetricPairMass_nonneg
+#print axioms ShorECDLP.Paper2607_13816.reducedCoverageMass_lower
+#print axioms ShorECDLP.Paper2607_13816.reducedLeftPrecision_order
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3105 ]]; then
-  printf 'expected 3105 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3123 ]]; then
+  printf 'expected 3123 #print axioms results\n' >&2
   exit 1
 fi
 

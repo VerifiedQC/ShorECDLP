@@ -3031,3 +3031,20 @@ and bounded classical post-processing for 28 additions, nor its 835-wire target.
 The existing default submission is unchanged. Phase gates still have unit P
 cost in these identities, and the classical decoder remains a mathematical
 specification.
+
+
+### Reduced-precision sampling and candidate coverage
+
+The mathematical sampling layer now permits different left/right Fourier
+precisions. The left precision still exceeds the group order; the right may
+be shorter. Wrapped nearest peaks retain the `4/pi^2` marginal lower bound,
+and the asymmetric character mixture has total mass one. A finite classical
+candidate list contains the true logarithm at those peaks, giving the same
+`(r-1)/r * (4/pi^2)^2` coverage lower bound.
+
+For 208 right-hand bits, an unwrapped numerator interval has at most `2^48+1`
+entries. Including both representations of the zero endpoint yields the
+conservative proved bound `2^49+2`; this is not a claim of exactly `2^48`
+classical operations. Candidate coverage is not yet a verified public-point
+decoder or a physical 256+208-bit circuit. The 28-addition and 835-wire
+implementation targets remain open.
