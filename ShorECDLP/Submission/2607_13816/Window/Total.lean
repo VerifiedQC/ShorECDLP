@@ -84,7 +84,7 @@ end ShorECDLP.Paper2607_13816
 namespace ShorECDLP.Paper2607_13816
 open Classical Quantum ShorECDLP.Secp256k1
 noncomputable section
-private theorem candidate_correct (Q : Point) (d : Nat) (hQd : Q=d • G) (c : ZMod order) :
+theorem secpCandidate_correct (Q : Point) (d : Nat) (hQd : Q=d • G) (c : ZMod order) :
     c.val • G=Q ↔ c=(d:ZMod order) := by
   rw [hQd,nsmul_eq_nsmul_iff_modEq,generator_order,←ZMod.natCast_eq_natCast_iff]
   letI : NeZero order := ⟨order_prime.ne_zero⟩
@@ -98,13 +98,13 @@ theorem secpWindowVerifiedCandidate_sound (Q : Point) (d : Nat) (hQd : Q=d • G
     (hc : secpWindowVerifiedCandidate Q out=some c) : c=(d:ZMod order) := by
   classical
   have h := Option.filter_eq_some_iff.mp hc
-  exact (candidate_correct Q d hQd c).mp (of_decide_eq_true h.2)
+  exact (secpCandidate_correct Q d hQd c).mp (of_decide_eq_true h.2)
 theorem secpWindowVerifiedCandidate_complete (Q : Point) (d : Nat) (hQd : Q=d • G)
     (out : Fin (2^257) × Fin (2^257)) :
     secpWindowVerifiedCandidate Q out=some (d:ZMod order) ↔
       secpWindowPostprocess Q out=some (d:ZMod order) := by
   classical
   rw [secpWindowVerifiedCandidate,Option.filter_eq_some_iff]
-  simp only [candidate_correct Q d hQd,decide_true,and_true]
+  simp only [secpCandidate_correct Q d hQd,decide_true,and_true]
 end
 end ShorECDLP.Paper2607_13816

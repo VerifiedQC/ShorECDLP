@@ -9,7 +9,7 @@ def ScalarComputeValid (s : BasisState) : Prop :=
 
 private theorem root_other (s : BasisState) (w : Wire) (hw : w≠836) : scalarRootFlip s w=s w := by
   simp [scalarRootFlip,upd,hw]
-private theorem root_word (ws : List Wire) (s : BasisState) (h : ∀ w∈ws, w≠836) :
+theorem scalarRootFlip_word (ws : List Wire) (s : BasisState) (h : ∀ w∈ws, w≠836) :
     wireValues ws (scalarRootFlip s)=wireValues ws s := by
   apply List.map_congr_left
   intro w hw
@@ -30,7 +30,7 @@ private theorem value_zero (n : Nat) : boolWordToNat (List.replicate n false)=0 
 private theorem root_zero_word (ws : List Wire) (s : BasisState)
     (hs : ∀ w : Wire, w<855 → s w=false) (hw : ∀ w∈ws, w<855 ∧ w≠836) :
     wireValues ws (scalarRootFlip s)=List.replicate ws.length false := by
-  rw [root_word ws s (by intro w h; exact (hw w h).2)]
+  rw [scalarRootFlip_word ws s (by intro w h; exact (hw w h).2)]
   exact zero_word ws s (by intro w h; exact hs w (hw w h).1)
 
 theorem scalarRootFlip_ready (s : BasisState) (hs : ScalarComputeValid s) :
@@ -56,14 +56,14 @@ theorem scalarRootFlip_ready (s : BasisState) (hs : ScalarComputeValid s) :
   · simpa only [pointLogicalWires,pointCorrectionX,pointCorrectionYInf,List.length_append,
       List.length_range',List.length_singleton] using hp
   · unfold ScalarPaddingClean
-    rw [root_word]
+    rw [scalarRootFlip_word]
     · exact hs.2.1
     · intro w hw; simp only [List.mem_range'_1,windowBankStart] at hw; dsimp only [Wire] at *; omega
   · unfold ScalarPaddingClean
-    rw [root_word]
+    rw [scalarRootFlip_word]
     · exact hs.2.2
     · intro w hw; simp only [List.mem_range'_1,windowBankStart] at hw; dsimp only [Wire] at *; omega
-private theorem root_pointWrite (P : Point) (s : BasisState) :
+theorem scalarRootFlip_pointWrite (P : Point) (s : BasisState) :
     scalarRootFlip (pointWrite P s)=pointWrite P (scalarRootFlip s) := by
   have hp : (836:Wire)∉pointLogicalWires := by decide +kernel
   funext w
@@ -75,7 +75,7 @@ private theorem root_pointWrite (P : Point) (s : BasisState) :
     by_cases hm : w∈pointLogicalWires
     · simp only [pointWrite,if_pos hm]
     · rw [pointWrite_frame P s w hm,pointWrite_frame P (scalarRootFlip s) w hm,root_other s w hw]
-private theorem root_twice (s : BasisState) : scalarRootFlip (scalarRootFlip s)=s := by
+theorem scalarRootFlip_twice (s : BasisState) : scalarRootFlip (scalarRootFlip s)=s := by
   funext w
   by_cases hw : w=836
   · subst w; simp [scalarRootFlip]
@@ -83,12 +83,12 @@ private theorem root_twice (s : BasisState) : scalarRootFlip (scalarRootFlip s)=
 private theorem root_scalar (j : Nat) (s : BasisState) :
     scalarInputValue j (scalarRootFlip s)=scalarInputValue j s := by
   unfold scalarInputValue
-  rw [root_word]
+  rw [scalarRootFlip_word]
   intro w hw
   simp only [List.mem_range'_1,windowBankStart] at hw
   dsimp only [Wire] at *
   omega
-private theorem root_coherent (Valid : BasisState → Prop) :
+theorem scalarRootFlip_coherent (Valid : BasisState → Prop) :
     CoherentlyImplementsOn (.unitary [.X 836] .done)
       (Finsupp.lmapDomain ℂ ℂ scalarRootFlip) Valid := by
   apply (CoherentlyImplementsOn.unitary [.X 836] Valid).congrIdeal
@@ -107,11 +107,11 @@ theorem scalarRootWrap_coherent (body : AdaptiveCircuit) (P Q : Point)
     CoherentlyImplementsOn
       (((AdaptiveCircuit.unitary [.X 836] .done).seq body).seq (.unitary [.X 836] .done))
       (Finsupp.lmapDomain ℂ ℂ (scalarRegisterOutput P Q)) ScalarComputeValid := by
-  have h1 := (root_coherent ScalarComputeValid).seq
+  have h1 := (scalarRootFlip_coherent ScalarComputeValid).seq
     hb (by
       intro s hs
       simpa [ket] using supportedOn_ket _ _ (scalarRootFlip_ready s hs))
-  have h2 := h1.seq (root_coherent (fun _ => True)) (by
+  have h2 := h1.seq (scalarRootFlip_coherent (fun _ => True)) (by
     intro s hs
     simp only [LinearMap.comp_apply,ket,Finsupp.lmapDomain_apply,Finsupp.mapDomain_single]
     exact supportedOn_ket _ _ trivial)
@@ -120,7 +120,7 @@ theorem scalarRootWrap_coherent (body : AdaptiveCircuit) (P Q : Point)
   simp only [LinearMap.comp_apply,ket,Finsupp.lmapDomain_apply,Finsupp.mapDomain_single]
   change Finsupp.single (scalarRootFlip (scalarRegisterOutput P Q (scalarRootFlip s))) 1 =
     Finsupp.single (scalarRegisterOutput P Q s) 1
-  simp only [scalarRegisterOutput,root_scalar,root_pointWrite,root_twice]
+  simp only [scalarRegisterOutput,root_scalar,scalarRootFlip_pointWrite,scalarRootFlip_twice]
 
 theorem scalarCompute_coherent (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : order • P=0) (hrQ : order • Q=0) :
@@ -234,9 +234,17 @@ private theorem inputUniform_supported (Valid : BasisState → Prop) (ws : List 
     · apply supported_smul
       exact ih (by intro q hq; exact hup q (List.mem_cons_of_mem _ hq)) _ (hup w (List.mem_cons_self) s hs true)
 
+theorem hadamardInputs_supported (Valid : BasisState → Prop) (ws : List Wire)
+    (hn : ws.Nodup) (hup : ∀ w∈ws, ∀ s, Valid s → ∀ b, Valid (s[w ↦ b]))
+    (s : BasisState) (hs : Valid s) (hz : Clean ws s) :
+    SupportedOn Valid (Quantum.run (ws.map Gate.H) (ket s)) := by
+  change SupportedOn Valid (Quantum.run (inputHadamards ws) (ket s))
+  rw [inputHadamards_ket ws hn s hz]
+  exact inputUniform_supported Valid ws hup s hs
+
 def scalarPhaseWires : List Wire := List.range' 855 257++List.range' 1127 257
 private theorem scalarPhaseWires_nodup : scalarPhaseWires.Nodup := by decide +kernel
-private theorem phase_update_ready (w : Wire) (hw : w∈scalarPhaseWires) (s : BasisState)
+theorem scalarPhase_update_ready (w : Wire) (hw : w∈scalarPhaseWires) (s : BasisState)
     (hs : ScalarComputeValid s) (b : Bool) : ScalarComputeValid (s[w ↦ b]) := by
   have hw' := hw
   simp only [scalarPhaseWires,List.mem_append,List.mem_range'_1] at hw'
@@ -266,8 +274,8 @@ def scalarPhasePrepare : Circuit := inputHadamards scalarPhaseWires
 theorem scalarPhasePrepare_supported (s : BasisState) (hs : ScalarComputeValid s)
     (hz : Clean scalarPhaseWires s) :
     SupportedOn ScalarComputeValid (Quantum.run scalarPhasePrepare (ket s)) := by
-  rw [scalarPhasePrepare,inputHadamards_ket scalarPhaseWires scalarPhaseWires_nodup s hz]
-  exact inputUniform_supported ScalarComputeValid _ phase_update_ready s hs
+  exact hadamardInputs_supported ScalarComputeValid scalarPhaseWires scalarPhaseWires_nodup
+    scalarPhase_update_ready s hs hz
 
 def ScalarPhaseInitial (s : BasisState) : Prop := ScalarComputeValid s ∧ Clean scalarPhaseWires s
 

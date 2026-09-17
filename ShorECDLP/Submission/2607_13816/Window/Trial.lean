@@ -110,7 +110,7 @@ private theorem history_support (dir : PhaseDir) (t : Wire) (bs : List Bool) (k 
       | true => simpa [fourierFeedForward,circuitWires,gateWires] using hw
     · exact ih (k+1) hw
 
-private theorem fourier_support (dir : PhaseDir) (ws : List Wire) (prior : List Bool) :
+theorem semiclassicalFourier_support (dir : PhaseDir) (ws : List Wire) (prior : List Bool) :
     (semiclassicalFourier dir ws prior).wires ⊆ ws := by
   induction ws generalizing prior with
   | nil => simp [semiclassicalFourier,AdaptiveCircuit.wires]
@@ -128,9 +128,9 @@ theorem scalarFourierProgram_support : scalarFourierProgram.wires ⊆ scalarPhas
   intro w hw
   rw [scalarFourierProgram,modularWires_seq] at hw
   rcases hw with hw | hw
-  · have h := fourier_support .inverse scalarFourierLeft List.nil hw
+  · have h := semiclassicalFourier_support .inverse scalarFourierLeft List.nil hw
     exact List.mem_append_left _ (by simpa [scalarFourierLeft] using h)
-  · have h := fourier_support .inverse scalarFourierRight List.nil hw
+  · have h := semiclassicalFourier_support .inverse scalarFourierRight List.nil hw
     exact List.mem_append_right _ (by simpa [scalarFourierRight] using h)
 
 theorem windowTrialProgram_support (P Q : Point) (hP : P≠0) (hQ : Q≠0)

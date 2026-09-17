@@ -21,6 +21,47 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierSlice_filter
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialSlice_filter
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrial_zero_initial
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialOutputMass_kernel
+#print axioms ShorECDLP.Paper2607_13816.instrumentFilter_pair
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_filter
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_history_length
+#print axioms ShorECDLP.Paper2607_13816.reducedScalar_coherent
+#print axioms ShorECDLP.Paper2607_13816.reducedScalarState_correct
+#print axioms ShorECDLP.Paper2607_13816.reducedScalar_support
+#print axioms ShorECDLP.Paper2607_13816.reducedScalar_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.reducedScalarState_registers
+#print axioms ShorECDLP.Paper2607_13816.reducedScalar_registers_coherent
+#print axioms ShorECDLP.Paper2607_13816.reducedPhasePrepare_supported
+#print axioms ShorECDLP.Paper2607_13816.reducedScalarCompute_coherent
+#print axioms ShorECDLP.Paper2607_13816.reducedPreparedScalar_coherent
+#print axioms ShorECDLP.Paper2607_13816.reducedPhasePrepare_length
+#print axioms ShorECDLP.Paper2607_13816.reducedPhasePrepare_support
+#print axioms ShorECDLP.Paper2607_13816.reducedPreparedScalar_support
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierProgram_run
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierProgram_measurements
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierProgram_support
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialSlice_mass
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialProgram_run
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialProgram_support
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialSlice_kernel_mass
+#print axioms ShorECDLP.Paper2607_13816.reducedVerifiedCandidate_sound
+#print axioms ShorECDLP.Paper2607_13816.reducedVerifiedCandidate_complete
+#print axioms ShorECDLP.Paper2607_13816.reducedVerifiedMass_eq
+#print axioms ShorECDLP.Paper2607_13816.reducedVerifiedMass_lower
+#print axioms ShorECDLP.Paper2607_13816.directSchedule_coherent
+#print axioms ShorECDLP.Paper2607_13816.axisWindowState_split
+#print axioms ShorECDLP.Paper2607_13816.secpCandidate_correct
+#print axioms ShorECDLP.Paper2607_13816.scalarRootFlip_word
+#print axioms ShorECDLP.Paper2607_13816.scalarRootFlip_pointWrite
+#print axioms ShorECDLP.Paper2607_13816.scalarRootFlip_twice
+#print axioms ShorECDLP.Paper2607_13816.scalarRootFlip_coherent
+#print axioms ShorECDLP.Paper2607_13816.scalarPhase_update_ready
+#print axioms ShorECDLP.Paper2607_13816.hadamardInputs_supported
+#print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_support
 #print axioms ShorECDLP.Paper2607_13816.eeaUnpreprocess_tCount
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAParityCorrection_tCount
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_tCount
@@ -3147,8 +3188,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3123 ]]; then
-  printf 'expected 3123 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3164 ]]; then
+  printf 'expected 3164 #print axioms results\n' >&2
   exit 1
 fi
 
