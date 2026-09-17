@@ -27,7 +27,7 @@ private theorem compose_maps {a b : AdaptiveCircuit} {f g : BasisState → Basis
   intro s hs
   simp [LinearMap.comp_apply,ket]
 
-private theorem directSchedule_coherent (A P Q : Point) (hP : P≠0) (hQ : Q≠0)
+theorem directSchedule_coherent (A P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : order • P=0) (hrQ : order • Q=0) (n start m : Nat) :
     CoherentlyImplementsOn
       (((physicalPointLookup (firstWindowTable A P)).seq
@@ -53,7 +53,7 @@ private theorem directSchedule_coherent (A P Q : Point) (hP : P≠0) (hQ : Q≠0
       (preparedWindowCallState_ready x y hv 0 (pointWrite A s) (pointInitialize_ready A s hs)))
   exact hall
 
-private theorem axis_split (P : Point) (hP : P≠0) (hr : order • P=0)
+theorem axisWindowState_split (P : Point) (hP : P≠0) (hr : order • P=0)
     (n : Nat) (s : BasisState) :
     axisWindowState P hP hr 0 (n+1) s=
       preparedWindowScheduleState (fun k => oddWindowX P (k-0)) (fun k => oddWindowY P (k-0))
@@ -71,7 +71,7 @@ theorem directScalar_coherent (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     P Q hP hQ hrP hrQ 16 17 17
   apply h.congrIdeal
   intro s hs
-  have he := axis_split P hP hrP 16
+  have he := axisWindowState_split P hP hrP 16
     (pointWrite (axisWindowOffset P 17+axisWindowOffset Q 17) s)
   have he' := congrArg (axisWindowState Q hQ hrQ 17 17) he
   simpa only [ket,Finsupp.lmapDomain_apply,Finsupp.mapDomain_single,

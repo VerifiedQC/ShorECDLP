@@ -3048,3 +3048,29 @@ conservative proved bound `2^49+2`; this is not a claim of exactly `2^48`
 classical operations. Candidate coverage is not yet a verified public-point
 decoder or a physical 256+208-bit circuit. The 28-addition and 835-wire
 implementation targets remain open.
+
+
+### Physical 256+208-bit trial and verified finite candidates
+
+`Window/ReducedScalar.lean`, `ReducedPhase.lean`, and `ReducedTrial.lean`
+construct the direct first lookup followed by 15 left and 13 right additions.
+The complete-state scalar theorem reads the actual 256-bit left and 208-bit
+right registers, preserves the frame, and restores the root control after
+464 Hadamards. `ReducedOutcomes.lean` consumes the actual adaptive arithmetic history before
+splitting the 256+208 output bits. The actual two Fourier measurements are connected to the ideal
+measured Fourier kernels, summing all internal arithmetic measurement histories.
+The same trial has a proved upper bound of 1,303 distinct wires. Preparation
+retains `ScalarComputeValid`'s clean work and baseline padding conditions,
+plus clean selected input wires; all-zero input satisfies these conditions.
+
+`OrderFinding/ReducedVerified.lean` checks candidates against the public point.
+It proves soundness, completeness for the finite candidate set, and the lower
+bound for the mathematical asymmetric distribution. This is a noncomputable
+finite-choice specification, not an executable search-cost theorem. Its
+conservative 208-bit candidate bound remains `2^49 + 2`.
+
+The equality between the physical trial's decoded output distribution and that
+mathematical distribution is still open. Consequently these files do not yet
+establish an end-to-end success or reset/repetition contract for the reduced
+trial. The 835-wire target and exact reduced resource ledger also remain open;
+the completed 33-addition contract remains available separately.

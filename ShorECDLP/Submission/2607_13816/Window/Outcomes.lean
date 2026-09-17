@@ -3,7 +3,7 @@ import ShorECDLP.Submission.«2607_13816».OrderFinding.PhaseSchedule
 namespace ShorECDLP.Paper2607_13816
 open Classical Quantum ShorECDLP.Secp256k1
 noncomputable section
-private theorem filterPairInstrument (xs ys : Instrument) (p q z : InstrumentBranch → Bool)
+theorem instrumentFilter_pair (xs ys : Instrument) (p q z : InstrumentBranch → Bool)
     (hz : ∀ x∈xs, ∀ y∈ys, z (x.seq y)=(p x && q y)) :
     Instrument.seq (xs.filter p) (ys.filter q)=(Instrument.seq xs ys).filter z := by
   induction xs with
@@ -24,7 +24,7 @@ private theorem filterPairInstrument (xs ys : Instrument) (p q z : InstrumentBra
     unfold Instrument.seq at iht
     cases hp : p x <;> simp [Instrument.seq,hp,hmap,iht]
 
-private theorem fourier_filter (dir : PhaseDir) (ws : List Wire) (bs : List Bool)
+theorem semiclassicalFourier_filter (dir : PhaseDir) (ws : List Wire) (bs : List Bool)
     (hlen : bs.length=ws.length) :
     (semiclassicalFourier dir ws List.nil).run.filter (fun b => b.history==bs)=
       [⟨bs,fourierBranch dir ws List.nil bs⟩] := by
@@ -35,7 +35,7 @@ private theorem fourier_filter (dir : PhaseDir) (ws : List Wire) (bs : List Bool
     List.count_eq_one_of_mem (fourierOutcomes_nodup _) ((fourierOutcomes_mem _ _).mpr hlen)
   rw [hc]
   rfl
-private theorem fourier_history_length (dir : PhaseDir) (ws : List Wire) (b : InstrumentBranch)
+theorem semiclassicalFourier_history_length (dir : PhaseDir) (ws : List Wire) (b : InstrumentBranch)
     (hb : b∈(semiclassicalFourier dir ws List.nil).run) : b.history.length=ws.length := by
   rw [semiclassicalFourier_run] at hb
   obtain ⟨bs,hbs,rfl⟩ := List.mem_map.mp hb
@@ -54,12 +54,12 @@ theorem scalarFourierSlice_filter (a b : List Bool) (ha : a.length=257) (hb : b.
         (List.singleton ⟨b,fourierBranch .inverse scalarFourierRight List.nil b⟩) := rfl
   rw [hslice]
   simp only [List.singleton]
-  rw [←fourier_filter .inverse _ _ hfirst,←fourier_filter .inverse _ _ hsecond,
+  rw [←semiclassicalFourier_filter .inverse _ _ hfirst,←semiclassicalFourier_filter .inverse _ _ hsecond,
     scalarFourierProgram,AdaptiveCircuit.run_seq]
-  apply filterPairInstrument
+  apply instrumentFilter_pair
   intro first hf second _
   have hlen : first.history.length=257 := by
-    simpa [scalarFourierLeft] using fourier_history_length .inverse scalarFourierLeft first hf
+    simpa [scalarFourierLeft] using semiclassicalFourier_history_length .inverse scalarFourierLeft first hf
   simp [decodeScalarFourier,InstrumentBranch.seq,←hlen]
   rfl
 
@@ -72,7 +72,7 @@ theorem adaptiveTerminalFilter (program : AdaptiveCircuit) (ys : Instrument)
     (q z : InstrumentBranch → Bool)
     (hz : ∀ x∈program.run, ∀ y∈ys, z (x.seq y)=q y) :
     Instrument.seq program.run (ys.filter q)=(Instrument.seq program.run ys).filter z := by
-  have h := filterPairInstrument program.run ys (fun _ => true) q z (by
+  have h := instrumentFilter_pair program.run ys (fun _ => true) q z (by
     intro x hx y hy
     simpa using hz x hx y hy)
   simpa only [List.filter_true] using h
