@@ -21,6 +21,17 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch_mapDomain_commute
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch_pointWrite_commute
+#print axioms ShorECDLP.Paper2607_13816.encodedPointRead_encoding
+#print axioms ShorECDLP.Paper2607_13816.statePointRead_correct
+#print axioms ShorECDLP.Paper2607_13816.pointStateCoordinates_reset
+#print axioms ShorECDLP.Paper2607_13816.statePointRead_reset
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_read
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowDelta_reset
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowIdeal_fourier_commute
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_read_coherent
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_branch_fourier_commute
 #print axioms ShorECDLP.Paper2607_13816.streamScalarTrial_measurements
 #print axioms ShorECDLP.Paper2607_13816.fourierContinue_done
 #print axioms ShorECDLP.Paper2607_13816.fourierContinue_append
@@ -3285,8 +3296,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3261 ]]; then
-  printf 'expected 3261 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3272 ]]; then
+  printf 'expected 3272 #print axioms results\n' >&2
   exit 1
 fi
 
