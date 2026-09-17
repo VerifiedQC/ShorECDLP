@@ -3036,11 +3036,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secpWindowProgram_tCount_exact
 #print axioms ShorECDLP.Paper2607_13816.secpWindowRepeatedProgram_tCount_exact
 #print axioms ShorECDLP.Paper2607_13816.secpWindowContract
+#print axioms ShorECDLP.Paper2607_13816.directPointLookup_coherent
+#print axioms ShorECDLP.Paper2607_13816.directPointLookup_support
+#print axioms ShorECDLP.Paper2607_13816.directPointLookup_tCount
+#print axioms ShorECDLP.Paper2607_13816.directPointLookup_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.physicalPointLookup_coherent
+#print axioms ShorECDLP.Paper2607_13816.physicalPointLookup_resources
+#print axioms ShorECDLP.Paper2607_13816.firstWindowLookup_coherent
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3015 ]]; then
-  printf 'expected 3015 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3022 ]]; then
+  printf 'expected 3022 #print axioms results\n' >&2
   exit 1
 fi
 

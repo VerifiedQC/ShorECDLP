@@ -195,6 +195,17 @@ the proved Fourier-sampling/postprocessing theorem. This entire chain moves to
 
 ### 4.2 arXiv:2607.13816v2 target
 
+**Version note (checked 2026-09-17):** This plan retains the explicitly requested
+[v2 target](https://arxiv.org/abs/2607.13816v2). The
+[v3 abstract](https://arxiv.org/abs/2607.13816v3), submitted 2026-09-05
+02:38:40 UTC, changes the leading full-algorithm Toffoli coefficient from
+1008 to 1056 and the inversion coefficient from 217 to 229; the headline
+835-qubit claim is unchanged. These are source claims, not replacements for
+our circuit-derived certificates. A full v2/v3 body reconciliation has not
+yet been performed. The supersession of arXiv:2604.02311 is already stated
+on the v2 abstract page and is not a newly established v3 change.
+
+
 Pinned sources:
 
 - paper: arXiv HTML v2, `2607.13816v2`;
@@ -2959,3 +2970,20 @@ point initialization, both root flips, 514 preparation Hadamards, all 34 signed
 windows and both Fourier measurements. Physical reset adds 1,383 measurements;
 the actual 26-run program scales every component by 26 while reusing its wires.
 The zero public-point branch is accounted for separately.
+
+
+### Direct initialization prerequisite for the reduced window schedule
+
+Appendix A.3 of arXiv:2603.28846 explicitly replaces the first point addition
+with a direct lookup and omits the last three using classical post-processing
+(Ekerå, arXiv:1905.09084; also Litinski, arXiv:2306.08585). Earlier claims that
+this appendix supplied only the formula were incorrect.
+
+`Window.DirectPointLookup` loads the full 513-bit point encoding directly from a
+16-bit physical address into a clean point register, preserving the complete
+frame and restoring the decoder paths coherently. Its actual adaptive circuit
+uses 458,745 T-model units, 65,535 measurements and at most 546 wires. The
+`FirstWindowReplacement` proves equality with initialization followed by the
+first signed-window call, using the existing scratch bank at 519–534. The
+33-addition integration and the final three-window post-processing reduction
+remain to be proved; the existing 34-window contract is unchanged.
