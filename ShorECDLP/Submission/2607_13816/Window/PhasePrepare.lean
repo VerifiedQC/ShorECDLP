@@ -101,12 +101,14 @@ def scalarComputeProgram (P Q : Point) (hP : P≠0) (hQ : Q≠0)
   ((AdaptiveCircuit.unitary [.X 836] .done).seq
     (initializedScalarProgram P Q hP hQ hrP hrQ)).seq (.unitary [.X 836] .done)
 
-theorem scalarCompute_coherent (P Q : Point) (hP : P≠0) (hQ : Q≠0)
-    (hrP : order • P=0) (hrQ : order • Q=0) :
-    CoherentlyImplementsOn (scalarComputeProgram P Q hP hQ hrP hrQ)
+theorem scalarRootWrap_coherent (body : AdaptiveCircuit) (P Q : Point)
+    (hb : CoherentlyImplementsOn body
+      (Finsupp.lmapDomain ℂ ℂ (scalarRegisterOutput P Q)) ScalarRegistersValid) :
+    CoherentlyImplementsOn
+      (((AdaptiveCircuit.unitary [.X 836] .done).seq body).seq (.unitary [.X 836] .done))
       (Finsupp.lmapDomain ℂ ℂ (scalarRegisterOutput P Q)) ScalarComputeValid := by
   have h1 := (root_coherent ScalarComputeValid).seq
-    (initializedScalar_registers_coherent P Q hP hQ hrP hrQ) (by
+    hb (by
       intro s hs
       simpa [ket] using supportedOn_ket _ _ (scalarRootFlip_ready s hs))
   have h2 := h1.seq (root_coherent (fun _ => True)) (by
@@ -120,6 +122,12 @@ theorem scalarCompute_coherent (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     Finsupp.single (scalarRegisterOutput P Q s) 1
   simp only [scalarRegisterOutput,root_scalar,root_pointWrite,root_twice]
 
+theorem scalarCompute_coherent (P Q : Point) (hP : P≠0) (hQ : Q≠0)
+    (hrP : order • P=0) (hrQ : order • Q=0) :
+    CoherentlyImplementsOn (scalarComputeProgram P Q hP hQ hrP hrQ)
+      (Finsupp.lmapDomain ℂ ℂ (scalarRegisterOutput P Q)) ScalarComputeValid :=
+  scalarRootWrap_coherent _ P Q (initializedScalar_registers_coherent P Q hP hQ hrP hrQ)
+
 private theorem root_support : (AdaptiveCircuit.unitary [.X 836] .done).wires ⊆
     List.range 839++List.range' 855 544 := by
   intro w hw
@@ -128,17 +136,23 @@ private theorem root_support : (AdaptiveCircuit.unitary [.X 836] .done).wires �
   subst w
   exact List.mem_append_left _ (List.mem_range.mpr (by decide))
 
-theorem scalarCompute_support (P Q : Point) (hP : P≠0) (hQ : Q≠0)
-    (hrP : order • P=0) (hrQ : order • Q=0) :
-    (scalarComputeProgram P Q hP hQ hrP hrQ).wires ⊆ List.range 839++List.range' 855 544 := by
+theorem scalarRootWrap_support (body : AdaptiveCircuit)
+    (hb : body.wires ⊆ List.range 839++List.range' 855 544) :
+    (((AdaptiveCircuit.unitary [.X 836] .done).seq body).seq (.unitary [.X 836] .done)).wires ⊆
+      List.range 839++List.range' 855 544 := by
   intro w hw
-  rw [scalarComputeProgram,modularWires_seq] at hw
+  rw [modularWires_seq] at hw
   rcases hw with hw | hw
   · rw [modularWires_seq] at hw
     rcases hw with hw | hw
     · exact root_support hw
-    · exact initializedScalar_support P Q hP hQ hrP hrQ hw
+    · exact hb hw
   · exact root_support hw
+
+theorem scalarCompute_support (P Q : Point) (hP : P≠0) (hQ : Q≠0)
+    (hrP : order • P=0) (hrQ : order • Q=0) :
+    (scalarComputeProgram P Q hP hQ hrP hrQ).wires ⊆ List.range 839++List.range' 855 544 :=
+  scalarRootWrap_support _ (initializedScalar_support P Q hP hQ hrP hrQ)
 
 theorem scalarCompute_qubitCount (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : order • P=0) (hrQ : order • Q=0) :
@@ -151,14 +165,14 @@ theorem scalarCompute_qubitCount (P Q : Point) (hP : P≠0) (hQ : Q≠0)
   rw [List.toFinset_card_of_nodup (List.nodup_dedup _)] at hc
   simpa only [AdaptiveCircuit.qubitCount,List.length_append,List.length_range,List.length_range'] using hc
 
-private theorem root_wrap_T (body : AdaptiveCircuit) :
+theorem scalarRootWrap_tCount (body : AdaptiveCircuit) :
     (((AdaptiveCircuit.unitary [.X 836] .done).seq body).seq (.unitary [.X 836] .done)).tCount=body.tCount := by
   have ht (a b : AdaptiveCircuit) : (a.seq b).tCount=a.tCount+b.tCount := by
     simpa only [gidneyGateCount_tCount] using modularGateCount_seq tCost a b
   rw [ht,ht]
   have hz : (AdaptiveCircuit.unitary [.X 836] .done).tCount=0 := rfl
   simp only [hz,Nat.zero_add,Nat.add_zero]
-private theorem root_wrap_M (body : AdaptiveCircuit) :
+theorem scalarRootWrap_measurementCount (body : AdaptiveCircuit) :
     (((AdaptiveCircuit.unitary [.X 836] .done).seq body).seq (.unitary [.X 836] .done)).measurementCount=body.measurementCount := by
   rw [modularMeasurements_seq,modularMeasurements_seq]
   simp only [AdaptiveCircuit.measurementCount,Nat.zero_add,Nat.add_zero]
@@ -167,12 +181,12 @@ theorem scalarCompute_tCount (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : order • P=0) (hrQ : order • Q=0) :
     (scalarComputeProgram P Q hP hQ hrP hrQ).tCount=
       (scalarWindowsProgram P Q hP hQ hrP hrQ).tCount :=
-  (root_wrap_T _).trans (initializedScalar_tCount P Q hP hQ hrP hrQ)
+  (scalarRootWrap_tCount _).trans (initializedScalar_tCount P Q hP hQ hrP hrQ)
 theorem scalarCompute_measurementCount (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : order • P=0) (hrQ : order • Q=0) :
     (scalarComputeProgram P Q hP hQ hrP hrQ).measurementCount=
       (scalarWindowsProgram P Q hP hQ hrP hrQ).measurementCount :=
-  (root_wrap_M _).trans (initializedScalar_measurementCount P Q hP hQ hrP hrQ)
+  (scalarRootWrap_measurementCount _).trans (initializedScalar_measurementCount P Q hP hQ hrP hrQ)
 
 private def inputHadamards (ws : List Wire) : Circuit := ws.map Gate.H
 private def inputUniform : List Wire → BasisState → State
@@ -314,13 +328,13 @@ theorem scalarPhasePrepare_tCount : tCount scalarPhasePrepare=0 := hadamard_T _
 private theorem unitary_T (c : Circuit) : (AdaptiveCircuit.unitary c .done).tCount=tCount c := by
   change tCount c+0=tCount c
   exact Nat.add_zero _
-private theorem phase_prefix_T (body : AdaptiveCircuit) :
+theorem scalarPhasePrefix_tCount (body : AdaptiveCircuit) :
     ((AdaptiveCircuit.unitary scalarPhasePrepare .done).seq body).tCount=body.tCount := by
   have h := modularGateCount_seq tCost (AdaptiveCircuit.unitary scalarPhasePrepare .done) body
   have hz : (AdaptiveCircuit.unitary scalarPhasePrepare .done).tCount=0 := by
     rw [unitary_T,scalarPhasePrepare_tCount]
   simpa only [gidneyGateCount_tCount,hz,Nat.zero_add] using h
-private theorem phase_prefix_M (body : AdaptiveCircuit) :
+theorem scalarPhasePrefix_measurementCount (body : AdaptiveCircuit) :
     ((AdaptiveCircuit.unitary scalarPhasePrepare .done).seq body).measurementCount=body.measurementCount := by
   rw [modularMeasurements_seq]
   exact Nat.zero_add _
@@ -329,12 +343,12 @@ theorem preparedScalar_tCount (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : order • P=0) (hrQ : order • Q=0) :
     (preparedScalarProgram P Q hP hQ hrP hrQ).tCount=
       (scalarWindowsProgram P Q hP hQ hrP hrQ).tCount :=
-  (phase_prefix_T _).trans (scalarCompute_tCount P Q hP hQ hrP hrQ)
+  (scalarPhasePrefix_tCount _).trans (scalarCompute_tCount P Q hP hQ hrP hrQ)
 theorem preparedScalar_measurementCount (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : order • P=0) (hrQ : order • Q=0) :
     (preparedScalarProgram P Q hP hQ hrP hrQ).measurementCount=
       (scalarWindowsProgram P Q hP hQ hrP hrQ).measurementCount :=
-  (phase_prefix_M _).trans (scalarCompute_measurementCount P Q hP hQ hrP hrQ)
+  (scalarPhasePrefix_measurementCount _).trans (scalarCompute_measurementCount P Q hP hQ hrP hrQ)
 
 end
 end ShorECDLP.Paper2607_13816

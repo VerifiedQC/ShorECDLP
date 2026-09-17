@@ -1,3 +1,5 @@
+import ShorECDLP.Submission.«2607_13816».Window.DirectTrial
+import ShorECDLP.Submission.«2607_13816».Window.DirectPhase
 import ShorECDLP.Submission.«2607_13816».Window.DirectScalar
 import ShorECDLP.Submission.«2607_13816».Window.FirstWindowReplacement
 import ShorECDLP.Submission.«2607_13816».Contract

@@ -70,7 +70,7 @@ private theorem aligned_terminal_mass (ideal : State →ₗ[ℂ] State) (Valid :
     rw [ih]
     ring
 
-private theorem coherent_terminal_mass {program : AdaptiveCircuit} {ideal : State →ₗ[ℂ] State}
+theorem coherentTerminalMass {program : AdaptiveCircuit} {ideal : State →ₗ[ℂ] State}
     {Valid : BasisState → Prop} (h : CoherentlyImplementsOn program ideal Valid)
     (ψ : State) (hψ : SupportedOn Valid ψ) (K : State →ₗ[ℂ] State) (bits : List Bool) :
     (Instrument.seq program.run (List.singleton ⟨bits,K⟩)).bornMass ψ=normSq (K (ideal ψ)) := by
@@ -85,7 +85,7 @@ theorem windowTrialSlice_mass (P Q : Point) (hP : P≠0) (hQ : Q≠0)
         (fourierBranch .inverse scalarFourierLeft List.nil a
           ((Finsupp.lmapDomain ℂ ℂ (scalarRegisterOutput P Q)) (Quantum.run scalarPhasePrepare ψ)))) := by
   simpa only [windowTrialSlice,scalarFourierSlice,LinearMap.comp_apply] using
-    coherent_terminal_mass (preparedScalar_coherent P Q hP hQ hrP hrQ) ψ hψ
+    coherentTerminalMass (preparedScalar_coherent P Q hP hQ hrP hrQ) ψ hψ
       ((fourierBranch .inverse scalarFourierRight List.nil b).comp
         (fourierBranch .inverse scalarFourierLeft List.nil a)) (a++b)
 /-- The actual full instrument, including arithmetic histories before the two output strings. -/
