@@ -3074,3 +3074,21 @@ mathematical distribution is still open. Consequently these files do not yet
 establish an end-to-end success or reset/repetition contract for the reduced
 trial. The 835-wire target and exact reduced resource ledger also remain open;
 the completed 33-addition contract remains available separately.
+
+
+### Reduced physical distribution and nonzero-point success
+
+`Window/ReducedUniform.lean`, `ReducedKernel.lean`, `ReducedMixture.lean`,
+and `ReducedSuccess.lean` close the distribution equality left open above.
+They retain the physical Fourier interference, reduce the resulting point sum
+to unequal-precision cyclic character amplitudes, and prove that the actual
+256+208-bit decoded mass equals `asymmetricPairMass`. The original
+same-precision character lemmas are specializations of the shared proof.
+
+For a nonzero public point `Q = d • G`, `reducedPhysical_success_certificate`
+combines normalized observations, the public-point-verified finite candidate
+success bound `((order-1)/order) * (4/pi^2)^2`, and the same circuit's 1,303-wire
+upper bound. Selection remains a noncomputable finite-choice specification,
+with conservative `2^49 + 2` candidate bound. No executable search-cost or
+Clifford+T synthesis claim follows. Zero-point dispatch, reset/repetition,
+exact reduced primitive counts, and the 835-wire target remain open.

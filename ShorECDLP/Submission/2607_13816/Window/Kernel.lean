@@ -2,7 +2,7 @@ import ShorECDLP.Submission.«2607_13816».Window.Uniform
 namespace ShorECDLP.Paper2607_13816
 open Classical Quantum ShorECDLP.Secp256k1
 noncomputable section
-private theorem clear_apply (ws : List Wire) (s : BasisState) (w : Wire) :
+theorem fourierClear_apply (ws : List Wire) (s : BasisState) (w : Wire) :
     fourierClear ws s w=if w∈ws then false else s w := by
   induction ws generalizing s with
   | nil => rfl
@@ -12,7 +12,7 @@ private theorem clear_apply (ws : List Wire) (s : BasisState) (w : Wire) :
     · subst w; simp [upd]
     · simp [hv,upd]
 
-private theorem kernel_ket (dir : PhaseDir) (ws : List Wire) (bs : List Bool) (s : BasisState) :
+theorem measuredFourierKernel_ket (dir : PhaseDir) (ws : List Wire) (bs : List Bool) (s : BasisState) :
     measuredFourierKernel dir ws bs (ket s)=
       (((((Real.sqrt 2)⁻¹:ℝ):ℂ)^ws.length)*
         dyadicFourierKernel dir ws.length (fourierWordMSB (ws.map s)) (fourierWordLSB bs)) •
@@ -23,7 +23,7 @@ private theorem right_after_left (s : BasisState) :
     scalarFourierRight.map (fourierClear scalarFourierLeft s)=scalarFourierRight.map s := by
   apply List.map_congr_left
   intro w hw
-  rw [clear_apply,if_neg]
+  rw [fourierClear_apply,if_neg]
   simp only [scalarFourierRight,List.mem_reverse,List.mem_range'_1] at hw
   simp only [scalarFourierLeft,List.mem_reverse,List.mem_range'_1]
   omega
@@ -35,14 +35,14 @@ theorem scalarFourierKernel_ket (a b : List Bool) (s : BasisState) :
         dyadicFourierKernel .inverse 257 (fourierWordMSB (scalarFourierLeft.map s)) (fourierWordLSB a)*
         dyadicFourierKernel .inverse 257 (fourierWordMSB (scalarFourierRight.map s)) (fourierWordLSB b)) •
       ket (fourierClear scalarFourierRight (fourierClear scalarFourierLeft s)) := by
-  rw [kernel_ket,map_smul,kernel_ket,smul_smul,right_after_left]
+  rw [measuredFourierKernel_ket,map_smul,measuredFourierKernel_ket,smul_smul,right_after_left]
   have hl : scalarFourierLeft.length=257 := by simp [scalarFourierLeft]
   have hr : scalarFourierRight.length=257 := by simp [scalarFourierRight]
   rw [hl,hr]
   apply congrArg (fun c : ℂ => c • ket (fourierClear scalarFourierRight (fourierClear scalarFourierLeft s)))
   rw [show 514=257+257 from rfl,pow_add]
   ring
-private theorem point_bound (w : Wire) (hw : w∈pointLogicalWires) : w<839 := by
+theorem pointLogicalWires_bound (w : Wire) (hw : w∈pointLogicalWires) : w<839 := by
   simp only [pointLogicalWires,pointCorrectionX,pointCorrectionYInf,List.mem_append,
     List.mem_range'_1,List.mem_cons,List.not_mem_nil,or_false] at hw
   dsimp only [Wire] at *
@@ -54,9 +54,9 @@ theorem scalarFourierClear_point (R : Point) (bits : List Bool) :
       (pointWrite R (phaseWordState scalarPhaseWires bits zeroBasisState)))=
     pointWrite R zeroBasisState := by
   funext w
-  simp only [clear_apply]
+  simp only [fourierClear_apply]
   by_cases hp : w∈pointLogicalWires
-  · have hbound := point_bound w hp
+  · have hbound := pointLogicalWires_bound w hp
     have hl : w∉scalarFourierLeft := by simp only [scalarFourierLeft,List.mem_reverse,List.mem_range'_1]; dsimp only [Wire] at *; omega
     have hr : w∉scalarFourierRight := by simp only [scalarFourierRight,List.mem_reverse,List.mem_range'_1]; dsimp only [Wire] at *; omega
     simp [hl,hr,pointWrite,hp]
@@ -102,13 +102,13 @@ private theorem phase_assignment_words (a b : List Bool) (ha : a.length=257) (hb
       _ = a := phaseWordState_word _ List.nodup_range' a (by simpa using ha) s
   · exact phaseWordState_word _ List.nodup_range' b (by simpa using hb) _
 
-private theorem phase_point_word (R : Point) (s : BasisState) (start : Nat) (hstart : 839≤start) :
-    wireValues (List.range' start 257) (pointWrite R s)=wireValues (List.range' start 257) s := by
+theorem pointWrite_phase_word (R : Point) (s : BasisState) (start n : Nat) (hstart : 839≤start) :
+    wireValues (List.range' start n) (pointWrite R s)=wireValues (List.range' start n) s := by
   apply List.map_congr_left
   intro w hw
   apply pointWrite_frame
   intro hp
-  have hb := point_bound w hp
+  have hb := pointLogicalWires_bound w hp
   simp only [List.mem_range'_1] at hw
   dsimp only [Wire] at *
   omega
@@ -130,19 +130,14 @@ theorem scalarFourierKernel_assigned (P Q : Point) (a b x y : List Bool)
         (phaseWordState scalarPhaseWires (a++b) zeroBasisState))=a.reverse := by
     rw [scalarFourierLeft,List.map_reverse]
     change (wireValues (List.range' 855 257) _).reverse=_
-    rw [phase_point_word _ _ _ (by decide),hw.1]
+    rw [pointWrite_phase_word _ _ _ _ (by decide),hw.1]
   have hr : scalarFourierRight.map
       (pointWrite (boolWordToNat a • P+boolWordToNat b • Q)
         (phaseWordState scalarPhaseWires (a++b) zeroBasisState))=b.reverse := by
     rw [scalarFourierRight,List.map_reverse]
     change (wireValues (List.range' 1127 257) _).reverse=_
-    rw [phase_point_word _ _ _ (by decide),hw.2]
+    rw [pointWrite_phase_word _ _ _ _ (by decide),hw.2]
   rw [hl,hr,fourierWordMSB_reverse,fourierWordMSB_reverse]
-
-private theorem linear_sum (L : State →ₗ[ℂ] State) (xs : List State) : L xs.sum=(xs.map L).sum := by
-  induction xs with
-  | nil => simp
-  | cons x xs ih => simp [ih]
 
 /-- Explicit point-valued double Fourier sum for each observed pair. -/
 theorem windowTrialOutputMass_point_sum (P Q : Point) (hP : P≠0) (hQ : Q≠0)
@@ -160,14 +155,14 @@ theorem windowTrialOutputMass_point_sum (P Q : Point) (hP : P≠0) (hQ : Q≠0)
   have hsplit := phaseUniformSum_append (List.range' 855 257) (List.range' 1127 257) zeroBasisState
   change phaseUniformSum scalarPhaseWires zeroBasisState=_ at hsplit
   rw [hsplit]
-  simp only [map_smul,linear_sum,phaseUniformSum,List.map_map,List.length_range']
+  simp only [map_smul,stateLinear_list_sum,phaseUniformSum,List.map_map,List.length_range']
   apply congrArg normSq
   apply congrArg (fun ψ : State => (((((Real.sqrt 2)⁻¹:ℝ):ℂ))^514) • ψ)
   apply congrArg List.sum
   apply List.map_congr_left
   intro a ha
   dsimp only [Function.comp_apply]
-  simp only [linear_sum,List.map_map]
+  simp only [stateLinear_list_sum,List.map_map]
   apply congrArg List.sum
   apply List.map_congr_left
   intro b hb

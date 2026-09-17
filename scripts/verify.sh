@@ -21,6 +21,27 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.reducedPhasePrepare_uniform
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialOutputMass_uniform
+#print axioms ShorECDLP.Paper2607_13816.reducedPhaseWord_inputs
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierKernel_ket
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierClear_point
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierKernel_assigned
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialOutputMass_point_sum
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialOutputMass_character_mixture
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialFiniteOutputMass_eq
+#print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialFiniteOutputMass_total
+#print axioms ShorECDLP.Paper2607_13816.reducedPhysicalVerifiedMass_eq
+#print axioms ShorECDLP.Paper2607_13816.reducedPhysicalVerifiedMass_lower
+#print axioms ShorECDLP.Paper2607_13816.reducedPhysical_success_certificate
+#print axioms ShorECDLP.Paper2607_13816.stateLinear_list_sum
+#print axioms ShorECDLP.Paper2607_13816.fourierClear_apply
+#print axioms ShorECDLP.Paper2607_13816.measuredFourierKernel_ket
+#print axioms ShorECDLP.Paper2607_13816.pointLogicalWires_bound
+#print axioms ShorECDLP.Paper2607_13816.pointWrite_phase_word
+#print axioms ShorECDLP.Paper2607_13816.asymmetric_point_character_sum
+#print axioms ShorECDLP.Paper2607_13816.asymmetric_point_character_mass
+#print axioms ShorECDLP.Paper2607_13816.pointDoubleSum_normalize
 #print axioms ShorECDLP.Paper2607_13816.reducedFourierSlice_filter
 #print axioms ShorECDLP.Paper2607_13816.reducedWindowTrialSlice_filter
 #print axioms ShorECDLP.Paper2607_13816.reducedWindowTrial_zero_initial
@@ -3188,8 +3209,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3164 ]]; then
-  printf 'expected 3164 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3185 ]]; then
+  printf 'expected 3185 #print axioms results\n' >&2
   exit 1
 fi
 

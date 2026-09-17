@@ -70,7 +70,7 @@ theorem scalarPhasePrepare_uniform : Quantum.run scalarPhasePrepare (ket zeroBas
   have hz := windowTrial_zero_initial.2
   have h := phaseHadamards_uniform scalarPhaseWires (by decide +kernel) zeroBasisState hz
   simpa only [scalarPhaseWires,List.length_append,List.length_range'] using h
-private theorem linear_list_sum (L : State →ₗ[ℂ] State) (xs : List State) :
+theorem stateLinear_list_sum (L : State →ₗ[ℂ] State) (xs : List State) :
     L xs.sum=(xs.map L).sum := by
   induction xs with
   | nil => simp
@@ -87,7 +87,7 @@ theorem windowTrialOutputMass_uniform (P Q : Point) (hP : P≠0) (hQ : Q≠0)
             (measuredFourierKernel .inverse scalarFourierLeft a
               (ket (scalarRegisterOutput P Q (phaseWordState scalarPhaseWires bits zeroBasisState)))))).sum)) := by
   rw [windowTrialOutputMass_kernel P Q hP hQ hrP hrQ a b ha hb,scalarPhasePrepare_uniform]
-  simp only [map_smul,phaseUniformSum,linear_list_sum,List.map_map]
+  simp only [map_smul,phaseUniformSum,stateLinear_list_sum,List.map_map]
   apply congrArg normSq
   apply congrArg (fun ψ : State => (((((Real.sqrt 2)⁻¹:ℝ):ℂ))^514) • ψ)
   have hl : scalarPhaseWires.length=514 := by
