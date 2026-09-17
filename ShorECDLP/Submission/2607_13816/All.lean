@@ -1,3 +1,10 @@
+import ShorECDLP.Submission.«2607_13816».DirectContract
+import ShorECDLP.Submission.«2607_13816».Window.DirectReset
+import ShorECDLP.Submission.«2607_13816».Window.DirectResetOutcomes
+import ShorECDLP.Submission.«2607_13816».Window.DirectCandidate
+import ShorECDLP.Submission.«2607_13816».Window.DirectRepetition
+import ShorECDLP.Submission.«2607_13816».Window.DirectPrimitives
+import ShorECDLP.Submission.«2607_13816».Window.DirectTCounts
 import ShorECDLP.Submission.«2607_13816».Window.DirectOutcomes
 import ShorECDLP.Submission.«2607_13816».Window.DirectSuccess
 import ShorECDLP.Submission.«2607_13816».Window.DirectSecp

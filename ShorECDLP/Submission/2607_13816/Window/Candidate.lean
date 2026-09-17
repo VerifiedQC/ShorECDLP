@@ -67,7 +67,7 @@ theorem resetWindowCandidate_sound (Q : Point) (hrQ : order • Q=0) (d : Nat) (
   obtain ⟨out,_,ho⟩ := Option.bind_eq_some_iff.mp hc
   exact secpWindowVerifiedCandidate_sound Q d hQd out c ho
 
-private theorem selected_decode_mass {α : Type} [Fintype α] [BEq α] [LawfulBEq α]
+theorem selectedDecode_mass {α : Type} [Fintype α] [BEq α] [LawfulBEq α]
     (I : Instrument) (decode : InstrumentBranch → Option α) (accept : α → Bool) (ψ : State) :
     Instrument.bornMass (I.filter (fun b => (decode b).any accept)) ψ=
       ∑ a : α, if accept a then Instrument.bornMass (I.filter (fun b => decode b==some a)) ψ else 0 := by
@@ -103,7 +103,7 @@ theorem resetWindowCandidate_mass (Q : Point) (hrQ : order • Q=0) (d : Nat) (h
     · intro h
       rw [(secpWindowVerifiedCandidate_complete Q d hQd out).mpr h]
       rfl
-  have hp := selected_decode_mass (resetWindowTrial Q hrQ).run
+  have hp := selectedDecode_mass (resetWindowTrial Q hrQ).run
     (fun b => resetWindowFiniteDecode Q hrQ b.history)
     (fun out => (secpWindowVerifiedCandidate Q out).isSome) (ket zeroBasisState)
   simp only [resetWindowFiniteOutputMass,ha] at hp

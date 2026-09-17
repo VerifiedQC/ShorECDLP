@@ -41,6 +41,9 @@ private theorem reset_nodup : windowResetWires.Nodup := by
   simp only [List.mem_range,List.mem_range'] at hw hv
   omega
 
+theorem windowReset_support : windowResetProgram.wires ⊆ windowResetWires :=
+  reset_wires windowResetWires
+
 theorem windowReset_clean (b : InstrumentBranch) (hb : b∈windowResetProgram.run) (ψ : State) :
     SupportedOn (Clean windowResetWires) (b.kraus ψ) :=
   reset_clean windowResetWires reset_nodup b hb ψ
@@ -72,7 +75,7 @@ theorem resetWindowTrial_support (Q : Point) (hrQ : order • Q=0) :
   rw [resetWindowTrial,modularWires_seq] at hw
   rcases hw with h | h
   · exact secp_support Q hrQ h
-  · exact reset_wires windowResetWires h
+  · exact windowReset_support h
 
 theorem resetWindowTrial_qubitCount (Q : Point) (hrQ : order • Q=0) :
     (resetWindowTrial Q hrQ).qubitCount≤1383 := by

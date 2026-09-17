@@ -144,7 +144,7 @@ def repeatWindowCandidate {α : Type} (a : AdaptiveCircuit) (decode : List Bool 
     | none => none
     | some rest => (decode (hist.take (hist.length-rest.length))).orElse
         (fun _ => repeatWindowCandidate a decode n rest)
-private theorem candidate_failed {α : Type} (a : AdaptiveCircuit) (decode : List Bool → Option α)
+theorem repeatWindowCandidate_failed {α : Type} (a : AdaptiveCircuit) (decode : List Bool → Option α)
     (n : Nat) (hist : List Bool) :
     (repeatWindowCandidate a decode n hist).isSome=
       !repeatWindowFailed a (fun h => (decode h).isSome) n hist := by
@@ -156,7 +156,7 @@ private theorem candidate_failed {α : Type} (a : AdaptiveCircuit) (decode : Lis
     | none => rfl
     | some rest =>
       cases hd : decode (hist.take (hist.length-rest.length)) <;> simp [ih]
-private theorem candidate_sound {α : Type} (a : AdaptiveCircuit) (decode : List Bool → Option α)
+theorem repeatWindowCandidate_sound {α : Type} (a : AdaptiveCircuit) (decode : List Bool → Option α)
     (c : α) (hd : ∀ hist v, decode hist=some v → v=c) (n : Nat) (hist : List Bool)
     (v : α) (hv : repeatWindowCandidate a decode n hist=some v) : v=c := by
   induction n generalizing hist with
@@ -171,7 +171,7 @@ private theorem candidate_sound {α : Type} (a : AdaptiveCircuit) (decode : List
       | some z =>
         have hz : z=v := by simpa [hc,he] using hv
         exact hz ▸ hd _ z he
-private theorem repeat_zero (a : AdaptiveCircuit)
+theorem repeatWindowProgram_zero (a : AdaptiveCircuit)
     (ha : ∀ b∈a.run, b.kraus (ket zeroBasisState)=
       (b.kraus (ket zeroBasisState)) zeroBasisState • ket zeroBasisState)
     (n : Nat) (b : InstrumentBranch) (hb : b∈(repeatWindowProgram a n).run) :
@@ -204,14 +204,14 @@ def secpWindowRepeatedCandidate (Q : Point) (hrQ : order • Q=0) (hist : List B
 theorem secpWindowRepeatedCandidate_sound (Q : Point) (hrQ : order • Q=0)
     (d : Nat) (hQd : Q=d • G) (hist : List Bool) (c : ZMod order)
     (hc : secpWindowRepeatedCandidate Q hrQ hist=some c) : c=(d:ZMod order) :=
-  candidate_sound _ _ (d:ZMod order) (resetWindowCandidate_sound Q hrQ d hQd) 26 hist c hc
+  repeatWindowCandidate_sound _ _ (d:ZMod order) (resetWindowCandidate_sound Q hrQ d hQd) 26 hist c hc
 
 theorem secpWindowRepeatedCandidate_mass (Q : Point) (hrQ : order • Q=0)
     (d : Nat) (hQd : Q=d • G) :
     Instrument.bornMass ((secpWindowRepeatedProgram Q hrQ).run.filter
       (fun b => (secpWindowRepeatedCandidate Q hrQ b.history).isSome)) (ket zeroBasisState)=
       independentRetrySuccessProbability (secpWindowSuccessMass Q hrQ d) 26 := by
-  simp only [secpWindowRepeatedProgram,secpWindowRepeatedCandidate,candidate_failed]
+  simp only [secpWindowRepeatedProgram,secpWindowRepeatedCandidate,repeatWindowCandidate_failed]
   rw [repeatWindowSuccess_mass _ _ (resetWindowTrial_zero_branch Q hrQ)
     (resetWindowTrial_total Q hrQ d hQd),resetWindowCandidate_mass Q hrQ d hQd]
 
@@ -226,7 +226,7 @@ theorem secpWindowRepeatedProgram_clean (Q : Point) (hrQ : order • Q=0)
     (b : InstrumentBranch) (hb : b∈(secpWindowRepeatedProgram Q hrQ).run) :
     b.kraus (ket zeroBasisState)=
       (b.kraus (ket zeroBasisState)) zeroBasisState • ket zeroBasisState :=
-  repeat_zero _ (resetWindowTrial_zero_branch Q hrQ) 26 b hb
+  repeatWindowProgram_zero _ (resetWindowTrial_zero_branch Q hrQ) 26 b hb
 
 theorem secpWindowRepeatedProgram_resources (Q : Point) (hrQ : order • Q=0) :
     (secpWindowRepeatedProgram Q hrQ).tCount=26*(secpWindowProgram Q hrQ).tCount ∧

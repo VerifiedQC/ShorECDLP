@@ -3010,5 +3010,24 @@ bound to the same new trial. `DirectSecp` handles the gate-free zero public
 point and defines success mass directly from filtered physical transcripts;
 `DirectTotal` proves every transcript decodes and the full instrument has unit
 Born mass. These proofs reuse the existing classical postprocessor specification.
-The reset/repetition and full primitive-count certificates still need propagation
-to the replacement; the 28-addition and 835-wire targets remain open.
+The reset/repetition and full primitive-count certificates are connected below;
+the 28-addition and 835-wire targets remain open.
+
+
+### Closed direct-load 33-addition contract
+
+`DirectContract` certifies the concrete 33-addition circuit, physical reset and
+26-run repetition. It connects the actual transcript decoder to the established
+ideal distribution, proves candidate soundness, at least 163/1000 single-trial
+success and at least 99/100 repeated success, and restores the complete zero
+basis state between trials. The same concrete circuits carry exact primitive
+vectors, T-model identities and direct 1,383-wire bounds. The first lookup
+includes all table-dependent CX payload and decoder overhead; the remaining
+16+17 additions retain their full ledgers.
+
+This completes the first-addition replacement on the existing 257+257-bit
+precision schedule. It does not yet implement the source's 256+208-bit schedule
+and bounded classical post-processing for 28 additions, nor its 835-wire target.
+The existing default submission is unchanged. Phase gates still have unit P
+cost in these identities, and the classical decoder remains a mathematical
+specification.

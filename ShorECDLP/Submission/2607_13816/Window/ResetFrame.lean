@@ -15,7 +15,7 @@ theorem resetWindowTrial_zero_support (Q : Point) (hrQ : order • Q=0)
   · have hn : w∉(resetWindowTrial Q hrQ).wires := fun h => hw (resetWindowTrial_support Q hrQ h)
     exact AdaptiveCircuit.branch_frame (resetWindowTrial Q hrQ) w false hn b hb
       (ket zeroBasisState) (supportedOn_ket _ _ rfl) s hs
-private theorem supported_zero_scalar (ψ : State)
+theorem supportedZero_scalar (ψ : State)
     (hψ : SupportedOn (fun s => s=zeroBasisState) ψ) :
     ψ=ψ zeroBasisState • ket zeroBasisState := by
   classical
@@ -28,6 +28,6 @@ theorem resetWindowTrial_zero_branch (Q : Point) (hrQ : order • Q=0)
     (b : InstrumentBranch) (hb : b∈(resetWindowTrial Q hrQ).run) :
     b.kraus (ket zeroBasisState)=
       (b.kraus (ket zeroBasisState)) zeroBasisState • ket zeroBasisState :=
-  supported_zero_scalar _ (resetWindowTrial_zero_support Q hrQ b hb)
+  supportedZero_scalar _ (resetWindowTrial_zero_support Q hrQ b hb)
 end
 end ShorECDLP.Paper2607_13816

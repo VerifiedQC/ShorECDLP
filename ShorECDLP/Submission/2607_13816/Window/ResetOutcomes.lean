@@ -18,10 +18,10 @@ private theorem reset_wellFormed (ws : List Wire) :
   induction ws with
   | nil => exact ⟨by simp [CircuitWellFormed],True.intro⟩
   | cons w ws ih => exact ⟨ih,ih⟩
-private theorem reset_mass (ws : List Wire) (ψ : State) :
+theorem resetRegister_mass (ws : List Wire) (ψ : State) :
     Instrument.bornMass (measureResetWithCorrection ws (fun _ => [])).run ψ=normSq ψ :=
   AdaptiveCircuit.run_preservesBornMass _ (reset_wellFormed ws) ψ
-private theorem mass_seq_preserving (I J : Instrument) (ψ : State)
+theorem instrumentMass_seq_preserving (I J : Instrument) (ψ : State)
     (hJ : ∀ φ, Instrument.bornMass J φ=normSq φ) :
     Instrument.bornMass (Instrument.seq I J) ψ=Instrument.bornMass I ψ := by
   induction I with
@@ -31,7 +31,7 @@ private theorem mass_seq_preserving (I J : Instrument) (ψ : State)
       simpa only [Instrument.bornMass,List.map_map,InstrumentBranch.seq,LinearMap.comp_apply] using hJ (b.kraus ψ)
     simpa only [Instrument.seq,List.flatMap_cons,Instrument.bornMass,List.map_append,List.sum_append,
       List.map_cons,List.sum_cons] using congrArg₂ (·+·) he ih
-private theorem filter_seq_first (I J : Instrument) (p z : InstrumentBranch → Bool)
+theorem instrumentFilter_seq_first (I J : Instrument) (p z : InstrumentBranch → Bool)
     (hz : ∀ b∈I, ∀ a∈J, z (b.seq a)=p b) :
     (Instrument.seq I J).filter z=Instrument.seq (I.filter p) J := by
   induction I with
@@ -55,15 +55,15 @@ theorem resetWindowOutputMass_physical (Q : Point) (hrQ : order • Q=0)
         some (paperOutcomeBits 257 out.1,paperOutcomeBits 257 out.2))) (ket zeroBasisState)=
       secpWindowOutputMass Q hrQ out := by
   rw [resetWindowTrial,AdaptiveCircuit.run_seq]
-  rw [filter_seq_first _ _ (fun b => secpWindowDecode Q hrQ b.history==
+  rw [instrumentFilter_seq_first _ _ (fun b => secpWindowDecode Q hrQ b.history==
     some (paperOutcomeBits 257 out.1,paperOutcomeBits 257 out.2)) _ (by
       intro b hb a _; rw [reset_decode_seq Q hrQ b a hb])]
-  rw [windowResetProgram,mass_seq_preserving _ _ _ (reset_mass windowResetWires)]
+  rw [windowResetProgram,instrumentMass_seq_preserving _ _ _ (resetRegister_mass windowResetWires)]
   exact secpWindowOutputMass_physical Q hrQ out
 
 theorem resetWindowTrial_total (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd : Q=d • G) :
     Instrument.bornMass (resetWindowTrial Q hrQ).run (ket zeroBasisState)=1 := by
-  rw [resetWindowTrial,AdaptiveCircuit.run_seq,windowResetProgram,mass_seq_preserving _ _ _ (reset_mass windowResetWires)]
+  rw [resetWindowTrial,AdaptiveCircuit.run_seq,windowResetProgram,instrumentMass_seq_preserving _ _ _ (resetRegister_mass windowResetWires)]
   exact secpWindowProgram_total Q hrQ d hQd
 end
 end ShorECDLP.Paper2607_13816
