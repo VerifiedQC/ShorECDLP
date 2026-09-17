@@ -2984,6 +2984,11 @@ this appendix supplied only the formula were incorrect.
 frame and restoring the decoder paths coherently. Its actual adaptive circuit
 uses 458,745 T-model units, 65,535 measurements and at most 546 wires. The
 `FirstWindowReplacement` proves equality with initialization followed by the
-first signed-window call, using the existing scratch bank at 519–534. The
-33-addition integration and the final three-window post-processing reduction
-remain to be proved; the existing 34-window contract is unchanged.
+first signed-window call, using the existing scratch bank at 519–534. `Window.DirectScalar` composes that lookup with the remaining 16 first-axis
+and 17 second-axis additions. Its coherent theorem has the same
+`initializedScalarState` ideal as the 34-addition circuit, with the original
+clean-input conditions and a direct 1,383-wire bound. Exact same-circuit count
+identities remove the first addition and add the lookup's 458,745 T-model units
+and 65,535 measurements. Integration into phase preparation and the final trial,
+then the asymmetric precision and classical post-processing reduction, remain
+open; the existing 34-window contract is unchanged.

@@ -3043,11 +3043,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.physicalPointLookup_coherent
 #print axioms ShorECDLP.Paper2607_13816.physicalPointLookup_resources
 #print axioms ShorECDLP.Paper2607_13816.firstWindowLookup_coherent
+#print axioms ShorECDLP.Paper2607_13816.directScalar_coherent
+#print axioms ShorECDLP.Paper2607_13816.directScalar_support
+#print axioms ShorECDLP.Paper2607_13816.directScalar_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.directScalar_tCount
+#print axioms ShorECDLP.Paper2607_13816.directScalar_measurementCount
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3022 ]]; then
-  printf 'expected 3022 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3027 ]]; then
+  printf 'expected 3027 #print axioms results\n' >&2
   exit 1
 fi
 
