@@ -3138,3 +3138,13 @@ point additions and changing the direct-load order still require the full
 sampling-equivalence proof. The established success/reset contract therefore
 continues to use 1,303 wires. Neither this constructor nor that contract proves
 the paper's 835-wire target.
+
+### Disjoint window/Fourier branch commutation
+
+The prepared arithmetic call now has a point-local ideal map and an exact
+commutation theorem for every internal instrument branch and every disjoint
+Fourier outcome. Both input states in this branch theorem must satisfy the
+existing window validity support conditions; no arithmetic transcript is
+discarded. This is a local reordering result, not yet the complete reusable-bank
+sampling equivalence. The 855-wire constructor remains allocation-only and the
+established full success contract still uses 1,303 wires.
