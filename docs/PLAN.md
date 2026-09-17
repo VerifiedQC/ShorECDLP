@@ -2989,6 +2989,14 @@ and 17 second-axis additions. Its coherent theorem has the same
 `initializedScalarState` ideal as the 34-addition circuit, with the original
 clean-input conditions and a direct 1,383-wire bound. Exact same-circuit count
 identities remove the first addition and add the lookup's 458,745 T-model units
-and 65,535 measurements. Integration into phase preparation and the final trial,
-then the asymmetric precision and classical post-processing reduction, remain
+and 65,535 measurements. `Window.DirectPhase` connects the replacement to the two physical scalar inputs,
+wraps control 836 with setup and cleanup, and composes the same 514 Hadamards.
+Its complete-state ideal and initial conditions match the original phase
+preparation, with the same 1,383-wire support bound and exact count differences.
+The original and replacement programs share the root-wrap proofs. `Window.DirectTrial` appends the same two Fourier measurements and proves each
+output pair has exactly the original slice probability after summing all
+internal arithmetic histories. The full instrument, 1,383-wire support and
+exact T-model/measurement differences refer to this new trial. Connecting its
+actual decoded outcome distribution to the success/reset/repetition contract,
+then the asymmetric precision/classical post-processing reduction, remains
 open; the existing 34-window contract is unchanged.
