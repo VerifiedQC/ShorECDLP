@@ -68,7 +68,7 @@ def decodeWindowTrial (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     Option (List Bool × List Bool) :=
   (consumeAdaptiveHistory (preparedScalarProgram P Q hP hQ hrP hrQ) hist).map decodeScalarFourier
 
-private theorem terminal_filter (program : AdaptiveCircuit) (ys : Instrument)
+theorem adaptiveTerminalFilter (program : AdaptiveCircuit) (ys : Instrument)
     (q z : InstrumentBranch → Bool)
     (hz : ∀ x∈program.run, ∀ y∈ys, z (x.seq y)=q y) :
     Instrument.seq program.run (ys.filter q)=(Instrument.seq program.run ys).filter z := by
@@ -84,7 +84,7 @@ theorem windowTrialSlice_filter (P Q : Point) (hP : P≠0) (hQ : Q≠0)
       (windowTrialProgram P Q hP hQ hrP hrQ).run.filter
         (fun branch => decodeWindowTrial P Q hP hQ hrP hrQ branch.history==some (a,b)) := by
   rw [windowTrialSlice,scalarFourierSlice_filter a b ha hb,windowTrialProgram,AdaptiveCircuit.run_seq]
-  exact terminal_filter _ _ _ _ (by
+  exact adaptiveTerminalFilter _ _ _ _ (by
     intro first hf second _
     simp [decodeWindowTrial,InstrumentBranch.seq,consumeAdaptiveHistory_run _ first hf])
 theorem windowTrial_zero_initial : ScalarPhaseInitial zeroBasisState := by

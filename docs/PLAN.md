@@ -2996,7 +2996,19 @@ preparation, with the same 1,383-wire support bound and exact count differences.
 The original and replacement programs share the root-wrap proofs. `Window.DirectTrial` appends the same two Fourier measurements and proves each
 output pair has exactly the original slice probability after summing all
 internal arithmetic histories. The full instrument, 1,383-wire support and
-exact T-model/measurement differences refer to this new trial. Connecting its
-actual decoded outcome distribution to the success/reset/repetition contract,
-then the asymmetric precision/classical post-processing reduction, remains
-open; the existing 34-window contract is unchanged.
+exact T-model/measurement differences refer to this new trial. Its actual decoded distribution and single-trial success are connected below.
+Reset/repetition, then asymmetric precision and classical post-processing,
+remain open; the existing 34-window contract is unchanged.
+
+
+### Direct-load trial: actual decoding and success
+
+`DirectOutcomes` consumes the new preparation circuit's own adaptive history
+and proves equality of each decoded output probability with the baseline.
+`DirectSuccess` transfers the normalized distribution and prime-order success
+bound to the same new trial. `DirectSecp` handles the gate-free zero public
+point and defines success mass directly from filtered physical transcripts;
+`DirectTotal` proves every transcript decodes and the full instrument has unit
+Born mass. These proofs reuse the existing classical postprocessor specification.
+The reset/repetition and full primitive-count certificates still need propagation
+to the replacement; the 28-addition and 835-wire targets remain open.

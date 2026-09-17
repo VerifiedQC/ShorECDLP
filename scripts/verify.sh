@@ -3072,11 +3072,29 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.directWindowTrialSlice_eq_mass
 #print axioms ShorECDLP.Paper2607_13816.directWindowTrialProgram_tCount
 #print axioms ShorECDLP.Paper2607_13816.directWindowTrialProgram_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.directWindowTrialSlice_filter
+#print axioms ShorECDLP.Paper2607_13816.directWindowTrialOutputMass_kernel
+#print axioms ShorECDLP.Paper2607_13816.directWindowTrialOutputMass_eq
+#print axioms ShorECDLP.Paper2607_13816.directWindowTrialFiniteOutputMass_eq
+#print axioms ShorECDLP.Paper2607_13816.directWindowTrialFiniteOutputMass_total
+#print axioms ShorECDLP.Paper2607_13816.directWindowTrialSuccessMass_eq
+#print axioms ShorECDLP.Paper2607_13816.directWindowTrialSuccessMass_lower
+#print axioms ShorECDLP.Paper2607_13816.directWindowTrial_success_certificate
+#print axioms ShorECDLP.Paper2607_13816.directSecpWindowProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.directSecpWindowOutputMass_physical
+#print axioms ShorECDLP.Paper2607_13816.directSecpWindowSuccessMass_eq
+#print axioms ShorECDLP.Paper2607_13816.directSecpWindow_success_certificate
+#print axioms ShorECDLP.Paper2607_13816.directSecpWindowDecode_total
+#print axioms ShorECDLP.Paper2607_13816.directSecpWindowProgram_total
+#print axioms ShorECDLP.Paper2607_13816.adaptiveTerminalFilter
+#print axioms ShorECDLP.Paper2607_13816.scalarFourierDecode_total
+#print axioms ShorECDLP.Paper2607_13816.instrumentPartitionMass
+#print axioms ShorECDLP.Paper2607_13816.paperOutcomePair_injective
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3051 ]]; then
-  printf 'expected 3051 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3069 ]]; then
+  printf 'expected 3069 #print axioms results\n' >&2
   exit 1
 fi
 

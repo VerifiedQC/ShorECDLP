@@ -1,3 +1,7 @@
+import ShorECDLP.Submission.«2607_13816».Window.DirectOutcomes
+import ShorECDLP.Submission.«2607_13816».Window.DirectSuccess
+import ShorECDLP.Submission.«2607_13816».Window.DirectSecp
+import ShorECDLP.Submission.«2607_13816».Window.DirectTotal
 import ShorECDLP.Submission.«2607_13816».Window.DirectTrial
 import ShorECDLP.Submission.«2607_13816».Window.DirectPhase
 import ShorECDLP.Submission.«2607_13816».Window.DirectScalar
