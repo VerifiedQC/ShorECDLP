@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.FirstWindowReplacement
 import ShorECDLP.Submission.«2607_13816».Contract
 import ShorECDLP.Submission.«2607_13816».Window.TrialPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».Window.ExactFourierResources
