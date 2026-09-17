@@ -31,7 +31,7 @@ private theorem signed_phase (x y : Nat → ShorECDLP.Fp)
     (signedPointPrimitives x y hc).phase=0 := by
   simp [signedPointPrimitives,signedCoordinatePrimitives,signedPointLookupPrimitives,
     PrimitiveResources.add,lookup_phase,correction_phase]
-private theorem schedule_phase (x y : Nat → Nat → ShorECDLP.Fp)
+theorem preparedSchedulePrimitives_phase_zero (x y : Nat → Nat → ShorECDLP.Fp)
     (hc : ∀ j a, ShorECDLP.Secp256k1.curve.toAffine.Nonsingular (x j a) (y j a)) (n j : Nat) :
     (preparedSchedulePrimitives x y hc n j).phase=0 := by
   induction n generalizing j with
@@ -40,7 +40,7 @@ private theorem schedule_phase (x y : Nat → Nat → ShorECDLP.Fp)
 private theorem scalar_phase (P Q : ShorECDLP.Secp256k1.Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : ShorECDLP.order • P=0) (hrQ : ShorECDLP.order • Q=0) :
     (scalarWindowPrimitives P Q hP hQ hrP hrQ).phase=0 := by
-  simp only [scalarWindowPrimitives,PrimitiveResources.add,schedule_phase,zero_add]
+  simp only [scalarWindowPrimitives,PrimitiveResources.add,preparedSchedulePrimitives_phase_zero,zero_add]
 
 attribute [local irreducible] primitiveResources
 private theorem prepared_resources (P Q : ShorECDLP.Secp256k1.Point) (hP : P≠0) (hQ : Q≠0)

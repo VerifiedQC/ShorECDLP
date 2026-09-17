@@ -7,7 +7,7 @@ private theorem history_length (ws : List Wire) (b : InstrumentBranch)
   rw [semiclassicalFourier_run] at hb
   obtain ⟨bs,hbs,rfl⟩ := List.mem_map.mp hb
   exact (fourierOutcomes_mem _ _).mp hbs
-private theorem scalar_decode_total (b : InstrumentBranch) (hb : b∈scalarFourierProgram.run) :
+theorem scalarFourierDecode_total (b : InstrumentBranch) (hb : b∈scalarFourierProgram.run) :
     ∃ out : Fin (2^257) × Fin (2^257), decodeScalarFourier b.history=
       (paperOutcomeBits 257 out.1,paperOutcomeBits 257 out.2) := by
   rw [scalarFourierProgram,AdaptiveCircuit.run_seq] at hb
@@ -27,7 +27,7 @@ private theorem window_decode_total (P Q : Point) (hP : P≠0) (hQ : Q≠0)
   rw [windowTrialProgram,AdaptiveCircuit.run_seq] at hb
   obtain ⟨before,hbefore,hrest⟩ := List.mem_flatMap.mp hb
   obtain ⟨after,hafter,rfl⟩ := List.mem_map.mp hrest
-  obtain ⟨out,ho⟩ := scalar_decode_total after hafter
+  obtain ⟨out,ho⟩ := scalarFourierDecode_total after hafter
   refine ⟨out,?_⟩
   simp only [decodeWindowTrial,InstrumentBranch.seq,consumeAdaptiveHistory_run _ before hbefore,
     Option.map_some,ho]
@@ -41,7 +41,7 @@ theorem secpWindowDecode_total (Q : Point) (hrQ : order • Q=0) (b : Instrument
     exact ⟨(0,0),by simp only [secpWindowDecode,dif_pos hQ,ite_true]⟩
   · simp only [secpWindowProgram,dif_neg hQ] at hb
     simpa only [secpWindowDecode,dif_neg hQ] using window_decode_total _ _ _ _ _ _ b hb
-private theorem partition_mass {α β : Type} [Fintype α] [BEq β] [LawfulBEq β]
+theorem instrumentPartitionMass {α β : Type} [Fintype α] [BEq β] [LawfulBEq β]
     (I : Instrument) (ψ : State) (decode : InstrumentBranch → β) (encode : α → β)
     (hinj : Function.Injective encode) (ht : ∀ b∈I, ∃ a, decode b=encode a) :
     (∑ a : α, Instrument.bornMass (I.filter (fun b => decode b==encode a)) ψ)=
@@ -62,7 +62,7 @@ private theorem partition_mass {α β : Type} [Fintype α] [BEq β] [LawfulBEq �
         simp [Instrument.bornMass,hn,he]
     simp only [hfilter,Finset.sum_add_distrib,Finset.sum_ite_eq',Finset.mem_univ,ite_true,ih htail]
     rfl
-private theorem pair_encode_injective (n : Nat) :
+theorem paperOutcomePair_injective (n : Nat) :
     Function.Injective (fun out : Fin (2^n) × Fin (2^n) =>
       some (paperOutcomeBits n out.1,paperOutcomeBits n out.2)) := by
   intro a b h
@@ -72,10 +72,10 @@ private theorem pair_encode_injective (n : Nat) :
 
 theorem secpWindowProgram_total (Q : Point) (hrQ : order • Q=0) (d : Nat) (hQd : Q=d • G) :
     Instrument.bornMass (secpWindowProgram Q hrQ).run (ket zeroBasisState)=1 := by
-  have hp := partition_mass (secpWindowProgram Q hrQ).run (ket zeroBasisState)
+  have hp := instrumentPartitionMass (secpWindowProgram Q hrQ).run (ket zeroBasisState)
     (fun b => secpWindowDecode Q hrQ b.history)
     (fun out : Fin (2^257) × Fin (2^257) => some (paperOutcomeBits 257 out.1,paperOutcomeBits 257 out.2))
-    (pair_encode_injective 257) (secpWindowDecode_total Q hrQ)
+    (paperOutcomePair_injective 257) (secpWindowDecode_total Q hrQ)
   simp only [secpWindowOutputMass_physical] at hp
   exact hp.symm.trans (secpWindowOutputMass_total Q hrQ d hQd)
 
