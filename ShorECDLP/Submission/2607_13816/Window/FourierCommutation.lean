@@ -134,17 +134,7 @@ theorem preparedWindowCall_branch_fourier_commute (x y : Nat → Nat → ShorECD
     (hF : SupportedOn WindowPointValid (fourierBranch dir ws prior bs ψ)) :
     fourierBranch dir ws prior bs (b.kraus ψ)=
       b.kraus (fourierBranch dir ws prior bs ψ) := by
-  obtain ⟨cs,ha,_⟩ := preparedWindowCall_read_coherent x y hc j
-  have extract {α β : Type} {R : α → β → Prop} {as : List α} {bs : List β}
-      (h : List.Forall₂ R as bs) : ∀ a∈as, ∃ c, R a c := by
-    induction h with
-    | nil => simp
-    | cons h _ ih =>
-      intro a hm
-      rcases List.mem_cons.mp hm with he | he
-      · subst a; exact ⟨_,h⟩
-      · exact ih a he
-  obtain ⟨c,hc'⟩ := extract ha b hmem
+  obtain ⟨c,hc'⟩ := (preparedWindowCall_read_coherent x y hc j).branch_coefficient b hmem
   rw [hc'.on_supported hψ,hc'.on_supported hF,map_smul]
   rw [preparedWindowIdeal_fourier_commute x y hc j dir ws prior bs hp hb hr hs ψ]
 end
