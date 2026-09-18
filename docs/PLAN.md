@@ -3157,3 +3157,13 @@ Fourier branch on any other physical window bank, using only the original
 input-validity premise. This includes arbitrary entangled input states and
 retains the same arithmetic branch. Whole-schedule reordering, bank reuse, and
 the complete 855-wire sampling equivalence remain open.
+
+### Complete arithmetic-schedule/Fourier commutation
+
+Each actual branch of a prepared arithmetic schedule now commutes with a
+Fourier branch on an address block disjoint from every window in that schedule.
+The proof preserves the same complete arithmetic transcript and its coherent
+coefficient, with validity required only on the original input state. This
+reorders a disjoint measurement across the arithmetic schedule; it does not
+yet reorder the initial direct load or identify the reused physical-bank
+program with the full sampling distribution.

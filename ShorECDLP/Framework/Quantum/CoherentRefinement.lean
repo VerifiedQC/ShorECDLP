@@ -59,6 +59,19 @@ def CoherentlyImplementsOn
       program.run coefficients ∧
     (coefficients.map Complex.normSq).sum = 1
 
+/-- Every instrument branch has an input-independent coefficient supplied by
+its coherent refinement. The branch remains the original instrument element. -/
+theorem CoherentlyImplementsOn.branch_coefficient
+    {program : AdaptiveCircuit} {ideal : State →ₗ[ℂ] State} {Valid : BasisState → Prop}
+    (h : CoherentlyImplementsOn program ideal Valid)
+    (b : InstrumentBranch) (hb : b∈program.run) :
+    ∃ c, BranchCoherentOn ideal Valid b c := by
+  obtain ⟨cs,ha,_⟩ := h
+  obtain ⟨i,hi⟩ := List.mem_iff_get.mp hb
+  have hc := ha.get i.isLt (ha.length_eq ▸ i.isLt)
+  rw [hi] at hc
+  exact ⟨_,hc⟩
+
 private theorem branch_coherent_on_supported_state
     {ideal : State →ₗ[ℂ] State}
     {Valid : BasisState → Prop}
