@@ -3189,6 +3189,23 @@ the measured block used in the bank-exchange proof. The physical first lookup no
 on clean initialization inputs. Identifying the concrete weighted stream calls
 and proving the full 855-wire sampling distribution remain open.
 
+
+### Readable current submission certificate
+
+`Submission/2607_13816/Submission.lean` is the reader-facing entry point for
+current concrete numbers, not a claim of matching the paper's target. The same
+physical 256+208-bit trial has at most 1,303 logical wires and a certified
+T-model upper bound of 161,379,629,708,789. Twenty-six reset/reused trials retain
+1,303 wires, cost at most 4,195,870,372,428,514 in that model, and have at least
+99% success with the existing public-point-checked decoder specification.
+
+`Window/ReducedNumericBounds.lean` derives the conservative uniform bound from
+all 65,536 exceptional-correction leaves per point call, each with at most
+4,104 word edges and 3,061 Toffolis per edge. The exact table-dependent count
+remains available. The model charges seven per CCX and one per P; it does not
+include rotation synthesis or an approximation-error budget. The 855-wire full
+sampling connection, the 835-wire target, and an efficient executable decoder
+remain unfinished.
 ### Concrete weighted-call bank identification
 
 Relabeling a reused-bank weighted point call by the explicit bank exchange
