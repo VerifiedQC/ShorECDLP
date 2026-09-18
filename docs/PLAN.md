@@ -3230,3 +3230,17 @@ This is a local conditional result. Coverage by the full signed-window schedule,
 initialization/zero/infinity cases, exceptional input weight, and quantum sampling
 error are still open. No repaired-circuit success bound or resource certificate is
 transferred to this raw circuit. The repaired baseline is retained separately.
+
+
+### Five-query raw signed coordinate core
+
+`Window/RawCoordinate.lean` replaces the two zero-as-one operations in a separately
+named actual five-query signed coordinate program with direct nonzero arithmetic.
+`SignedRawDomain` retains the query-layout readiness contract, explicitly including
+root control 836=true, and checks both executed field inputs. The second snapshot
+is proved equal to the complete state after raw division and the intervening query.
+The raw program coherently implements the signed coordinate state for supported
+address/sign superpositions, preserves every non-coordinate wire and restores query
+readiness. This is not a claim that every window invocation satisfies the domain.
+Full schedule coverage, exceptional weight, quantum sampling error and revised
+success/resource certificates remain open; the repaired baseline is unchanged.
