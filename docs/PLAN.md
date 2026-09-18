@@ -3214,3 +3214,19 @@ address-preparation circuits and the arithmetic body. This is circuit equality,
 not only equality of an ideal point update. Generic relabel composition and
 agreement on used wires support the proof. Composing all measured blocks and
 connecting the full 855-wire sampling distribution remain open.
+
+
+### Raw coordinate core and executed nonzero domain
+
+`Arithmetic/PointRawDomain.lean` defines a separate nine-stage coordinate program
+with direct nonzero Figure 15 division and multiplication, without zero-as-one
+wrappers or exceptional-point repair. Its domain checks the actual two arithmetic
+input snapshots for either control value; disabling the group update does not
+waive a nonzero precondition. The raw operations agree with the extended coordinate
+specification on these inputs, and the actual raw circuit coherently implements
+that complete state with clean-work readiness and the full non-coordinate frame.
+
+This is a local conditional result. Coverage by the full signed-window schedule,
+initialization/zero/infinity cases, exceptional input weight, and quantum sampling
+error are still open. No repaired-circuit success bound or resource certificate is
+transferred to this raw circuit. The repaired baseline is retained separately.
