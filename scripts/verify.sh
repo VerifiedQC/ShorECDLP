@@ -21,6 +21,19 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Quantum.relabelBasis_clean
+#print axioms ShorECDLP.Quantum.relabelState_clean
+#print axioms ShorECDLP.Quantum.branch_relabel_clean
+#print axioms ShorECDLP.Paper2607_13816.streamBankPerm_moved
+#print axioms ShorECDLP.Paper2607_13816.streamBankPerm_symm
+#print axioms ShorECDLP.Paper2607_13816.streamBankPerm_address
+#print axioms ShorECDLP.Paper2607_13816.streamBankPerm_core
+#print axioms ShorECDLP.Paper2607_13816.streamBankPerm_clean
+#print axioms ShorECDLP.Paper2607_13816.streamBankBranch_clean
+#print axioms ShorECDLP.Paper2607_13816.measuredStreamBlock_clean
+#print axioms ShorECDLP.Paper2607_13816.measuredStreamBlock_parked_clean
+#print axioms ShorECDLP.Paper2607_13816.measuredStreamBlock_relabel
+#print axioms ShorECDLP.Paper2607_13816.measuredStreamBlock_relabel_run
 #print axioms ShorECDLP.Paper2607_13816.preparedWindowSchedule_otherBank_fourier_commute
 #print axioms ShorECDLP.Quantum.CoherentlyImplementsOn.branch_coefficient
 #print axioms ShorECDLP.Paper2607_13816.preparedWindowSum_reset
@@ -3307,8 +3320,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3283 ]]; then
-  printf 'expected 3283 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3296 ]]; then
+  printf 'expected 3296 #print axioms results\n' >&2
   exit 1
 fi
 

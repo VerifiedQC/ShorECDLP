@@ -3167,3 +3167,14 @@ coefficient, with validity required only on the original input state. This
 reorders a disjoint measurement across the arithmetic schedule; it does not
 yet reorder the initial direct load or identify the reused physical-bank
 program with the full sampling distribution.
+
+
+### Measured-block clean-bank exchange
+
+The measured streaming block (Hadamards, one supported arithmetic call, then
+Fourier measurement/reset) clears the active bank and preserves a disjoint clean
+bank. Exchanging the two banks preserves the entire ordered list of histories
+and output states, including multiplicities, on inputs with both banks clean.
+The call must use only the core and active bank. This is a local block result;
+direct-load reordering, continuation composition, and the complete 855-wire
+sampling distribution are still open.
