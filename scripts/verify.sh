@@ -21,6 +21,18 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.firstPreparedState_ready
+#print axioms ShorECDLP.Paper2607_13816.directOrderedTail_coherent
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowDelta_pointWrite
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCallState_pair_commute
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowListState_correct
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowListState_reverse
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowListState_ready
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowList_coherent
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowList_reverse_coherent
+#print axioms ShorECDLP.Quantum.circuit_seq_assoc
+#print axioms ShorECDLP.Paper2607_13816.streamAxis_clean
+#print axioms ShorECDLP.Paper2607_13816.streamAxis_singleton
 #print axioms ShorECDLP.Quantum.relabelBasis_clean
 #print axioms ShorECDLP.Quantum.relabelState_clean
 #print axioms ShorECDLP.Quantum.branch_relabel_clean
@@ -3320,8 +3332,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3296 ]]; then
-  printf 'expected 3296 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3308 ]]; then
+  printf 'expected 3308 #print axioms results\n' >&2
   exit 1
 fi
 
