@@ -62,7 +62,7 @@ private theorem raw_delta_pointWrite (x y : Nat → Nat → ShorECDLP.Fp)
     dsimp only [Wire] at *
     omega
   simp only [windowPointDelta,hs,ha]
-private theorem delta_pointWrite (x y : Nat → Nat → ShorECDLP.Fp)
+theorem preparedWindowDelta_pointWrite (x y : Nat → Nat → ShorECDLP.Fp)
     (hc : ∀ j a, ShorECDLP.Secp256k1.curve.toAffine.Nonsingular (x j a) (y j a))
     (j : Nat) (P : ShorECDLP.Secp256k1.Point) (s : BasisState) :
     preparedWindowDelta x y hc j (pointWrite P s)=preparedWindowDelta x y hc j s := by
@@ -78,7 +78,7 @@ private theorem sum_pointWrite (x y : Nat → Nat → ShorECDLP.Fp)
     preparedWindowSum x y hc n j (pointWrite P s)=preparedWindowSum x y hc n j s := by
   induction n generalizing j with
   | zero => rfl
-  | succ n ih => simp only [preparedWindowSum,delta_pointWrite,ih]
+  | succ n ih => simp only [preparedWindowSum,preparedWindowDelta_pointWrite,ih]
 private theorem pointWrite_self (P : ShorECDLP.Secp256k1.Point) (s : BasisState)
     (hs : PointLookupValid s) (hp : pointStateCoordinates s=fig14PointEncoding P) : s=pointWrite P s := by
   have hw := pointStateCoordinates_word s hs.1

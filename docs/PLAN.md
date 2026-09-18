@@ -3178,3 +3178,13 @@ and output states, including multiplicities, on inputs with both banks clean.
 The call must use only the core and active bank. This is a local block result;
 direct-load reordering, continuation composition, and the complete 855-wire
 sampling distribution are still open.
+
+### Prepared-call order and streaming reset propagation
+
+Arbitrary lists of prepared point additions coherently implement their accumulated
+point update; reversing the list preserves that ideal update on valid inputs.
+The actual history-dependent streaming axis preserves the clean active-bank
+condition when its final continuation does, and its singleton case is exactly
+the measured block used in the bank-exchange proof. The physical first lookup now composes coherently with a reversed prepared tail
+on clean initialization inputs. Identifying the concrete weighted stream calls
+and proving the full 855-wire sampling distribution remain open.
