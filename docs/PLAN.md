@@ -3188,3 +3188,12 @@ condition when its final continuation does, and its singleton case is exactly
 the measured block used in the bank-exchange proof. The physical first lookup now composes coherently with a reversed prepared tail
 on clean initialization inputs. Identifying the concrete weighted stream calls
 and proving the full 855-wire sampling distribution remain open.
+
+### Concrete weighted-call bank identification
+
+Relabeling a reused-bank weighted point call by the explicit bank exchange
+produces exactly the corresponding parked-bank prepared call, including both
+address-preparation circuits and the arithmetic body. This is circuit equality,
+not only equality of an ideal point update. Generic relabel composition and
+agreement on used wires support the proof. Composing all measured blocks and
+connecting the full 855-wire sampling distribution remain open.
