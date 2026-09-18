@@ -3206,3 +3206,11 @@ remains available. The model charges seven per CCX and one per P; it does not
 include rotation synthesis or an approximation-error budget. The 855-wire full
 sampling connection, the 835-wire target, and an efficient executable decoder
 remain unfinished.
+### Concrete weighted-call bank identification
+
+Relabeling a reused-bank weighted point call by the explicit bank exchange
+produces exactly the corresponding parked-bank prepared call, including both
+address-preparation circuits and the arithmetic body. This is circuit equality,
+not only equality of an ideal point update. Generic relabel composition and
+agreement on used wires support the proof. Composing all measured blocks and
+connecting the full 855-wire sampling distribution remain open.

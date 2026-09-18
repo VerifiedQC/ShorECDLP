@@ -30,6 +30,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.Submission.trial_success
 #print axioms ShorECDLP.Paper2607_13816.Submission.certificate
 #print axioms ShorECDLP.Paper2607_13816.Submission.decoder_sound
+#print axioms ShorECDLP.Gate.relabel_trans
+#print axioms ShorECDLP.Gate.relabel_congr
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel_trans
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.relabel_congr
+#print axioms ShorECDLP.Paper2607_13816.streamBankPerm_address_comp
+#print axioms ShorECDLP.Paper2607_13816.parkedWindowProgram_reuse
+#print axioms ShorECDLP.Paper2607_13816.streamBankPerm_bits
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_reuse
+#print axioms ShorECDLP.Paper2607_13816.preparedWindowCall_reuse
+#print axioms ShorECDLP.Paper2607_13816.streamPointCall_reuse
 #print axioms ShorECDLP.Paper2607_13816.firstPreparedState_ready
 #print axioms ShorECDLP.Paper2607_13816.directOrderedTail_coherent
 #print axioms ShorECDLP.Paper2607_13816.preparedWindowDelta_pointWrite
@@ -3341,8 +3351,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3317 ]]; then
-  printf 'expected 3317 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3327 ]]; then
+  printf 'expected 3327 #print axioms results\n' >&2
   exit 1
 fi
 
