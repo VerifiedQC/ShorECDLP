@@ -72,7 +72,7 @@ def preparedWindowSum (x y : Nat → Nat → ShorECDLP.Fp)
     (hc : ∀ j a, ShorECDLP.Secp256k1.curve.toAffine.Nonsingular (x j a) (y j a)) : Nat → Nat → BasisState → ShorECDLP.Secp256k1.Point
   | 0, _, _ => 0
   | n+1, j, s => preparedWindowDelta x y hc j s+preparedWindowSum x y hc n (j+1) s
-private theorem sum_pointWrite (x y : Nat → Nat → ShorECDLP.Fp)
+theorem preparedWindowSum_pointWrite (x y : Nat → Nat → ShorECDLP.Fp)
     (hc : ∀ j a, ShorECDLP.Secp256k1.curve.toAffine.Nonsingular (x j a) (y j a))
     (n j : Nat) (P : ShorECDLP.Secp256k1.Point) (s : BasisState) :
     preparedWindowSum x y hc n j (pointWrite P s)=preparedWindowSum x y hc n j s := by
@@ -102,7 +102,7 @@ theorem preparedWindowScheduleState_correct (x y : Nat → Nat → ShorECDLP.Fp)
     have hp' : pointStateCoordinates (preparedWindowCallState x y hc j s)=fig14PointEncoding (P+preparedWindowDelta x y hc j s) := by
       rw [he,pointWrite_coordinates]
       rfl
-    rw [preparedWindowScheduleState,ih (j+1) _ _ hv hp',he,sum_pointWrite,pointWrite_overwrite,preparedWindowSum,add_assoc]
+    rw [preparedWindowScheduleState,ih (j+1) _ _ hv hp',he,preparedWindowSum_pointWrite,pointWrite_overwrite,preparedWindowSum,add_assoc]
 
 theorem preparedWindowSchedule_support (x y : Nat → Nat → ShorECDLP.Fp)
     (hc : ∀ j a, ShorECDLP.Secp256k1.curve.toAffine.Nonsingular (x j a) (y j a)) (n j : Nat) :
