@@ -3244,3 +3244,18 @@ address/sign superpositions, preserves every non-coordinate wire and restores qu
 readiness. This is not a claim that every window invocation satisfies the domain.
 Full schedule coverage, exceptional weight, quantum sampling error and revised
 success/resource certificates remain open; the repaired baseline is unchanged.
+
+
+### Prepared raw calls in execution order
+
+`Window/RawSchedule.lean` places the raw five-query core on each actual parked
+address bank, brackets it with `windowPrepareCircuit`, and composes the resulting
+calls in the supplied list order (including repeated indices). Its recursive domain
+checks query readiness and both nonzero interfaces at each successive complete
+input state after address preparation. Coherent correctness and restoration of all
+non-coordinate wires are proved for the actual composed circuit. Cleanup is not
+used to infer the next call's nonzero conditions.
+
+Satisfaction of this domain by initialized scalar inputs, group-law agreement over
+the complete algorithm, exceptional weight and quantum sampling error remain open.
+No existing repaired-circuit success or resource bound is transferred here.
