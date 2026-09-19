@@ -3291,3 +3291,21 @@ This closes the local selected-constant interface bridge, including the sign of
 the selected Y coordinate. It does not assert that initialized scalar paths avoid
 the exceptional set, that its weight is four divided by the group order, or that
 the raw algorithm inherits the repaired algorithm's success or resource bounds.
+
+### Conditional full point encoding along raw paths
+
+`Window/RawPoint.lean` upgrades the local nonexceptional result to complete
+`pointWrite` equality, including the infinity marker and the external frame.
+The prepared/parked call restores input banks and produces the selected group
+sum under its local canonical, nonsingular and exceptional-exclusion conditions.
+
+`RawPointPath` records these conditions at each step on a complete state written
+with the preceding group sum. Induction establishes the actual recursive raw
+domain and final complete point encoding in the supplied execution order. The
+physical first lookup initializes this relation, yielding coherent group-point
+semantics on clean inputs supplied with path certificates. Input-dependent final
+points are allowed without changing the normalized branch coefficients.
+
+This is conditional propagation, not coverage: no certificate for all scalar
+inputs is constructed, and no mass of excluded inputs or sampling-error bound
+is supplied. The repaired success/resource certificates remain separate.
