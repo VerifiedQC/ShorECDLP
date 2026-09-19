@@ -3309,3 +3309,21 @@ points are allowed without changing the normalized branch coefficients.
 This is conditional propagation, not coverage: no certificate for all scalar
 inputs is constructed, and no mass of excluded inputs or sampling-error bound
 is supplied. The repaired success/resource certificates remain separate.
+
+
+### Concrete raw scalar-window path conditions
+
+`Window/RawScalar.lean` fixes the first lookup to the existing 16+13-window
+axis offsets and the raw tail to banks 1–15 followed by 17–29. Each entry uses
+the canonical odd-window coordinates; the Q radix exponent restarts at bank 17.
+`reducedRaw_delta` identifies the selected group point with the signed scalar
+digit and half-point term. `reducedRawExclusions` checks the four-point
+exclusion along the algebraic walk on the original scalar banks, without
+assuming a raw arithmetic certificate. These conditions construct that
+certificate and imply coherent execution of `reducedRawProgram` with complete
+point output and the original non-point state preserved.
+
+This is a sufficient restricted-input theorem. It does not bound the excluded
+input weight, establish a sampling error, or transfer the repaired circuit's
+success probability or resource claims. The final algebraic walk is explicit;
+its simplification to the two-register scalar expression is a subsequent step.

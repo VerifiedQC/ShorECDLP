@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.RawScalar
 import ShorECDLP.Submission.«2607_13816».Window.RawPoint
 import ShorECDLP.Submission.«2607_13816».Window.RawInitialize
 import ShorECDLP.Submission.«2607_13816».Window.RawSchedule
