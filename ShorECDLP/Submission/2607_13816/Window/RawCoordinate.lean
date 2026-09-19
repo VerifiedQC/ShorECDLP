@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointExceptions
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointRawDomain
 import ShorECDLP.Submission.«2607_13816».Window.SignedCoordinate
 
@@ -24,6 +25,33 @@ def SignedRawDomain (x y : Nat → Nat) (s : BasisState) : Prop :=
   PointLookupValid s ∧
   boolWordToNat (wireValues (List.range' 263 256) (signedRawBeforeDivision x y s)) ≠ 0 ∧
   boolWordToNat (wireValues (List.range' 263 256) (signedRawBeforeMultiplication x y s)) ≠ 0
+
+/-- The two raw domain conditions are exactly those of the selected signed
+constant core. Query readiness, including the enabled root, remains required. -/
+theorem signedRawDomain_iff_selected (x y : Nat → Nat) (s : BasisState) (hs : PointLookupValid s) :
+    SignedRawDomain x y s ↔
+      Fig14RawDomain (x (tableAddressValue pointLookupAddress s)) (signedPointTableValue y s) s := by
+  have he := signedLookup_interfaces_eq x y s hs
+  change signedRawBeforeDivision x y s = _ ∧ signedRawBeforeMultiplication x y s = _ at he
+  simp only [SignedRawDomain,Fig14RawDomain,he.1,he.2,and_iff_right hs,and_iff_right hs.1]
+
+/-- Excluding the four affine exceptional points supplies the actual signed
+query domain, for the constant selected by the entry address and sign. -/
+theorem signedRawDomain_of_nonexceptional (x y : Nat → Nat) (s : BasisState)
+    (hs : PointLookupValid s)
+    (hx : x (tableAddressValue pointLookupAddress s)<ShorECDLP.p)
+    (hy : signedPointTableValue y s<ShorECDLP.p)
+    (h₁ : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular
+      (boolWordToNat (wireValues (List.range' 263 256) s))
+      (boolWordToNat (wireValues (List.range' 580 256) s)))
+    (h₂ : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular
+      (x (tableAddressValue pointLookupAddress s) : ShorECDLP.Fp)
+      (signedPointTableValue y s : ShorECDLP.Fp))
+    (hout : (.some h₁ : ShorECDLP.Secp256k1.Point) ∉ fig14ExceptionalPoints (.some h₂)) :
+    SignedRawDomain x y s := by
+  have hf := fig14_nonexceptional_factors h₁ h₂ hout
+  exact (signedRawDomain_iff_selected x y s hs).mpr
+    (fig14RawDomain_of_factors _ _ hx hy s hs.1 hs.2 hf.1 hf.2)
 
 /-- Five load/add/unload queries around the raw arithmetic core; no repair. -/
 def signedRawProgram (x y : Nat → Nat) : AdaptiveCircuit :=

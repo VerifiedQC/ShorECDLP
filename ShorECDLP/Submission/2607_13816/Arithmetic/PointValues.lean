@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointRawDomain
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointCircuit
 namespace ShorECDLP.Paper2607_13816
 open Classical Quantum
@@ -119,6 +120,39 @@ theorem fig14CoordinateState_values (x₂ y₂ : Nat) (s : BasisState)
   change (pointX s9,pointY s9)=fig14CoordinateValues x₂ y₂ (s 836) (pointX s) (pointY s)
   dsimp only [s1,s2,s3,s4,s5,s6,s7,s8,s9] at v1 v2 v3 v4 v5 v6 v7 v8 v9 ⊢
   simp only [v9.1,v9.2.1,v8.1,v8.2.1,v8.2.2,v7.1,v7.2.1,v7.2.2,v6.1,v6.2.1,v6.2.2,v5.1,v5.2.1,v5.2.2,v4.1,v4.2.1,v4.2.2,v3.1,v3.2.1,v3.2.2,v2.1,v2.2.1,v2.2.2,v1.1,v1.2.1,v1.2.2]
+  rfl
+
+/-- Numeric values at both executed field interfaces of the enabled core. -/
+def fig14InterfaceValues (x₂ y₂ x y : Nat) : Nat × Nat :=
+  let a := (x+(ShorECDLP.p-x₂)%ShorECDLP.p)%ShorECDLP.p
+  let b := (y+(ShorECDLP.p-y₂)%ShorECDLP.p)%ShorECDLP.p
+  let u := (b*paperInverse ShorECDLP.p (if a=0 then 1 else a))%ShorECDLP.p
+  (a,((a+ShorECDLP.p-(u*u)%ShorECDLP.p)%ShorECDLP.p+(3*x₂)%ShorECDLP.p)%ShorECDLP.p)
+
+theorem fig14_interfaces_values (x₂ y₂ : Nat) (s : BasisState)
+    (hs : Secp256k1ZeroAllowedInputValid s) (hq : s 836=true) :
+    (boolWordToNat (wireValues (List.range' 263 256) (fig14BeforeDivision x₂ y₂ s)),
+      boolWordToNat (wireValues (List.range' 263 256) (fig14BeforeMultiplication x₂ y₂ s))) =
+      fig14InterfaceValues x₂ y₂ (boolWordToNat (wireValues (List.range' 263 256) s))
+        (boolWordToNat (wireValues (List.range' 580 256) s)) := by
+  have hk (k : Nat) : k%ShorECDLP.p<ShorECDLP.p := Nat.mod_lt _ ShorECDLP.Secp256k1.p_prime.pos
+  let s1 := (fig14ConstantXState ((ShorECDLP.p-x₂)%ShorECDLP.p)) s
+  have h1 : Secp256k1ZeroAllowedInputValid s1 := fig14ConstantXState_ready _ (hk _) s hs
+  have v1 := constantX_values ((ShorECDLP.p-x₂)%ShorECDLP.p) (hk (ShorECDLP.p-x₂)) s hs
+  let s2 := (fig14ControlledConstantYState ((ShorECDLP.p-y₂)%ShorECDLP.p)) s1
+  have h2 : Secp256k1ZeroAllowedInputValid s2 := fig14ControlledConstantYState_ready _ (hk _) s1 h1
+  have v2 := constantY_values ((ShorECDLP.p-y₂)%ShorECDLP.p) (hk (ShorECDLP.p-y₂)) s1 h1
+  let s3 := (zeroAllowedDivisionOutputState) s2
+  have h3 : Secp256k1ZeroAllowedInputValid s3 := fig14Division_ready s2 h2
+  have v3 := division_values s2 h2
+  let s4 := (fig14SquareSubtractState) s3
+  have h4 : Secp256k1ZeroAllowedInputValid s4 := fig14SquareSubtractState_ready s3 h3
+  have v4 := square_values s3 h3
+  let s5 := (fig14ControlledConstantXState ((3*x₂)%ShorECDLP.p)) s4
+  have v5 := constantCX_values ((3*x₂)%ShorECDLP.p) (hk (3*x₂)) s4 h4
+  change (pointX s2,pointX s5) = _
+  dsimp only [s1,s2,s3,s4,s5] at v1 v2 v3 v4 v5 ⊢
+  simp only [v5.1,v4.1,v4.2.2,v3.1,v3.2.1,v3.2.2,v2.1,v2.2.1,v2.2.2,v1.1,v1.2.1,v1.2.2,hq]
   rfl
 
 private theorem effective_inverse (a : Nat) (ha : a<ShorECDLP.p) :

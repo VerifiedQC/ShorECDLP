@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Arithmetic.PointRawDomain
 import ShorECDLP.Submission.«2607_13816».Window.SignedPointY
 import ShorECDLP.Submission.«2607_13816».Arithmetic.PointSupport
 namespace ShorECDLP.Paper2607_13816
@@ -233,6 +234,53 @@ private theorem lookupXState_eq_controlled (table : Nat → Nat) (hv : ∀ a, ta
   by_cases hw : w∈List.range' 263 256
   · exact List.map_inj_left.mp he' w hw
   · exact (hl.2 w hw).trans (hr.2 w hw).symm
+
+/-- Both intermediate complete states agree with the selected constant core.
+The address and sign used here are those at entry, not a later query state. -/
+theorem signedLookup_interfaces_eq (x y : Nat → Nat) (s : BasisState) (hs : PointLookupValid s) :
+    let s₂ := signedPointLookupYState (fun a => (ShorECDLP.p-y a)%ShorECDLP.p)
+      (fig14LookupXState (fun a => (ShorECDLP.p-x a)%ShorECDLP.p) s)
+    s₂ = fig14BeforeDivision (x (tableAddressValue pointLookupAddress s)) (signedPointTableValue y s) s ∧
+    fig14LookupXState (fun a => (3*x a)%ShorECDLP.p)
+      (fig14SquareSubtractState (zeroAllowedDivisionOutputState s₂)) =
+      fig14BeforeMultiplication (x (tableAddressValue pointLookupAddress s)) (signedPointTableValue y s) s := by
+  have hk (k : Nat) : k%ShorECDLP.p<ShorECDLP.p := Nat.mod_lt _ ShorECDLP.Secp256k1.p_prime.pos
+  let s1 := fig14LookupXState (fun a => (ShorECDLP.p-x a)%ShorECDLP.p) s
+  have h1 : PointLookupValid s1 := fig14LookupXState_ready _ (fun _ => hk _) s hs
+  have a1 : tableAddressValue pointLookupAddress s1=tableAddressValue pointLookupAddress s := fig14LookupXState_address _ (fun _ => hk _) s hs
+  have z1 : s1 854=s 854 := lookup_X_sign (fun a => (ShorECDLP.p-x a)%ShorECDLP.p) (fun _ => hk _) s hs
+  have e1 := fig14LookupXState_eq (fun a => (ShorECDLP.p-x a)%ShorECDLP.p) (fun _ => hk _) s hs.1 hs.2
+  let s2 := signedPointLookupYState (fun a => (ShorECDLP.p-y a)%ShorECDLP.p) s1
+  have h2 : PointLookupValid s2 := signedPointLookupYState_ready _ (fun _ => hk _) s1 h1
+  have a2 : tableAddressValue pointLookupAddress s2=tableAddressValue pointLookupAddress s := (signedPointLookupYState_address _ (fun _ => hk _) s1 h1).trans a1
+  have z2 : s2 854=s 854 := (signedPointLookupYState_sign _ (fun _ => hk _) s1 h1).trans z1
+  have e2 := signedPointLookupYState_eq (fun a => (ShorECDLP.p-y a)%ShorECDLP.p) (fun _ => hk _) s1 h1
+  rw [signed_table_minus y s1, signedPointTableValue, a1, z1] at e2
+  let s3 := zeroAllowedDivisionOutputState s2
+  have h3 : PointLookupValid s3 := lookup_division_ready s2 h2
+  have a3 : tableAddressValue pointLookupAddress s3=tableAddressValue pointLookupAddress s := (lookup_division_address s2 h2).trans a2
+  have z3 : s3 854=s 854 := (lookup_division_sign s2 h2).trans z2
+  let s4 := fig14SquareSubtractState s3
+  have h4 : PointLookupValid s4 := lookup_square_ready s3 h3
+  have a4 : tableAddressValue pointLookupAddress s4=tableAddressValue pointLookupAddress s := (lookup_square_address s3 h3).trans a3
+  have z4 : s4 854=s 854 := ((fig14SquareSubtractState_correct s3 h3.1).2 854 (by decide +kernel)).trans z3
+  let s5 := fig14LookupXState (fun a => (3*x a)%ShorECDLP.p) s4
+  have e5 := lookupXState_eq_controlled (fun a => (3*x a)%ShorECDLP.p) (fun _ => hk _) s4 h4
+  rw [a4] at e5
+  have he2 : s2 = fig14BeforeDivision (x (tableAddressValue pointLookupAddress s))
+      (signedPointTableValue y s) s := by
+    dsimp only [s2]
+    rw [e2]
+    dsimp only [s1]
+    rw [e1]
+    rfl
+  refine ⟨he2,?_⟩
+  change s5 = _
+  dsimp only [s5]
+  rw [e5]
+  change fig14ControlledConstantXState _ (fig14SquareSubtractState (zeroAllowedDivisionOutputState s2)) = _
+  rw [he2]
+  rfl
 
 theorem signedLookupCoordinateState_eq (x y : Nat → Nat) (s : BasisState) (hs : PointLookupValid s) :
     signedLookupCoordinateState x y s=fig14CoordinateState

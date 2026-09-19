@@ -3276,3 +3276,18 @@ is established on this restricted set. This is not a proof that all scalar input
 belong to it, a group-theoretic characterization of the excluded set, or a bound
 on its weight. The 256+208-bit scalar specialization, sampling error and resource
 claims are not established by this module.
+
+### Selected signed constant and raw arithmetic factors
+
+The signed lookup now has complete intermediate-state equalities at division
+and multiplication, using the address and sign at entry. Under query readiness,
+`SignedRawDomain` is equivalent to `Fig14RawDomain` for that selected constant.
+The actual enabled interface values are computed from the coordinate stages;
+affine nonzero factors imply that both words are nonzero. Consequently, for
+canonical selected coordinates and nonsingular finite input/constant points,
+exclusion of `fig14ExceptionalPoints` proves the signed raw domain.
+
+This closes the local selected-constant interface bridge, including the sign of
+the selected Y coordinate. It does not assert that initialized scalar paths avoid
+the exceptional set, that its weight is four divided by the group order, or that
+the raw algorithm inherits the repaired algorithm's success or resource bounds.
