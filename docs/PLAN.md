@@ -3259,3 +3259,20 @@ used to infer the next call's nonzero conditions.
 Satisfaction of this domain by initialized scalar inputs, group-law agreement over
 the complete algorithm, exceptional weight and quantum sampling error remain open.
 No existing repaired-circuit success or resource bound is transferred here.
+
+### Physical first lookup and raw-tail input set
+
+`Window/RawInitialize.lean` composes the physical first-window point lookup with
+the raw tail in its supplied execution order. Its initial state reads the actual
+16-bit bank at 855 and writes `firstWindowTable A P` at that address. Clean
+initialization establishes query readiness, including for a lookup returning
+infinity; readiness does not discharge the two nonzero conditions.
+
+`InitializedRawDomain` restricts clean inputs to those whose lookup output satisfies
+the whole recursive tail domain. For clean inputs, this is equivalent to having
+no first failed call: the witness identifies a valid prefix and the next bank
+whose domain fails on that prefix's complete output state. Coherent correctness
+is established on this restricted set. This is not a proof that all scalar inputs
+belong to it, a group-theoretic characterization of the excluded set, or a bound
+on its weight. The 256+208-bit scalar specialization, sampling error and resource
+claims are not established by this module.

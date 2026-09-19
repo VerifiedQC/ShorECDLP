@@ -21,6 +21,10 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.initializedRawProgram_coherent
+#print axioms ShorECDLP.Paper2607_13816.rawInitialState_ready
+#print axioms ShorECDLP.Paper2607_13816.rawWindowSchedule_domain_or_firstFailure
+#print axioms ShorECDLP.Paper2607_13816.initializedRawDomain_iff_no_firstFailure
 #print axioms ShorECDLP.Paper2607_13816.parkedRawProgram_coherent
 #print axioms ShorECDLP.Paper2607_13816.preparedRawProgram_coherent
 #print axioms ShorECDLP.Paper2607_13816.rawWindowSchedule_coherent
@@ -3366,8 +3370,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3342 ]]; then
-  printf 'expected 3342 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3346 ]]; then
+  printf 'expected 3346 #print axioms results\n' >&2
   exit 1
 fi
 
