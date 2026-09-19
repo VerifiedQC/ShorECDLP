@@ -3325,5 +3325,22 @@ point output and the original non-point state preserved.
 
 This is a sufficient restricted-input theorem. It does not bound the excluded
 input weight, establish a sampling error, or transfer the repaired circuit's
-success probability or resource claims. The final algebraic walk is explicit;
-its simplification to the two-register scalar expression is a subsequent step.
+success probability or resource claims. The final algebraic walk is explicit; its two-register simplification is proved
+in `Window/RawRegisters.lean` below.
+
+
+### Raw scalar-register reconstruction
+
+`Window/RawRegisters.lean` proves that the concrete algebraic endpoint is
+`scalarRegisterValue 16 0 s • P + scalarRegisterValue 13 17 s • Q` on clean
+initial inputs. The proof splits the actual 15+13 execution order, relates its
+table selections to the existing axis sums, and reuses the physical first-window
+replacement and scalar-register reconstruction. It includes the complete point
+encoding, not just its affine coordinates.
+
+`reducedRaw_registers_coherent` gives this same register expression as the
+coherent output of `reducedRawProgram`, retaining `PointInitializeValid` and
+`reducedRawExclusions`. The endpoint identity itself does not require exclusions;
+raw-circuit correctness does. There is still no bound on excluded input weight,
+no sampling-error theorem, and no transfer of the repaired success probability
+or resource result.

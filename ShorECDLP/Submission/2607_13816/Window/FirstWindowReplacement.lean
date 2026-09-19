@@ -23,7 +23,7 @@ private theorem raw_zero (s : BasisState) :
 def firstWindowTable (A P : Point) (i : Nat) : Point :=
   A+(signedWindowDigit 16 i • P+signedWindowHalfPoint P order)
 
-private theorem first_state (A P : Point) (hP : P≠0) (hr : order • P=0)
+theorem firstWindowState_correct (A P : Point) (hP : P≠0) (hr : order • P=0)
     (s : BasisState) (hs : PointInitializeValid s) :
     preparedWindowCallState (fun k => oddWindowX P (k-0)) (fun k => oddWindowY P (k-0))
       (fun k => oddWindowTable_valid P hP hr (k-0)) 0 (pointWrite A s)=
@@ -56,7 +56,7 @@ theorem firstWindowLookup_coherent (A P : Point) (hP : P≠0) (hr : order • P=
       PointInitializeValid := ⟨cs,hcs.imp (fun b c hb s hs => hb s (input_valid s hs)),hcm⟩
   apply hc.congrIdeal
   intro s hs
-  simpa [ket] using congrArg ket (first_state A P hP hr s hs).symm
+  simpa [ket] using congrArg ket (firstWindowState_correct A P hP hr s hs).symm
 
 end
 end ShorECDLP.Paper2607_13816
