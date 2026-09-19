@@ -83,6 +83,51 @@ private theorem generic_from_steps (x₂ y₂ x y a b u v w z : Nat)
       l*((x : ZMod ShorECDLP.p)-ShorECDLP.Secp256k1.genericX x y x₂ y₂)-y
     exact field_finish_Y _ _ _ _ _ _ hsl
 
+/-- The nonexceptional affine factors are the executed interface values. -/
+theorem fig14InterfaceValues_nonzero (x₂ y₂ x y : Nat)
+    (hx₂ : x₂<ShorECDLP.p) (hy₂ : y₂<ShorECDLP.p)
+    (hden : (x : ZMod ShorECDLP.p)≠(x₂ : ZMod ShorECDLP.p))
+    (hsecond : (x₂ : ZMod ShorECDLP.p)≠ShorECDLP.Secp256k1.genericX x y x₂ y₂) :
+    (fig14InterfaceValues x₂ y₂ x y).1 ≠ 0 ∧ (fig14InterfaceValues x₂ y₂ x y).2 ≠ 0 := by
+  let a := (x+(ShorECDLP.p-x₂)%ShorECDLP.p)%ShorECDLP.p
+  let b := (y+(ShorECDLP.p-y₂)%ShorECDLP.p)%ShorECDLP.p
+  let u := (b*paperInverse ShorECDLP.p (if a=0 then 1 else a))%ShorECDLP.p
+  let v := (a+ShorECDLP.p-(u*u)%ShorECDLP.p)%ShorECDLP.p
+  let w := (v+(3*x₂)%ShorECDLP.p)%ShorECDLP.p
+  have ha_def : a = (x+(ShorECDLP.p-x₂)%ShorECDLP.p)%ShorECDLP.p := rfl
+  have hb_def : b = (y+(ShorECDLP.p-y₂)%ShorECDLP.p)%ShorECDLP.p := rfl
+  have hu_def : u = (b*paperInverse ShorECDLP.p (if a=0 then 1 else a))%ShorECDLP.p := rfl
+  have hv_def : v = (a+ShorECDLP.p-(u*u)%ShorECDLP.p)%ShorECDLP.p := rfl
+  have hw_def : w = (v+(3*x₂)%ShorECDLP.p)%ShorECDLP.p := rfl
+  let l : ZMod ShorECDLP.p := ((y : ZMod ShorECDLP.p)-y₂)*((x : ZMod ShorECDLP.p)-x₂)⁻¹
+  have hp (k : Nat) : k%ShorECDLP.p<ShorECDLP.p := Nat.mod_lt _ ShorECDLP.Secp256k1.p_prime.pos
+  have ha : (a : ZMod ShorECDLP.p)=(x : ZMod ShorECDLP.p)-x₂ := by rw [ha_def]; exact cast_offset x x₂ hx₂
+  have hb : (b : ZMod ShorECDLP.p)=(y : ZMod ShorECDLP.p)-y₂ := by rw [hb_def]; exact cast_offset y y₂ hy₂
+  have hal : a<ShorECDLP.p := by rw [ha_def]; exact hp _
+  have han : a≠0 := by
+    intro h
+    have hh : (x : ZMod ShorECDLP.p)-x₂=0 := by rw [← ha,h,Nat.cast_zero]
+    exact hden (sub_eq_zero.mp hh)
+  have hu : (u : ZMod ShorECDLP.p)=l := by
+    rw [hu_def]
+    rw [if_neg han]
+    simp only [Nat.cast_mul,ZMod.natCast_mod,cast_inverse a hal han,ha,hb,l]
+  have hv : (v : ZMod ShorECDLP.p)=(a : ZMod ShorECDLP.p)-l*l := by
+    rw [show (v : ZMod ShorECDLP.p)=(a : ZMod ShorECDLP.p)-((u*u)%ShorECDLP.p : Nat) from
+      by rw [hv_def]; exact cast_subtract a ((u*u)%ShorECDLP.p) (hp _)]
+    simp only [ZMod.natCast_mod,Nat.cast_mul,hu]
+  have hw : (w : ZMod ShorECDLP.p)=(x₂ : ZMod ShorECDLP.p)-ShorECDLP.Secp256k1.genericX x y x₂ y₂ := by
+    rw [hw_def]
+    simp only [ZMod.natCast_mod,Nat.cast_add,Nat.cast_mul,Nat.cast_ofNat,hv,ha]
+    change (x : ZMod ShorECDLP.p)-x₂-l*l+3*x₂=(x₂ : ZMod ShorECDLP.p)-(l^2-x-x₂)
+    exact field_square_shift _ _ _
+  have hwn : w≠0 := by
+    intro h
+    have hh : (x₂ : ZMod ShorECDLP.p)-ShorECDLP.Secp256k1.genericX x y x₂ y₂=0 := by
+      rw [← hw,h,Nat.cast_zero]
+    exact hsecond (sub_eq_zero.mp hh)
+  exact ⟨han,hwn⟩
+
 /-- On the nonexceptional affine domain, the actual coordinate formula is the
 usual addition formula. The second excluded zero factor is explicit. -/
 theorem fig14CoordinateValues_generic (x₂ y₂ x y : Nat)
@@ -99,6 +144,20 @@ theorem fig14CoordinateValues_generic (x₂ y₂ x y : Nat)
   let z := (u*(if w=0 then 1 else w))%ShorECDLP.p
   have hh := generic_from_steps x₂ y₂ x y a b u v w z hx₂ hy₂ hden hsecond rfl rfl rfl rfl rfl rfl
   simpa only [fig14CoordinateValues,Bool.true_eq,if_true,a,b,u,v,w,z] using hh
+
+/-- Affine nonzero factors establish both actual raw interface conditions. -/
+theorem fig14RawDomain_of_factors (x₂ y₂ : Nat)
+    (hx₂ : x₂<ShorECDLP.p) (hy₂ : y₂<ShorECDLP.p)
+    (s : BasisState) (hs : Secp256k1ZeroAllowedInputValid s) (hq : s 836=true)
+    (hden : (boolWordToNat (wireValues (List.range' 263 256) s) : ZMod ShorECDLP.p)≠x₂)
+    (hsecond : (x₂ : ZMod ShorECDLP.p)≠ShorECDLP.Secp256k1.genericX
+      (boolWordToNat (wireValues (List.range' 263 256) s))
+      (boolWordToNat (wireValues (List.range' 580 256) s)) x₂ y₂) :
+    Fig14RawDomain x₂ y₂ s := by
+  have he := fig14_interfaces_values x₂ y₂ s hs hq
+  have hn := fig14InterfaceValues_nonzero x₂ y₂ _ _ hx₂ hy₂ hden hsecond
+  rw [←he] at hn
+  exact ⟨hs,hn⟩
 
 attribute [local irreducible] fig14CoordinateState
 
