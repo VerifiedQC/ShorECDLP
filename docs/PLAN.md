@@ -3402,6 +3402,20 @@ of the 28 exclusion events is assumed. The fixed root-enabled background is
 the one certified in `RawEntry.lean`.
 
 This bounds a sufficient-domain exclusion set at input. It does not identify
-all actual arithmetic failures or bound output sampling error. Global raw
-program normalization and coherent error transfer remain open; previous repaired
+all actual arithmetic failures or bound output sampling error. Coherent error transfer remains open; previous repaired
 algorithm success bounds are not transferred by this theorem.
+
+
+### Global normalization of the raw arithmetic program
+
+`Window/RawNormalization.lean` composes gate/measurement well-formedness for
+all five lookups, raw division/multiplication, sign handling, address preparation,
+parking, initialization, and the complete 28-call schedule. The raw instrument
+preserves Born mass on every input state, including inputs outside the sufficient
+nonexceptional domain. The physical 464-H then X836 entry and its raw arithmetic
+output both have unit total mass.
+
+When the excluded input component is supplied separately, its output mass is
+at most `7/4096`. This is not the probability of an observable failure event or
+a bound on sampling error: interference with the good component and comparison
+to the ideal Fourier distribution still require a coherent error argument.
