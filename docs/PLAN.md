@@ -3419,3 +3419,25 @@ When the excluded input component is supplied separately, its output mass is
 at most `7/4096`. This is not the probability of an observable failure event or
 a bound on sampling error: interference with the good component and comparison
 to the ideal Fourier distribution still require a coherent error argument.
+
+
+### Coherent raw-versus-ideal event bounds
+
+`Framework/Quantum/Interference.lean` bounds the cross term of a coherent sum
+before summing internal measurement histories. Basis-event projection is
+contractive, and coherent refinement gives the exact ideal event weight on
+a supported input. `Window/RawInterference.lean` proves the actual entry is
+clean, and the full ideal scalar map preserves norm there because it retains
+all non-point wires and the initial point wires are fixed to zero.
+
+For any well-formed post-circuit and any basis measurement event, the complete
+raw and complete ideal scalar outputs satisfy
+
+`9/16 * p_ideal - 147/16384 <= p_raw <= 25/16 * p_ideal + 315/16384`.
+
+The proof applies the coherent-sum inequalities on both sides and uses the
+`7/4096` excluded input weight and global raw normalization. It does not discard
+cross terms or condition/renormalize the good input component. These are
+conservative event bounds, not a tight additive statistical-distance estimate.
+The specific final Fourier/decoder event and its success/retry contract are
+not instantiated here; previous repaired-program success claims remain separate.
