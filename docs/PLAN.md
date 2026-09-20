@@ -3344,3 +3344,21 @@ coherent output of `reducedRawProgram`, retaining `PointInitializeValid` and
 raw-circuit correctness does. There is still no bound on excluded input weight,
 no sampling-error theorem, and no transfer of the repaired success probability
 or resource result.
+
+
+### Conditional first-window exclusion count
+
+`Window/RawFibers.lean` fixes every wire outside the first 16-bit P window and
+varies that window through all 65,536 values. The remaining calls (banks 1–15
+and 17–29) select the same constants throughout this family, including during
+address reflection. The incoming algebraic point at every step is an affine
+translate of the first scalar digit times P. Since P has prime order greater
+than 65,536, this map is injective. Each four-point set therefore has at most
+four preimages; a union bound over the 28 calls excludes at most 112 words.
+The corresponding conditional uniform fraction is at most `7/4096`.
+
+This is a count for the actual physical first-window update with arbitrary
+fixed other wires, not an asserted Born-weight bound. Connecting the initialized
+464-bit superposition to these conditional families, and then bounding the
+sampling error of the raw adaptive program, remain open. No old success or
+resource result is transferred.
