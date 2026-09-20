@@ -3376,3 +3376,16 @@ This provides the quantum mass/count interface. Summing the conditional
 `7/4096` exclusion bound across the remaining assignments, including the root
 control setup, remains open. No sampling-error or success-probability claim
 is added here; global normalization of the raw arithmetic program is separate.
+
+
+### Root-enabled raw arithmetic entry
+
+`Window/RawEntry.lean` defines the actual 464-H preparation followed by X on
+root 836, and proves its uniform-sum and predicate-projection mass formulas.
+The background is now `scalarRootFlip zeroBasisState`; every emitted assignment
+has root=true and satisfies `PointInitializeValid`. The proof commutes the root
+flip through physical word assignment without changing the emitted circuit.
+
+The total exclusion bound still needs aggregation of the first-window fibers.
+No sampling-error or final-success theorem is claimed, and raw-program global
+normalization remains a separate obligation.
