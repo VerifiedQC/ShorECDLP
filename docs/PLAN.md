@@ -3389,3 +3389,19 @@ flip through physical word assignment without changing the emitted circuit.
 The total exclusion bound still needs aggregation of the first-window fibers.
 No sampling-error or final-success theorem is claimed, and raw-program global
 normalization remains a separate obligation.
+
+
+### Actual raw-entry excluded Born mass
+
+`Window/RawWeight.lean` proves that the subspace violating
+`reducedRawExclusions` in the actual 464-H then X836 entry state has Born mass
+at most `7/4096`. The full assignment count is at most `112 * 2^448`: fixed-length
+first-window words inject into the 65,536 physical values, disjoint word writes
+commute, and finite summation combines the conditional bounds. No independence
+of the 28 exclusion events is assumed. The fixed root-enabled background is
+the one certified in `RawEntry.lean`.
+
+This bounds a sufficient-domain exclusion set at input. It does not identify
+all actual arithmetic failures or bound output sampling error. Global raw
+program normalization and coherent error transfer remain open; previous repaired
+algorithm success bounds are not transferred by this theorem.
