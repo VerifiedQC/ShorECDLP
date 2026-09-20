@@ -21,6 +21,18 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Quantum.normSq_interference
+#print axioms ShorECDLP.Quantum.normSq_filter_le
+#print axioms ShorECDLP.Quantum.Instrument.eventMass_le_bornMass
+#print axioms ShorECDLP.Quantum.Instrument.eventMass_interference
+#print axioms ShorECDLP.Quantum.normSq_mapDomain
+#print axioms ShorECDLP.Quantum.normSq_neg
+#print axioms ShorECDLP.Quantum.CoherentlyImplementsOn.eventMass
+#print axioms ShorECDLP.Paper2607_13816.reducedRawEntryState_supported
+#print axioms ShorECDLP.Paper2607_13816.reducedRawGoodEventMass_eq
+#print axioms ShorECDLP.Paper2607_13816.reducedRawEvent_interference
+#print axioms ShorECDLP.Paper2607_13816.reducedScalarOutput_normSq
+#print axioms ShorECDLP.Paper2607_13816.reducedRawEvent_ideal_bounds
 #print axioms ShorECDLP.Paper2607_13816.signedRawProgram_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.preparedRawProgram_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.rawWindowSchedule_wellFormed
@@ -3418,8 +3430,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3394 ]]; then
-  printf 'expected 3394 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3406 ]]; then
+  printf 'expected 3406 #print axioms results\n' >&2
   exit 1
 fi
 
