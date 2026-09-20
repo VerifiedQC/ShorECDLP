@@ -3362,3 +3362,17 @@ fixed other wires, not an asserted Born-weight bound. Connecting the initialized
 464-bit superposition to these conditional families, and then bounding the
 sampling error of the raw adaptive program, remain open. No old success or
 resource result is transferred.
+
+
+### Raw initialized subspace mass
+
+`Window/RawUniform.lean` proves that the Born mass of any basis-predicate
+projection of the actual 464-H preparation is exactly the number of selected
+464-bit assignments divided by `2^464`. Distinct physical assignments are
+orthogonal; normalization is proved explicitly. The emitted uniform sum also
+splits into the first 16-bit P window and the remaining 448 wires.
+
+This provides the quantum mass/count interface. Summing the conditional
+`7/4096` exclusion bound across the remaining assignments, including the root
+control setup, remains open. No sampling-error or success-probability claim
+is added here; global normalization of the raw arithmetic program is separate.
