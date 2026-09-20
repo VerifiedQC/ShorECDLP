@@ -83,7 +83,7 @@ theorem phaseUniformSum_filtered_normalized_mass (ws : List Wire) (hn : ws.Nodup
   rw [hs, map_pow, hc, phaseUniformSum_filtered_mass ws hn s p]
   simp [div_eq_mul_inv, mul_comm]
 
-private theorem filter_ket_list (xs : List BasisState) (p : BasisState → Prop)
+theorem phaseBasisSum_filter (xs : List BasisState) (p : BasisState → Prop)
     [DecidablePred p] : ((xs.map ket).sum).filter p = ((xs.filter p).map ket).sum := by
   induction xs with
   | nil => simp [Finsupp.filter_zero]
@@ -98,7 +98,7 @@ theorem reducedPhasePrepare_filtered_mass (p : BasisState → Prop) [DecidablePr
       (((fourierOutcomes 464).filter
         (fun bs => p (phaseWordState reducedPhaseWires bs zeroBasisState))).length : ℝ) / 2^464 := by
   rw [reducedPhasePrepare_uniform, Finsupp.filter_smul]
-  have hf := filter_ket_list
+  have hf := phaseBasisSum_filter
     ((fourierOutcomes reducedPhaseWires.length).map
       (fun bs => phaseWordState reducedPhaseWires bs zeroBasisState)) p
   simp only [List.map_map, Function.comp_def, List.filter_map] at hf
