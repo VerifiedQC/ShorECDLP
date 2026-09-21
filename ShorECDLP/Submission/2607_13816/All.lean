@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.RawTerminal
 import ShorECDLP.Submission.«2607_13816».Window.RawInterference
 import ShorECDLP.Submission.«2607_13816».Window.RawNormalization
 import ShorECDLP.Submission.«2607_13816».Window.RawWeight
