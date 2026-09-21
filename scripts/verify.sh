@@ -32,6 +32,20 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.reducedRawGoodEventMass_eq
 #print axioms ShorECDLP.Paper2607_13816.reducedRawEvent_interference
 #print axioms ShorECDLP.Paper2607_13816.reducedScalarOutput_normSq
+#print axioms ShorECDLP.Quantum.Instrument.bornMass_filter_le
+#print axioms ShorECDLP.Quantum.Instrument.bornMass_interference
+#print axioms ShorECDLP.Quantum.Instrument.bornMass_neg
+#print axioms ShorECDLP.Quantum.Instrument.seq_bornMass_le
+#print axioms ShorECDLP.Quantum.CoherentlyImplementsOn.terminalMass
+#print axioms ShorECDLP.Paper2607_13816.reducedRawFourier_filter
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierProgram_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierSelection_contractive
+#print axioms ShorECDLP.Paper2607_13816.reducedRawTerminal_bounds
+#print axioms ShorECDLP.Paper2607_13816.reducedRawFourierEventMass_le_one
+#print axioms ShorECDLP.Paper2607_13816.reducedRawFourierEvent_bounds
+#print axioms ShorECDLP.Paper2607_13816.reducedRawPublicDecode_sound
+#print axioms ShorECDLP.Paper2607_13816.reducedRawDecoderAccept_correct
+#print axioms ShorECDLP.Paper2607_13816.reducedRawDecoder_bounds
 #print axioms ShorECDLP.Paper2607_13816.reducedRawEvent_ideal_bounds
 #print axioms ShorECDLP.Paper2607_13816.signedRawProgram_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.preparedRawProgram_wellFormed
@@ -3430,8 +3444,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3406 ]]; then
-  printf 'expected 3406 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3420 ]]; then
+  printf 'expected 3420 #print axioms results\n' >&2
   exit 1
 fi
 
