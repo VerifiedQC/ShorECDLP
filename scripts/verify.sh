@@ -21,6 +21,24 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_support
+#print axioms ShorECDLP.Paper2607_13816.windowPrepareCircuit_primitive
+#print axioms ShorECDLP.Paper2607_13816.signedRawProgram_support
+#print axioms ShorECDLP.Paper2607_13816.preparedRawProgram_support
+#print axioms ShorECDLP.Paper2607_13816.reducedRawProgram_support
+#print axioms ShorECDLP.Paper2607_13816.preparedRawTrial_support
+#print axioms ShorECDLP.Paper2607_13816.rawTrialResetWires_length
+#print axioms ShorECDLP.Paper2607_13816.rawRepeatedProgram_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.signedRawProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.preparedRawProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.rawWindowSchedule_primitive
+#print axioms ShorECDLP.Paper2607_13816.reducedRawProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.preparedRawTrial_primitive
+#print axioms ShorECDLP.Paper2607_13816.rawRepeatedProgram_primitive
+#print axioms ShorECDLP.Paper2607_13816.preparedRawTrial_counts
+#print axioms ShorECDLP.Paper2607_13816.rawRepeatedProgram_counts
+#print axioms ShorECDLP.Paper2607_13816.rawRepeatedProgram_resource_bounds
+#print axioms ShorECDLP.Paper2607_13816.rawRepeatedProgram_success_resources
 #print axioms ShorECDLP.Paper2607_13816.preparedRawTrial_selected
 #print axioms ShorECDLP.Paper2607_13816.preparedRawTrial_total
 #print axioms ShorECDLP.Paper2607_13816.resetRawTrial_total
@@ -3468,8 +3486,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3444 ]]; then
-  printf 'expected 3444 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3462 ]]; then
+  printf 'expected 3462 #print axioms results\n' >&2
   exit 1
 fi
 
