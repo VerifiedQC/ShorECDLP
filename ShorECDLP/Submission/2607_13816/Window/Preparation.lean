@@ -224,7 +224,7 @@ theorem preparedWindowCallState_selected (x y : Nat → Nat → ShorECDLP.Fp)
     exact windowPrepareState_address j s hs.2
   simp only [windowPointDelta,show windowPrepareState j s (windowBankStart j+15)=s (windowBankStart j+15) from hsign,ha]
 
-private theorem prepare_support (j : Nat) : circuitWires (windowPrepareCircuit j) ⊆
+theorem windowPrepareCircuit_support (j : Nat) : circuitWires (windowPrepareCircuit j) ⊆
     List.range 839++List.range' (windowBankStart j) 16 := by
   intro w hw
   simp only [windowPrepareCircuit,signedAddressCircuit,circuitWires,List.flatMap_append,
@@ -253,7 +253,7 @@ theorem preparedWindowCall_support (x y : Nat → Nat → ShorECDLP.Fp)
   rw [preparedWindowCall,modularWires_seq,modularWires_seq] at hw
   have hp : (AdaptiveCircuit.unitary (windowPrepareCircuit j) .done).wires ⊆
       List.range 839++List.range' (windowBankStart j) 16 := by
-    simpa only [AdaptiveCircuit.wires,List.append_nil] using prepare_support j
+    simpa only [AdaptiveCircuit.wires,List.append_nil] using windowPrepareCircuit_support j
   rcases hw with (hw | hw) | hw
   · exact hp hw
   · exact parkedWindowProgram_tight_support (windowBankStart j) (by unfold windowBankStart; omega) (x j) (y j) (hc j) hw

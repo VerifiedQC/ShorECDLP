@@ -12,7 +12,7 @@ private theorem xor_primitive (q : Wire) (ws : List Wire) :
       primitiveXCost,primitiveHCost,primitivePhaseCost,AdaptiveCircuit.measurementCount] at *
     omega
 attribute [local irreducible] primitiveResources
-private theorem prepare_primitive (j : Nat) :
+theorem windowPrepareCircuit_primitive (j : Nat) :
     primitiveResources (.unitary (windowPrepareCircuit j) .done)=⟨0,0,30,0,0,0⟩ := by
   rw [windowPrepareCircuit,signedAddressCircuit,primitiveResources_unitary_append,xor_primitive,xor_primitive]
   simp only [windowAddressBits,List.length_range',PrimitiveResources.add]
@@ -24,7 +24,7 @@ def preparedCallPrimitives (x y : Nat → ShorECDLP.Fp)
 theorem preparedWindowCall_primitive (x y : Nat → Nat → ShorECDLP.Fp)
     (hc : ∀ j a, ShorECDLP.Secp256k1.curve.toAffine.Nonsingular (x j a) (y j a)) (j : Nat) :
     primitiveResources (preparedWindowCall x y hc j)=preparedCallPrimitives (x j) (y j) (hc j) := by
-  rw [preparedWindowCall,primitiveResources_seq,primitiveResources_seq,prepare_primitive,
+  rw [preparedWindowCall,primitiveResources_seq,primitiveResources_seq,windowPrepareCircuit_primitive,
     windowCall,parkedWindowProgram,primitiveResources_relabel,signedLookupPointProgram_primitive]
   rfl
 
