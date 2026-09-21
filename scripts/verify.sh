@@ -21,6 +21,19 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.scalarRootFlip_register
+#print axioms ShorECDLP.Paper2607_13816.scalarRootFlip_run
+#print axioms ShorECDLP.Paper2607_13816.scalarRootFlip_normSq
+#print axioms ShorECDLP.Paper2607_13816.reducedScalarOutput_root
+#print axioms ShorECDLP.Paper2607_13816.reducedScalarMap_root
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch_root
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierSelection_root
+#print axioms ShorECDLP.Paper2607_13816.reducedRawIdealFourierEventMass_root
+#print axioms ShorECDLP.Paper2607_13816.reducedFourierSelection_partition
+#print axioms ShorECDLP.Paper2607_13816.reducedRawIdealFourierEventMass_distribution
+#print axioms ShorECDLP.Paper2607_13816.reducedRawIdealDecoder_eq
+#print axioms ShorECDLP.Paper2607_13816.reducedRawDecoder_success
+#print axioms ShorECDLP.Paper2607_13816.reducedRawDecoder_independent_retry
 #print axioms ShorECDLP.Quantum.normSq_interference
 #print axioms ShorECDLP.Quantum.normSq_filter_le
 #print axioms ShorECDLP.Quantum.Instrument.eventMass_le_bornMass
@@ -3444,8 +3457,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3420 ]]; then
-  printf 'expected 3420 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3433 ]]; then
+  printf 'expected 3433 #print axioms results\n' >&2
   exit 1
 fi
 

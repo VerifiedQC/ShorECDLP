@@ -3,7 +3,7 @@ import ShorECDLP.Submission.«2607_13816».Window.PhasePrepare
 namespace ShorECDLP.Paper2607_13816
 open Classical Quantum ShorECDLP.Secp256k1
 noncomputable section
-private theorem root_register (n j : Nat) (s : BasisState) :
+theorem scalarRootFlip_register (n j : Nat) (s : BasisState) :
     scalarRegisterValue n j (scalarRootFlip s)=scalarRegisterValue n j s := by
   unfold scalarRegisterValue
   rw [scalarRootFlip_word]
@@ -30,7 +30,7 @@ private theorem reducedRootWrap_coherent (body : AdaptiveCircuit) (P Q : Point)
   simp only [LinearMap.comp_apply,ket,Finsupp.lmapDomain_apply,Finsupp.mapDomain_single]
   change Finsupp.single (scalarRootFlip (reducedScalarOutput P Q (scalarRootFlip s))) 1 =
     Finsupp.single (reducedScalarOutput P Q s) 1
-  simp only [reducedScalarOutput,root_register,scalarRootFlip_pointWrite,scalarRootFlip_twice]
+  simp only [reducedScalarOutput,scalarRootFlip_register,scalarRootFlip_pointWrite,scalarRootFlip_twice]
 
 def reducedPhaseWires : List Wire := List.range' 855 256++List.range' 1127 208
 def reducedPhasePrepare : Circuit := reducedPhaseWires.map Gate.H
