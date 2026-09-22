@@ -21,6 +21,36 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.measuredAndErase_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredZeroCell_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperForwardLeaf_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperReverseLeaf_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerForwardLeaf_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerReverseLeaf_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredRangeLeaf_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredRangeScan_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperZeroMap_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerZeroMap_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredHighestPositionWrite_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredRightLengthWrite_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLtUnary_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLrpUnary_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredEndUpper_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredEndLower_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIteration_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIterationInverse_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHForward_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHInverse_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStep_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStepInverse_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedSchedule_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedScheduleInverse_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForward_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverse_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_qubitCount
 #print axioms ShorECDLP.Paper2607_13816.preprocess_basis_coherent
 #print axioms ShorECDLP.Paper2607_13816.parity_basis_coherent
 #print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverse_input
@@ -3605,8 +3635,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3581 ]]; then
-  printf 'expected 3581 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3611 ]]; then
+  printf 'expected 3611 #print axioms results\n' >&2
   exit 1
 fi
 

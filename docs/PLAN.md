@@ -3542,3 +3542,21 @@ forward or reverse wrapper, a reduction of **1,681,736** from its previous
 including its boundary operations. Point-addition and sampling callers have
 not yet been changed to use these wrappers; the published whole-program
 Toffoli, physical support, and success bounds remain unchanged.
+
+### Physical support of the measured inversion wrappers
+
+`EEA/MeasuredSupport.lean` proves that every branch of the measured AND erasure,
+zero-map leaves and scans, borrowed-work length writers, length updates, and
+forward/reverse H blocks uses only wires already present in its strict source
+reference. The decoder argument includes both measurement outcomes.
+
+`EEA/MeasuredPhysicalSupport.lean` lifts that containment through the unchanged
+adaptive prefixes/tails and all 1,620 scheduled steps, then through both full
+inversion wrappers. The very same measured wrapper definitions whose coherent
+semantics and 15,910,015 Toffoli counts were proved now have support contained
+in `List.range 580` and whole-tree distinct-wire count at most **580**. Reset
+wires are counted; this is not a peak-liveness or 579-wire claim.
+
+The existing point-addition and sampling callers still await replacement with
+these new wrappers. Their published whole-program cost, allocation and success
+bounds are unchanged by this support certificate.
