@@ -3194,10 +3194,10 @@ and proving the full 855-wire sampling distribution remain open.
 
 `Submission/2607_13816/Submission.lean` now exports the current raw physical
 program from `Window/RawCounts.lean`. One trial uses at most 1,303 wires,
-exactly 2,229,177,063 Toffolis and 54,168 phase units, giving a T-model upper
-bound of 15,604,293,609. Its accepted probability is at least 8% for nonzero
+exactly 2,040,822,631 Toffolis and 54,168 phase units, giving a T-model upper
+bound of 14,285,812,585. Its accepted probability is at least 8% for nonzero
 public points under the stated group hypotheses. Fifty-six actual reset/reused
-trials retain at most 1,303 wires, have T-model cost at most 873,840,442,104,
+trials retain at most 1,303 wires, have T-model cost at most 800,005,504,760,
 and achieve at least 99% accepted probability from zero. The exported decoder
 soundness theorem certifies every returned scalar.
 
@@ -3205,8 +3205,11 @@ The model charges seven per CCX and one per phase rotation, without rotation
 synthesis or approximation error. The decoder remains a noncomputable
 specification. The old corrected-program bounds remain in
 `Window/ReducedNumericBounds.lean`; they are no longer the submission entry.
-Measured inversion integration into this whole program, the 835-wire target,
-and an efficient executable decoder remain unfinished.
+The actual multiply/divide calls now use the measured inversion wrappers,
+including data-bank relabeling and the selected controlled-Z corrections. This
+saves 188,354,432 Toffolis per trial and raises its measurement count to
+847,701,655. The 835-wire target and an efficient executable decoder remain
+unfinished.
 
 ### Concrete weighted-call bank identification
 

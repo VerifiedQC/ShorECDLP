@@ -59,10 +59,10 @@ private theorem relabel_support (p : AdaptiveCircuit) (hp : p.wires ⊆ List.ran
   intro w hw
   obtain ⟨v,hv,rfl⟩ := List.mem_map.mp hw
   exact exchange_bound v (hp hv)
-theorem secp256k1EEAForwardInDataBank_wires_subset : secp256k1EEAForwardInDataBank.wires ⊆ List.range 836 :=
-  relabel_support _ secp256k1EEAForwardWrapper_wires_subset
-theorem secp256k1EEAReverseInDataBank_wires_subset : secp256k1EEAReverseInDataBank.wires ⊆ List.range 836 :=
-  relabel_support _ secp256k1EEAReverseWrapper_wires_subset
+theorem secp256k1MeasuredEEAForwardInDataBank_wires_subset : secp256k1MeasuredEEAForwardInDataBank.wires ⊆ List.range 836 :=
+  relabel_support _ secp256k1MeasuredEEAForwardWrapper_wires_subset
+theorem secp256k1MeasuredEEAReverseInDataBank_wires_subset : secp256k1MeasuredEEAReverseInDataBank.wires ⊆ List.range 836 :=
+  relabel_support _ secp256k1MeasuredEEAReverseWrapper_wires_subset
 private theorem correction_support (targets : List Wire) (outcomes : List Bool) :
     circuitWires (registerZCorrection targets outcomes) ⊆ targets := by
   induction targets generalizing outcomes with
@@ -119,23 +119,23 @@ private theorem unitary_support836 (c : Circuit) (hc : circuitWires c ⊆ List.r
     (AdaptiveCircuit.unitary c .done).wires ⊆ List.range 836 := by
   simpa only [AdaptiveCircuit.wires,List.append_nil] using hc
 attribute [local irreducible] fig15MultiplyToWork fig15MultiplyToData fig15MultiplyToDataInverse
-  secp256k1EEAForwardWrapper secp256k1EEAForwardInDataBank secp256k1EEAReverseInDataBank
+  secp256k1MeasuredEEAForwardWrapper secp256k1MeasuredEEAForwardInDataBank secp256k1MeasuredEEAReverseInDataBank
 private theorem division_after_support (bs : List Bool) : (fig15DivisionAfterReset bs).wires ⊆ List.range 836 := by
   exact seq_support _ _ (seq_support _ _ (seq_support _ _
-    (seq_support _ _ secp256k1EEAReverseInDataBank_wires_subset fig15MultiplyToData_wires_subset)
+    (seq_support _ _ secp256k1MeasuredEEAReverseInDataBank_wires_subset fig15MultiplyToData_wires_subset)
     (unitary_support836 _ (List.Subset.trans (correction_support _ bs) data_support)))
     fig15MultiplyToDataInverse_wires_subset) (unitary_support836 _ swap_support)
 private theorem multiplication_after_support (bs : List Bool) : (fig15MultiplicationAfterReset bs).wires ⊆ List.range 836 := by
   exact seq_support _ _ (seq_support _ _ (seq_support _ _ (seq_support _ _
-    (seq_support _ _ secp256k1EEAForwardInDataBank_wires_subset fig15MultiplyToData_wires_subset)
+    (seq_support _ _ secp256k1MeasuredEEAForwardInDataBank_wires_subset fig15MultiplyToData_wires_subset)
     (unitary_support836 _ (List.Subset.trans (correction_support _ bs) data_support)))
-    fig15MultiplyToDataInverse_wires_subset) secp256k1EEAReverseInDataBank_wires_subset)
+    fig15MultiplyToDataInverse_wires_subset) secp256k1MeasuredEEAReverseInDataBank_wires_subset)
     (unitary_support836 _ swap_support)
 /-- Every branch of the complete division uses only the concrete 0–835 allocation. -/
 theorem secp256k1InPlaceDivision_wires_subset : secp256k1InPlaceDivision.wires ⊆ List.range 836 := by
-  have hf : secp256k1EEAForwardWrapper.wires ⊆ List.range 836 := by
+  have hf : secp256k1MeasuredEEAForwardWrapper.wires ⊆ List.range 836 := by
     intro w hw
-    have h := secp256k1EEAForwardWrapper_wires_subset hw
+    have h := secp256k1MeasuredEEAForwardWrapper_wires_subset hw
     simp only [List.mem_range] at h ⊢; omega
   exact seq_support _ _ (seq_support _ _ hf fig15MultiplyToWork_wires_subset)
     (measured_support _ _ data_support division_after_support)
@@ -163,8 +163,8 @@ theorem secp256k1InPlaceMultiplication_qubitCount : secp256k1InPlaceMultiplicati
 theorem secp256k1InPlaceDivision_certificate :
     CoherentlyImplementsOn secp256k1InPlaceDivision
       (Finsupp.lmapDomain ℂ ℂ fig15DivisionOutputState) Secp256k1InPlaceInputValid ∧
-    secp256k1InPlaceDivision.tCount = 269605707 ∧
-    secp256k1InPlaceDivision.measurementCount = 11343835 ∧
+    secp256k1InPlaceDivision.tCount = 246061403 ∧
+    secp256k1InPlaceDivision.measurementCount = 14707307 ∧
     secp256k1InPlaceDivision.qubitCount ≤ 836 :=
   ⟨secp256k1InPlaceDivision_coherent,secp256k1InPlaceDivision_T,
     secp256k1InPlaceDivision_measurements,secp256k1InPlaceDivision_qubitCount⟩
@@ -172,8 +172,8 @@ theorem secp256k1InPlaceDivision_certificate :
 theorem secp256k1InPlaceMultiplication_certificate :
     CoherentlyImplementsOn secp256k1InPlaceMultiplication
       (Finsupp.lmapDomain ℂ ℂ fig15MultiplicationOutputState) Secp256k1InPlaceInputValid ∧
-    secp256k1InPlaceMultiplication.tCount = 269605707 ∧
-    secp256k1InPlaceMultiplication.measurementCount = 11343835 ∧
+    secp256k1InPlaceMultiplication.tCount = 246061403 ∧
+    secp256k1InPlaceMultiplication.measurementCount = 14707307 ∧
     secp256k1InPlaceMultiplication.qubitCount ≤ 836 :=
   ⟨secp256k1InPlaceMultiplication_coherent,secp256k1InPlaceMultiplication_T,
     secp256k1InPlaceMultiplication_measurements,secp256k1InPlaceMultiplication_qubitCount⟩

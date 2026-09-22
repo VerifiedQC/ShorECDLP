@@ -35,13 +35,13 @@ def algorithm (Q : Point) : AdaptiveCircuit := rawRepeatedProgram Q
 
 /-- Exact primitive counts for the same trial certified below. -/
 theorem trial_counts (Q : Point) :
-    (primitiveResources (trial Q)).toffoli = 2229177063 ∧
+    (primitiveResources (trial Q)).toffoli = 2040822631 ∧
     (primitiveResources (trial Q)).phase = 54168 ∧
-    (trial Q).measurementCount = 659347223 := preparedRawTrial_counts Q
+    (trial Q).measurementCount = 847701655 := preparedRawTrial_counts Q
 
 /-- The numeric resource bounds apply to the actual prepared trial. -/
 theorem trial_resources (Q : Point) :
-    (trial Q).qubitCount ≤ 1303 ∧ (trial Q).tCount ≤ 15604293609 := by
+    (trial Q).qubitCount ≤ 1303 ∧ (trial Q).tCount ≤ 14285812585 := by
   have ht := primitiveResources_T_le (trial Q)
   rw [(trial_counts Q).1, (trial_counts Q).2.1] at ht
   exact ⟨rawTrialResetWires_length Q, by omega⟩
@@ -60,8 +60,8 @@ theorem trial_success (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
 theorem certificate (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
     (hrQ : ShorECDLP.order • Q = 0) (d : Nat) (hd : Q = d • G) :
     (algorithm Q).qubitCount ≤ 1303 ∧
-    (algorithm Q).tCount ≤ 873840442104 ∧
-    (algorithm Q).measurementCount ≤ 36923517456 ∧
+    (algorithm Q).tCount ≤ 800005504760 ∧
+    (algorithm Q).measurementCount ≤ 47471365648 ∧
     (99 : ℝ) / 100 ≤ Instrument.bornMass ((algorithm Q).run.filter
       (fun b => (rawRepeatedCandidate Q b.history).isSome)) (ket zeroBasisState) :=
   rawRepeatedProgram_success_resources Q hG hQ hrQ d hd

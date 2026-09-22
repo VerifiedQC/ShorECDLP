@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.MeasuredPrimitiveCounts
 import ShorECDLP.Submission.«2607_13816».Arithmetic.InPlace
 import ShorECDLP.Submission.«2607_13816».EEA.ScheduleResources
 /-! Resource composition for the literal Figure 15 schedules.
@@ -53,7 +54,7 @@ private theorem after_T_generic (a b c : AdaptiveCircuit) (z swap : Circuit)
     ((((a.seq b).seq (.unitary z .done)).seq c).seq (.unitary swap .done)).tCount = a.tCount+b.tCount+c.tCount := by
   simp only [adaptive_tCount_seq,unitary_T,hz,hs,Nat.add_zero]
 private theorem division_after_T (bs : List Bool) : (fig15DivisionAfterReset bs).tCount =
-    secp256k1EEAReverseInDataBank.tCount+fig15MultiplyToData.tCount+fig15MultiplyToDataInverse.tCount :=
+    secp256k1MeasuredEEAReverseInDataBank.tCount+fig15MultiplyToData.tCount+fig15MultiplyToDataInverse.tCount :=
   after_T_generic _ _ _ _ _ (z_correction_T _ _) swap_T
 private theorem division_T_generic (a b : AdaptiveCircuit) (ts : List Wire)
     (next : List Bool → AdaptiveCircuit) (n : Nat)
@@ -62,8 +63,8 @@ private theorem division_T_generic (a b : AdaptiveCircuit) (ts : List Wire)
   rw [adaptive_tCount_seq, adaptive_tCount_seq, resetThen_tCount ts next n hn]
 /-- Exact T accounting on the complete adaptive division schedule. -/
 theorem secp256k1InPlaceDivision_tCount :
-    secp256k1InPlaceDivision.tCount = secp256k1EEAForwardWrapper.tCount +
-      fig15MultiplyToWork.tCount + (secp256k1EEAReverseInDataBank.tCount +
+    secp256k1InPlaceDivision.tCount = secp256k1MeasuredEEAForwardWrapper.tCount +
+      fig15MultiplyToWork.tCount + (secp256k1MeasuredEEAReverseInDataBank.tCount +
       fig15MultiplyToData.tCount + fig15MultiplyToDataInverse.tCount) :=
   division_T_generic _ _ _ _ _ (fun bs _ => division_after_T bs)
 private theorem multiplication_after_T_generic (a b c d : AdaptiveCircuit) (z swap : Circuit)
@@ -73,8 +74,8 @@ private theorem multiplication_after_T_generic (a b c d : AdaptiveCircuit) (z sw
   simp only [adaptive_tCount_seq,unitary_T,hz,hs,Nat.add_zero]
 private theorem multiplication_after_T (bs : List Bool) :
     (fig15MultiplicationAfterReset bs).tCount =
-      secp256k1EEAForwardInDataBank.tCount+fig15MultiplyToData.tCount+
-      fig15MultiplyToDataInverse.tCount+secp256k1EEAReverseInDataBank.tCount :=
+      secp256k1MeasuredEEAForwardInDataBank.tCount+fig15MultiplyToData.tCount+
+      fig15MultiplyToDataInverse.tCount+secp256k1MeasuredEEAReverseInDataBank.tCount :=
   multiplication_after_T_generic _ _ _ _ _ _ (z_correction_T _ _) swap_T
 private theorem multiplication_T_generic (a : AdaptiveCircuit) (ts : List Wire)
     (next : List Bool → AdaptiveCircuit) (n : Nat)
@@ -84,8 +85,8 @@ private theorem multiplication_T_generic (a : AdaptiveCircuit) (ts : List Wire)
 /-- Exact T accounting on the complete adaptive multiplication schedule. -/
 theorem secp256k1InPlaceMultiplication_tCount :
     secp256k1InPlaceMultiplication.tCount = fig15MultiplyToWork.tCount +
-      (secp256k1EEAForwardInDataBank.tCount+fig15MultiplyToData.tCount+
-      fig15MultiplyToDataInverse.tCount+secp256k1EEAReverseInDataBank.tCount) :=
+      (secp256k1MeasuredEEAForwardInDataBank.tCount+fig15MultiplyToData.tCount+
+      fig15MultiplyToDataInverse.tCount+secp256k1MeasuredEEAReverseInDataBank.tCount) :=
   multiplication_T_generic _ _ _ _ (fun bs _ => multiplication_after_T bs)
 private theorem unitary_measurements (c : Circuit) :
     (AdaptiveCircuit.unitary c .done).measurementCount=0 := rfl
@@ -94,7 +95,7 @@ private theorem after_measurements_generic (a b c : AdaptiveCircuit) (z swap : C
       a.measurementCount+b.measurementCount+c.measurementCount := by
   simp only [modularMeasurements_seq, unitary_measurements, Nat.add_zero]
 private theorem division_after_measurements (bs : List Bool) :
-    (fig15DivisionAfterReset bs).measurementCount = secp256k1EEAReverseInDataBank.measurementCount+
+    (fig15DivisionAfterReset bs).measurementCount = secp256k1MeasuredEEAReverseInDataBank.measurementCount+
       fig15MultiplyToData.measurementCount+fig15MultiplyToDataInverse.measurementCount :=
   after_measurements_generic _ _ _ _ _
 private theorem division_measurements_generic (a b : AdaptiveCircuit) (ts : List Wire)
@@ -105,8 +106,8 @@ private theorem division_measurements_generic (a b : AdaptiveCircuit) (ts : List
   rw [modularMeasurements_seq, modularMeasurements_seq, resetThen_measurements ts next n hn, hlen]
 /-- Counts every measurement, including the 256-bit Y reset. -/
 theorem secp256k1InPlaceDivision_measurementCount :
-    secp256k1InPlaceDivision.measurementCount = secp256k1EEAForwardWrapper.measurementCount +
-      fig15MultiplyToWork.measurementCount + (256+(secp256k1EEAReverseInDataBank.measurementCount +
+    secp256k1InPlaceDivision.measurementCount = secp256k1MeasuredEEAForwardWrapper.measurementCount +
+      fig15MultiplyToWork.measurementCount + (256+(secp256k1MeasuredEEAReverseInDataBank.measurementCount +
       fig15MultiplyToData.measurementCount + fig15MultiplyToDataInverse.measurementCount)) :=
   division_measurements_generic _ _ _ _ _ 256 List.length_range' (fun bs _ => division_after_measurements bs)
 private theorem multiplication_after_measurements_generic (a b c d : AdaptiveCircuit) (z swap : Circuit) :
@@ -115,8 +116,8 @@ private theorem multiplication_after_measurements_generic (a b c d : AdaptiveCir
   simp only [modularMeasurements_seq,unitary_measurements,Nat.add_zero]
 private theorem multiplication_after_measurements (bs : List Bool) :
     (fig15MultiplicationAfterReset bs).measurementCount =
-      secp256k1EEAForwardInDataBank.measurementCount+fig15MultiplyToData.measurementCount+
-      fig15MultiplyToDataInverse.measurementCount+secp256k1EEAReverseInDataBank.measurementCount :=
+      secp256k1MeasuredEEAForwardInDataBank.measurementCount+fig15MultiplyToData.measurementCount+
+      fig15MultiplyToDataInverse.measurementCount+secp256k1MeasuredEEAReverseInDataBank.measurementCount :=
   multiplication_after_measurements_generic _ _ _ _ _ _
 private theorem multiplication_measurements_generic (a : AdaptiveCircuit) (ts : List Wire)
     (next : List Bool → AdaptiveCircuit) (n : Nat) (len : Nat) (hlen : ts.length=len)
@@ -126,8 +127,8 @@ private theorem multiplication_measurements_generic (a : AdaptiveCircuit) (ts : 
 /-- Counts every measurement on the actual multiplication schedule. -/
 theorem secp256k1InPlaceMultiplication_measurementCount :
     secp256k1InPlaceMultiplication.measurementCount = fig15MultiplyToWork.measurementCount +
-      (256+(secp256k1EEAForwardInDataBank.measurementCount+fig15MultiplyToData.measurementCount+
-      fig15MultiplyToDataInverse.measurementCount+secp256k1EEAReverseInDataBank.measurementCount)) :=
+      (256+(secp256k1MeasuredEEAForwardInDataBank.measurementCount+fig15MultiplyToData.measurementCount+
+      fig15MultiplyToDataInverse.measurementCount+secp256k1MeasuredEEAReverseInDataBank.measurementCount)) :=
   multiplication_measurements_generic _ _ _ _ 256 List.length_range' (fun bs _ => multiplication_after_measurements bs)
 private theorem constant_metrics (acc dirty : List Wire) (bits : List Bool)
     (q c r t : Wire) (ha : acc.length=256) (hd : dirty.length=255) (hb : bits.length=255) :
@@ -399,6 +400,11 @@ private theorem inverse_rotation_epoch_T : ShorECDLP.tCount (terminalEpochCompre
 theorem secp256k1EEAForwardWrapper_tCount : secp256k1EEAForwardWrapper.tCount=123142257 :=
   forward_wrapper_T _ _ _ _ _ eeaPreprocess_resources.2.2.2.1 secp256k1EEAForwardAdaptive_tCount
     secp256k1EEAParityCorrection_tCount rotation_epoch_T terminalWork1Clear_resources.2.2.2.1
+theorem secp256k1MeasuredEEAForwardWrapper_tCount : secp256k1MeasuredEEAForwardWrapper.tCount=111370105 := by
+  have hp : (primitiveResources secp256k1MeasuredEEAForwardWrapper).phase=0 := by rw [secp256k1MeasuredEEAForwardWrapper_primitive_exact]
+  rw [primitiveResources_T_of_no_phase _ hp,secp256k1MeasuredEEAForwardWrapper_primitive_exact]
+  decide
+
 private theorem reverse_wrapper_T (pre schedule parity : AdaptiveCircuit) (a b : Circuit)
     (hpre : pre.tCount=933541) (hs : schedule.tCount=122179575) (hp : parity.tCount=10696)
     (ha : ShorECDLP.tCount a=0) (hb : ShorECDLP.tCount b=18445) :
@@ -407,10 +413,15 @@ private theorem reverse_wrapper_T (pre schedule parity : AdaptiveCircuit) (a b :
 theorem secp256k1EEAReverseWrapper_tCount : secp256k1EEAReverseWrapper.tCount=123142257 :=
   reverse_wrapper_T _ _ _ _ _ eeaUnpreprocess_tCount secp256k1EEAReverseAdaptive_tCount
     secp256k1EEAParityCorrection_tCount terminalWork1Clear_resources.2.2.2.1 inverse_rotation_epoch_T
-private theorem forward_bank_T : secp256k1EEAForwardInDataBank.tCount=123142257 :=
-  (AdaptiveCircuit.relabel_tCount _ _).trans secp256k1EEAForwardWrapper_tCount
-private theorem reverse_bank_T : secp256k1EEAReverseInDataBank.tCount=123142257 :=
-  (AdaptiveCircuit.relabel_tCount _ _).trans secp256k1EEAReverseWrapper_tCount
+theorem secp256k1MeasuredEEAReverseWrapper_tCount : secp256k1MeasuredEEAReverseWrapper.tCount=111370105 := by
+  have hp : (primitiveResources secp256k1MeasuredEEAReverseWrapper).phase=0 := by rw [secp256k1MeasuredEEAReverseWrapper_primitive_exact]
+  rw [primitiveResources_T_of_no_phase _ hp,secp256k1MeasuredEEAReverseWrapper_primitive_exact]
+  decide
+
+private theorem forward_bank_T : secp256k1MeasuredEEAForwardInDataBank.tCount=111370105 :=
+  (AdaptiveCircuit.relabel_tCount _ _).trans secp256k1MeasuredEEAForwardWrapper_tCount
+private theorem reverse_bank_T : secp256k1MeasuredEEAReverseInDataBank.tCount=111370105 :=
+  (AdaptiveCircuit.relabel_tCount _ _).trans secp256k1MeasuredEEAReverseWrapper_tCount
 
 attribute [local irreducible] eeaPreprocess eeaUnpreprocess AdaptiveCircuit.measurementCount
 theorem eeaUnpreprocess_measurementCount : eeaUnpreprocess.measurementCount=766 :=
@@ -424,6 +435,9 @@ theorem secp256k1EEAForwardWrapper_measurementCount :
     secp256k1EEAForwardWrapper.measurementCount=5280108 :=
   forward_wrapper_measurements _ _ _ _ _ eeaPreprocess_resources.2.2.2.2.1
     secp256k1EEAForwardAdaptive_measurementCount secp256k1EEAParityCorrection_measurementCount
+theorem secp256k1MeasuredEEAForwardWrapper_measurementCount : secp256k1MeasuredEEAForwardWrapper.measurementCount=6961844 := by
+  exact congrArg PrimitiveResources.measurements secp256k1MeasuredEEAForwardWrapper_primitive_exact
+
 private theorem reverse_wrapper_measurements (pre schedule parity : AdaptiveCircuit) (a b : Circuit)
     (hpre : pre.measurementCount=766) (hs : schedule.measurementCount=5278832)
     (hp : parity.measurementCount=510) :
@@ -434,31 +448,34 @@ theorem secp256k1EEAReverseWrapper_measurementCount :
   reverse_wrapper_measurements _ _ _ _ _ eeaUnpreprocess_measurementCount
     secp256k1EEAReverseAdaptive_measurementCount secp256k1EEAParityCorrection_measurementCount
 
-private theorem forward_bank_measurements : secp256k1EEAForwardInDataBank.measurementCount=5280108 :=
-  (AdaptiveCircuit.relabel_measurementCount _ _).trans secp256k1EEAForwardWrapper_measurementCount
-private theorem reverse_bank_measurements : secp256k1EEAReverseInDataBank.measurementCount=5280108 :=
-  (AdaptiveCircuit.relabel_measurementCount _ _).trans secp256k1EEAReverseWrapper_measurementCount
+theorem secp256k1MeasuredEEAReverseWrapper_measurementCount : secp256k1MeasuredEEAReverseWrapper.measurementCount=6961844 := by
+  exact congrArg PrimitiveResources.measurements secp256k1MeasuredEEAReverseWrapper_primitive_exact
+
+private theorem forward_bank_measurements : secp256k1MeasuredEEAForwardInDataBank.measurementCount=6961844 :=
+  (AdaptiveCircuit.relabel_measurementCount _ _).trans secp256k1MeasuredEEAForwardWrapper_measurementCount
+private theorem reverse_bank_measurements : secp256k1MeasuredEEAReverseInDataBank.measurementCount=6961844 :=
+  (AdaptiveCircuit.relabel_measurementCount _ _).trans secp256k1MeasuredEEAReverseWrapper_measurementCount
 attribute [local irreducible] fig15MultiplyToWork fig15MultiplyToData fig15MultiplyToDataInverse
-  secp256k1EEAForwardWrapper secp256k1EEAForwardInDataBank secp256k1EEAReverseInDataBank
+  secp256k1MeasuredEEAForwardWrapper secp256k1MeasuredEEAForwardInDataBank secp256k1MeasuredEEAReverseInDataBank
 /-- Worst-branch measurement total of the same complete division circuit as the coherent contract. -/
 theorem secp256k1InPlaceDivision_measurements :
-    secp256k1InPlaceDivision.measurementCount=11343835 := by
-  rw [secp256k1InPlaceDivision_measurementCount,secp256k1EEAForwardWrapper_measurementCount,
+    secp256k1InPlaceDivision.measurementCount=14707307 := by
+  rw [secp256k1InPlaceDivision_measurementCount,secp256k1MeasuredEEAForwardWrapper_measurementCount,
     fig15MultiplyToWork_resources.2,reverse_bank_measurements,
     fig15MultiplyToData_resources.2,fig15MultiplyToDataInverse_resources.2]
 /-- Worst-branch measurement total of the complete multiplication circuit. -/
 theorem secp256k1InPlaceMultiplication_measurements :
-    secp256k1InPlaceMultiplication.measurementCount=11343835 := by
+    secp256k1InPlaceMultiplication.measurementCount=14707307 := by
   rw [secp256k1InPlaceMultiplication_measurementCount,fig15MultiplyToWork_resources.2,
     forward_bank_measurements,fig15MultiplyToData_resources.2,
     fig15MultiplyToDataInverse_resources.2,reverse_bank_measurements]
 /-- Worst-branch T total on the same complete division circuit as the coherent contract. -/
-theorem secp256k1InPlaceDivision_T : secp256k1InPlaceDivision.tCount=269605707 := by
-  rw [secp256k1InPlaceDivision_tCount,secp256k1EEAForwardWrapper_tCount,
+theorem secp256k1InPlaceDivision_T : secp256k1InPlaceDivision.tCount=246061403 := by
+  rw [secp256k1InPlaceDivision_tCount,secp256k1MeasuredEEAForwardWrapper_tCount,
     fig15MultiplyToWork_resources.1,reverse_bank_T,
     fig15MultiplyToData_resources.1,fig15MultiplyToDataInverse_resources.1]
 /-- Worst-branch T total on the same complete multiplication circuit as the coherent contract. -/
-theorem secp256k1InPlaceMultiplication_T : secp256k1InPlaceMultiplication.tCount=269605707 := by
+theorem secp256k1InPlaceMultiplication_T : secp256k1InPlaceMultiplication.tCount=246061403 := by
   rw [secp256k1InPlaceMultiplication_tCount,fig15MultiplyToWork_resources.1,forward_bank_T,
     fig15MultiplyToData_resources.1,fig15MultiplyToDataInverse_resources.1,reverse_bank_T]
 

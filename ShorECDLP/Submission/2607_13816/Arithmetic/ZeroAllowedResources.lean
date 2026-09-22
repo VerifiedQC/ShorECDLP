@@ -88,15 +88,15 @@ private theorem zero_wrapper_counts (a : AdaptiveCircuit) :
 attribute [local irreducible] secp256k1InPlaceDivision secp256k1InPlaceMultiplication
 
 theorem secp256k1ZeroAllowedDivision_resources :
-    secp256k1ZeroAllowedDivision.tCount=269612833 ∧
-    secp256k1ZeroAllowedDivision.measurementCount=11343835 ∧
+    secp256k1ZeroAllowedDivision.tCount=246068529 ∧
+    secp256k1ZeroAllowedDivision.measurementCount=14707307 ∧
     secp256k1ZeroAllowedDivision.qubitCount≤837 := by
   have hh := zero_wrapper_counts secp256k1InPlaceDivision
   rw [secp256k1InPlaceDivision_T,secp256k1InPlaceDivision_measurements] at hh
   exact ⟨hh.1,hh.2,secp256k1ZeroAllowedDivision_qubitCount⟩
 theorem secp256k1ZeroAllowedMultiplication_resources :
-    secp256k1ZeroAllowedMultiplication.tCount=269612833 ∧
-    secp256k1ZeroAllowedMultiplication.measurementCount=11343835 ∧
+    secp256k1ZeroAllowedMultiplication.tCount=246068529 ∧
+    secp256k1ZeroAllowedMultiplication.measurementCount=14707307 ∧
     secp256k1ZeroAllowedMultiplication.qubitCount≤837 := by
   have hh := zero_wrapper_counts secp256k1InPlaceMultiplication
   rw [secp256k1InPlaceMultiplication_T,secp256k1InPlaceMultiplication_measurements] at hh
@@ -105,16 +105,16 @@ theorem secp256k1ZeroAllowedMultiplication_resources :
 theorem secp256k1ZeroAllowedDivision_certificate :
     CoherentlyImplementsOn secp256k1ZeroAllowedDivision
       (Finsupp.lmapDomain ℂ ℂ zeroAllowedDivisionOutputState) Secp256k1ZeroAllowedInputValid ∧
-    secp256k1ZeroAllowedDivision.tCount=269612833 ∧
-    secp256k1ZeroAllowedDivision.measurementCount=11343835 ∧
+    secp256k1ZeroAllowedDivision.tCount=246068529 ∧
+    secp256k1ZeroAllowedDivision.measurementCount=14707307 ∧
     secp256k1ZeroAllowedDivision.qubitCount≤837 :=
   ⟨secp256k1ZeroAllowedDivision_coherent,secp256k1ZeroAllowedDivision_resources⟩
 /-- Coherence and physical resources of the same zero-extended multiplication program. -/
 theorem secp256k1ZeroAllowedMultiplication_certificate :
     CoherentlyImplementsOn secp256k1ZeroAllowedMultiplication
       (Finsupp.lmapDomain ℂ ℂ zeroAllowedMultiplicationOutputState) Secp256k1ZeroAllowedInputValid ∧
-    secp256k1ZeroAllowedMultiplication.tCount=269612833 ∧
-    secp256k1ZeroAllowedMultiplication.measurementCount=11343835 ∧
+    secp256k1ZeroAllowedMultiplication.tCount=246068529 ∧
+    secp256k1ZeroAllowedMultiplication.measurementCount=14707307 ∧
     secp256k1ZeroAllowedMultiplication.qubitCount≤837 :=
   ⟨secp256k1ZeroAllowedMultiplication_coherent,secp256k1ZeroAllowedMultiplication_resources⟩
 end ShorECDLP.Paper2607_13816

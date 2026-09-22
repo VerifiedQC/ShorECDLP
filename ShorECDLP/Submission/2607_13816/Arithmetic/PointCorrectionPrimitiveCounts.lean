@@ -106,11 +106,11 @@ theorem pointCorrectionCircuit_primitive_bounds {x₂ y₂ : ShorECDLP.Fp}
   pointWordProgram_primitive_bounds _
 
 private theorem totalPoint_primitive_sum (a b : PrimitiveResources) (n : Nat)
-    (ha : a.x≤100961378 ∧ a.h≤50639660 ∧ a.cnot≤156187745 ∧ a.toffoli≤79278324 ∧ a.phase=0 ∧ a.measurements≤23217835)
+    (ha : a.x≤100961378 ∧ a.h≤64093548 ∧ a.cnot≤162914689 ∧ a.toffoli≤72551380 ∧ a.phase=0 ∧ a.measurements≤29944779)
     (hb : b.x≤3076*n ∧ b.h=0 ∧ b.cnot=0 ∧ b.toffoli≤3061*n ∧ b.phase=0 ∧ b.measurements=0) :
     let v := a.add b
-    v.x≤100961378+3076*n ∧ v.h≤50639660 ∧ v.cnot≤156187745 ∧
-      v.toffoli≤79278324+3061*n ∧ v.phase=0 ∧ v.measurements≤23217835 := by
+    v.x≤100961378+3076*n ∧ v.h≤64093548 ∧ v.cnot≤162914689 ∧
+      v.toffoli≤72551380+3061*n ∧ v.phase=0 ∧ v.measurements≤29944779 := by
   dsimp only [PrimitiveResources.add]
   exact ⟨by omega,by omega,by omega,by omega,by omega,by omega⟩
 attribute [local irreducible] primitiveResources fig14CoordinateProgram pointCorrectionCircuit
@@ -119,8 +119,8 @@ theorem totalPointProgram_primitive_bounds {x₂ y₂ : ShorECDLP.Fp}
     (hC : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular x₂ y₂) :
     let n := (pointCorrectionWordEdges hC).length
     let v := primitiveResources (totalPointProgram hC)
-    v.x≤100961378+3076*n ∧ v.h≤50639660 ∧ v.cnot≤156187745 ∧
-      v.toffoli≤79278324+3061*n ∧ v.phase=0 ∧ v.measurements≤23217835 := by
+    v.x≤100961378+3076*n ∧ v.h≤64093548 ∧ v.cnot≤162914689 ∧
+      v.toffoli≤72551380+3061*n ∧ v.phase=0 ∧ v.measurements≤29944779 := by
   rw [totalPointProgram,primitiveResources_seq]
   exact totalPoint_primitive_sum _ _ _ (fig14CoordinateProgram_primitive_bounds _ _)
     (pointCorrectionCircuit_primitive_bounds hC)

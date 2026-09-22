@@ -44,20 +44,20 @@ theorem fig14SquareSubtract_primitive_bounds :
 private theorem pointCoordinate_primitive_sum (a : PrimitiveResources)
     (ha : a.x≤18924 ∧ a.h≤5112 ∧ a.cnot≤19167 ∧ a.toffoli≤3829 ∧ a.phase=0 ∧ a.measurements≤1278) (b : PrimitiveResources)
     (hb : b.x≤7419 ∧ b.h≤5112 ∧ b.cnot≤19169 ∧ b.toffoli≤3829 ∧ b.phase=0 ∧ b.measurements≤1278) (c : PrimitiveResources)
-    (hc : c.x≤47568459 ∧ c.h≤24259500 ∧ c.cnot≤73396360 ∧ c.toffoli≤38516119 ∧ c.phase=0 ∧ c.measurements≤11343835) (d : PrimitiveResources)
+    (hc : c.x≤47568459 ∧ c.h≤30986444 ∧ c.cnot≤76759832 ∧ c.toffoli≤35152647 ∧ c.phase=0 ∧ c.measurements≤14707307) (d : PrimitiveResources)
     (hd : d.x≤5761287 ∧ d.h≤2091012 ∧ d.cnot≤9283600 ∧ d.toffoli≤2223879 ∧ d.phase=0 ∧ d.measurements≤522753) (e : PrimitiveResources)
     (he : e.x≤7419 ∧ e.h≤5112 ∧ e.cnot≤19169 ∧ e.toffoli≤3829 ∧ e.phase=0 ∧ e.measurements≤1278) (f : PrimitiveResources)
-    (hf : f.x≤47568459 ∧ f.h≤24259500 ∧ f.cnot≤73396360 ∧ f.toffoli≤38516119 ∧ f.phase=0 ∧ f.measurements≤11343835) (g : PrimitiveResources)
+    (hf : f.x≤47568459 ∧ f.h≤30986444 ∧ f.cnot≤76759832 ∧ f.toffoli≤35152647 ∧ f.phase=0 ∧ f.measurements≤14707307) (g : PrimitiveResources)
     (hg : g.x≤3068 ∧ g.h≤4088 ∧ g.cnot≤15584 ∧ g.toffoli≤3062 ∧ g.phase=0 ∧ g.measurements≤1022) (h : PrimitiveResources)
     (hh : h.x≤18924 ∧ h.h≤5112 ∧ h.cnot≤19167 ∧ h.toffoli≤3829 ∧ h.phase=0 ∧ h.measurements≤1278) :
     let v := ((((((((a.add b).add c).add d).add e).add f).add g).add h).add b)
-    v.x≤100961378 ∧ v.h≤50639660 ∧ v.cnot≤156187745 ∧ v.toffoli≤79278324 ∧ v.phase=0 ∧ v.measurements≤23217835 := by
+    v.x≤100961378 ∧ v.h≤64093548 ∧ v.cnot≤162914689 ∧ v.toffoli≤72551380 ∧ v.phase=0 ∧ v.measurements≤29944779 := by
   dsimp only [PrimitiveResources.add]
   exact ⟨by omega,by omega,by omega,by omega,by omega,by omega⟩
 /-- All nine literal coordinate stages contribute to this common bound. -/
 theorem fig14CoordinateProgram_primitive_bounds (x y : Nat) :
     let v := primitiveResources (fig14CoordinateProgram x y)
-    v.x≤100961378 ∧ v.h≤50639660 ∧ v.cnot≤156187745 ∧ v.toffoli≤79278324 ∧ v.phase=0 ∧ v.measurements≤23217835 := by
+    v.x≤100961378 ∧ v.h≤64093548 ∧ v.cnot≤162914689 ∧ v.toffoli≤72551380 ∧ v.phase=0 ∧ v.measurements≤29944779 := by
   rw [fig14CoordinateProgram]
   simp only [primitiveResources_seq]
   exact pointCoordinate_primitive_sum
@@ -132,7 +132,7 @@ namespace ShorECDLP.Paper2607_13816
 def pointCoordinatePrimitives (x y : Nat) : PrimitiveResources :=
   let a := pointConstantPrimitives false ((ShorECDLP.p-x)%ShorECDLP.p)
   let b := pointConstantPrimitives true ((ShorECDLP.p-y)%ShorECDLP.p)
-  let field : PrimitiveResources := ⟨41769233,24259500,67286144,38516119,0,11343835⟩
+  let field : PrimitiveResources := ⟨41769233,30986444,70649616,35152647,0,14707307⟩
   ((((((((a.add b).add field).add ⟨1896393,2091012,5630143,2223879,0,522753⟩).add
     (pointConstantPrimitives true ((3*x)%ShorECDLP.p))).add field).add
     ⟨3068,4088,12983,3062,0,1022⟩).add (pointConstantPrimitives false (x%ShorECDLP.p))).add b)

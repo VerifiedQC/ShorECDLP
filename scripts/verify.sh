@@ -21,6 +21,69 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedScheduleInverse_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedSchedule_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStepInverse_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStep_balance
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_balance
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_balance
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedScheduleInverseSource256_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedScheduleSource256_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStepInverseSource256_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStepSource256_erase
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardSource_erase
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapperSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapperSource_erase
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapperSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapperSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHForward_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHInverse_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIterationInverse_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIteration_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredEndLower_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredEndUpper_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredHighestPositionWrite_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLrpUnary_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLtUnary_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerForwardLeaf_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerReverseLeaf_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerZeroMap_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredRangeLeaf_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredRangeScan_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredRightLengthWrite_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperForwardLeaf_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperReverseLeaf_balance
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperZeroMap_balance
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardInDataBank_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAInDataBank_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseInDataBank_coherent_localImage
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_coherent_localImage
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHForwardSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHForwardSource_events
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHInverseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHInverseSource_events
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIterationInverseSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIterationSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredEndLowerSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredEndUpperSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredHighestPositionWriteSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLrpUnarySource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLtUnarySource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerForwardLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerReverseLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerZeroMapSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredRangeLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredRangeScanSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredRightLengthWriteSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperForwardLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperReverseLeafSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperZeroMapSource_erase
+#print axioms ShorECDLP.Paper2607_13816.measuredZeroCellSource_erase
 #print axioms ShorECDLP.Paper2607_13816.measuredAndErase_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.measuredZeroCell_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.measuredUpperForwardLeaf_wires_subset
@@ -2146,8 +2209,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse_wires_subset
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBank_wires_subset
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBank_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardInDataBank_wires_subset
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseInDataBank_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceMultiplication_wires_subset
 #print axioms ShorECDLP.Paper2607_13816.secp256k1InPlaceDivision_qubitCount
@@ -2435,8 +2498,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardWrapper_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReversePostprocessing_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseWrapper_primitive_exact
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBank_primitive_exact
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBank_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardInDataBank_primitive_exact
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseInDataBank_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData_primitive_exact
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse_primitive_exact
@@ -2781,8 +2844,8 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.primitiveResources_relabel
 #print axioms ShorECDLP.Paper2607_13816.registerZCorrection_primitive
 #print axioms ShorECDLP.Paper2607_13816.measureResetThen_primitive_bounds
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBank_primitive_bounds
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBank_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardInDataBank_primitive_bounds
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseInDataBank_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWork_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToData_primitive_bounds
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataInverse_primitive_bounds
@@ -2874,10 +2937,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.relabel
 #print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.erase_relabel
 #print axioms ShorECDLP.Paper2607_13816.CorrectionProgram.events_relabel
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBankSource
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAForwardInDataBankSource_certificate
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBankSource
-#print axioms ShorECDLP.Paper2607_13816.secp256k1EEAReverseInDataBankSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardInDataBankSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardInDataBankSource_certificate
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseInDataBankSource
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseInDataBankSource_certificate
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWorkSource
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToWorkSource_certificate
 #print axioms ShorECDLP.Paper2607_13816.fig15MultiplyToDataSource
@@ -3635,8 +3698,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3611 ]]; then
-  printf 'expected 3611 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3674 ]]; then
+  printf 'expected 3674 #print axioms results\n' >&2
   exit 1
 fi
 
