@@ -1,3 +1,4 @@
+import ShorECDLP.Framework.Quantum.AdaptiveComposition
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientSupport
 import ShorECDLP.Submission.«2607_13816».EEA.EndIterationArithmetic
 import ShorECDLP.Submission.«2607_13816».EEA.CoefficientArithmetic
@@ -7633,8 +7634,9 @@ private theorem blockHForward_HPFree
     HPFree (blockHForward registers n T) := by
   by_cases hstep : T % 4 = 0 <;> simp [blockHForward, hstep]
 
+/-- The explicit inverse H block contains only classical reversible gates. -/
 @[simp]
-private theorem blockHInverse_HPFree
+theorem blockHInverse_HPFree
     (registers : IndexedStepRegisters) (n T : Nat) :
     HPFree (blockHInverse registers n T) := by
   by_cases hstep : T % 4 = 0 <;> simp [blockHInverse, hstep]
@@ -14547,5 +14549,26 @@ theorem blockHIter_ready (r : IndexedStepRegisters) (n T : Nat)
   change xorWireState r.control r.iter s q = false
   rw [xorWireState_preserves r.control r.iter s hne]
   exact hs q hq
+
+/-- The literal A--G prefix restores shared scratch on the full existing step contract. -/
+theorem indexedStepBeforeEnd_ready (r : IndexedStepRegisters) (n T : Nat)
+    (h : IndexedStepLayout r n T) (s : BasisState)
+    (hr : IndexedStepReady r s) (he : IndexedStepEpochEncoded r s) :
+    IndexedStepReady r (run (indexedStepShiftPrefix r n T ++ blockGForward r) s) := by
+  rw [Classical.run_append]
+  exact (blockGForward_correct r n T _ h (active_shift_prefix r n T s h hr he).2).2
+
+/-- Actual G-through-A adaptive tail of the explicit inverse step. -/
+def indexedStepInverseTailAdaptive (registers : IndexedStepRegisters) (n T : Nat) :
+    Quantum.AdaptiveCircuit :=
+  (((((((((((Quantum.AdaptiveCircuit.done).seq (phaseUpdateEpochInverseAdaptive registers.phaseUpdate registers.shiftEpoch)).seq (adaptiveUnitary (inverseCoefficientEntry registers n))).seq (coefficientPrefixInverseAdaptive (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .add true .work2)).seq (adaptiveUnitary (inverseCoefficientMiddle registers))).seq (coefficientPrefixInverseAdaptive (registers.coefficient (certifiedActiveWindows n T).coefficient) (certifiedActiveWindows n T).coefficient.start (certifiedActiveWindows n T).coefficient.stop .sub false .work2)).seq (adaptiveUnitary (inverseRemainderEntry registers n (certifiedActiveWindows n T).quotientSwap))).seq (intervalAddSubInverse (registers.remainder (certifiedActiveWindows n T).remainder) n (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .add false .work1)).seq (adaptiveUnitary (inverseRemainderMiddle registers))).seq (intervalAddSubInverse (registers.remainder (certifiedActiveWindows n T).remainder) n (certifiedActiveWindows n T).remainder.start (certifiedActiveWindows n T).remainder.stop .sub true .work1)).seq (adaptiveUnitary (inverseStepFinish registers)))
+
+/-- Factor the original inverse into its initial strict H and unchanged measured tail. -/
+theorem indexedStepInverseAdaptive_factor (r : IndexedStepRegisters) (n T : Nat) :
+    indexedStepInverseAdaptive r n T =
+      (Quantum.AdaptiveCircuit.unitary (blockHInverse r n T) .done).seq
+        (indexedStepInverseTailAdaptive r n T) := by
+  simp only [indexedStepInverseAdaptive,indexedStepInverseTailAdaptive,
+    Quantum.circuit_seq_assoc,adaptiveUnitary,Quantum.AdaptiveCircuit.seq]
 
 end ShorECDLP.Paper2607_13816
