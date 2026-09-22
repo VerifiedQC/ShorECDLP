@@ -21,6 +21,34 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.measuredHighestPositionWrite_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredRightLengthWrite_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredHighestPositionWrite_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredHighestPositionWrite_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredRightLengthWrite_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredRightLengthWrite_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredZeroPrefix_computed
+#print axioms ShorECDLP.Paper2607_13816.measuredZeroCell_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredZeroCell_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredZeroCell_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.measuredZeroCell_tCount
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperForwardLeaf_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperReverseLeaf_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerForwardLeaf_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerReverseLeaf_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredRangeScan_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperZeroMap_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerZeroMap_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperZeroMap_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerZeroMap_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredZeroCell_primitive
+#print axioms ShorECDLP.Paper2607_13816.measuredRangeScan_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperZeroMap_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerZeroMap_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredUpperZeroMap_toffoli_closed
+#print axioms ShorECDLP.Paper2607_13816.measuredLowerZeroMap_toffoli_closed
+#print axioms ShorECDLP.Paper2607_13816.upperZeroForwardScan_scratch
+#print axioms ShorECDLP.Paper2607_13816.lowerZeroForwardScan_scratch
 #print axioms ShorECDLP.Paper2607_13816.fourierHistoryRotations_relabel
 #print axioms ShorECDLP.Paper2607_13816.semiclassicalFourier_relabel
 #print axioms ShorECDLP.Paper2607_13816.fourierContinue_relabel
@@ -3495,8 +3523,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3471 ]]; then
-  printf 'expected 3471 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3499 ]]; then
+  printf 'expected 3499 #print axioms results\n' >&2
   exit 1
 fi
 

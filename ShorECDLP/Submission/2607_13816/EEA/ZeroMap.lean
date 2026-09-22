@@ -5946,6 +5946,54 @@ theorem lowerZeroMapUnitary_clean
         rangeAccumulator temporary path bitAt dirtyAt hlayout)]
       exact hfirstTemporary
 
+/-- The first upper scan restores the decoder path and recurrence temporary, ready for
+its measured reverse pass. No condition is imposed on the borrowed data. -/
+theorem upperZeroForwardScan_scratch
+    (k K : Nat) (hkK : k ≤ K) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary : Wire) (path : List Wire)
+    (bitAt dirtyAt : Nat → Wire)
+    (hlayout : ZeroMapLayout k K tree control rangeAccumulator temporary path bitAt dirtyAt)
+    (state : BasisState) (hp : Clean path state) (ht : state temporary = false) :
+    let output := Classical.run
+      (rangeScanUnitary true .inc tree control rangeAccumulator path
+        (upperZeroForwardLeaf k K control temporary bitAt dirtyAt)) state
+    Clean path output ∧ output temporary = false := by
+  constructor
+  · intro w hw
+    rw [run_upperZeroForwardScan_preserves_protected k K hkK tree control rangeAccumulator
+      temporary path bitAt dirtyAt state hlayout hp ht w
+      (by simp [zeroMapProtectedWires, hw])]
+    exact hp w hw
+  · rw [run_upperZeroForwardScan_preserves k K hkK tree control rangeAccumulator temporary
+      path bitAt dirtyAt state hlayout hp ht temporary (Ne.symm hlayout.range_ne_temporary)
+      (fun label s => upperZeroForwardLeafState_preserves_temporary k K hkK tree control
+        rangeAccumulator temporary path bitAt dirtyAt hlayout label s)]
+    exact ht
+
+/-- The first lower scan restores the decoder path and recurrence temporary, ready for
+its measured reverse pass. No condition is imposed on the borrowed data. -/
+theorem lowerZeroForwardScan_scratch
+    (k K : Nat) (hkK : k ≤ K) (tree : UnaryActionTree)
+    (control rangeAccumulator temporary : Wire) (path : List Wire)
+    (bitAt dirtyAt : Nat → Wire)
+    (hlayout : ZeroMapLayout k K tree control rangeAccumulator temporary path bitAt dirtyAt)
+    (state : BasisState) (hp : Clean path state) (ht : state temporary = false) :
+    let output := Classical.run
+      (rangeScanUnitary true .dec tree control rangeAccumulator path
+        (lowerZeroForwardLeaf k K control temporary bitAt dirtyAt)) state
+    Clean path output ∧ output temporary = false := by
+  constructor
+  · intro w hw
+    rw [run_lowerZeroForwardScan_preserves_protected k K hkK tree control rangeAccumulator
+      temporary path bitAt dirtyAt state hlayout hp ht w
+      (by simp [zeroMapProtectedWires, hw])]
+    exact hp w hw
+  · rw [run_lowerZeroForwardScan_preserves k K hkK tree control rangeAccumulator temporary
+      path bitAt dirtyAt state hlayout hp ht temporary (Ne.symm hlayout.range_ne_temporary)
+      (fun label s => lowerZeroForwardLeafState_preserves_temporary k K hkK tree control
+        rangeAccumulator temporary path bitAt dirtyAt hlayout label s)]
+    exact ht
+
 end
 
 end ShorECDLP.Paper2607_13816

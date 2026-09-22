@@ -3441,3 +3441,23 @@ cross terms or condition/renormalize the good input component. These are
 conservative event bounds, not a tight additive statistical-distance estimate.
 The specific final Fourier/decoder event and its success/retry contract are
 not instantiated here; previous repaired-program success claims remain separate.
+
+
+### Measured zero-map length-refresh subcircuits
+
+`EEA/MeasuredZeroMap.lean` implements both complete source zero-map scans with
+measurement-assisted leaf AND erasure and unary decoder cleanup. The coherent
+refinement preserves arbitrary borrowed data and both external-control values,
+assuming only clean decoder path and recurrence temporary. The classical first
+scan restores those scratch wires before the reverse scan. Every adaptive branch
+is well formed. `EEA/MeasuredZeroMapCounts.lean` derives the actual Toffoli count
+`6*M-4` for a source tree covering M consecutive positions, replacing the strict
+map's `10*M-7`. This is a proved subcircuit saving, not a new whole-EEA count.
+
+`EEA/MeasuredLengthWriters.lean` composes the seeds, borrowed CNOT writes and
+two measured maps into each actual highest-position/right-length writer. It proves
+coherent refinement, well-formedness and `12*M-8` Toffolis. The shared-scratch
+length-update wrappers, full EEA schedule and raw sampling program still use their
+previous strict writers. Their resource/success claims remain unchanged until
+the new writers are composed through those actual callers. Full register streaming
+and the 835-wire target also remain open.
