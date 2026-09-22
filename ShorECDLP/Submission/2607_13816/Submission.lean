@@ -8,8 +8,8 @@ raw circuit, without exceptional-input correction tables.
 
                          One trial          56 trials, with reset
 Logical wires            ≤ 1,303            ≤ 1,303 (reused)
-Toffoli count            2,229,177,063      124,833,915,528
-T-model upper bound      15,604,293,609     873,840,442,104
+Toffoli count            2,040,822,631      114,286,067,336
+T-model upper bound      14,285,812,585     800,005,504,760
 Success probability      ≥ 8%              ≥ 99%
 
 Success assumes a nonzero public point Q = d • G of order dividing the group
@@ -20,8 +20,8 @@ used support after each trial. It has 54,168 phase-rotation units per trial.
 `tCount` charges 7 per CCX and 1 per phase rotation. The bounds are not synthesized
 Clifford+T counts: rotation approximation, synthesis and error remain unspecified.
 The public-point-checked decoder is a noncomputable specification, not an efficient
-executable classical implementation. The measured inversion optimization is not
-yet connected to this whole program. The 835-wire target remains open.
+executable classical implementation. The actual multiply/divide calls include
+the measured inversion optimization. The 835-wire target remains open.
 -/
 namespace ShorECDLP.Paper2607_13816.Submission
 open Quantum ShorECDLP.Secp256k1
