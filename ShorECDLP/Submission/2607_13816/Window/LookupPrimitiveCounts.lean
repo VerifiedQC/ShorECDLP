@@ -125,7 +125,7 @@ theorem signedPointLookupY_primitive (table : Nat → Nat) :
 def signedCoordinatePrimitives (x y : Nat → Nat) : PrimitiveResources :=
   let a := pointLookupPrimitives (fun k => (ShorECDLP.p-x k)%ShorECDLP.p)
   let b := signedPointLookupPrimitives (fun k => (ShorECDLP.p-y k)%ShorECDLP.p)
-  let field : PrimitiveResources := ⟨41769233,24259500,67286144,38516119,0,11343835⟩
+  let field : PrimitiveResources := ⟨41769233,30986444,70649616,35152647,0,14707307⟩
   ((((((((a.add b).add field).add ⟨1896393,2091012,5630143,2223879,0,522753⟩).add
     (pointLookupPrimitives (fun k => (3*x k)%ShorECDLP.p))).add field).add
     ⟨3068,4088,12983,3062,0,1022⟩).add (pointLookupPrimitives (fun k => x k%ShorECDLP.p))).add b)

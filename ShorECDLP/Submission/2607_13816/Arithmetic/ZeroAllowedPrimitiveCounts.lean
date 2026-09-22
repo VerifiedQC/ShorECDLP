@@ -27,26 +27,26 @@ theorem fig15ZeroRestore_primitive : primitiveResources (.unitary fig15ZeroResto
   rw [fig15ZeroRestore,nonzeroInputRestore,primitiveResources_unitary_append,zeroPrepareEq_primitive]
   rfl
 private theorem zeroAllowed_primitive_sum (v : PrimitiveResources)
-    (h : v.x≤47567435 ∧ v.h≤24259500 ∧ v.cnot≤73396358 ∧ v.toffoli≤38515101 ∧
-      v.phase=0 ∧ v.measurements≤11343835) :
+    (h : v.x≤47567435 ∧ v.h≤30986444 ∧ v.cnot≤76759830 ∧ v.toffoli≤35151629 ∧
+      v.phase=0 ∧ v.measurements≤14707307) :
     let w := ((⟨512,0,1,509,0,0⟩ : PrimitiveResources).add v).add ⟨512,0,1,509,0,0⟩
-    w.x≤47568459 ∧ w.h≤24259500 ∧ w.cnot≤73396360 ∧ w.toffoli≤38516119 ∧
-      w.phase=0 ∧ w.measurements≤11343835 := by
+    w.x≤47568459 ∧ w.h≤30986444 ∧ w.cnot≤76759832 ∧ w.toffoli≤35152647 ∧
+      w.phase=0 ∧ w.measurements≤14707307 := by
   dsimp only [PrimitiveResources.add]
   exact ⟨by omega,by omega,by omega,by omega,by omega,by omega⟩
 attribute [local irreducible] primitiveResources secp256k1InPlaceDivision secp256k1InPlaceMultiplication
 /-- The complete zero-allowed division includes both equality-predicate masks. -/
 theorem secp256k1ZeroAllowedDivision_primitive_bounds :
     let v := primitiveResources secp256k1ZeroAllowedDivision
-    v.x≤47568459 ∧ v.h≤24259500 ∧ v.cnot≤73396360 ∧ v.toffoli≤38516119 ∧
-      v.phase=0 ∧ v.measurements≤11343835 := by
+    v.x≤47568459 ∧ v.h≤30986444 ∧ v.cnot≤76759832 ∧ v.toffoli≤35152647 ∧
+      v.phase=0 ∧ v.measurements≤14707307 := by
   rw [secp256k1ZeroAllowedDivision]
   simp only [primitiveResources_seq,fig15ZeroPrepare_primitive,fig15ZeroRestore_primitive]
   exact zeroAllowed_primitive_sum _ secp256k1InPlaceDivision_primitive_bounds
 theorem secp256k1ZeroAllowedMultiplication_primitive_bounds :
     let v := primitiveResources secp256k1ZeroAllowedMultiplication
-    v.x≤47568459 ∧ v.h≤24259500 ∧ v.cnot≤73396360 ∧ v.toffoli≤38516119 ∧
-      v.phase=0 ∧ v.measurements≤11343835 := by
+    v.x≤47568459 ∧ v.h≤30986444 ∧ v.cnot≤76759832 ∧ v.toffoli≤35152647 ∧
+      v.phase=0 ∧ v.measurements≤14707307 := by
   rw [secp256k1ZeroAllowedMultiplication]
   simp only [primitiveResources_seq,fig15ZeroPrepare_primitive,fig15ZeroRestore_primitive]
   exact zeroAllowed_primitive_sum _ secp256k1InPlaceMultiplication_primitive_bounds
@@ -56,7 +56,7 @@ namespace ShorECDLP.Paper2607_13816
 /-- The exact zero-allowed division vector includes both equality masks. -/
 theorem secp256k1ZeroAllowedDivision_primitive_exact :
     primitiveResources secp256k1ZeroAllowedDivision =
-      (⟨41769233,24259500,67286144,38516119,0,11343835⟩ : PrimitiveResources) := by
+      (⟨41769233,30986444,70649616,35152647,0,14707307⟩ : PrimitiveResources) := by
   rw [secp256k1ZeroAllowedDivision]
   simp only [primitiveResources_seq,fig15ZeroPrepare_primitive,fig15ZeroRestore_primitive,
     secp256k1InPlaceDivision_primitive_exact]
@@ -64,7 +64,7 @@ theorem secp256k1ZeroAllowedDivision_primitive_exact :
 /-- The exact zero-allowed multiplication vector includes both equality masks. -/
 theorem secp256k1ZeroAllowedMultiplication_primitive_exact :
     primitiveResources secp256k1ZeroAllowedMultiplication =
-      (⟨41769233,24259500,67286144,38516119,0,11343835⟩ : PrimitiveResources) := by
+      (⟨41769233,30986444,70649616,35152647,0,14707307⟩ : PrimitiveResources) := by
   rw [secp256k1ZeroAllowedMultiplication]
   simp only [primitiveResources_seq,fig15ZeroPrepare_primitive,fig15ZeroRestore_primitive,
     secp256k1InPlaceMultiplication_primitive_exact]

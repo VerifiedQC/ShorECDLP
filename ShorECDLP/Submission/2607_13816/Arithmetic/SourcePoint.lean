@@ -84,7 +84,7 @@ open Quantum
 def fig14CoordinateSource (x₂ y₂ : Nat) : CorrectionProgram :=
   (((((((((fig14ConstantXSource ((ShorECDLP.p-x₂)%ShorECDLP.p)).seq (fig14ControlledConstantYSource ((ShorECDLP.p-y₂)%ShorECDLP.p))).seq (secp256k1ZeroAllowedDivisionSource)).seq (fig14SquareSubtractSource)).seq (fig14ControlledConstantXSource ((3*x₂)%ShorECDLP.p))).seq (secp256k1ZeroAllowedMultiplicationSource)).seq (fig14NegateSource)).seq (fig14ConstantXSource (x₂%ShorECDLP.p))).seq (fig14ControlledConstantYSource ((ShorECDLP.p-y₂)%ShorECDLP.p)))
 def pointCoordinateSourceEvents (x y : Nat) : Nat :=
-  25307050+pointConstantSourceEvents ((ShorECDLP.p-x)%ShorECDLP.p)+
+  32033994+pointConstantSourceEvents ((ShorECDLP.p-x)%ShorECDLP.p)+
     2*pointConstantSourceEvents ((ShorECDLP.p-y)%ShorECDLP.p)+
     pointConstantSourceEvents ((3*x)%ShorECDLP.p)+pointConstantSourceEvents (x%ShorECDLP.p)
 theorem fig14CoordinateSource_certificate (x y : Nat) :
@@ -102,7 +102,7 @@ theorem fig14CoordinateSource_certificate (x y : Nat) :
       (fig14ControlledConstantXSource_certificate _).2,secp256k1ZeroAllowedMultiplicationSource_certificate.2,
       fig14NegateSource_certificate.2,pointCoordinateSourceEvents]
     omega
-theorem pointCoordinateSourceEvents_le (x y : Nat) : pointCoordinateSourceEvents x y≤25319830 := by
+theorem pointCoordinateSourceEvents_le (x y : Nat) : pointCoordinateSourceEvents x y≤32046774 := by
   have h1 := pointConstantSourceEvents_le ((ShorECDLP.p-x)%ShorECDLP.p)
   have h2 := pointConstantSourceEvents_le ((ShorECDLP.p-y)%ShorECDLP.p)
   have h3 := pointConstantSourceEvents_le ((3*x)%ShorECDLP.p)
@@ -118,7 +118,7 @@ theorem totalPointSource_certificate {x y : ShorECDLP.Fp}
     (hC : ShorECDLP.Secp256k1.curve.toAffine.Nonsingular x y) :
     (totalPointSource hC).erase=totalPointProgram hC ∧
       (totalPointSource hC).events=pointCoordinateSourceEvents x.val y.val ∧
-      (totalPointSource hC).events≤25319830 := by
+      (totalPointSource hC).events≤32046774 := by
   have he : (totalPointSource hC).events=pointCoordinateSourceEvents x.val y.val := by
     simp [totalPointSource,CorrectionProgram.events_seq,(fig14CoordinateSource_certificate _ _).2,
       CorrectionProgram.events,correctionBlockEvents,CorrectionFragment.events]
@@ -137,7 +137,7 @@ def pointAddSourceEvents : ShorECDLP.Secp256k1.Point → Nat
 theorem pointAddSource_certificate (C : ShorECDLP.Secp256k1.Point) :
     (pointAddSource C).erase = pointAddProgram C ∧
       (pointAddSource C).events = pointAddSourceEvents C ∧
-      (pointAddSource C).events ≤ 25319830 := by
+      (pointAddSource C).events ≤ 32046774 := by
   cases C with
   | zero => exact ⟨rfl, rfl, Nat.zero_le _⟩
   | some hC => exact totalPointSource_certificate hC

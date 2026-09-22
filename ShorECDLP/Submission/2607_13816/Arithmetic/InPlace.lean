@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».EEA.MeasuredWorkspace
 import ShorECDLP.Framework.Quantum.AdaptiveMeasurement
 import ShorECDLP.Submission.«2607_13816».Arithmetic.HornerCoherent
 import ShorECDLP.Submission.«2607_13816».EEA.WrapperLocality
@@ -38,21 +39,21 @@ def fig15SwapOutput : Circuit :=
 /-- Source division continuation: restore X, recompute Y for phase correction,
 uncompute it, and swap the quotient into Y. -/
 def fig15DivisionAfterReset (outcomes : List Bool) : AdaptiveCircuit :=
-  (((secp256k1EEAReverseInDataBank.seq fig15MultiplyToData).seq
+  (((secp256k1MeasuredEEAReverseInDataBank.seq fig15MultiplyToData).seq
     (.unitary (registerZCorrection (List.range' 580 256) outcomes) .done)).seq
       fig15MultiplyToDataInverse).seq (.unitary fig15SwapOutput .done)
 
 /-- Source multiplication continuation: invert X, recompute and phase-correct Y,
 uncompute Y, restore X, and swap the product into Y. -/
 def fig15MultiplicationAfterReset (outcomes : List Bool) : AdaptiveCircuit :=
-  ((((secp256k1EEAForwardInDataBank.seq fig15MultiplyToData).seq
+  ((((secp256k1MeasuredEEAForwardInDataBank.seq fig15MultiplyToData).seq
     (.unitary (registerZCorrection (List.range' 580 256) outcomes) .done)).seq
-      fig15MultiplyToDataInverse).seq secp256k1EEAReverseInDataBank).seq
+      fig15MultiplyToDataInverse).seq secp256k1MeasuredEEAReverseInDataBank).seq
         (.unitary fig15SwapOutput .done)
 
 /-- Literal complete Figure 15 division schedule at secp256k1 width. -/
 def secp256k1InPlaceDivision : AdaptiveCircuit :=
-  (secp256k1EEAForwardWrapper.seq fig15MultiplyToWork).seq
+  (secp256k1MeasuredEEAForwardWrapper.seq fig15MultiplyToWork).seq
     (measureResetThen (List.range' 580 256) fig15DivisionAfterReset)
 
 /-- Literal complete Figure 15 multiplication schedule at secp256k1 width. -/
@@ -113,28 +114,28 @@ private theorem figure15_swap_wellFormed : CircuitWellFormed fig15SwapOutput := 
   rcases hg with rfl | rfl | rfl <;> norm_num [Gate.WellFormed,Nat.add_right_cancel_iff]
 
 attribute [local irreducible] fig15MultiplyToWork fig15MultiplyToData fig15MultiplyToDataInverse
-  secp256k1EEAForwardWrapper secp256k1EEAForwardInDataBank secp256k1EEAReverseInDataBank
+  secp256k1MeasuredEEAForwardWrapper secp256k1MeasuredEEAForwardInDataBank secp256k1MeasuredEEAReverseInDataBank
 
 private theorem figure15_unitary_wellFormed (c : Circuit) (h : CircuitWellFormed c) :
     (AdaptiveCircuit.unitary c .done).WellFormed := ⟨h,trivial⟩
 
 private theorem division_continuation_wellFormed (outcomes : List Bool) :
     (fig15DivisionAfterReset outcomes).WellFormed := by
-  exact (((secp256k1EEAInDataBank_wellFormed.2.seq figure15_multipliers_wellFormed.2.1).seq
+  exact (((secp256k1MeasuredEEAInDataBank_wellFormed.2.seq figure15_multipliers_wellFormed.2.1).seq
     (figure15_unitary_wellFormed _ (registerZCorrection_wellFormed (List.range' 580 256) outcomes))).seq figure15_multipliers_wellFormed.2.2).seq
       (figure15_unitary_wellFormed _ figure15_swap_wellFormed)
 
 private theorem multiplication_continuation_wellFormed (outcomes : List Bool) :
     (fig15MultiplicationAfterReset outcomes).WellFormed := by
-  exact ((((secp256k1EEAInDataBank_wellFormed.1.seq figure15_multipliers_wellFormed.2.1).seq
+  exact ((((secp256k1MeasuredEEAInDataBank_wellFormed.1.seq figure15_multipliers_wellFormed.2.1).seq
     (figure15_unitary_wellFormed _ (registerZCorrection_wellFormed (List.range' 580 256) outcomes))).seq figure15_multipliers_wellFormed.2.2).seq
-      secp256k1EEAInDataBank_wellFormed.2).seq (figure15_unitary_wellFormed _ figure15_swap_wellFormed)
+      secp256k1MeasuredEEAInDataBank_wellFormed.2).seq (figure15_unitary_wellFormed _ figure15_swap_wellFormed)
 
 /-- All gates and measurements in both complete source schedules are physically well formed. -/
 theorem secp256k1InPlace_wellFormed :
     secp256k1InPlaceDivision.WellFormed ∧ secp256k1InPlaceMultiplication.WellFormed := by
   constructor
-  · exact (secp256k1EEAForwardWrapper_wellFormed.seq figure15_multipliers_wellFormed.1).seq
+  · exact (secp256k1MeasuredEEAForwardWrapper_wellFormed.seq figure15_multipliers_wellFormed.1).seq
       (measureResetThen_wellFormed _ _ (fun outcomes _ => division_continuation_wellFormed outcomes))
   · exact figure15_multipliers_wellFormed.1.seq
       (measureResetThen_wellFormed _ _ (fun outcomes _ => multiplication_continuation_wellFormed outcomes))
@@ -285,10 +286,10 @@ attribute [local irreducible] secp256k1EEAOutputIdealState fig15WorkProductState
 
 /-- The division prefix coherently writes the quotient product while preserving the future transcript input. -/
 theorem fig15DivisionPrefix_coherent :
-    CoherentlyImplementsOn (secp256k1EEAForwardWrapper.seq fig15MultiplyToWork)
+    CoherentlyImplementsOn (secp256k1MeasuredEEAForwardWrapper.seq fig15MultiplyToWork)
       (Finsupp.lmapDomain ℂ ℂ (fun s => fig15WorkProductState (secp256k1EEAOutputIdealState s)))
       Secp256k1InPlaceInputValid := by
-  have hf := coherent_strengthen secp256k1EEAForwardWrapper_coherent
+  have hf := coherent_strengthen secp256k1MeasuredEEAForwardWrapper_coherent
     (Stronger := Secp256k1InPlaceInputValid) (fun s hs => hs.1)
   have hc := hf.seq fig15MultiplyToWork_coherent (by
     intro s hs
@@ -708,8 +709,8 @@ private theorem division_uncompute_ket (s : BasisState) (hs : Secp256k1InPlaceIn
 private theorem division_continuation_coherent (outcomes : List Bool) :
     CoherentlyImplementsOn (fig15DivisionAfterReset outcomes)
       ((Quantum.run fig15SwapOutput).comp (divisionUncomputeMap outcomes)) divisionResetValid := by
-  have hr : CoherentlyImplementsOn secp256k1EEAReverseInDataBank divisionRestoreMap divisionResetValid := by
-    apply coherent_strengthen secp256k1EEAReverseInDataBank_coherent_localImage
+  have hr : CoherentlyImplementsOn secp256k1MeasuredEEAReverseInDataBank divisionRestoreMap divisionResetValid := by
+    apply coherent_strengthen secp256k1MeasuredEEAReverseInDataBank_coherent_localImage
     rintro t ⟨s,hs,rfl⟩
     exact fig15DivisionReset_inverseReady s hs
   have hm := hr.seq fig15MultiplyToData_coherent (by
@@ -922,8 +923,8 @@ private theorem multiplication_restore_ket (s : BasisState) (hs : Secp256k1InPla
 private theorem multiplication_continuation_coherent (outcomes : List Bool) :
     CoherentlyImplementsOn (fig15MultiplicationAfterReset outcomes)
       ((Quantum.run fig15SwapOutput).comp (multiplicationRestoreMap outcomes)) multiplicationResetValid := by
-  have hf : CoherentlyImplementsOn secp256k1EEAForwardInDataBank multiplicationInvertMap multiplicationResetValid := by
-    apply coherent_strengthen secp256k1EEAForwardInDataBank_coherent
+  have hf : CoherentlyImplementsOn secp256k1MeasuredEEAForwardInDataBank multiplicationInvertMap multiplicationResetValid := by
+    apply coherent_strengthen secp256k1MeasuredEEAForwardInDataBank_coherent
     rintro t ⟨s,hs,rfl⟩
     exact multiplication_reset_input s hs
   have hm := hf.seq fig15MultiplyToData_coherent (by
@@ -938,7 +939,7 @@ private theorem multiplication_continuation_coherent (outcomes : List Bool) :
     change SupportedOn _ (multiplicationCorrectMap outcomes _)
     rw [multiplication_correct_ket s hs]
     exact supported_phase _ _ ⟨fig15MultiplicationInvertedState s,multiplication_inverted_horner s hs,rfl⟩)
-  have hr := hi.seq secp256k1EEAReverseInDataBank_coherent_localImage (by
+  have hr := hi.seq secp256k1MeasuredEEAReverseInDataBank_coherent_localImage (by
     rintro t ⟨s,hs,rfl⟩
     change SupportedOn _ (multiplicationUncomputeMap outcomes _)
     rw [multiplication_uncompute_ket s hs]

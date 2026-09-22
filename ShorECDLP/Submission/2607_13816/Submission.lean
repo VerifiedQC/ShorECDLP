@@ -8,8 +8,8 @@ raw circuit, without exceptional-input correction tables.
 
                          One trial          56 trials, with reset
 Logical wires            ≤ 1,303            ≤ 1,303 (reused)
-Toffoli count            2,229,177,063      124,833,915,528
-T-model upper bound      15,604,293,609     873,840,442,104
+Toffoli count            2,040,822,631      114,286,067,336
+T-model upper bound      14,285,812,585     800,005,504,760
 Success probability      ≥ 8%              ≥ 99%
 
 Success assumes a nonzero public point Q = d • G of order dividing the group
@@ -20,8 +20,8 @@ used support after each trial. It has 54,168 phase-rotation units per trial.
 `tCount` charges 7 per CCX and 1 per phase rotation. The bounds are not synthesized
 Clifford+T counts: rotation approximation, synthesis and error remain unspecified.
 The public-point-checked decoder is a noncomputable specification, not an efficient
-executable classical implementation. The measured inversion optimization is not
-yet connected to this whole program. The 835-wire target remains open.
+executable classical implementation. The actual multiply/divide calls include
+the measured inversion optimization. The 835-wire target remains open.
 -/
 namespace ShorECDLP.Paper2607_13816.Submission
 open Quantum ShorECDLP.Secp256k1
@@ -35,13 +35,13 @@ def algorithm (Q : Point) : AdaptiveCircuit := rawRepeatedProgram Q
 
 /-- Exact primitive counts for the same trial certified below. -/
 theorem trial_counts (Q : Point) :
-    (primitiveResources (trial Q)).toffoli = 2229177063 ∧
+    (primitiveResources (trial Q)).toffoli = 2040822631 ∧
     (primitiveResources (trial Q)).phase = 54168 ∧
-    (trial Q).measurementCount = 659347223 := preparedRawTrial_counts Q
+    (trial Q).measurementCount = 847701655 := preparedRawTrial_counts Q
 
 /-- The numeric resource bounds apply to the actual prepared trial. -/
 theorem trial_resources (Q : Point) :
-    (trial Q).qubitCount ≤ 1303 ∧ (trial Q).tCount ≤ 15604293609 := by
+    (trial Q).qubitCount ≤ 1303 ∧ (trial Q).tCount ≤ 14285812585 := by
   have ht := primitiveResources_T_le (trial Q)
   rw [(trial_counts Q).1, (trial_counts Q).2.1] at ht
   exact ⟨rawTrialResetWires_length Q, by omega⟩
@@ -60,8 +60,8 @@ theorem trial_success (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
 theorem certificate (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
     (hrQ : ShorECDLP.order • Q = 0) (d : Nat) (hd : Q = d • G) :
     (algorithm Q).qubitCount ≤ 1303 ∧
-    (algorithm Q).tCount ≤ 873840442104 ∧
-    (algorithm Q).measurementCount ≤ 36923517456 ∧
+    (algorithm Q).tCount ≤ 800005504760 ∧
+    (algorithm Q).measurementCount ≤ 47471365648 ∧
     (99 : ℝ) / 100 ≤ Instrument.bornMass ((algorithm Q).run.filter
       (fun b => (rawRepeatedCandidate Q b.history).isSome)) (ket zeroBasisState) :=
   rawRepeatedProgram_success_resources Q hG hQ hrQ d hd

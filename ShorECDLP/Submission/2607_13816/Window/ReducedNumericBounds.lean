@@ -37,7 +37,7 @@ private theorem lookup_toffoli (table : Nat → Nat) : (pointLookupPrimitives ta
   simp only [pointLookupPrimitives,lookupWordPrimitives,PrimitiveResources.add,pointLookupAddress,
     List.length_range',hn]
   norm_num
-private theorem coordinate_toffoli (x y : Nat → Nat) : (signedCoordinatePrimitives x y).toffoli=79613162 := by
+private theorem coordinate_toffoli (x y : Nat → Nat) : (signedCoordinatePrimitives x y).toffoli=72886218 := by
   simp only [signedCoordinatePrimitives,signedPointLookupPrimitives,PrimitiveResources.add,lookup_toffoli]
 private theorem prepared_toffoli (x y : Nat → ShorECDLP.Fp)
     (hc : ∀ a, ShorECDLP.Secp256k1.curve.toAffine.Nonsingular (x a) (y a)) :

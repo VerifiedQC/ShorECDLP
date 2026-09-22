@@ -8,11 +8,11 @@ private theorem seq_T (a b : AdaptiveCircuit) : (a.seq b).tCount=a.tCount+b.tCou
   simpa only [gidneyGateCount_tCount] using modularGateCount_seq tCost a b
 /-- Cost of the five classical constant stages and four fixed coordinate stages. -/
 def pointCoordinateT (x y : Nat) : Nat :=
-  554814253 + pointConstantT ((ShorECDLP.p-x)%ShorECDLP.p) +
+  507725645 + pointConstantT ((ShorECDLP.p-x)%ShorECDLP.p) +
     2*pointConstantT ((ShorECDLP.p-y)%ShorECDLP.p) +
     pointConstantT ((3*x)%ShorECDLP.p) + pointConstantT (x%ShorECDLP.p)
 def pointCoordinateMeasurements (x y : Nat) : Nat :=
-  23211445 + pointConstantMeasurements ((ShorECDLP.p-x)%ShorECDLP.p) +
+  29938389 + pointConstantMeasurements ((ShorECDLP.p-x)%ShorECDLP.p) +
     2*pointConstantMeasurements ((ShorECDLP.p-y)%ShorECDLP.p) +
     pointConstantMeasurements ((3*x)%ShorECDLP.p) + pointConstantMeasurements (x%ShorECDLP.p)
 theorem fig14CoordinateProgram_counts (x y : Nat) :
