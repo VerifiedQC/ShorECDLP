@@ -70,7 +70,7 @@ def streamScalarTrial (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (streamAxis (streamLeftCalls P Q hP hrP) List.nil
       (streamAxis (streamRightCalls Q hQ hrQ) List.nil (AdaptiveCircuit.unitary [.X 836] .done)))
 
-private theorem lookup_support (table : Nat → Point) : (physicalPointLookup table).wires ⊆ streamAllocation := by
+theorem streamPointLookup_support (table : Nat → Point) : (physicalPointLookup table).wires ⊆ streamAllocation := by
   intro w hw
   rw [physicalPointLookup] at hw
   have h := directPointLookup_support table (List.range' 855 16) (List.range' 519 16) 836 hw
@@ -96,7 +96,7 @@ theorem streamScalarTrial_support (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     · intro c hc
       simp only [streamLeftCalls,List.mem_cons,List.mem_map] at hc
       rcases hc with rfl | ⟨j,hj,rfl⟩
-      · exact lookup_support _
+      · exact streamPointLookup_support _
       · exact streamPointCall_support _ _ _ _
     · apply streamAxis_support _ List.nil _ ?_ hx
       intro c hc

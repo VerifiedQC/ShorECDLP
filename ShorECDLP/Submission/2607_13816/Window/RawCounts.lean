@@ -2,7 +2,7 @@ import ShorECDLP.Submission.«2607_13816».Window.RawResources
 namespace ShorECDLP.Paper2607_13816
 open Classical Quantum ShorECDLP.Secp256k1
 noncomputable section
-attribute [local irreducible] preparedRawTrial rawRepeatedProgram rawTrialResetWires
+attribute [local irreducible] preparedRawProgram preparedRawTrial rawRepeatedProgram rawTrialResetWires
 private theorem adder_counts : pointLookupAdderPrimitives.toffoli=2813 ∧
     pointLookupAdderPrimitives.phase=0 ∧ pointLookupAdderPrimitives.measurements=511 := by
   decide +kernel
@@ -18,6 +18,16 @@ private theorem core_counts (x y : Nat → Nat) :
   simp only [signedRawPrimitives,signedPointLookupPrimitives,PrimitiveResources.add,
     (lookup_counts _).1,(lookup_counts _).2.1,(lookup_counts _).2.2]
   decide
+/-- Counts for one actual prepared raw call, independent of its constant table and bank. -/
+theorem preparedRawProgram_counts (x y : Nat → Nat → Nat) (j : Nat) :
+    (primitiveResources (preparedRawProgram x y j)).toffoli = 72884182 ∧
+    (primitiveResources (preparedRawProgram x y j)).phase = 0 ∧
+    (preparedRawProgram x y j).measurementCount = 30272702 := by
+  change _ ∧ _ ∧ (primitiveResources (preparedRawProgram x y j)).measurements = _
+  rw [preparedRawProgram_primitive]
+  simpa only [preparedRawPrimitives, PrimitiveResources.add, Nat.zero_add, Nat.add_zero]
+    using core_counts (x j) (y j)
+
 private theorem schedule_counts (x y : Nat → Nat → Nat) (js : List Nat) :
     (rawSchedulePrimitives x y js).toffoli=js.length*72884182 ∧
     (rawSchedulePrimitives x y js).phase=0 ∧
