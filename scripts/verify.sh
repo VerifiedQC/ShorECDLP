@@ -21,6 +21,39 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.EndIterationLayout.constants_length
+#print axioms ShorECDLP.Paper2607_13816.EndIterationLayout.clean_components4
+#print axioms ShorECDLP.Paper2607_13816.EndIterationLayout.clean_components5
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwap_ready
+#print axioms ShorECDLP.Paper2607_13816.controlledWorkSwapInverse_ready
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLtUnary_ready
+#print axioms ShorECDLP.Paper2607_13816.lenUpdateLrpUnary_ready
+#print axioms ShorECDLP.Paper2607_13816.blockHForward_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.blockHInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.blockHPrefix_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.blockHPrefix_run
+#print axioms ShorECDLP.Paper2607_13816.blockHIter_ready
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHForward_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHInverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHForward_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHForward_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredBlockHInverse_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredEndUpper_coherent
+#print axioms ShorECDLP.Paper2607_13816.strictEndUpper_ready
+#print axioms ShorECDLP.Paper2607_13816.measuredEndUpper_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredEndLower_coherent
+#print axioms ShorECDLP.Paper2607_13816.strictEndLower_ready
+#print axioms ShorECDLP.Paper2607_13816.measuredEndLower_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIteration_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIterationInverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIteration_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIterationInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredEndUpper_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredEndLower_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIteration_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIterationInverse_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredEndIteration_savings
 #print axioms ShorECDLP.Paper2607_13816.highestPositionWrite_scratch
 #print axioms ShorECDLP.Paper2607_13816.rightLengthWrite_scratch
 #print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLtUnary_coherent
@@ -3531,8 +3564,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3507 ]]; then
-  printf 'expected 3507 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3540 ]]; then
+  printf 'expected 3540 #print axioms results\n' >&2
   exit 1
 fi
 

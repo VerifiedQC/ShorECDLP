@@ -1025,7 +1025,8 @@ private theorem EndIterationLayout.depth_succ_lt_scratch5
   have hcapacity := hlayout.scratch_capacity
   omega
 
-private theorem EndIterationLayout.constants_length
+/-- Shared scratch facts used to compose adaptive length updates. -/
+theorem EndIterationLayout.constants_length
     {registers : EndIterationRegisters} {n : Nat}
     {windows : EndIterationWindows}
     (hlayout : EndIterationLayout registers n windows) :
@@ -1033,7 +1034,8 @@ private theorem EndIterationLayout.constants_length
   simp [EndIterationRegisters.constants, List.length_take,
     Nat.min_eq_left (Nat.le_of_lt hlayout.width_lt_scratch)]
 
-private theorem EndIterationLayout.clean_components4
+/-- Shared scratch facts used to compose adaptive length updates. -/
+theorem EndIterationLayout.clean_components4
     {registers : EndIterationRegisters} {n : Nat}
     {windows : EndIterationWindows}
     (hlayout : EndIterationLayout registers n windows)
@@ -1066,7 +1068,8 @@ private theorem EndIterationLayout.clean_components4
   · intro wire hwire
     exact hready wire (List.mem_of_mem_take hwire)
 
-private theorem EndIterationLayout.clean_components5
+/-- Shared scratch facts used to compose adaptive length updates. -/
+theorem EndIterationLayout.clean_components5
     {registers : EndIterationRegisters} {n : Nat}
     {windows : EndIterationWindows}
     (hlayout : EndIterationLayout registers n windows)
@@ -4539,5 +4542,75 @@ theorem controlledWorkSwap_endpoint_context
     rw [hf wire (h.scratch_not_work1 hw) (h.scratch_not_work2 hw)]
     exact hr wire hw
   · rw [hf r.control hc1 hc2, hen]
+
+
+/-- The bank permutation preserves clean shared scratch for either control value. -/
+theorem controlledWorkSwap_ready (r : EndIterationRegisters) (n : Nat)
+    (w : EndIterationWindows) (h : EndIterationLayout r n w)
+    (s : BasisState) (hs : EndIterationReady r s) :
+    EndIterationReady r (run (controlledWorkSwap r.control r.work1 r.work2) s) := by
+  have hc1 : r.control ∉ r.work1 := by
+    intro hw
+    exact (List.nodup_cons.mp h.work_nodup).1 (List.mem_append_left r.work2 hw)
+  have hc2 : r.control ∉ r.work2 := by
+    intro hw
+    exact (List.nodup_cons.mp h.work_nodup).1 (List.mem_append_right r.work1 hw)
+  intro q hq
+  rw [controlledWorkSwap_preservesOutsideWords r.control r.work1 r.work2 s hc1 hc2
+    q (h.scratch_not_work1 hq) (h.scratch_not_work2 hq)]
+  exact hs q hq
+
+/-- The bank permutation preserves clean shared scratch for either control value. -/
+theorem controlledWorkSwapInverse_ready (r : EndIterationRegisters) (n : Nat)
+    (w : EndIterationWindows) (h : EndIterationLayout r n w)
+    (s : BasisState) (hs : EndIterationReady r s) :
+    EndIterationReady r (run (controlledWorkSwapInverse r.control r.work1 r.work2) s) := by
+  have hc1 : r.control ∉ r.work1 := by
+    intro hw
+    exact (List.nodup_cons.mp h.work_nodup).1 (List.mem_append_left r.work2 hw)
+  have hc2 : r.control ∉ r.work2 := by
+    intro hw
+    exact (List.nodup_cons.mp h.work_nodup).1 (List.mem_append_right r.work1 hw)
+  intro q hq
+  rw [controlledWorkSwapInverse_preservesOutsideWords r.control r.work1 r.work2 s hc1 hc2
+    q (h.scratch_not_work1 hq) (h.scratch_not_work2 hq)]
+  exact hs q hq
+
+/-- Every routed leaf is in the source window, so the strict block restores all shared scratch. -/
+theorem lenUpdateLtUnary_ready (r : EndIterationRegisters) (n : Nat)
+    (w : EndIterationWindows) (h : EndIterationLayout r n w)
+    (s : BasisState) (hs : EndIterationReady r s) :
+    EndIterationReady r (run (lenUpdateLtUnary n w.k4 w.K4 (r.upperTree w) r.control
+      (r.rangeAccumulator w.k4 w.K4) (r.temporary w.k4 w.K4) r.carry
+      (r.path w.k4 w.K4) r.work1At r.work2At r.lengthT r.lengthRP r.constants) s) := by
+  let boundary := (r.upperTree w).routeLabel (run (constMinus r.lengthRP r.constants r.carry (n+2)) s)
+  have hlabels := r.upperTree_visitLabels w h.k4_le_K4
+  have hb : w.k4 ≤ boundary ∧ boundary ≤ w.K4 := by
+    apply (mem_zeroMapLabels h.k4_le_K4).mp
+    rw [← hlabels, UnaryActionTree.visitLabels_inc]
+    exact UnaryActionTree.routeLabel_mem_labels _ _
+  exact (lenUpdateLtUnary_endpoint_stage r n w boundary s h hs hb rfl).2.1
+
+/-- Every routed leaf is in the source window, so the strict block restores all shared scratch. -/
+theorem lenUpdateLrpUnary_ready (r : EndIterationRegisters) (n : Nat)
+    (w : EndIterationWindows) (h : EndIterationLayout r n w)
+    (s : BasisState) (hs : EndIterationReady r s) :
+    EndIterationReady r (run (lenUpdateLrpUnary n w.k5 (w.K5Decode n) (r.lowerTree n w) r.control
+      (r.rangeAccumulator w.k5 (w.K5Decode n)) (r.temporary w.k5 (w.K5Decode n)) r.carry
+      (r.path w.k5 (w.K5Decode n)) r.work1At r.work2At r.lengthT r.lengthRP r.constants) s) := by
+  let boundary := (r.lowerTree n w).routeLabel (run (addConstant r.lengthT r.constants r.carry 3) s)
+  have hlabels := r.lowerTree_visitLabels n w h.k5_le_decode
+  have hb : w.k5 ≤ boundary ∧ boundary ≤ (w.K5Decode n) := by
+    apply (mem_zeroMapLabels h.k5_le_decode).mp
+    rw [← hlabels, UnaryActionTree.visitLabels_inc]
+    exact UnaryActionTree.routeLabel_mem_labels _ _
+  obtain ⟨hc,hp,hr,ht⟩ := h.clean_components5 hs
+  have hh := lenUpdateLrpUnary_correct_shared n w.k5 (w.K5Decode n) boundary h.k5_le_decode hb
+    (r.lowerTree n w) r.control (r.rangeAccumulator w.k5 (w.K5Decode n))
+    (r.temporary w.k5 (w.K5Decode n)) r.carry (r.path w.k5 (w.K5Decode n))
+    r.work1At r.work2At r.lengthT r.lengthRP r.constants s h.constants_length h.lower hlabels rfl hc hp hr ht
+  intro q hq
+  rw [hh.2.2.2.2 q (h.scratch_not_lengthRP hq)]
+  exact hs q hq
 
 end ShorECDLP.Paper2607_13816

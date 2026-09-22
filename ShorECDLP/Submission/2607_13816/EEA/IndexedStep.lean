@@ -7563,7 +7563,8 @@ private theorem blockHIterGate_wellFormed
     not_or] at hphysical
   simpa only [Gate.WellFormed] using hphysical.2.2.1
 
-private theorem blockHForward_wellFormed
+/-- The literal scheduled refresh is well formed for the indexed layout. -/
+theorem blockHForward_wellFormed
     (registers : IndexedStepRegisters) (n T : Nat)
     (hlayout : IndexedStepLayout registers n T) :
     CircuitWellFormed (blockHForward registers n T) := by
@@ -7588,7 +7589,8 @@ private theorem blockHForward_wellFormed
     aesop
   · simp [blockHForward, hstep]
 
-private theorem blockHInverse_wellFormed
+/-- The literal scheduled refresh is well formed for the indexed layout. -/
+theorem blockHInverse_wellFormed
     (registers : IndexedStepRegisters) (n T : Nat)
     (hlayout : IndexedStepLayout registers n T) :
     CircuitWellFormed (blockHInverse registers n T) := by
@@ -8910,7 +8912,8 @@ private theorem blockGInverse_after_forward
   exact run_phaseUpdateEpochInverseUnitary_after_forward registers.phaseUpdate
     registers.shiftEpoch state hlayout.phaseUpdate
 
-private def blockHPrefix (registers : IndexedStepRegisters) : Circuit :=
+/-- Literal source boundary for composing the measured endpoint refresh. -/
+def blockHPrefix (registers : IndexedStepRegisters) : Circuit :=
   circuit! {
     mcxVChain registers.lengthQ (registers.sourceScratch.getD 0 0)
       (registers.sourceScratch.drop 2);
@@ -8922,7 +8925,8 @@ private def blockHPrefix (registers : IndexedStepRegisters) : Circuit :=
       (registers.sourceScratch.getD 1 0) registers.control
   }
 
-private def blockHSuffix (registers : IndexedStepRegisters) : Circuit :=
+/-- Literal source boundary for composing the measured endpoint refresh. -/
+def blockHSuffix (registers : IndexedStepRegisters) : Circuit :=
   circuit! {
     gate! Gate.CCX (registers.sourceScratch.getD 0 0)
       (registers.sourceScratch.getD 1 0) registers.control;
@@ -8940,7 +8944,8 @@ private theorem blockHSuffix_eq_adjoint_blockHPrefix
   simp [blockHPrefix, blockHSuffix, circuit_adjoint_append,
     mcxVChain_indexedStep_selfAdjoint]
 
-private theorem blockHPrefix_wellFormed
+/-- Physical prefix contract for the subsequent measured refresh. -/
+theorem blockHPrefix_wellFormed
     (registers : IndexedStepRegisters) (n T : Nat)
     (hlayout : IndexedStepLayout registers n T) :
     CircuitWellFormed (blockHPrefix registers) := by
@@ -8959,7 +8964,8 @@ private theorem blockHPrefix_wellFormed
     List.not_mem_nil, or_false] at hgate
   aesop
 
-private theorem blockHPrefix_run
+/-- Physical prefix contract for the subsequent measured refresh. -/
+theorem blockHPrefix_run
     (registers : IndexedStepRegisters) (n T : Nat) (state : BasisState)
     (hlayout : IndexedStepLayout registers n T)
     (hready : IndexedStepReady registers state) :
@@ -14528,5 +14534,18 @@ theorem indexedStepInverseAdaptive_wires_subset (r : IndexedStepRegisters) (n T 
     AdaptiveCircuit.wires,circuitWires,List.flatMap_append,List.mem_append,
     List.not_mem_nil,or_false] at hw ⊢
   aesop
+
+/-- The parity CNOT does not touch shared endpoint scratch. -/
+theorem blockHIter_ready (r : IndexedStepRegisters) (n T : Nat)
+    (h : IndexedStepLayout r n T) (s : BasisState)
+    (hs : EndIterationReady (r.endIteration n T) s) :
+    EndIterationReady (r.endIteration n T) (run [.CX r.control r.iter] s) := by
+  intro q hq
+  have hsource : q ∈ r.sourceScratch := List.mem_of_mem_drop (List.mem_of_mem_take hq)
+  have hne : q ≠ r.iter := h.aux_not_payload (h.sourceScratch_mem_aux hsource)
+    (by simp [indexedStepPayload])
+  change xorWireState r.control r.iter s q = false
+  rw [xorWireState_preserves r.control r.iter s hne]
+  exact hs q hq
 
 end ShorECDLP.Paper2607_13816

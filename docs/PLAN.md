@@ -3479,3 +3479,26 @@ literal prefix/suffix constant-arithmetic counts plus `24M - 16` for a nonempty
 window of `M = K + 1 - k` positions with the corresponding decoder leaf labels.
 The full end-iteration and EEA schedule still use their previous length blocks;
 whole-program cost, success, and wire claims remain unchanged.
+
+### Measured endpoint refresh and scheduled H blocks
+
+`EEA/MeasuredEndIteration.lean` emits the forward bank swap followed by measured
+upper/lower updates, and the source inverse order lower/upper/inverse swap.
+Both coherently refine their strict counterparts on clean shared scratch for
+both control values. Every routed leaf lies in its decoder window; no extra
+numeric route premise is added. Both emitted orders are well formed and have
+the proved closed Toffoli formula. Relative to the strict formula, each window
+of size `M` saves `16M - 12` Toffolis, with all constant arithmetic retained.
+
+`EEA/MeasuredBlockH.lean` composes these programs with the actual enable-flag
+prefix, parity CNOT and cleanup suffix in their source order. The measured
+forward and inverse H blocks coherently implement the literal source H blocks
+on `IndexedStepReady`, are well formed, and prove actual Toffoli savings only
+on indices divisible by four. The prefix restores endpoint scratch even though
+its two enable flags remain live; the inverse parity CNOT leaves that scratch
+untouched. No measurement history is reversed.
+
+The previously published complete `indexedStepAdaptive`, EEA schedule, and
+raw sampling programs still contain their original H realization. Their
+whole-program resource and success claims remain unchanged until these new
+blocks are composed through those callers.
