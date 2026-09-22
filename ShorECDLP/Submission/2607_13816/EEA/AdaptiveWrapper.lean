@@ -61,7 +61,8 @@ private theorem coherent_basis_unitary (c : Circuit) (hc : HPFree c)
   apply (CoherentlyImplementsOn.unitary c Valid).congrIdeal
   intro s _
   rw [basisLift_ket,Quantum.run_ket_agrees_classical c s hc]
-private theorem preprocess_basis_coherent :
+/-- Preprocessing coherently implements its deterministic basis-state map on clean inputs. -/
+theorem preprocess_basis_coherent :
     CoherentlyImplementsOn eeaPreprocess (Finsupp.lmapDomain ℂ ℂ eeaPreprocessIdealState)
       (Clean (List.range' 0 263 ++ List.range' 519 61)) := by
   apply coherent_of_basis_branches eeaPreprocess eeaPreprocessIdealState _
@@ -69,7 +70,8 @@ private theorem preprocess_basis_coherent :
     (fun _ => false) (by intro w hw; rfl)
   intro b hb s hs
   exact eeaPreprocess_branch_correct s hs b hb
-private theorem parity_basis_coherent :
+/-- Parity correction coherently implements its deterministic map on clean temporary inputs. -/
+theorem parity_basis_coherent :
     CoherentlyImplementsOn secp256k1EEAParityCorrection
       (Finsupp.lmapDomain ℂ ℂ secp256k1EEAParityIdealState)
       (fun s => s 560=false ∧ s 561=false ∧ s 562=false) := by

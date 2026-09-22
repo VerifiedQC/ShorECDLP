@@ -3525,3 +3525,20 @@ These are new full EEA programs, not replacements of the existing inversion,
 point-addition or sampling callers. Their input conditions still need to be
 discharged at those call sites. Whole-program cost and success claims therefore
 remain unchanged; this does not yet establish the planned 112-call reduction.
+
+### Measured inversion wrappers on the original input domain
+
+`EEA/MeasuredForwardImage.lean` discharges the new descending schedule's clean
+H-entry condition on the actual forward image, using the original clean,
+nonzero, canonical input assumptions. No additional original-input premise
+is introduced. `EEA/MeasuredWrapper.lean` composes the new schedules with the
+existing preprocessing, parity correction, terminal transforms, and inverse
+cleanup. Both complete emitted wrappers are well formed and coherently
+implement the same full-state ideal maps as the previous wrappers.
+
+`EEA/MeasuredWrapperCounts.lean` proves **15,910,015 Toffoli** for each actual
+forward or reverse wrapper, a reduction of **1,681,736** from its previous
+17,591,751 count. This is a kernel-checked count of the adaptive program,
+including its boundary operations. Point-addition and sampling callers have
+not yet been changed to use these wrappers; the published whole-program
+Toffoli, physical support, and success bounds remain unchanged.

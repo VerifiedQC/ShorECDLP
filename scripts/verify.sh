@@ -21,6 +21,19 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.preprocess_basis_coherent
+#print axioms ShorECDLP.Paper2607_13816.parity_basis_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverse_input
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForward_coherent_preprocessed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverse_coherent_forward_image
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_savings
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_savings
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForwardWrapper_toffoli
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverseWrapper_toffoli
 #print axioms ShorECDLP.Quantum.cancelUnitaryRight
 #print axioms ShorECDLP.Quantum.replaceInitialUnitary
 #print axioms ShorECDLP.Paper2607_13816.blockHInverse_HPFree
@@ -3592,8 +3605,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3568 ]]; then
-  printf 'expected 3568 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3581 ]]; then
+  printf 'expected 3581 #print axioms results\n' >&2
   exit 1
 fi
 
