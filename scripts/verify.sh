@@ -373,6 +373,23 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.reducedSecpWindow_tCount_bound
 #print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeated_tCount_bound
 #print axioms ShorECDLP.Paper2607_13816.Submission.trial_resources
+#print axioms ShorECDLP.Quantum.circuit_seq_done
+#print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowContract
+#print axioms ShorECDLP.Paper2607_13816.Submission.corrected_certificate
+#print axioms ShorECDLP.Paper2607_13816.streamPointLookup_support
+#print axioms ShorECDLP.Paper2607_13816.preparedRawProgram_counts
+#print axioms ShorECDLP.Paper2607_13816.measuredWeightedBlock_relabel
+#print axioms ShorECDLP.Paper2607_13816.measuredWeightedBlock_run
+#print axioms ShorECDLP.Paper2607_13816.streamRawCall_support
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_support
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_qubitCount
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_clean
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_measurements
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_measurementCount
+#print axioms ShorECDLP.Paper2607_13816.streamRawCall_bank_run
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.resources
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.address_reset
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.block_bank_reuse
 #print axioms ShorECDLP.Paper2607_13816.Submission.trial_counts
 #print axioms ShorECDLP.Paper2607_13816.Submission.trial_success
 #print axioms ShorECDLP.Paper2607_13816.Submission.certificate
@@ -3698,8 +3715,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3674 ]]; then
-  printf 'expected 3674 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3691 ]]; then
+  printf 'expected 3691 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -3565,3 +3565,26 @@ wires are counted; this is not a peak-liveness or 579-wire claim.
 The existing point-addition and sampling callers still await replacement with
 these new wrappers. Their published whole-program cost, allocation and success
 bounds are unchanged by this support certificate.
+
+### Integration of completed register-reuse work
+
+`Window/WeightedBlock.lean` integrates the two remaining checked complete-point-add
+relocation lemmas from the prototype. Their equality retains the ordered list of
+all arithmetic and Fourier histories and unnormalized output states on clean banks.
+The already integrated `RawBankReuse` supplies the corresponding raw-core result.
+
+`Window/RawStream.lean` connects the existing MSB-first streaming construction to
+the current raw additions, which now include measured inversion. It has one
+weighted direct load and 28 raw additions, two separate Fourier histories, at most
+855 distinct wires and exactly 847,701,655 measurements. Every branch clears the
+reused address bank. `Submission.Streaming` exports the actual constructor, its
+resources, its reset theorem and its concrete block bank-reuse theorem. The
+complete-point-add relocation lemmas are reachable through that same entry import.
+
+This integration does not supply the still-missing whole-stream sampling equivalence:
+local bank exchange, schedule/Fourier commutation and direct-load order lemmas do
+not by themselves identify the entire adaptive output distribution. Consequently
+`Submission.trial` and `Submission.algorithm` retain their established 1,303-wire
+8%/99% certificates. No streaming success claim or 835-wire certificate is made.
+The prototype inventory and exact remaining obligations are recorded in
+`Submission/2607_13816/INTEGRATION.md`.

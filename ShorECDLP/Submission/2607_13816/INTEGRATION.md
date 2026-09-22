@@ -1,0 +1,62 @@
+# Completed-work integration
+
+The program entry is `Submission.lean`. The target reference remains
+arXiv:2607.13816v2. This inventory separates implemented connections from missing
+mathematical results; an import alone is not a proof of program equivalence.
+
+| Completed work | Production connection |
+|---|---|
+| Measured forward/reverse EEA, exchanged-bank inverse, selected CZ corrections | `Arithmetic/InPlace`, `SourceInPlace`, point arithmetic and both submission constructors |
+| Reduced 256+208 sampling, raw-domain coverage, public-point decoder, actual resets and repetition | `Submission.trial`, `algorithm`, `certificate`, `decoder_sound` |
+| Completed 26-round corrected-program contract | `Submission.corrected_certificate` |
+| Fourier continuation, disjoint schedule commutation, validity under Fourier reset | `Fourier/Continuation`, `Window/ScheduleFourier`, `Window/FourierSupport` |
+| Prepared-call reversal and direct-load coherent tail | `Window/PreparedOrder`, `Window/DirectOrderedTail` |
+| Clean-bank permutation and raw block relocation | `Window/RawBankReuse`, used by `RawStream.streamRawCall_bank_run` and `Submission.Streaming.block_bank_reuse` |
+| Complete-point-add block relocation | `Window/WeightedBlock`: both former prototype theorems now compiled and audited |
+| Single reusable bank, actual branch reset, support and measurement accounting | `Window/RawStream`, exported as `Submission.Streaming.trial`, `resources`, `address_reset` |
+
+The current streaming constructor uses the current raw core (including measured
+inversion), not the former exceptionally repaired call. It prepares each 16-bit
+bank, executes the appropriate weighted call, and carries the Fourier history
+classically to the next block. The two axes keep independent histories. Its
+support bound is 855 wires and it retains 847,701,655 measurements.
+
+## Prototype reconciliation
+
+All theorem/definition names in the workspace's checked prototypes were compared
+against production. The remaining unmatched names were:
+
+- `measuredWeightedBlock_relabel`, `measuredWeightedBlock_run`: integrated here.
+- `circuit_seq_done`: integrated into `Framework/Quantum/AdaptiveComposition`.
+- `reducedOutcomePair_injective`: already present as `unequalOutcomePair_injective`,
+  used directly by the production `Window/ReducedTotal` proof. No duplicate is added.
+- `reducedSecpWindowContract`: integrated as `Window/ReducedContract` and exported
+  through `Submission.corrected_certificate`. It retains its own 26-round corrected
+  program and must not be confused with the current 56-round raw program.
+
+The older `paper-copied-add`/`paper-square` branch uses the name
+`copiedModularAdd`; the same copy/add/un-copy constructor is already integrated as
+`Arithmetic/Square.squareAdd`, with ideal-state, branch, well-formedness and full
+square contracts. The adaptive-foundation branch declarations are also already
+present in Framework.
+
+Debug experiments are not missing implementation features. Historical notes saying
+these prototypes were unintegrated predate their subsequent production PRs.
+
+## Remaining proof obligations
+
+The 855-wire construction still needs the full MSB-first direct-load and
+history-continuation composition, interleaving of the arithmetic/Fourier branches,
+and identification of the complete sampling distribution with a verified decoder
+acceptance event. The local relocation theorem preserves all histories and states
+but does not establish this global equivalence. Thus the actual success theorem
+continues to apply to the 1,303-wire program. The 835-wire goal, stronger success
+analysis and efficient executable classical decoder remain unfinished work.
+
+## Earlier alternative implementation
+
+The open PR #53 is the earlier Fermat/checkpoint exponentiation implementation,
+stacked on `proof/low-qubit-modmul`. It is not an implementation of this paper's
+EEA algorithm. It remains separate from this integration, following the adopted
+Naive/paper submission isolation in `docs/PLAN.md` §2. No arithmetic implementation
+from that branch is imported into the paper submission.
