@@ -21,6 +21,34 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Quantum.cancelUnitaryRight
+#print axioms ShorECDLP.Quantum.replaceInitialUnitary
+#print axioms ShorECDLP.Paper2607_13816.blockHInverse_HPFree
+#print axioms ShorECDLP.Paper2607_13816.indexedStepBeforeEnd_ready
+#print axioms ShorECDLP.Paper2607_13816.indexedStepInverseAdaptive_factor
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedSchedule_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedScheduleInverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedSchedule_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedScheduleInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedSchedule_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedScheduleInverse_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredScheduleSavings_add
+#print axioms ShorECDLP.Paper2607_13816.measuredScheduleSavings_secp256k1
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForward_toffoli
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverse_toffoli
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForward_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAForward_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.secp256k1MeasuredEEAReverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredStepPrefix_factor
+#print axioms ShorECDLP.Paper2607_13816.measuredStepPrefix_unitary_factor
+#print axioms ShorECDLP.Paper2607_13816.measuredStepPrefix_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStep_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStep_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStep_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStepInverse_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStepInverse_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredIndexedStepInverse_toffoli
 #print axioms ShorECDLP.Paper2607_13816.EndIterationLayout.constants_length
 #print axioms ShorECDLP.Paper2607_13816.EndIterationLayout.clean_components4
 #print axioms ShorECDLP.Paper2607_13816.EndIterationLayout.clean_components5
@@ -3564,8 +3592,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3540 ]]; then
-  printf 'expected 3540 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3568 ]]; then
+  printf 'expected 3568 #print axioms results\n' >&2
   exit 1
 fi
 

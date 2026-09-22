@@ -3502,3 +3502,26 @@ The previously published complete `indexedStepAdaptive`, EEA schedule, and
 raw sampling programs still contain their original H realization. Their
 whole-program resource and success claims remain unchanged until these new
 blocks are composed through those callers.
+
+### Measured complete EEA steps and schedules
+
+`EEA/MeasuredStep.lean` composes the measured H realization with the literal
+existing adaptive A–G prefix and G–A inverse tail. Both full steps coherently
+implement the same strict source steps and are well formed. Forward inputs
+retain `IndexedStepReady` and epoch encoding. The inverse explicitly requires
+H-entry `IndexedStepReady` together with the original five actual-prefix tail
+conditions; the strict H block's larger input domain is not silently inherited.
+
+`EEA/MeasuredSchedule.lean` emits these steps in ascending and descending order.
+Its forward coherent contract is the existing actual-prefix condition; its
+inverse contract additionally tracks clean H-entry scratch at every descending
+prefix. Actual primitive counts prove that both schedules save the sum of the
+per-index H savings. `MeasuredScheduleCounts.lean` checks this sum in Lean's
+kernel: each actual 1,620-step program saves **1,681,736 Toffoli** compared with
+its previous adaptive realization. Small checked intervals are combined by an
+additivity theorem, with no increased proof limits or native decision axiom.
+
+These are new full EEA programs, not replacements of the existing inversion,
+point-addition or sampling callers. Their input conditions still need to be
+discharged at those call sites. Whole-program cost and success claims therefore
+remain unchanged; this does not yet establish the planned 112-call reduction.
