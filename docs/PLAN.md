@@ -3441,3 +3441,41 @@ cross terms or condition/renormalize the good input component. These are
 conservative event bounds, not a tight additive statistical-distance estimate.
 The specific final Fourier/decoder event and its success/retry contract are
 not instantiated here; previous repaired-program success claims remain separate.
+
+
+### Measured zero-map length-refresh subcircuits
+
+`EEA/MeasuredZeroMap.lean` implements both complete source zero-map scans with
+measurement-assisted leaf AND erasure and unary decoder cleanup. The coherent
+refinement preserves arbitrary borrowed data and both external-control values,
+assuming only clean decoder path and recurrence temporary. The classical first
+scan restores those scratch wires before the reverse scan. Every adaptive branch
+is well formed. `EEA/MeasuredZeroMapCounts.lean` derives the actual Toffoli count
+`6*M-4` for a source tree covering M consecutive positions, replacing the strict
+map's `10*M-7`. This is a proved subcircuit saving, not a new whole-EEA count.
+
+`EEA/MeasuredLengthWriters.lean` composes the seeds, borrowed CNOT writes and
+two measured maps into each actual highest-position/right-length writer. It proves
+coherent refinement, well-formedness and `12*M-8` Toffolis. The shared-scratch
+length-update wrappers, full EEA schedule and raw sampling program still use their
+previous strict writers. Their resource/success claims remain unchanged until
+the new writers are composed through those actual callers. Full register streaming
+and the 835-wire target also remain open.
+
+### Measured shared-scratch length updates
+
+`EEA/MeasuredLengthUpdates.lean` composes the actual measured writers through
+`measuredLenUpdateLtUnary` and `measuredLenUpdateLrpUnary`. Their coherent
+refinements target the literal strict length updates, using the existing
+`SharedLengthBlockLayout`; constant/carry scratch may alias scanner scratch.
+Clean constant/carry, decoder path and temporary inputs suffice; range and
+borrowed data need not be zero. Constant arithmetic restores those shared wires
+before scanning, and the first writer restores the path and temporary before
+the second. The upper wrapper requires a nonempty affine register; the lower
+wrapper does not add that restriction.
+
+Both actual adaptive wrappers are well formed. Their Toffoli counts are the
+literal prefix/suffix constant-arithmetic counts plus `24M - 16` for a nonempty
+window of `M = K + 1 - k` positions with the corresponding decoder leaf labels.
+The full end-iteration and EEA schedule still use their previous length blocks;
+whole-program cost, success, and wire claims remain unchanged.
