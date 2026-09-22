@@ -21,6 +21,14 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.highestPositionWrite_scratch
+#print axioms ShorECDLP.Paper2607_13816.rightLengthWrite_scratch
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLtUnary_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLtUnary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLtUnary_toffoli
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLrpUnary_coherent
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLrpUnary_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.measuredLenUpdateLrpUnary_toffoli
 #print axioms ShorECDLP.Paper2607_13816.measuredHighestPositionWrite_coherent
 #print axioms ShorECDLP.Paper2607_13816.measuredRightLengthWrite_coherent
 #print axioms ShorECDLP.Paper2607_13816.measuredHighestPositionWrite_wellFormed
@@ -3523,8 +3531,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3499 ]]; then
-  printf 'expected 3499 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3507 ]]; then
+  printf 'expected 3507 #print axioms results\n' >&2
   exit 1
 fi
 
