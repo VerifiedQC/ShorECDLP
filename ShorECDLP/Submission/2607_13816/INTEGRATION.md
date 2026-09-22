@@ -43,6 +43,20 @@ present in Framework.
 Debug experiments are not missing implementation features. Historical notes saying
 these prototypes were unintegrated predate their subsequent production PRs.
 
+## History-dependent block composition
+
+`Window/StreamHistory.lean` decomposes an actual streaming axis into its first
+measured block and the remaining adaptive execution. The next Fourier history is
+recovered from exactly the last sixteen block outcomes; internal arithmetic
+measurements remain in the complete transcript but never enter feed-forward.
+The ordered list of histories and unnormalized states is preserved when a block
+is relocated to a clean parked bank, even through an arbitrary remaining axis
+and tail. `streamRawCall_continuation_reuse` specializes this to current raw
+arithmetic. Both source and destination banks must be clean.
+
+This extends local block reuse through a continuation. It does not reorder all
+arithmetic/Fourier operations or prove the whole-stream sampling distribution.
+
 ## Remaining proof obligations
 
 The 855-wire construction still needs the full MSB-first direct-load and

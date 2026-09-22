@@ -416,6 +416,12 @@ import ShorECDLP
 #print axioms ShorECDLP.Quantum.circuit_seq_assoc
 #print axioms ShorECDLP.Paper2607_13816.streamAxis_clean
 #print axioms ShorECDLP.Paper2607_13816.streamAxis_singleton
+#print axioms ShorECDLP.Paper2607_13816.streamBlockOutcomes_run
+#print axioms ShorECDLP.Paper2607_13816.streamAxis_cons_run
+#print axioms ShorECDLP.Paper2607_13816.streamBlockOutcomes_history
+#print axioms ShorECDLP.Paper2607_13816.streamAxis_cons_block_run
+#print axioms ShorECDLP.Paper2607_13816.streamAxis_cons_reuse_run
+#print axioms ShorECDLP.Paper2607_13816.streamRawCall_continuation_reuse
 #print axioms ShorECDLP.Quantum.relabelBasis_clean
 #print axioms ShorECDLP.Quantum.relabelState_clean
 #print axioms ShorECDLP.Quantum.branch_relabel_clean
@@ -3715,8 +3721,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3691 ]]; then
-  printf 'expected 3691 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3697 ]]; then
+  printf 'expected 3697 #print axioms results\n' >&2
   exit 1
 fi
 

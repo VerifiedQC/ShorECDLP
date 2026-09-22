@@ -1,6 +1,6 @@
 import ShorECDLP.Submission.«2607_13816».Window.RawCounts
 import ShorECDLP.Submission.«2607_13816».Window.RawBankReuse
-import ShorECDLP.Submission.«2607_13816».Window.StreamContinuation
+import ShorECDLP.Submission.«2607_13816».Window.StreamHistory
 
 /-! The existing streaming schedule now calls the current raw arithmetic, including
 measured inversion. These are support, reset and measurement certificates for this
@@ -125,5 +125,21 @@ theorem streamRawCall_bank_run (P : Point) (j k : Nat) (hk : k ≠ 0)
     ((measuredStreamBlock (streamRawCall P j) prior).run.map
       (fun b => (b.history,b.kraus ψ))) :=
   measuredRawBankBlock_run _ _ k hk prior ψ hin
+/-- Reusing one raw arithmetic block remains exact through the remaining adaptive
+axis and arbitrary tail; this does not identify the global sampling distribution. -/
+theorem streamRawCall_continuation_reuse (P : Point) (j k : Nat) (hk : k ≠ 0)
+    (calls : List AdaptiveCircuit) (prior : List Bool) (tail : AdaptiveCircuit)
+    (ψ : State)
+    (hin : SupportedOn (Clean (streamAddress ++ List.range' (windowBankStart k) 16)) ψ) :
+    ((streamAxis (streamRawCall P j :: calls) prior tail).run.map
+      (fun b => (b.history, b.kraus ψ))) =
+      (((measuredStreamBlock (streamRawCall P j) prior).relabel (streamBankPerm k)).run.flatMap
+        (fun b => (streamAxis calls (b.history.reverse.take 16 ++ prior) tail).run.map
+          (fun next => (b.history ++ next.history, next.kraus (b.kraus ψ))))) := by
+  apply streamAxis_cons_reuse_run _ calls prior tail k hk _ ψ hin
+  intro w hw
+  have hs := streamRawCall_support P j hw
+  simpa only [streamAllocation, List.mem_append, List.mem_range] using hs
+
 end
 end ShorECDLP.Paper2607_13816
