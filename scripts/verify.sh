@@ -310,7 +310,7 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.reducedSecpWindow_tCount_bound
 #print axioms ShorECDLP.Paper2607_13816.reducedSecpWindowRepeated_tCount_bound
 #print axioms ShorECDLP.Paper2607_13816.Submission.trial_resources
-#print axioms ShorECDLP.Paper2607_13816.Submission.trial_t_model_exact
+#print axioms ShorECDLP.Paper2607_13816.Submission.trial_counts
 #print axioms ShorECDLP.Paper2607_13816.Submission.trial_success
 #print axioms ShorECDLP.Paper2607_13816.Submission.certificate
 #print axioms ShorECDLP.Paper2607_13816.Submission.decoder_sound
