@@ -432,6 +432,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.streamRawInitialPoint_firstWord
 #print axioms ShorECDLP.Paper2607_13816.streamRawExclusions_firstWord_card
 #print axioms ShorECDLP.Paper2607_13816.streamRawExclusions_firstWord_fraction
+#print axioms ShorECDLP.Paper2607_13816.phaseHadamards_filtered_mass
+#print axioms ShorECDLP.Paper2607_13816.rawFirstWord_filter_count
+#print axioms ShorECDLP.Paper2607_13816.rawFirstWord_full_count
+#print axioms ShorECDLP.Paper2607_13816.streamRawExclusions_word_count
+#print axioms ShorECDLP.Paper2607_13816.streamLogicalEntry_filtered_mass
+#print axioms ShorECDLP.Paper2607_13816.streamLogicalEntry_excluded_mass
+#print axioms ShorECDLP.Paper2607_13816.streamFirstWord_excluded_mass
 #print axioms ShorECDLP.Quantum.relabelBasis_clean
 #print axioms ShorECDLP.Quantum.relabelState_clean
 #print axioms ShorECDLP.Quantum.branch_relabel_clean
@@ -3731,8 +3738,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3707 ]]; then
-  printf 'expected 3707 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3714 ]]; then
+  printf 'expected 3714 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -92,22 +92,29 @@ theorem phaseBasisSum_filter (xs : List BasisState) (p : BasisState → Prop)
     · simp [Finsupp.filter_add, ket, Finsupp.filter_single_of_pos p h, h, ih]
     · simp [Finsupp.filter_add, ket, Finsupp.filter_single_of_neg p h, h, ih]
 
+/-- Born mass after distinct clean-wire Hadamards equals the normalized count
+of assignments satisfying the event. The background may contain nonzero wires. -/
+theorem phaseHadamards_filtered_mass (ws : List Wire) (hn : ws.Nodup)
+    (s : BasisState) (hz : Clean ws s) (p : BasisState → Prop) [DecidablePred p] :
+    normSq ((Quantum.run (ws.map Gate.H) (ket s)).filter p) =
+      (((fourierOutcomes ws.length).filter
+        (fun bs => p (phaseWordState ws bs s))).length : ℝ) / 2^ws.length := by
+  rw [phaseHadamards_uniform ws hn s hz,Finsupp.filter_smul]
+  have hf := phaseBasisSum_filter
+    ((fourierOutcomes ws.length).map (fun bs => phaseWordState ws bs s)) p
+  simp only [List.map_map,Function.comp_def,List.filter_map] at hf
+  unfold phaseUniformSum
+  rw [hf]
+  exact phaseUniformSum_filtered_normalized_mass ws hn s p
+
 /-- An actual projection of the prepared state has the exact normalized word count. -/
 theorem reducedPhasePrepare_filtered_mass (p : BasisState → Prop) [DecidablePred p] :
     normSq ((Quantum.run reducedPhasePrepare (ket zeroBasisState)).filter p) =
       (((fourierOutcomes 464).filter
         (fun bs => p (phaseWordState reducedPhaseWires bs zeroBasisState))).length : ℝ) / 2^464 := by
-  rw [reducedPhasePrepare_uniform, Finsupp.filter_smul]
-  have hf := phaseBasisSum_filter
-    ((fourierOutcomes reducedPhaseWires.length).map
-      (fun bs => phaseWordState reducedPhaseWires bs zeroBasisState)) p
-  simp only [List.map_map, Function.comp_def, List.filter_map] at hf
-  change normSq (_ • (phaseUniformSum reducedPhaseWires zeroBasisState).filter p)=_
-  unfold phaseUniformSum
-  rw [hf]
-  have h := phaseUniformSum_filtered_normalized_mass reducedPhaseWires
-    (by decide +kernel) zeroBasisState p
-  simpa only [reducedPhaseWires, List.length_append, List.length_range'] using h
+  have h := phaseHadamards_filtered_mass reducedPhaseWires (by decide +kernel)
+    zeroBasisState (by intro w hw; rfl) p
+  simpa only [reducedPhasePrepare,reducedPhaseWires,List.length_append,List.length_range'] using h
 
 end
 end ShorECDLP.Paper2607_13816
