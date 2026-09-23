@@ -131,12 +131,27 @@ single-axis result with the same tail. Combining both axes, matching logical
 bank numbering to `streamLogicalEntryState`, and identifying arithmetic/Fourier
 sampling and decoder events remain necessary for the 855-wire success claim.
 
+## Two-axis physical trial correspondence
+
+`TwoAxisHoist` moves both disjoint logical preparations to entry with separate
+Fourier histories. `TwoAxisReuse` composes physical bank reuse across the axis
+boundary: the first axis resets the reusable address and frames all parked
+banks needed by the second. `RawTwoAxis.streamRawTrial_prepared` includes the
+initial root X and final root cleanup and directly identifies the ordered
+histories and unnormalized states of the actual `streamRawTrial` from zero with
+`streamRawPreparedBody` on its simultaneously prepared logical input.
+
+The comparison instrument uses banks 1–29, whereas `streamLogicalEntryState`
+uses banks 0–28. This correspondence therefore does not yet transfer the
+reference excluded-mass bound. Bank renaming, ideal arithmetic/Fourier sampling
+and decoder-event identification remain necessary; no 855-wire success contract
+is asserted by this result.
+
 ## Remaining proof obligations
 
-The 855-wire construction still needs the full MSB-first direct-load and
-history-continuation composition, interleaving of the arithmetic/Fourier branches,
-and identification of the complete sampling distribution with a verified decoder
-acceptance event. The whole-axis relocation theorem preserves all histories and states
+The 855-wire construction still needs reference-bank renaming, ideal
+arithmetic/Fourier sampling and identification of the complete sampling
+distribution with a verified decoder acceptance event. The whole-axis relocation theorem preserves all histories and states
 but does not establish equivalence to the fully prepared reference. Thus the actual success theorem
 continues to apply to the 1,303-wire program. The 835-wire goal, stronger success
 analysis and efficient executable classical decoder remain unfinished work.
