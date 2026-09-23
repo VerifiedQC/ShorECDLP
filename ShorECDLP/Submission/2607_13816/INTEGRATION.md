@@ -116,6 +116,21 @@ The branchwise rule also crosses an entire relocated axis if all its assigned
 banks and its tail avoid j. This is not yet a reordering theorem for the entire
 two-axis schedule or a transfer of the reference-state bound.
 
+## Preparing an entire axis at entry
+
+`Window/StreamHoist.lean` separates each logical block's Hadamards from its
+arithmetic/Fourier body and proves that all preparations for an axis can move
+to its entry. This equality retains ordered complete histories and branch states
+for arbitrary inputs and adaptive tails. The assigned banks must be distinct;
+repeated-bank reuse does not justify hoisting preparation.
+
+`indexedStreamAxis_prepared` composes this reordering with physical bank reuse:
+with the original clean-bank premises, the actual physical axis equals its
+unprepared logical-body instrument on the fully prepared axis input. This is a
+single-axis result with the same tail. Combining both axes, matching logical
+bank numbering to `streamLogicalEntryState`, and identifying arithmetic/Fourier
+sampling and decoder events remain necessary for the 855-wire success claim.
+
 ## Remaining proof obligations
 
 The 855-wire construction still needs the full MSB-first direct-load and
