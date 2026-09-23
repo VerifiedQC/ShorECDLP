@@ -1,4 +1,4 @@
-import ShorECDLP.Submission.«2607_13816».Window.RawStream
+import ShorECDLP.Submission.«2607_13816».Window.StreamFibers
 import ShorECDLP.Submission.«2607_13816».Window.WeightedBlock
 import ShorECDLP.Submission.«2607_13816».Window.ReducedContract
 
