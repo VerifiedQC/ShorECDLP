@@ -57,6 +57,21 @@ arithmetic. Both source and destination banks must be clean.
 This extends local block reuse through a continuation. It does not reorder all
 arithmetic/Fourier operations or prove the whole-stream sampling distribution.
 
+## MSB-first exceptional-input fibers
+
+`Window/StreamFibers.lean` records the actual MSB-first table order: direct load
+with weight 2^240, then P14..P0 and Q12..Q0. A circuit-list equality checks those
+indexed tables against the current raw streaming calls. The logical banks in the
+counting model hold the window assignments separately; this does not allocate
+additional physical wires to the streaming constructor.
+
+For every fixed assignment of the other logical banks, at most 112 of 65,536
+first-window values violate the 28 raw-addition path exclusions, giving a
+conditional uniform fraction at most 7/4096. The proof establishes injectivity
+of the weighted first point and independence of all later calls from that word.
+This is a finite conditional count, **not yet a Born-weight bound** for the
+adaptive streaming input, and it supplies no new success probability.
+
 ## Remaining proof obligations
 
 The 855-wire construction still needs the full MSB-first direct-load and

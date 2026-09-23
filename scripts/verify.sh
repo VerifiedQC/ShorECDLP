@@ -422,6 +422,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.streamAxis_cons_block_run
 #print axioms ShorECDLP.Paper2607_13816.streamAxis_cons_reuse_run
 #print axioms ShorECDLP.Paper2607_13816.streamRawCall_continuation_reuse
+#print axioms ShorECDLP.Paper2607_13816.rawFirstWordState_address
+#print axioms ShorECDLP.Paper2607_13816.rawAlgebraicExclusions_firstWord
+#print axioms ShorECDLP.Paper2607_13816.streamRawTable_valid
+#print axioms ShorECDLP.Paper2607_13816.streamRawIndexedCall_left
+#print axioms ShorECDLP.Paper2607_13816.streamRawIndexedCall_right
+#print axioms ShorECDLP.Paper2607_13816.streamRawIndexedCalls_order
+#print axioms ShorECDLP.Paper2607_13816.streamRawFirstPoint_ne_zero
+#print axioms ShorECDLP.Paper2607_13816.streamRawInitialPoint_firstWord
+#print axioms ShorECDLP.Paper2607_13816.streamRawExclusions_firstWord_card
+#print axioms ShorECDLP.Paper2607_13816.streamRawExclusions_firstWord_fraction
 #print axioms ShorECDLP.Quantum.relabelBasis_clean
 #print axioms ShorECDLP.Quantum.relabelState_clean
 #print axioms ShorECDLP.Quantum.branch_relabel_clean
@@ -3721,8 +3731,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3697 ]]; then
-  printf 'expected 3697 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3707 ]]; then
+  printf 'expected 3707 #print axioms results\n' >&2
   exit 1
 fi
 

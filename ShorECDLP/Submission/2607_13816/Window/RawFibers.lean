@@ -67,7 +67,7 @@ private theorem first_frame (a : Fin 65536) (s : BasisState) (w : Wire)
     (hw : w∉List.range' 855 16) : rawFirstWordState a s w=s w :=
   phaseWordState_frame _ _ _ _ hw
 
-private theorem first_address (a : Fin 65536) (s : BasisState) :
+theorem rawFirstWordState_address (a : Fin 65536) (s : BasisState) :
     tableAddressValue (List.range' 855 16) (rawFirstWordState a s)=a.val := by
   have hw := phaseWordState_word (List.range' 855 16) (List.nodup_range') (constantBits 16 a.val)
     (by simp only [constantBits_length,List.length_range']) s
@@ -104,7 +104,7 @@ theorem preparedWindowDelta_firstWord (x y : Nat → Nat → ShorECDLP.Fp)
     omega
   simp only [preparedWindowDelta,windowPointDelta,hsign,ha]
 
-private theorem exclusions_firstWord (x y : Nat → Nat → ShorECDLP.Fp)
+theorem rawAlgebraicExclusions_firstWord (x y : Nat → Nat → ShorECDLP.Fp)
     (hc : ∀ j a, curve.toAffine.Nonsingular (x j a) (y j a)) (js : List Nat)
     (hj : ∀ j∈js,1≤j) (a : Fin 65536) (A : Point) (s : BasisState) :
     rawAlgebraicExclusions x y hc js A (rawFirstWordState a s)=rawAlgebraicExclusions x y hc js A s := by
@@ -118,7 +118,7 @@ private theorem initial_affine (P Q : Point) (a : Fin 65536) (s : BasisState) :
     reducedRawInitialPoint P Q (rawFirstWordState a s)=a.val • P+
       (axisWindowOffset P 16+axisWindowOffset Q 13+signedWindowHalfPoint P order-(32768:ℤ) • P) := by
   unfold reducedRawInitialPoint
-  rw [first_address]
+  rw [rawFirstWordState_address]
   simp only [firstWindowTable,signedWindowDigit,sub_zsmul,natCast_zsmul]
   norm_num
   abel
@@ -142,7 +142,7 @@ theorem reducedRawExclusions_firstWord_card (P Q : Point) (hP : P≠0) (hQ : Q�
       rawAlgebraicExclusions (reducedRawX P Q) (reducedRawY P Q) hc reducedRawIndices
         (a.val • P+(axisWindowOffset P 16+axisWindowOffset Q 13+signedWindowHalfPoint P order-(32768:ℤ) • P)) s := by
     change rawAlgebraicExclusions _ _ hc _ _ _=_
-    rw [exclusions_firstWord _ _ hc _ hj,initial_affine]
+    rw [rawAlgebraicExclusions_firstWord _ _ hc _ hj,initial_affine]
   simp only [he]
   have h := rawAlgebraicExclusions_card (reducedRawX P Q) (reducedRawY P Q) hc reducedRawIndices
     P hP hrP 65536 (by norm_num [order])
