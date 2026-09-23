@@ -86,13 +86,29 @@ shared with the existing reduced-program proof. Neither new bound identifies
 an adaptive-stream failure event. Transport through the whole reused-bank
 execution is still required before claiming a streaming success probability.
 
+## Whole-axis relocation
+
+`Window/StreamAxisReuse.lean` composes block relocation across an entire axis,
+preserving the ordered list of full histories and unnormalized branch states.
+All assigned banks and the reusable bank must initially be clean; subsequent
+cleanliness is proved for each branch. Fourier feed-forward uses only the final
+sixteen records of each block, and an arbitrary adaptive tail is retained.
+
+`Window/RawAxisReuse.lean` instantiates the actual left-axis sequence (direct
+lookup and fifteen raw additions) on banks 1–16, and the thirteen right-axis
+additions on banks 17–29. These are interleaved instruments with preparation,
+arithmetic and Fourier measurement at each block. They are not the fully
+prepared `streamLogicalEntryState`. The latter still requires preparation
+commutation, arithmetic/Fourier identification and decoder composition before
+its exceptional mass bound can imply a success theorem for the streaming trial.
+
 ## Remaining proof obligations
 
 The 855-wire construction still needs the full MSB-first direct-load and
 history-continuation composition, interleaving of the arithmetic/Fourier branches,
 and identification of the complete sampling distribution with a verified decoder
-acceptance event. The local relocation theorem preserves all histories and states
-but does not establish this global equivalence. Thus the actual success theorem
+acceptance event. The whole-axis relocation theorem preserves all histories and states
+but does not establish equivalence to the fully prepared reference. Thus the actual success theorem
 continues to apply to the 1,303-wire program. The 835-wire goal, stronger success
 analysis and efficient executable classical decoder remain unfinished work.
 
