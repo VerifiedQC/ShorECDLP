@@ -4,13 +4,13 @@ open Classical Quantum ShorECDLP.Secp256k1
 noncomputable section
 attribute [local instance] Classical.propDecidable
 
-private theorem first_count (P Q : Point) (hP : P≠0) (hQ : Q≠0)
-    (hrP : order • P=0) (hrQ : order • Q=0) (s : BasisState) :
+/-- Transfer a finite first-word bound to its Boolean assignment enumeration. -/
+theorem rawFirstWord_filter_count (p : BasisState → Prop) (b : Nat) (s : BasisState)
+    (hbound : (Finset.univ.filter (fun a : Fin 65536 => ¬p (rawFirstWordState a s))).card ≤ b) :
     ((fourierOutcomes 16).filter (fun bs =>
-      ¬reducedRawExclusions P Q hP hQ hrP hrQ
-        (phaseWordState (List.range' 855 16) bs s))).length ≤ 112 := by
+      ¬p (phaseWordState (List.range' 855 16) bs s))).length ≤ b := by
   let xs := (fourierOutcomes 16).filter (fun bs =>
-      ¬reducedRawExclusions P Q hP hQ hrP hrQ
+      ¬p
         (phaseWordState (List.range' 855 16) bs s))
   let f (bs : List Bool) : Fin 65536 := ⟨boolWordToNat bs % 65536, Nat.mod_lt _ (by norm_num)⟩
   have hb (bs : List Bool) (h : bs ∈ xs) : bs.length=16 :=
@@ -31,18 +31,18 @@ private theorem first_count (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     simpa only [hv a ha', hv b hb''] using hh
   have hm : Set.MapsTo f (xs.toFinset : Set (List Bool))
       (Finset.univ.filter (fun a : Fin 65536 =>
-        ¬reducedRawExclusions P Q hP hQ hrP hrQ (rawFirstWordState a s))) := by
+        ¬p (rawFirstWordState a s))) := by
     intro bs hbs
     have h := List.mem_toFinset.mp hbs
     change f bs ∈ (Finset.univ.filter (fun a : Fin 65536 =>
-      ¬reducedRawExclusions P Q hP hQ hrP hrQ (rawFirstWordState a s)))
+      ¬p (rawFirstWordState a s)))
     apply Finset.mem_filter.mpr
     refine ⟨Finset.mem_univ _, ?_⟩
     simpa only [rawFirstWordState, he bs h, decide_eq_true_eq] using (List.mem_filter.mp h).2
   have hc := Finset.card_le_card_of_injOn f hm hi
   have hn : xs.Nodup := (fourierOutcomes_nodup _).filter _
   rw [List.toFinset_card_of_nodup hn] at hc
-  exact hc.trans (reducedRawExclusions_firstWord_card P Q hP hQ hrP hrQ s)
+  exact hc.trans hbound
 
 private theorem word_update (ws : List Wire) (bs : List Bool) (s : BasisState)
     (q : Wire) (b : Bool) (hq : q∉ws) :
@@ -106,43 +106,56 @@ private theorem bounded_sum {α : Type} (xs : List α) (f : α → Nat) (b : Nat
     have h2 := ih (by intro y hy; exact h y (by simp [hy]))
     omega
 
+/-- A conditional first-word count extends over every assignment of disjoint
+remaining wires. This statement counts assignments, not adaptive output events. -/
+theorem rawFirstWord_full_count (p : BasisState → Prop) (b : Nat)
+    (vs : List Wire) (hd : List.Disjoint (List.range' 855 16) vs)
+    (hbound : ∀ s, (Finset.univ.filter (fun a : Fin 65536 => ¬p (rawFirstWordState a s))).card ≤ b)
+    (s : BasisState) :
+    ((fourierOutcomes (16+vs.length)).filter (fun bs =>
+      ¬p (phaseWordState (List.range' 855 16 ++ vs) bs s))).length ≤ 2^vs.length*b := by
+  let ws := List.range' 855 16
+  let bad (bs : List Bool) : Bool := decide (¬p (phaseWordState (ws++vs) bs s))
+  have hc (cs : List Bool) :
+      ((fourierOutcomes 16).filter (fun bs => bad (bs++cs))).length ≤ b := by
+    have he : (fourierOutcomes 16).filter (fun bs => bad (bs++cs)) =
+        (fourierOutcomes 16).filter (fun bs => decide
+          (¬p (phaseWordState ws bs (phaseWordState vs cs s)))) := by
+      apply List.filter_congr
+      intro bs hbs
+      have hl := (fourierOutcomes_mem _ _).mp hbs
+      dsimp only [bad]
+      rw [phaseWordState_append ws vs bs cs (by simpa [ws] using hl),word_commute ws vs bs cs s hd]
+    rw [he]
+    exact rawFirstWord_filter_count p b _ (hbound _)
+  change ((fourierOutcomes (16+vs.length)).filter bad).length ≤ _
+  rw [outcomes_add,List.filter_flatMap,List.length_flatMap]
+  simp only [List.filter_map,Function.comp_def,List.length_map]
+  rw [product_filter_swap]
+  have h := bounded_sum (fourierOutcomes vs.length)
+    (fun cs => ((fourierOutcomes 16).filter (fun bs => bad (bs++cs))).length) b
+    (by intro cs _; exact hc cs)
+  simpa only [fourierOutcomes_length] using h
+
 /-- The full emitted assignment family inherits the conditional first-window bound. -/
 theorem reducedRawExclusions_word_count (P Q : Point) (hP : P≠0) (hQ : Q≠0)
     (hrP : order • P=0) (hrQ : order • Q=0) (s : BasisState) :
     ((fourierOutcomes 464).filter (fun bs =>
       ¬reducedRawExclusions P Q hP hQ hrP hrQ
         (phaseWordState reducedPhaseWires bs s))).length ≤ 2^448*112 := by
-  let ws := List.range' 855 16
   let vs := List.range' 871 240 ++ List.range' 1127 208
-  let bad (bs : List Bool) : Bool := decide
-    (¬reducedRawExclusions P Q hP hQ hrP hrQ (phaseWordState reducedPhaseWires bs s))
-  have hw : reducedPhaseWires=ws++vs := by decide +kernel
-  have hd : List.Disjoint ws vs := by
+  have hw : reducedPhaseWires=List.range' 855 16++vs := by decide +kernel
+  have hd : List.Disjoint (List.range' 855 16) vs := by
     apply List.disjoint_left.mpr
     intro w hw hv
-    simp only [ws,vs,List.mem_append,List.mem_range'_1] at *
+    simp only [vs,List.mem_append,List.mem_range'_1] at *
     omega
-  have hc (cs : List Bool) :
-      ((fourierOutcomes 16).filter (fun bs => bad (bs++cs))).length≤112 := by
-    have he : (fourierOutcomes 16).filter (fun bs => bad (bs++cs)) =
-        (fourierOutcomes 16).filter (fun bs => decide
-          (¬reducedRawExclusions P Q hP hQ hrP hrQ
-            (phaseWordState ws bs (phaseWordState vs cs s)))) := by
-      apply List.filter_congr
-      intro bs hbs
-      have hl := (fourierOutcomes_mem _ _).mp hbs
-      dsimp only [bad]
-      rw [hw,phaseWordState_append ws vs bs cs (by simpa [ws] using hl),word_commute ws vs bs cs s hd]
-    rw [he]
-    exact first_count P Q hP hQ hrP hrQ _
-  change ((fourierOutcomes 464).filter bad).length≤_
-  rw [show 464=16+448 from rfl,outcomes_add,List.filter_flatMap,List.length_flatMap]
-  simp only [List.filter_map,Function.comp_def,List.length_map]
-  rw [product_filter_swap]
-  have h := bounded_sum (fourierOutcomes 448)
-    (fun cs => ((fourierOutcomes 16).filter (fun bs => bad (bs++cs))).length) 112
-    (by intro cs _; exact hc cs)
-  simpa only [fourierOutcomes_length] using h
+  have h := rawFirstWord_full_count (reducedRawExclusions P Q hP hQ hrP hrQ) 112 vs hd
+    (reducedRawExclusions_firstWord_card P Q hP hQ hrP hrQ) s
+  rw [hw]
+  have hv : vs.length=448 := by simp only [vs,List.length_append,List.length_range']
+  rw [hv] at h
+  exact h
 
 /-- The excluded subspace of the actual root-enabled entry has mass at most 7/4096.
 This is an input bound, not yet an output sampling-error bound. -/

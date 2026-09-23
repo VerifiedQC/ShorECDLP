@@ -72,6 +72,20 @@ of the weighted first point and independence of all later calls from that word.
 This is a finite conditional count, **not yet a Born-weight bound** for the
 adaptive streaming input, and it supplies no new success probability.
 
+## Logical reference input weight
+
+`Window/StreamWeight.lean` lifts the conditional MSB-first count to a Born-mass
+bound of 7/4096 for the excluded subspace of `streamLogicalEntryState`. This
+reference preparation contains all 464 logical window wires simultaneously,
+with the root control enabled. A separate theorem gives the same conditional
+bound after the actual 16-wire Hadamard block on a clean basis background whose
+other logical windows remain fixed.
+
+The generic clean-Hadamard event/count and disjoint-word counting proofs are
+shared with the existing reduced-program proof. Neither new bound identifies
+an adaptive-stream failure event. Transport through the whole reused-bank
+execution is still required before claiming a streaming success probability.
+
 ## Remaining proof obligations
 
 The 855-wire construction still needs the full MSB-first direct-load and
