@@ -102,6 +102,20 @@ prepared `streamLogicalEntryState`. The latter still requires preparation
 commutation, arithmetic/Fourier identification and decoder composition before
 its exceptional mass bound can imply a success theorem for the streaming trial.
 
+## Moving unused-bank preparation
+
+`Framework/Quantum/AdaptiveHadamard.lean` proves that Hadamards on wires outside
+an adaptive prefix commute with every Kraus branch, including measurement/reset
+and outcome-dependent continuations. The evaluated instrument identity retains
+ordered histories, unnormalized states and an arbitrary adaptive tail. It holds
+for arbitrary inputs without cleanliness or separability assumptions.
+
+`Window/StreamPreparation.lean` proves that a relocated block on bank k does not
+use any different bank j, and moves preparation of j before that complete block.
+The branchwise rule also crosses an entire relocated axis if all its assigned
+banks and its tail avoid j. This is not yet a reordering theorem for the entire
+two-axis schedule or a transfer of the reference-state bound.
+
 ## Remaining proof obligations
 
 The 855-wire construction still needs the full MSB-first direct-load and

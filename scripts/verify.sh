@@ -426,6 +426,13 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedStreamAxis_run
 #print axioms ShorECDLP.Paper2607_13816.streamRawLeftAxis_relocated
 #print axioms ShorECDLP.Paper2607_13816.streamRawRightAxis_relocated
+#print axioms ShorECDLP.Quantum.applyGate_H_commute
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.branch_H_commute
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.branch_hadamards_commute
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.prepare_hadamards_run
+#print axioms ShorECDLP.Paper2607_13816.streamRelabel_bank_disjoint
+#print axioms ShorECDLP.Paper2607_13816.streamBlock_prepare_future
+#print axioms ShorECDLP.Paper2607_13816.relocatedStreamAxis_future_commute
 #print axioms ShorECDLP.Paper2607_13816.streamRawCall_continuation_reuse
 #print axioms ShorECDLP.Paper2607_13816.rawFirstWordState_address
 #print axioms ShorECDLP.Paper2607_13816.rawAlgebraicExclusions_firstWord
@@ -3743,8 +3750,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3719 ]]; then
-  printf 'expected 3719 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3726 ]]; then
+  printf 'expected 3726 #print axioms results\n' >&2
   exit 1
 fi
 
