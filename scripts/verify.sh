@@ -462,6 +462,18 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.unpreparedStreamAxis_deferred
 #print axioms ShorECDLP.Paper2607_13816.streamRawPreparedBody_deferred
 #print axioms ShorECDLP.Paper2607_13816.streamRawTrial_deferred
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch_append
+#print axioms ShorECDLP.Paper2607_13816.fourierBranch_disjoint_commute
+#print axioms ShorECDLP.Paper2607_13816.streamArithmeticPaths_length
+#print axioms ShorECDLP.Paper2607_13816.deferredStreamAxis_kernel
+#print axioms ShorECDLP.Paper2607_13816.streamFourierWires_nodup
+#print axioms ShorECDLP.Paper2607_13816.deferredStreamAxis_measuredKernel
+#print axioms ShorECDLP.Paper2607_13816.streamArithmeticPath_fourier_commute
+#print axioms ShorECDLP.Paper2607_13816.deferredTwoAxis_kernel
+#print axioms ShorECDLP.Paper2607_13816.streamRawDeferredBody_kernel
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_kernel
+#print axioms ShorECDLP.Paper2607_13816.streamFourierWires_length
+#print axioms ShorECDLP.Paper2607_13816.streamRawKernel_precisions
 #print axioms ShorECDLP.Paper2607_13816.streamBody_support
 #print axioms ShorECDLP.Paper2607_13816.streamRawCall_continuation_reuse
 #print axioms ShorECDLP.Paper2607_13816.rawFirstWordState_address
@@ -3780,8 +3792,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3756 ]]; then
-  printf 'expected 3756 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3768 ]]; then
+  printf 'expected 3768 #print axioms results\n' >&2
   exit 1
 fi
 

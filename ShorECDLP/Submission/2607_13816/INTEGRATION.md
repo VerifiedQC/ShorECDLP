@@ -163,9 +163,22 @@ feedback; this is not a new physical circuit or a resource reduction.
 The deferred maps still need to be identified with the ideal Fourier sampling
 kernel and the decoder event. No success bound is inferred from commutation alone.
 
+## Mathematical Fourier rows after actual arithmetic
+
+`StreamKernel` factors each axis into arithmetic paths and one contiguous
+Fourier branch, with a separate tag for Fourier bits and the original full
+chronological history. `StreamTwoKernel` moves the left Fourier row through
+all right-axis arithmetic and cleanup. `RawKernel.streamRawTrial_kernel`
+identifies the actual trial with all arithmetic followed by the mathematical
+256- and 208-bit Fourier rows, preserving amplitudes and every internal outcome.
+
+The arithmetic maps in this expression are still the actual raw maps. Their
+identification with the ideal scalar oracle on the permitted input set, the
+exceptional-input perturbation bound and actual decoder acceptance remain open.
+
 ## Remaining proof obligations
 
-The 855-wire construction still needs ideal arithmetic/Fourier sampling and
+The 855-wire construction still needs ideal scalar-oracle identification and
 identification of the complete sampling distribution with a verified decoder
 acceptance event. The two-axis correspondence preserves all histories and states,
 and the prepared input now has the excluded-mass bound, but the connection to
