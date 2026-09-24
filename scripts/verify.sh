@@ -443,6 +443,11 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedTwoAxis_reuse
 #print axioms ShorECDLP.Paper2607_13816.indexedTwoAxis_prepared
 #print axioms ShorECDLP.Paper2607_13816.streamRawTrial_prepared
+#print axioms ShorECDLP.Paper2607_13816.streamPreparedWire_injective
+#print axioms ShorECDLP.Paper2607_13816.streamPreparedWire_bank
+#print axioms ShorECDLP.Paper2607_13816.indexedStreamCalls_preparation
+#print axioms ShorECDLP.Paper2607_13816.streamRawPreparation_eq
+#print axioms ShorECDLP.Paper2607_13816.streamRawPrepared_excluded_mass
 #print axioms ShorECDLP.Paper2607_13816.streamRawCall_continuation_reuse
 #print axioms ShorECDLP.Paper2607_13816.rawFirstWordState_address
 #print axioms ShorECDLP.Paper2607_13816.rawAlgebraicExclusions_firstWord
@@ -3760,8 +3765,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3736 ]]; then
-  printf 'expected 3736 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3741 ]]; then
+  printf 'expected 3741 #print axioms results\n' >&2
   exit 1
 fi
 

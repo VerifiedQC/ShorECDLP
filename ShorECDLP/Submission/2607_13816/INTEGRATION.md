@@ -142,19 +142,22 @@ histories and unnormalized states of the actual `streamRawTrial` from zero with
 `streamRawPreparedBody` on its simultaneously prepared logical input.
 
 The comparison instrument uses banks 1–29, whereas `streamLogicalEntryState`
-uses banks 0–28. This correspondence therefore does not yet transfer the
-reference excluded-mass bound. Bank renaming, ideal arithmetic/Fourier sampling
-and decoder-event identification remain necessary; no 855-wire success contract
-is asserted by this result.
+uses banks 0–28. `PreparedWeight.streamPreparedWire` now identifies each reference
+bit with the corresponding prepared bit, preserving arithmetic addresses below
+855. `streamRawPreparation_eq` identifies the actual preparation with 464
+Hadamards on wires 871–1334. `streamRawPrepared_excluded_mass` transports the
+reference bound of 7/4096 to the excluded input predicate on this same preparation.
+This is a bound on input mass, not a bound on a physical failure or decoder event.
 
 ## Remaining proof obligations
 
-The 855-wire construction still needs reference-bank renaming, ideal
-arithmetic/Fourier sampling and identification of the complete sampling
-distribution with a verified decoder acceptance event. The whole-axis relocation theorem preserves all histories and states
-but does not establish equivalence to the fully prepared reference. Thus the actual success theorem
-continues to apply to the 1,303-wire program. The 835-wire goal, stronger success
-analysis and efficient executable classical decoder remain unfinished work.
+The 855-wire construction still needs ideal arithmetic/Fourier sampling and
+identification of the complete sampling distribution with a verified decoder
+acceptance event. The two-axis correspondence preserves all histories and states,
+and the prepared input now has the excluded-mass bound, but the connection to
+output success remains unproved. Thus the actual success theorem continues to
+apply to the 1,303-wire program. The 835-wire goal, stronger success analysis and
+efficient executable classical decoder remain unfinished work.
 
 ## Earlier alternative implementation
 
