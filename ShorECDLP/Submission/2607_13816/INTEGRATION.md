@@ -193,3 +193,12 @@ stacked on `proof/low-qubit-modmul`. It is not an implementation of this paper's
 EEA algorithm. It remains separate from this integration, following the adopted
 Naive/paper submission isolation in `docs/PLAN.md` §2. No arithmetic implementation
 from that branch is imported into the paper submission.
+
+`Window/PreparedArithmetic` transports the counted exclusions from reference
+banks 0–28 to prepared banks 1–29, preserving each selected signed table point.
+It identifies the 28 relocated raw addition calls and proves coherent semantics
+for their group-walk endpoint, including the complete non-point frame. The
+incoming point encoding and readiness remain hypotheses; first-lookup
+initialization, scalar reconstruction of this endpoint, and connection to the
+Fourier path enumeration are still required before a full streaming success
+contract follows.
