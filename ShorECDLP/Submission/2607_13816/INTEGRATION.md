@@ -202,3 +202,13 @@ incoming point encoding and readiness remain hypotheses; first-lookup
 initialization, scalar reconstruction of this endpoint, and connection to the
 Fourier path enumeration are still required before a full streaming success
 contract follows.
+
+`Window/StreamRecords` parses the original chronological trial records by following
+arithmetic measurement branches and extracting each subsequent 16-bit Fourier
+block. It proves equality with the existing left/right Fourier path labels, with
+256/208 bits in unchanged order, and rejects incomplete blocks and trailing data.
+The public-point decoder consumes this parsed record. Its accepted event is the
+actual history event, and its probability equals a nested path-list sum preserving
+every occurrence and internal arithmetic branch. No path or history deduplication
+is used. This is a noncomputable decoder specification; the numerical single-trial
+success lower bound, retry count, and complete 855-wire success contract remain open.

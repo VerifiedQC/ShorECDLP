@@ -481,6 +481,17 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.streamPreparedRawProgram_calls
 #print axioms ShorECDLP.Paper2607_13816.streamPreparedRaw_correct
 #print axioms ShorECDLP.Paper2607_13816.streamPreparedRaw_coherent
+#print axioms ShorECDLP.Paper2607_13816.consumeStreamFourier_path
+#print axioms ShorECDLP.Paper2607_13816.decodeStreamRawFourier_paths
+#print axioms ShorECDLP.Paper2607_13816.decodeStreamRawFourier_paths_trailing
+#print axioms ShorECDLP.Paper2607_13816.decodeStreamRawFourier_paths_lengths
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_decode
+#print axioms ShorECDLP.Paper2607_13816.streamRawHistoryAccept_paths
+#print axioms ShorECDLP.Paper2607_13816.streamRawFourierEventMass_paths
+#print axioms ShorECDLP.Paper2607_13816.streamRawPublicDecode_sound
+#print axioms ShorECDLP.Paper2607_13816.streamRawPublicDecode_accept
+#print axioms ShorECDLP.Paper2607_13816.streamRawPublicDecode_correct
+#print axioms ShorECDLP.Paper2607_13816.streamRawPublicDecode_eventMass
 #print axioms ShorECDLP.Paper2607_13816.streamBody_support
 #print axioms ShorECDLP.Paper2607_13816.streamRawCall_continuation_reuse
 #print axioms ShorECDLP.Paper2607_13816.rawFirstWordState_address
@@ -3799,8 +3810,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3775 ]]; then
-  printf 'expected 3775 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3786 ]]; then
+  printf 'expected 3786 #print axioms results\n' >&2
   exit 1
 fi
 
