@@ -149,6 +149,20 @@ Hadamards on wires 871–1334. `streamRawPrepared_excluded_mass` transports the
 reference bound of 7/4096 to the excluded input predicate on this same preparation.
 This is a bound on input mass, not a bound on a physical failure or decoder event.
 
+## Deferred Fourier maps
+
+`StreamFourierCommute` proves that each actual arithmetic branch commutes with
+Fourier measurement on a disjoint bank, including phase feedback and reset.
+`StreamDeferred.unpreparedStreamAxis_deferred` moves every Fourier map after
+its remaining axis and disjoint tail, preserving the original ordered full
+transcript and Kraus maps on arbitrary states. Distinct banks are required.
+`RawDeferred.streamRawTrial_deferred` connects both actual axes, initial setup
+and final cleanup to this algebraic instrument. Each axis keeps independent
+feedback; this is not a new physical circuit or a resource reduction.
+
+The deferred maps still need to be identified with the ideal Fourier sampling
+kernel and the decoder event. No success bound is inferred from commutation alone.
+
 ## Remaining proof obligations
 
 The 855-wire construction still needs ideal arithmetic/Fourier sampling and

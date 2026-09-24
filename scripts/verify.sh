@@ -448,6 +448,21 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.indexedStreamCalls_preparation
 #print axioms ShorECDLP.Paper2607_13816.streamRawPreparation_eq
 #print axioms ShorECDLP.Paper2607_13816.streamRawPrepared_excluded_mass
+#print axioms ShorECDLP.Quantum.applyGate_P_commute
+#print axioms ShorECDLP.Quantum.xReset_P_commute
+#print axioms ShorECDLP.Quantum.applyGate_reset_commute
+#print axioms ShorECDLP.Quantum.xReset_reset_commute
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.branch_commute
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.branch_P_commute
+#print axioms ShorECDLP.Quantum.AdaptiveCircuit.branch_reset_commute
+#print axioms ShorECDLP.Paper2607_13816.adaptiveBranch_fourier_commute
+#print axioms ShorECDLP.Paper2607_13816.streamArithmetic_fourier_commute
+#print axioms ShorECDLP.Paper2607_13816.unpreparedStreamAxis_fourier_commute
+#print axioms ShorECDLP.Paper2607_13816.parkedStreamBody_run
+#print axioms ShorECDLP.Paper2607_13816.unpreparedStreamAxis_deferred
+#print axioms ShorECDLP.Paper2607_13816.streamRawPreparedBody_deferred
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_deferred
+#print axioms ShorECDLP.Paper2607_13816.streamBody_support
 #print axioms ShorECDLP.Paper2607_13816.streamRawCall_continuation_reuse
 #print axioms ShorECDLP.Paper2607_13816.rawFirstWordState_address
 #print axioms ShorECDLP.Paper2607_13816.rawAlgebraicExclusions_firstWord
@@ -3765,8 +3780,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3741 ]]; then
-  printf 'expected 3741 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3756 ]]; then
+  printf 'expected 3756 #print axioms results\n' >&2
   exit 1
 fi
 

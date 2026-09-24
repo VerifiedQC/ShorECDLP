@@ -25,7 +25,7 @@ theorem measuredStreamBlock_split (call : AdaptiveCircuit) (k : Nat) (prior : Li
     rfl
   simp only [measuredStreamBlock, AdaptiveCircuit.seq, AdaptiveCircuit.relabel, parkedStreamBody, hh]
 
-private theorem body_support (call : AdaptiveCircuit) (prior : List Bool)
+theorem streamBody_support (call : AdaptiveCircuit) (prior : List Bool)
     (hc : call.wires ⊆ streamAllocation) :
     (call.seq (semiclassicalFourier .inverse streamAddress.reverse prior)).wires ⊆ streamAllocation := by
   have hm : (measuredStreamBlock call prior).wires ⊆ streamAllocation := by
@@ -53,7 +53,7 @@ theorem parkedStreamBody_future_commute (call : AdaptiveCircuit) (k : Nat) (prio
   apply AdaptiveCircuit.branch_hadamards_commute _ _ _ b hb ψ
   intro w hw
   obtain ⟨c, hc', hw⟩ := List.mem_flatMap.mp hw
-  exact streamRelabel_bank_disjoint _ (body_support call prior hc) k c.1 (hk c hc') w hw
+  exact streamRelabel_bank_disjoint _ (streamBody_support call prior hc) k c.1 (hk c hc') w hw
 
 /-- Move every preparation in an axis to its entry, retaining every branch in
 order. Distinct banks are essential here, unlike clean-boundary bank reuse.
