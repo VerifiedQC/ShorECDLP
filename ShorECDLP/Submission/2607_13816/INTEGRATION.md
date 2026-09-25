@@ -238,7 +238,16 @@ identified with this composition before an actual streaming success bound follow
 `Window/StreamPathMass` rearranges the actual record-acceptance mass into
 the complete relocated arithmetic instrument followed by the same selected
 256+208 Fourier rows on each branch. All list occurrences remain separate
-contributions. This closes the history-dependent path-sum interface, but the
-arithmetic fold still needs identification with the prepared scalar program
-and final root cleanup before the good-input mass theorem can be applied.
+contributions. This closes the history-dependent path-sum interface; the arithmetic and
+root-cleanup connection is provided by `StreamGoodFourier` below.
 No positive streaming success bound follows from this rearrangement alone.
+
+`Window/StreamGoodFourier` identifies that arithmetic fold with the actual
+prepared lookup and raw scalar schedule, retaining final X 836 cleanup. It
+constructs the common selected Fourier instrument and connects its mass to
+the actual full-record acceptance event. On the original good input component,
+all arithmetic histories sum to the scalar output's selected Fourier mass;
+root cleanup leaves that mass unchanged. This does not turn input filtering
+into physical postselection. The bad component and its interference still need
+control, and the ideal sampling lower bound, repetition and unified 855-wire
+success contract remain open.
