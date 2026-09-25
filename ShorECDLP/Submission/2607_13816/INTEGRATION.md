@@ -224,3 +224,13 @@ bounds. `streamPreparedArithmetic_scalars_coherent` retains the original
 initialization and exclusion premises and the complete point-write frame.
 Actual preparation, Fourier-path enumeration and root cleanup must still be
 connected before an actual trial success bound.
+
+`Window/PreparedEntry` proves that the actual 464-Hadamard preparation is
+supported on the clean initialization predicate. Filtering this same state by
+the previously counted path exclusions supplies the complete premise of the
+prepared scalar arithmetic theorem. Every original arithmetic branch has its
+aligned input-independent coefficient, with total squared mass one; any terminal
+instrument therefore has exactly the corresponding ideal good-component mass.
+This input filtering is a mathematical decomposition, not physical postselection.
+The interleaved Fourier arithmetic paths and final root cleanup still need to be
+identified with this composition before an actual streaming success bound follows.
