@@ -234,3 +234,11 @@ instrument therefore has exactly the corresponding ideal good-component mass.
 This input filtering is a mathematical decomposition, not physical postselection.
 The interleaved Fourier arithmetic paths and final root cleanup still need to be
 identified with this composition before an actual streaming success bound follows.
+
+`Window/StreamPathMass` rearranges the actual record-acceptance mass into
+the complete relocated arithmetic instrument followed by the same selected
+256+208 Fourier rows on each branch. All list occurrences remain separate
+contributions. This closes the history-dependent path-sum interface, but the
+arithmetic fold still needs identification with the prepared scalar program
+and final root cleanup before the good-input mass theorem can be applied.
+No positive streaming success bound follows from this rearrangement alone.
