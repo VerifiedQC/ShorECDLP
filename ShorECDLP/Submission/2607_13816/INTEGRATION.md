@@ -258,3 +258,9 @@ input mass and two coherent interference comparisons, actual record acceptance
 is at least 9/16 of the full ideal scalar output's Fourier event mass minus
 147/16384. This is an event comparison, not a positive numerical success bound:
 the full ideal event still needs its sampling lower bound connected.
+
+`Window/StreamScalarWord` identifies the reconstructed scalars with the MSB
+integers read by the actual 256-bit and 208-bit Fourier wire lists, including
+the prepared bank shift. Clearing both phase registers preserves the point
+and root bit. Uniform preparation and the numerical ideal sampling bound
+still need to be connected; this module does not add a success bound.
