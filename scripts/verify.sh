@@ -481,6 +481,11 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.streamPreparedRawProgram_calls
 #print axioms ShorECDLP.Paper2607_13816.streamPreparedRaw_correct
 #print axioms ShorECDLP.Paper2607_13816.streamPreparedRaw_coherent
+#print axioms ShorECDLP.Paper2607_13816.streamBankLookup_coherent
+#print axioms ShorECDLP.Paper2607_13816.streamPreparedLookup_coherent
+#print axioms ShorECDLP.Paper2607_13816.streamPreparedInitialState_ready
+#print axioms ShorECDLP.Paper2607_13816.streamPreparedInitialState_exclusions
+#print axioms ShorECDLP.Paper2607_13816.streamPreparedArithmetic_coherent
 #print axioms ShorECDLP.Paper2607_13816.consumeStreamFourier_path
 #print axioms ShorECDLP.Paper2607_13816.decodeStreamRawFourier_paths
 #print axioms ShorECDLP.Paper2607_13816.decodeStreamRawFourier_paths_trailing
@@ -3810,8 +3815,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3786 ]]; then
-  printf 'expected 3786 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3791 ]]; then
+  printf 'expected 3791 #print axioms results\n' >&2
   exit 1
 fi
 

@@ -212,3 +212,11 @@ actual history event, and its probability equals a nested path-list sum preservi
 every occurrence and internal arithmetic branch. No path or history deduplication
 is used. This is a noncomputable decoder specification; the numerical single-trial
 success lower bound, retry count, and complete 855-wire success contract remain open.
+
+`Window/PreparedLookup` connects the actual direct lookup relocated to bank 1
+to the 28 prepared raw additions. From point-initialization readiness and the
+original counted exclusions, `streamPreparedArithmetic_coherent` proves one
+coherent complete point-write map for their composition. The lookup establishes
+the initial point and preserves the exclusions. The resulting group-walk
+endpoint still requires scalar reconstruction; Fourier-path enumeration and
+root cleanup must also be connected before an actual trial success bound.
