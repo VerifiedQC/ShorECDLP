@@ -222,8 +222,8 @@ as the two MSB-first scalar values multiplied by P and Q. The scalar convention
 is proved equal to the reversed existing radix digit list, with 256/208-bit
 bounds. `streamPreparedArithmetic_scalars_coherent` retains the original
 initialization and exclusion premises and the complete point-write frame.
-Actual preparation, Fourier-path enumeration and root cleanup must still be
-connected before an actual trial success bound.
+Fourier-path enumeration and root cleanup must still be connected before an
+actual trial success bound. The preparation premise is discharged below.
 
 `Window/PreparedEntry` proves that the actual 464-Hadamard preparation is
 supported on the clean initialization predicate. Filtering this same state by
