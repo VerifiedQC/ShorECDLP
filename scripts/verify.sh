@@ -21,6 +21,13 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.preparedOddWindowCallIndexed_correct
+#print axioms ShorECDLP.Paper2607_13816.streamScalarValue_reverse
+#print axioms ShorECDLP.Paper2607_13816.streamScalarValue_lt
+#print axioms ShorECDLP.Paper2607_13816.streamRawEnd_scalars
+#print axioms ShorECDLP.Paper2607_13816.streamRawEnd_initialized_scalars
+#print axioms ShorECDLP.Paper2607_13816.streamPreparedRawEnd_scalars
+#print axioms ShorECDLP.Paper2607_13816.streamPreparedArithmetic_scalars_coherent
 #print axioms ShorECDLP.Paper2607_13816.measuredIndexedScheduleInverse_balance
 #print axioms ShorECDLP.Paper2607_13816.measuredIndexedSchedule_balance
 #print axioms ShorECDLP.Paper2607_13816.measuredIndexedStepInverse_balance
@@ -3815,8 +3822,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3791 ]]; then
-  printf 'expected 3791 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3798 ]]; then
+  printf 'expected 3798 #print axioms results\n' >&2
   exit 1
 fi
 

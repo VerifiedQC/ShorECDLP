@@ -217,6 +217,10 @@ success lower bound, retry count, and complete 855-wire success contract remain 
 to the 28 prepared raw additions. From point-initialization readiness and the
 original counted exclusions, `streamPreparedArithmetic_coherent` proves one
 coherent complete point-write map for their composition. The lookup establishes
-the initial point and preserves the exclusions. The resulting group-walk
-endpoint still requires scalar reconstruction; Fourier-path enumeration and
-root cleanup must also be connected before an actual trial success bound.
+the initial point and preserves the exclusions. The resulting group-walk endpoint is reconstructed by `Window/StreamScalar`
+as the two MSB-first scalar values multiplied by P and Q. The scalar convention
+is proved equal to the reversed existing radix digit list, with 256/208-bit
+bounds. `streamPreparedArithmetic_scalars_coherent` retains the original
+initialization and exclusion premises and the complete point-write frame.
+Actual preparation, Fourier-path enumeration and root cleanup must still be
+connected before an actual trial success bound.
