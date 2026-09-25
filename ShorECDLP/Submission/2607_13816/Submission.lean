@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.StreamScalar
 import ShorECDLP.Submission.«2607_13816».Window.PreparedLookup
 import ShorECDLP.Submission.«2607_13816».Window.StreamRecords
 import ShorECDLP.Submission.«2607_13816».Window.PreparedArithmetic

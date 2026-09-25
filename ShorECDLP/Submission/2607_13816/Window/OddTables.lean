@@ -96,6 +96,20 @@ theorem preparedOddWindowCall_correct (P : Point) (hP : P≠0) (hr : order • P
   rw [oddWindowTable_point P hP hr j (signedTableAddress 32768 (windowRawDigit j s))]
   rw [selected_oddWindow P j j s,oddWindow_digit P hr j (windowRawDigit j s)]
 
+/-- Physical bank and scalar exponent may be chosen independently, including
+MSB-first schedules. -/
+theorem preparedOddWindowCallIndexed_correct (P : Point) (hP : P≠0) (hr : order • P=0)
+    (exponent : Nat → Nat) (j : Nat) (A : Point) (s : BasisState)
+    (hs : PointLookupValid s) (hA : pointStateCoordinates s=fig14PointEncoding A) :
+    preparedWindowCallState (fun k => oddWindowX P (exponent k))
+      (fun k => oddWindowY P (exponent k))
+      (fun k => oddWindowTable_valid P hP hr (exponent k)) j s=
+      pointWrite (A+(signedWindowDigit 16 (windowRawDigit j s) • ((2^(16*exponent j)) • P)+
+        (2^(16*exponent j)) • signedWindowHalfPoint P order)) s := by
+  rw [preparedWindowCallState_selected _ _ _ j A s hs hA]
+  rw [oddWindowTable_point P hP hr (exponent j) (signedTableAddress 32768 (windowRawDigit j s))]
+  rw [selected_oddWindow P (exponent j) j s,oddWindow_digit P hr (exponent j) (windowRawDigit j s)]
+
 /-- An axis may begin at a later physical bank while its radix exponent starts at zero. -/
 theorem preparedOddWindowCallAt_correct (P : Point) (hP : P≠0) (hr : order • P=0)
     (start j : Nat) (A : Point) (s : BasisState) (hs : PointLookupValid s)
