@@ -248,6 +248,13 @@ constructs the common selected Fourier instrument and connects its mass to
 the actual full-record acceptance event. On the original good input component,
 all arithmetic histories sum to the scalar output's selected Fourier mass;
 root cleanup leaves that mass unchanged. This does not turn input filtering
-into physical postselection. The bad component and its interference still need
-control, and the ideal sampling lower bound, repetition and unified 855-wire
-success contract remain open.
+into physical postselection. The bad component and interference are bounded by `StreamInterference` below;
+the ideal sampling lower bound, repetition and unified 855-wire success
+contract remain open.
+
+`Window/StreamInterference` proves the actual selected terminal is contractive
+on every input, including excluded inputs. With the original 7/4096 excluded
+input mass and two coherent interference comparisons, actual record acceptance
+is at least 9/16 of the full ideal scalar output's Fourier event mass minus
+147/16384. This is an event comparison, not a positive numerical success bound:
+the full ideal event still needs its sampling lower bound connected.
