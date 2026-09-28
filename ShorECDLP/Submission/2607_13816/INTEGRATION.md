@@ -271,3 +271,11 @@ the actual two-axis kernels on each assigned scalar-output basis state have
 the 256/208-bit dyadic Fourier amplitudes and retain exactly aP+bQ and the root.
 Summing these amplitudes and identifying the ideal event distribution remains
 a separate step; no new numerical success bound is asserted here.
+
+`Window/StreamSamplingSuccess` sums the complete point-valued Fourier amplitudes
+before taking norms and identifies the ideal event distribution. Its actual
+`streamRawTrial_success_certificate` combines the same trial's 855-wire bound,
+847,701,655 measurements, at least 8% public-decoder acceptance and correctness
+of every accepted candidate. The nonzero-public-point and subgroup premises
+remain explicit. Actual total mass is one. The reset/retry program and 99%
+contract for this streaming trial are still separate unfinished obligations.
