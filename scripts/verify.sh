@@ -21,6 +21,22 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.streamResetTrial_total
+#print axioms ShorECDLP.Paper2607_13816.streamResetCandidate_mass
+#print axioms ShorECDLP.Paper2607_13816.streamResetCandidate_sound
+#print axioms ShorECDLP.Paper2607_13816.streamResetTrial_zero_support
+#print axioms ShorECDLP.Paper2607_13816.streamResetTrial_zero_branch
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedCandidate_sound
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedCandidate_mass
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedCandidate_success
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedProgram_zero
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedProgram_qubits
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedProgram_measurements
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedProgram_certificate
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.trial_certificate
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.certificate
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.decoder_sound
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.algorithm_zero
 #print axioms ShorECDLP.Paper2607_13816.streamFourierKernel_point_sum
 #print axioms ShorECDLP.Paper2607_13816.streamFourierKernel_outputMass
 #print axioms ShorECDLP.Paper2607_13816.streamIdealFourierEventMass_eq
@@ -3859,8 +3875,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3835 ]]; then
-  printf 'expected 3835 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3851 ]]; then
+  printf 'expected 3851 #print axioms results\n' >&2
   exit 1
 fi
 

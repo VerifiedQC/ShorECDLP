@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.StreamResetRepetition
 import ShorECDLP.Submission.«2607_13816».Window.StreamSamplingSuccess
 import ShorECDLP.Submission.«2607_13816».Window.StreamAssignedKernel
 import ShorECDLP.Submission.«2607_13816».Window.StreamScalarWord
@@ -21,10 +22,11 @@ import ShorECDLP.Submission.«2607_13816».Window.WeightedBlock
 import ShorECDLP.Submission.«2607_13816».Window.ReducedContract
 
 /-!
-# Current verified raw submission — secp256k1 (256 bits)
+# Verified raw and streaming submissions — secp256k1 (256 bits)
 
 Target reference remains arXiv:2607.13816v2. These certify our current physical
-raw circuit, without exceptional-input correction tables.
+raw circuits, without exceptional-input correction tables. The table below describes
+the original 1,303-wire program; the 855-wire Streaming entry is described next.
 
                          One trial          56 trials, with reset
 Logical wires            ≤ 1,303            ≤ 1,303 (reused)
@@ -43,12 +45,13 @@ The public-point-checked decoder is a noncomputable specification, not an effici
 executable classical implementation. The actual multiply/divide calls include
 the measured inversion optimization. The 835-wire target remains open.
 
-`Streaming.trial` below integrates the already proved reusable-address construction
-with these same raw arithmetic calls. Its support bound is 855 wires and its
-measurement count is 847,701,655. `Streaming.address_reset` and the block relocation
-results retain actual measurement branches. No whole-stream sampling-equivalence
-or success theorem has yet been proved; the 8%/99% contracts above apply to `trial`
-and `algorithm`, not to `Streaming.trial`.
+`Streaming.trial` and `Streaming.algorithm` below provide the actual 855-wire
+streaming contracts: at least 8% single-trial acceptance and at least 99% for
+56 reset-and-repeat trials, with the same public-point premises. Their measurement
+counts are 847,701,655 per trial and at most 47,471,340,560 for the repeated program.
+The 1,303-wire program's Toffoli/T-model bounds above are not transferred here;
+streaming gate-resource certificates remain separate work.
+
 -/
 namespace ShorECDLP.Paper2607_13816.Submission
 open Quantum ShorECDLP.Secp256k1
@@ -105,8 +108,7 @@ theorem corrected_certificate (Q : Point) (hrQ : ShorECDLP.order • Q = 0) :
     ReducedSecpWindowContract Q hrQ := reducedSecpWindowContract Q hrQ
 
 namespace Streaming
-/-- Current raw arithmetic in the existing single-bank MSB-first construction.
-The whole-stream sampling-equivalence proof remains open. -/
+/-- Current raw arithmetic in the verified single-bank MSB-first trial. -/
 def trial (Q : Point) : AdaptiveCircuit := streamRawTrial G Q
 
 /-- Support and measurement count refer to this actual streaming program. -/
@@ -132,6 +134,41 @@ theorem block_bank_reuse (P : Point) (j k : Nat) (hk : k ≠ 0)
     ((measuredStreamBlock (streamRawCall P j) prior).run.map
       (fun b => (b.history,b.kraus ψ))) :=
   streamRawCall_bank_run P j k hk prior ψ hin
+
+/-- Actual record acceptance, with a positive probability and correct returned scalar. -/
+theorem trial_certificate (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
+    (hrQ : ShorECDLP.order • Q = 0) (d : Nat) (hd : Q = d • G) :
+    (trial Q).qubitCount ≤ 855 ∧
+    (trial Q).measurementCount = 847701655 ∧
+    (2 : ℝ) / 25 ≤ Instrument.bornMass ((trial Q).run.filter
+      (fun b => (streamRawPublicDecode Q b.history).isSome)) (ket zeroBasisState) ∧
+    (∀ hist c, streamRawPublicDecode Q hist = some c → c = (d : ZMod ShorECDLP.order)) :=
+  streamRawTrial_success_certificate Q hG hQ hrQ d hd
+
+/-- Fifty-six trials with full support reset between trials. -/
+def algorithm (Q : Point) : AdaptiveCircuit := streamRepeatedProgram Q
+/-- Parse the full repeated record and return the first verified candidate. -/
+def candidate (Q : Point) (hist : List Bool) : Option (ZMod ShorECDLP.order) :=
+  streamRepeatedCandidate Q hist
+
+theorem certificate (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
+    (hrQ : ShorECDLP.order • Q = 0) (d : Nat) (hd : Q = d • G) :
+    (algorithm Q).qubitCount ≤ 855 ∧
+    (algorithm Q).measurementCount ≤ 47471340560 ∧
+    (99 : ℝ) / 100 ≤ Instrument.bornMass ((algorithm Q).run.filter
+      (fun b => (candidate Q b.history).isSome)) (ket zeroBasisState) ∧
+    (∀ hist c, candidate Q hist = some c → c = (d : ZMod ShorECDLP.order)) :=
+  streamRepeatedProgram_certificate Q hG hQ hrQ d hd
+
+theorem decoder_sound (Q : Point) (d : Nat) (hd : Q = d • G)
+    (hist : List Bool) (c : ZMod ShorECDLP.order)
+    (hc : candidate Q hist = some c) : c = (d : ZMod ShorECDLP.order) :=
+  streamRepeatedCandidate_sound Q d hd hist c hc
+
+theorem algorithm_zero (Q : Point) (b : InstrumentBranch) (hb : b ∈ (algorithm Q).run) :
+    b.kraus (ket zeroBasisState) = (b.kraus (ket zeroBasisState)) zeroBasisState • ket zeroBasisState :=
+  streamRepeatedProgram_zero Q b hb
+
 end Streaming
 
 end
