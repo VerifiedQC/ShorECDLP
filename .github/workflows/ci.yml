@@ -17,7 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # Cold proof builds can exceed one hour; retain every warning-fatal step.
+    timeout-minutes: 90
 
     steps:
       - name: Check out source
