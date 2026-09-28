@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Window.StreamGateCounts
 import ShorECDLP.Submission.«2607_13816».Window.StreamResetRepetition
 import ShorECDLP.Submission.«2607_13816».Window.StreamSamplingSuccess
 import ShorECDLP.Submission.«2607_13816».Window.StreamAssignedKernel
@@ -49,8 +50,10 @@ the measured inversion optimization. The 835-wire target remains open.
 streaming contracts: at least 8% single-trial acceptance and at least 99% for
 56 reset-and-repeat trials, with the same public-point premises. Their measurement
 counts are 847,701,655 per trial and at most 47,471,340,560 for the repeated program.
-The 1,303-wire program's Toffoli/T-model bounds above are not transferred here;
-streaming gate-resource certificates remain separate work.
+The streaming gate counts are now proved directly for that program: single-trial
+Toffoli 2,040,822,631 and T-model ≤14,285,812,585; repeated Toffoli 114,286,067,336
+and T-model ≤800,005,504,760. These happen to match the original gate bounds.
+`Streaming.gate_certificate` combines them with the 855-wire success contract.
 
 -/
 namespace ShorECDLP.Paper2607_13816.Submission
@@ -168,6 +171,31 @@ theorem decoder_sound (Q : Point) (d : Nat) (hd : Q = d • G)
 theorem algorithm_zero (Q : Point) (b : InstrumentBranch) (hb : b ∈ (algorithm Q).run) :
     b.kraus (ket zeroBasisState) = (b.kraus (ket zeroBasisState)) zeroBasisState • ket zeroBasisState :=
   streamRepeatedProgram_zero Q b hb
+
+/-- Actual single-trial gate counts, without a public-point nonzero premise. -/
+theorem trial_gate_resources (Q : Point) :
+    (primitiveResources (trial Q)).toffoli = 2040822631 ∧
+    (primitiveResources (trial Q)).phase ≤ 54168 ∧ (trial Q).tCount ≤ 14285812585 :=
+  ⟨streamRawTrial_toffoli G Q, streamRawTrial_phase_le G Q, streamRawTrial_tCount_le G Q⟩
+
+/-- Actual repeated gate counts; resetting adds measurements but no Toffoli or phase gates. -/
+theorem algorithm_gate_resources (Q : Point) :
+    (primitiveResources (algorithm Q)).toffoli = 114286067336 ∧
+    (primitiveResources (algorithm Q)).phase ≤ 3033408 ∧ (algorithm Q).tCount ≤ 800005504760 :=
+  ⟨(streamRepeatedProgram_gate_counts Q).1, (streamRepeatedProgram_gate_counts Q).2,
+    streamRepeatedProgram_tCount_le Q⟩
+
+/-- Combined resources and actual acceptance for the same 855-wire program. -/
+theorem gate_certificate (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
+    (hrQ : ShorECDLP.order • Q = 0) (d : Nat) (hd : Q = d • G) :
+    (algorithm Q).qubitCount ≤ 855 ∧
+    (primitiveResources (algorithm Q)).toffoli = 114286067336 ∧
+    (algorithm Q).tCount ≤ 800005504760 ∧
+    (algorithm Q).measurementCount ≤ 47471340560 ∧
+    (99 : ℝ) / 100 ≤ Instrument.bornMass ((algorithm Q).run.filter
+      (fun b => (candidate Q b.history).isSome)) (ket zeroBasisState) ∧
+    (∀ hist c, candidate Q hist = some c → c = (d : ZMod ShorECDLP.order)) :=
+  streamRepeatedProgram_gate_certificate Q hG hQ hrQ d hd
 
 end Streaming
 
