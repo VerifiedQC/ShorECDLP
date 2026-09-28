@@ -3872,11 +3872,20 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.asymmetricPairMass_nonneg
 #print axioms ShorECDLP.Paper2607_13816.reducedCoverageMass_lower
 #print axioms ShorECDLP.Paper2607_13816.reducedLeftPrecision_order
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_toffoli
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_phase_le
+#print axioms ShorECDLP.Paper2607_13816.streamRawTrial_tCount_le
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedProgram_gate_counts
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedProgram_tCount_le
+#print axioms ShorECDLP.Paper2607_13816.streamRepeatedProgram_gate_certificate
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.trial_gate_resources
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.algorithm_gate_resources
+#print axioms ShorECDLP.Paper2607_13816.Submission.Streaming.gate_certificate
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3851 ]]; then
-  printf 'expected 3851 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3860 ]]; then
+  printf 'expected 3860 #print axioms results\n' >&2
   exit 1
 fi
 

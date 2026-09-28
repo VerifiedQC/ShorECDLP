@@ -12,9 +12,9 @@ in the all-zero state. The decoders are mathematical specifications.
 | `Submission.Streaming.algorithm`, `candidate`, `certificate`, `decoder_sound`, `algorithm_zero` | The same streaming trial reset and repeated 56 times: ≤855 wires, ≤47,471,340,560 measurements, ≥99% acceptance, accepted-scalar correctness and branchwise final zero state |
 | `Submission.corrected_certificate` | Separate completed 26-round corrected-program contract |
 
-The original program's Toffoli and T-model bounds are not transferred to the
-streaming program by these contracts. T-model costs are not synthesized
-Clifford+T counts.
+`Streaming.trial_gate_resources`, `algorithm_gate_resources` and `gate_certificate`
+now prove gate bounds directly for the streaming program, as detailed below.
+T-model costs are not synthesized Clifford+T counts.
 
 ## Arithmetic and physical execution
 
@@ -59,9 +59,16 @@ arithmetic. These are physical correspondence theorems, not postselection.
    Every branch returns to zero, reset preserves acceptance, and the sequential
    instrument gives the 56-trial ≥99% contract exported by `Submission.Streaming`.
 
+8. `StreamGateCounts` counts the actual interleaved streaming program. Fourier
+   rotations add no Toffoli gates; their phase budgets are 32,640 and 21,528.
+   One trial has 2,040,822,631 Toffoli gates and T-model ≤14,285,812,585.
+   The 56-trial program has 114,286,067,336 Toffoli gates and T-model
+   ≤800,005,504,760. `Streaming.gate_certificate` binds these bounds to
+   the same 855-wire program and its ≥99% acceptance contract.
+
 ## Remaining scope
 
-The 835-wire target, streaming Toffoli/T-model resource certificates, stronger
+The 835-wire target, stronger
 success analysis, phase-rotation synthesis/error budgets and an efficient
 executable classical decoder remain separate work. The 855-wire sampling and
 reset/repetition connection is covered by the contracts above.
