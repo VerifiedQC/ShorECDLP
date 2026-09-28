@@ -264,3 +264,10 @@ integers read by the actual 256-bit and 208-bit Fourier wire lists, including
 the prepared bank shift. Clearing both phase registers preserves the point
 and root bit. Uniform preparation and the numerical ideal sampling bound
 still need to be connected; this module does not add a success bound.
+
+`Window/StreamUniform` rewrites the same prepared state as a normalized uniform
+sum in the reversed Fourier wire order. `Window/StreamAssignedKernel` proves
+the actual two-axis kernels on each assigned scalar-output basis state have
+the 256/208-bit dyadic Fourier amplitudes and retain exactly aP+bQ and the root.
+Summing these amplitudes and identifying the ideal event distribution remains
+a separate step; no new numerical success bound is asserted here.
