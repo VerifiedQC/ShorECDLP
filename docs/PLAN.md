@@ -3588,3 +3588,20 @@ not by themselves identify the entire adaptive output distribution. Consequently
 8%/99% certificates. No streaming success claim or 835-wire certificate is made.
 The prototype inventory and exact remaining obligations are recorded in
 `Submission/2607_13816/INTEGRATION.md`.
+
+
+### Current streaming resource refinement (2026-09-29)
+
+The complete streaming sampling and 56-trial reset/repetition connection is now
+proved in `StreamSamplingSuccess` and `StreamResetRepetition`, with ≥8% and ≥99%
+actual decoder acceptance under the stated nonzero/subgroup premises.
+`StreamGateCounts` directly proves the streaming gate bounds. Earlier progress
+entries above describe historical intermediate states.
+
+`StreamTightSupport` sharpens the unchanged program's allocation to **854 distinct
+wires**, excluding unused flag 837 but retaining point-infinity flag 838. Its
+`Submission.Streaming.tight_certificate` combines this bound, ≤47,471,340,504
+measurements, 114,286,067,336 Toffoli, T-model ≤800,005,504,760, ≥99% acceptance and
+decoder soundness for the same 56-trial program. This is a tighter upper bound,
+not a circuit rewrite or a minimality result. The 835-wire target still requires
+further justified arithmetic/layout changes; T-model is not synthesized T-count.

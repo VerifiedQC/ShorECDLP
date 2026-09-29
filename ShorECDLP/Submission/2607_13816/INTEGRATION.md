@@ -66,6 +66,14 @@ arithmetic. These are physical correspondence theorems, not postselection.
    ≤800,005,504,760. `Streaming.gate_certificate` binds these bounds to
    the same 855-wire program and its ≥99% acceptance contract.
 
+9. `StreamTightSupport` removes unused wire 837 from the proven allocation.
+   Initial lookup still needs infinity flag 838; the complete allocation is
+   `range 837 ++ [838] ++ range′ 855 16`, with 854 distinct wires. The actual
+   trial, reset list and repeated program are unchanged. The reset measurement
+   upper bound tightens to 47,471,340,504. `Streaming.tight_certificate` exports
+   this bound with the same ≥99% acceptance, soundness and gate counts.
+   This improves an upper bound; it does not establish that 854 is minimal.
+
 ## Remaining scope
 
 The 835-wire target, stronger
