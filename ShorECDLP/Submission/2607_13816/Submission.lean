@@ -1,4 +1,4 @@
-import ShorECDLP.Submission.«2607_13816».Window.StreamGateCounts
+import ShorECDLP.Submission.«2607_13816».Window.StreamTightSupport
 import ShorECDLP.Submission.«2607_13816».Window.StreamResetRepetition
 import ShorECDLP.Submission.«2607_13816».Window.StreamSamplingSuccess
 import ShorECDLP.Submission.«2607_13816».Window.StreamAssignedKernel
@@ -53,7 +53,11 @@ counts are 847,701,655 per trial and at most 47,471,340,560 for the repeated pro
 The streaming gate counts are now proved directly for that program: single-trial
 Toffoli 2,040,822,631 and T-model ≤14,285,812,585; repeated Toffoli 114,286,067,336
 and T-model ≤800,005,504,760. These happen to match the original gate bounds.
-`Streaming.gate_certificate` combines them with the 855-wire success contract.
+`Streaming.gate_certificate` combines them with the original 855-wire bound.
+`Streaming.tight_certificate` tightens the same program to 854 wires and
+47,471,340,504 measurements for 56 trials, keeping the same ≥99% acceptance
+and gate bounds. Wire 837 is unused; infinity flag 838 is retained. The paper's
+835-wire target remains open. Earlier resource contracts remain available.
 
 -/
 namespace ShorECDLP.Paper2607_13816.Submission
@@ -196,6 +200,25 @@ theorem gate_certificate (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
       (fun b => (candidate Q b.history).isSome)) (ket zeroBasisState) ∧
     (∀ hist c, candidate Q hist = some c → c = (d : ZMod ShorECDLP.order)) :=
   streamRepeatedProgram_gate_certificate Q hG hQ hrQ d hd
+
+/-- Current tighter bounds for the same trial and reset-and-repeat program. -/
+theorem tight_resources (Q : Point) :
+    (trial Q).qubitCount ≤ 854 ∧ (algorithm Q).qubitCount ≤ 854 ∧
+    (algorithm Q).measurementCount ≤ 47471340504 :=
+  ⟨streamRawTrial_qubits_854 G Q, streamRepeatedProgram_qubits_854 Q,
+    streamRepeatedProgram_measurements_854 Q⟩
+
+/-- Current 854-wire bound together with actual acceptance, correctness and gate resources. -/
+theorem tight_certificate (Q : Point) (hG : G ≠ 0) (hQ : Q ≠ 0)
+    (hrQ : ShorECDLP.order • Q = 0) (d : Nat) (hd : Q = d • G) :
+    (algorithm Q).qubitCount ≤ 854 ∧
+    (primitiveResources (algorithm Q)).toffoli = 114286067336 ∧
+    (algorithm Q).tCount ≤ 800005504760 ∧
+    (algorithm Q).measurementCount ≤ 47471340504 ∧
+    (99 : ℝ) / 100 ≤ Instrument.bornMass ((algorithm Q).run.filter
+      (fun b => (candidate Q b.history).isSome)) (ket zeroBasisState) ∧
+    (∀ hist c, candidate Q hist = some c → c = (d : ZMod ShorECDLP.order)) :=
+  streamRepeatedProgram_tight_certificate Q hG hQ hrQ d hd
 
 end Streaming
 
