@@ -1,0 +1,13 @@
+ShorECDLP.NaiveChallenge.naiveEvent
+ShorECDLP.NaiveChallenge.naiveObserved
+ShorECDLP.NaiveChallenge.naiveObserved_length
+ShorECDLP.NaiveChallenge.naiveObserved_probability
+ShorECDLP.NaiveChallenge.naiveObserved_success
+ShorECDLP.NaiveChallenge.naiveObserved_total
+ShorECDLP.NaiveChallenge.naiveRepeated
+ShorECDLP.NaiveChallenge.naiveRepeatedSuccess
+ShorECDLP.NaiveChallenge.naiveRepeated_probability
+ShorECDLP.NaiveChallenge.naiveRepeated_success
+ShorECDLP.NaiveChallenge.naive_bound_value
+ShorECDLP.NaiveChallenge.naive_trialCount_value
+ShorECDLP.NaiveChallenge.recoveredPair

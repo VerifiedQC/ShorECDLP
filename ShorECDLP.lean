@@ -1,4 +1,3 @@
-import ShorECDLP.Submission.«2607_13816».Challenge.Fourier
 import ShorECDLP.Submission.«2607_13816».Challenge.Support
 import ShorECDLP.Submission.«2607_13816».Challenge.Records
 import ShorECDLP.Submission.«2607_13816».Challenge.Positions
@@ -27,3 +26,9 @@ import ShorECDLP.Challenge.Contract
 import ShorECDLP.Challenge.Smoke
 import ShorECDLP.Challenge.StraightSmoke
 import ShorECDLP.Challenge.DecoderSmoke
+
+import ShorECDLP.Submission.Naive.Challenge.Readout
+import ShorECDLP.Submission.Naive.Challenge.Probability
+import ShorECDLP.Submission.Naive.Challenge.ResetRepeat
+import ShorECDLP.Submission.Naive.Challenge.Physical
+import ShorECDLP.Submission.«2607_13816».Challenge.Fourier
