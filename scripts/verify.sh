@@ -28,6 +28,29 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires_eq_streamTightAllocation
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.rawTrial_support_resetWires
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires_avoids_837
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires_avoids_oldAddress
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.rawTrial_avoids_oldAddress
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.rawTrial_avoids_resetGap
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires_nodup
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.reset_supported_program_zero
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.rawTrial_fixedReset_zero
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.straight_history_length
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_history_length
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.legacyDecoderParams
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.legacyTrialStride
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierPosition
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierPosition_before_reset
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierPosition_lt_total
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.leftPosition
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.rightPosition
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.leftPosition_strictMono
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.rightPosition_strictMono
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.leftPosition_lt_rightPosition
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.legacyTrialPositions
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.legacyDecodeLayout
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram_slots
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram_run
@@ -3937,8 +3960,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3906 ]]; then
-  printf 'expected 3906 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3929 ]]; then
+  printf 'expected 3929 #print axioms results\n' >&2
   exit 1
 fi
 

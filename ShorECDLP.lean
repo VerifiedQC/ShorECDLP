@@ -1,3 +1,6 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.Support
+import ShorECDLP.Submission.«2607_13816».Challenge.Records
+import ShorECDLP.Submission.«2607_13816».Challenge.Positions
 import ShorECDLP.Submission.«2607_13816».Challenge.Gates
 import ShorECDLP.Submission.«2607_13816».Challenge.Reset
 -- ShorECDLP: shared verified semantics and independent Bitcoin ECDLP submissions.
