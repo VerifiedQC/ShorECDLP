@@ -578,7 +578,7 @@ theorem controlledOutGates_length_le {n : Nat} (row : Fin n) (c : Wire)
 
 theorem controlledPointGates_length_le {n : Nat} (row : Fin n) (c : Wire)
     (ps : List Wire) (w : Wire) (hp : ps.length = 513) :
-    (controlledPointGates row c ps w).length ≤ 300000000000 := by
+    (controlledPointGates row c ps w).length ≤ 272000061539 := by
   have ht : (controlledPointAddTemp w).length = 513 := by
     simp only [controlledPointAddTemp, List.length_range']; rfl
   have h1 := controlledOutGates_length_le row c ps (controlledPointAddTemp w)
@@ -592,7 +592,7 @@ theorem controlledPointGates_length_le {n : Nat} (row : Fin n) (c : Wire)
 
 theorem scalarGates_length_le {n : Nat} (ps : List Wire) (w : Wire)
     (cs : List Wire) (rs : List (Fin n)) (hp : ps.length = 513) :
-    (scalarGates ps w cs rs).length ≤ cs.length * 300000000000 := by
+    (scalarGates ps w cs rs).length ≤ cs.length * 272000061539 := by
   induction cs generalizing rs with
   | nil => cases rs <;> simp [scalarGates]
   | cons c cs ih =>
@@ -636,7 +636,7 @@ theorem iqft_length_le (ws : List Wire) (a : Wire) :
     List.length_reverse, List.length_append]
   omega
 
-theorem trialGates_length_le : trialGates.length ≤ 153600000400000 := by
+theorem trialGates_length_le : trialGates.length ≤ 139264031903744 := by
   have hp : bitcoinPointReg.length = 513 := by
     simp only [bitcoinPointReg, List.length_range']; rfl
   have h1 := scalarGates_length_le bitcoinPointReg bitcoinWorkStart bitcoinAReg gPowerRows hp
@@ -666,12 +666,12 @@ theorem roundProgram_gateSlots_eq (cursor : Nat) :
   exact observedTrialProgram_slots cursor
 
 theorem roundProgram_gateSlots_le (cursor : Nat) :
-    (roundProgram cursor).gateSlots ≤ 153600000401024 := by
+    (roundProgram cursor).gateSlots ≤ 139264031904768 := by
   rw [roundProgram_gateSlots_eq]
   exact Nat.add_le_add_right trialGates_length_le 1024
 
 theorem repeatedProgram_gateSlots_le (count cursor : Nat) :
-    (repeatedProgram count cursor).gateSlots ≤ count*153600000401024 := by
+    (repeatedProgram count cursor).gateSlots ≤ count*139264031904768 := by
   induction count generalizing cursor with
   | zero => simp only [repeatedProgram, gateSlots_castFinish, Straight.gateSlots, Nat.zero_mul, le_refl]
   | succ count ih =>
@@ -681,7 +681,7 @@ theorem repeatedProgram_gateSlots_le (count cursor : Nat) :
     omega
 
 theorem naiveRepeatedEntry_gateSlots_le :
-    naiveRepeatedEntry.program.gateSlots ≤ 4000000000000000 := by
+    naiveRepeatedEntry.program.gateSlots ≤ 3620864829523968 := by
   simp only [naiveRepeatedEntry, gateSlots_castTable]
   exact (repeatedProgram_gateSlots_le 26 0).trans (by decide)
 

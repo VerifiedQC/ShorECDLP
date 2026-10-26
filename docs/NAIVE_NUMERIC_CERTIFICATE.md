@@ -8,7 +8,7 @@ covers all 26 rounds, including observation and fixed-wire reset.
 | --- | ---: |
 | Quantum wires | 206,624 |
 | T-model cost / declared score | 8,918,039,383,771,648 |
-| Gate slots, including disabled slots | 4,000,000,000,000,000 |
+| Gate slots, including disabled slots | 3,620,864,829,523,968 |
 | Measurement records | 5,385,536 |
 | Fixed coefficient rows | 512 |
 | Candidate checks | 26 |
@@ -38,3 +38,5 @@ Four existing support lemmas are made public without changing their proofs.
 No new axioms, admitted proofs, reduction-limit increases or semantic
 assumptions are introduced. The resource numbers describe this Naive entry;
 they do not establish any score or bound for the separate Streaming entry.
+
+The gate-slot admission limit is now 3,620,864,829,523,968, derived by propagating the controlled-point bound 272,000,061,539, the two 256-step scalar programs, Fourier bounds, and all 26 rounds. This removes the previous final rounding to 4 quadrillion and the 300-billion point-add allowance. It is still an upper bound, not an exact gate count; the T-model score and quantum program are unchanged.

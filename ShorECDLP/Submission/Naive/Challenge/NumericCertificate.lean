@@ -9,7 +9,7 @@ noncomputable section
 /-- Conservative admission limits for the complete 26-round Naive entry.
 The gate-slot bound counts disabled slots too; it is not the T-model score. -/
 def naiveNumericLimits : Limits where
-  gateSlots := 4000000000000000
+  gateSlots := 3620864829523968
   measurements := 5385536
   coefficientRows := 512
   candidateChecks := 26
