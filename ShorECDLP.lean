@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointSwap
 import ShorECDLP.Submission.«2607_13816».Challenge.SharedTable
 import ShorECDLP.Submission.«2607_13816».Challenge.Coordinate
 import ShorECDLP.Submission.«2607_13816».Challenge.RetainedRecords
