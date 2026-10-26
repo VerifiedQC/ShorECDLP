@@ -17,3 +17,4 @@ import ShorECDLP.Submission.«2607_13816».All
 
 import ShorECDLP.Challenge.Template
 import ShorECDLP.Challenge.StraightLine
+import ShorECDLP.Challenge.Contract
