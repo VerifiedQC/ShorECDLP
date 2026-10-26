@@ -38,4 +38,5 @@ import ShorECDLP.Submission.Naive.Challenge.PointGates
 import ShorECDLP.Submission.Naive.Challenge.TrialGates
 import ShorECDLP.Submission.Naive.Challenge.Static
 import ShorECDLP.Submission.Naive.Challenge.StaticResources
+import ShorECDLP.Submission.Naive.Challenge.RepeatedEntry
 import ShorECDLP.Submission.«2607_13816».Challenge.Fourier
