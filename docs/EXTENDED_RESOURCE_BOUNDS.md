@@ -22,12 +22,14 @@ an existing certificate:
 
 The new Naive `naiveRepeatedEntry_extended_certificate` covers all 26 rounds:
 
-| Metric | Proven upper bound |
+| Metric | Derived upper bound (推导上界) |
 |---|---:|
 | Toffoli primitives | 1,274,005,626,253,092 |
 | Non-Clifford primitives | 3,620,864,829,523,968 |
 
-These conservative bounds reuse the existing numeric certificate. They do not
+These conservative derived bounds reuse the existing numeric certificate.
+In particular, the non-Clifford bound uses all gate slots and can be much looser
+than the actual non-Clifford count. They do not
 change its circuit, success theorem, qubit bound, measurement count, or abstract
 T-model score. A protected judge can require `ExtendedCertificate` and report
 these bounds alongside those existing metrics. The judge must label them as
