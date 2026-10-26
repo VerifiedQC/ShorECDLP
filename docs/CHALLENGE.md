@@ -125,3 +125,5 @@ Optional tighter diagnostics use `ShorECDLP.Entrant.extendedBounds : ExtendedBou
 Both must be present and pass the same syntax-free kernel type and axiom checks. Otherwise the
 judge derives Toffoli ≤ T-model/7 and non-Clifford ≤ the official gate-slot limit. JSON names
 explicitly distinguish these derived upper bounds and organizer limits from exact counts.
+
+Runtime prerequisite: use Python **3.10 or newer** for the runner scripts (place it on `PATH` as `python3`), and the Lean/Lake version pinned by `lean-toolchain`.
