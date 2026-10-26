@@ -1,0 +1,13 @@
+ShorECDLP.NaiveChallenge.observeWires_slots
+ShorECDLP.NaiveChallenge.observedGateProgram_slots
+ShorECDLP.NaiveChallenge.observedStaticBounds
+ShorECDLP.NaiveChallenge.observedTrialProgram_resources
+ShorECDLP.NaiveChallenge.observedTrialProgram_slots
+ShorECDLP.NaiveChallenge.slotGate
+ShorECDLP.NaiveChallenge.slot_t_bound
+ShorECDLP.NaiveChallenge.slot_wires_subset
+ShorECDLP.NaiveChallenge.straightT
+ShorECDLP.NaiveChallenge.straightWires
+ShorECDLP.NaiveChallenge.straight_qubit_bound
+ShorECDLP.NaiveChallenge.straight_t_bound
+ShorECDLP.NaiveChallenge.straight_wires_subset
