@@ -3,8 +3,12 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
-# 1. Only the editable path may differ from the pinned trusted tree.
-python3 scripts/challenge/check-editable.py --allow ShorECDLP/Submission/Entrant
+# 1. Only the editable path may differ from the pinned trusted tree (checker runs from the TRUSTED copy, before any cache restore).
+: "${TRUSTED_REPO:?runner must set TRUSTED_REPO (evaluator-owned checkout)}"
+: "${TRUSTED_TREE:?runner must set TRUSTED_TREE (full tree hash)}"
+"$TRUSTED_REPO/scripts/challenge/check-editable.py" --repo "$root" \
+  --trusted-repo "$TRUSTED_REPO" --trusted-tree "$TRUSTED_TREE" \
+  --allow ShorECDLP/Submission/Entrant
 # 2. Source policy (no kernel-disable option) and layer rules.
 python3 scripts/challenge/gate.py --source-only
 SHORECDLP_ROOT="$root" python3 scripts/check-source.py
