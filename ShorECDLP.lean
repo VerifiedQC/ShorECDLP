@@ -47,3 +47,5 @@ import ShorECDLP.Submission.Naive.Challenge.NumericCosts
 import ShorECDLP.Submission.Naive.Challenge.NumericQubits
 import ShorECDLP.Submission.Naive.Challenge.NumericLengths
 import ShorECDLP.Submission.Naive.Challenge.NumericCertificate
+import ShorECDLP.Challenge.ExtendedContract
+import ShorECDLP.Submission.Naive.Challenge.ExtendedCertificate
