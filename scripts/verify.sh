@@ -14,6 +14,7 @@ fi
 # Lean reports `sorry`/`admit` as warnings, so make the compiler's own parser
 # authoritative instead of attempting to duplicate Lean's extensible syntax in a hand lexer.
 lake --wfail build
+lake env lean ShorECDLP/Challenge/Smoke.lean
 
 # Ask Lean itself for every module's imports, then reject out-of-tree sources and
 # anything not reachable from the root aggregator.
@@ -21,6 +22,11 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Challenge.toffoliCount
+#print axioms ShorECDLP.Challenge.nonCliffordCount
+#print axioms ShorECDLP.Challenge.resources
+#print axioms ShorECDLP.Challenge.Entry.program_wellFormed
+#print axioms ShorECDLP.Challenge.Template.instantiate_seq
 #print axioms ShorECDLP.Paper2607_13816.streamResetTrial_total
 #print axioms ShorECDLP.Paper2607_13816.streamResetCandidate_mass
 #print axioms ShorECDLP.Paper2607_13816.streamResetCandidate_sound
@@ -3893,8 +3899,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3869 ]]; then
-  printf 'expected 3869 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3874 ]]; then
+  printf 'expected 3874 #print axioms results\n' >&2
   exit 1
 fi
 
