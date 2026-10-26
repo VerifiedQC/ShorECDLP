@@ -1,0 +1,5 @@
+ShorECDLP.Challenge.ExtendedBounds
+ShorECDLP.Challenge.ExtendedCertificate
+ShorECDLP.Challenge.toffoliCount_mul_seven_le
+ShorECDLP.Challenge.nonCliffordCount_le_allGateCount
+ShorECDLP.Challenge.Certificate.extend
