@@ -28,3 +28,6 @@ ShorECDLP.Paper2607_13816.secp256k1GidneyAdd_correct_resources
 ShorECDLP.Paper2607_13816.secp256k1GidneyAdd_counts
 ShorECDLP.Paper2607_13816.secp256k1Increment_counts
 ShorECDLP.Paper2607_13816.secp256k1ModulusAdd_counts
+ShorECDLP.Paper2607_13816.gidneyFlipWord
+ShorECDLP.Paper2607_13816.gidneyAddCleanup
+ShorECDLP.Paper2607_13816.gidneyAddTail
