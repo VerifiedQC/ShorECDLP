@@ -1,5 +1,7 @@
 # ShorECDLP
 
+> **Challenge:** see [docs/CHALLENGE.md](docs/CHALLENGE.md) for the verified-circuit challenge (with Eigen Labs). Apache 2.0, see `LICENSE` and `NOTICE`.
+
 A verified, end-to-end resource estimate for Shor's algorithm on the **elliptic-curve
 discrete-logarithm problem (ECDLP)** over **secp256k1** — the quantum attack on ECDSA
 as used by Bitcoin.
