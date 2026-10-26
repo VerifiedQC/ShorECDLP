@@ -1,3 +1,5 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.Square
+import ShorECDLP.Submission.«2607_13816».Challenge.Horner
 import ShorECDLP.Submission.«2607_13816».Challenge.SignedWindow
 import ShorECDLP.Submission.«2607_13816».Challenge.ModularAdd
 import ShorECDLP.Submission.«2607_13816».Challenge.GidneyAdd
