@@ -2,6 +2,7 @@
 """Own benign fixtures only. This is not a sandbox for arbitrary submissions."""
 from pathlib import Path
 import subprocess
+import re
 import tempfile
 import gate
 
@@ -54,7 +55,7 @@ CASES = {
 EXPECTED_ERRORS = {
     "CustomFieldCallback": ("Type mismatch", "ShorECDLP.Secp256k1.Point → ℕ",
                             "ShorECDLP.Challenge.PointField"),
-    "InventedField": ("Invalid dotted identifier notation", "discreteLog"),
+    "InventedField": ("Unknown constant", "ShorECDLP.Challenge.PointField.discreteLog"),
     "CustomPostprocessor": ("Type mismatch", "has type List Bool → ℕ", "expected to have type ShorECDLP.Challenge.DecodeLayout"),
     "EditableCounter": ("`counter` is not a field", "ShorECDLP.Challenge.StraightEntry"),
     "DecoderReadsQ": ("Type mismatch", "has type ShorECDLP.Secp256k1.Point → ShorECDLP.Secp256k1.Point",
@@ -103,7 +104,7 @@ def main():
                 cwd=gate.ROOT, env=env, text=True, capture_output=True, timeout=120)
             if (result.returncode == 0) != accept:
                 raise AssertionError(f"{name}: unexpected compiler result\n{result.stdout}\n{result.stderr}")
-            if not accept and (result.returncode != 1 or "error:" not in result.stdout):
+            if not accept and (result.returncode != 1 or re.search(r"error(?:\([^\n)]+\))?:", result.stdout) is None):
                 raise AssertionError(f"{name}: rejection was not a Lean diagnostic: {result.stdout} {result.stderr}")
             if not accept:
                 require_diagnostic(name, result.stdout, EXPECTED_ERRORS[name])
