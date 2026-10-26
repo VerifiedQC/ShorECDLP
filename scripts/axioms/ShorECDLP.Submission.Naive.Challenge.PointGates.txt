@@ -57,3 +57,5 @@ ShorECDLP.NaiveChallenge.variableCircuit_fieldLoad
 ShorECDLP.NaiveChallenge.variableCircuit_literal
 ShorECDLP.NaiveChallenge.variableCircuit_packedLoad
 ShorECDLP.NaiveChallenge.variableCircuit_reverse
+
+ShorECDLP.NaiveChallenge.LegacyField

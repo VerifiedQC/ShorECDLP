@@ -50,3 +50,13 @@ binding, fixed-address selection, cleanup, and the complete program certificate.
 Constant-bit-controlled X gates for a fixed row do not charge T, but selecting a
 row with quantum address bits requires an address-selection network. Neither
 that cost nor the costs of adjusted endpoint swaps are certified by this menu.
+
+## Compatibility with the original menu
+
+The original coordinate source remains computable by reading `baseFieldValue`
+only at its fixed original constructors; those values are definitionally equal
+to `fieldValue`. The general protected reader remains `fieldValue`.
+The Naive negation/reindexing proof now requires `LegacyField` (the original six
+constructors). A compositional proof establishes that its actual gate list only
+reads those fields. No negation-invariance claim is made for new exceptional Y
+fields, and no new field is silently substituted in the Naive circuit.
