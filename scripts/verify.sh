@@ -15,6 +15,7 @@ fi
 # authoritative instead of attempting to duplicate Lean's extensible syntax in a hand lexer.
 lake --wfail build
 lake env lean tests/challenge/Smoke.lean
+lake env lean tests/challenge/StraightSmoke.lean
 
 # Ask Lean itself for every module's imports, then reject out-of-tree sources and
 # anything not reachable from the root aggregator.
@@ -22,6 +23,10 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Challenge.Straight.instantiate_wellFormed
+#print axioms ShorECDLP.Challenge.Straight.measurementCount
+#print axioms ShorECDLP.Challenge.Straight.allGateCount_le
+#print axioms ShorECDLP.Challenge.Straight.gateSlots_append
 #print axioms ShorECDLP.Challenge.toffoliCount
 #print axioms ShorECDLP.Challenge.nonCliffordCount
 #print axioms ShorECDLP.Challenge.resources
