@@ -14,8 +14,9 @@ fi
 # Lean reports `sorry`/`admit` as warnings, so make the compiler's own parser
 # authoritative instead of attempting to duplicate Lean's extensible syntax in a hand lexer.
 lake --wfail build
-lake env lean tests/challenge/Smoke.lean
-lake env lean tests/challenge/StraightSmoke.lean
+lake env lean ShorECDLP/Challenge/Smoke.lean
+lake env lean ShorECDLP/Challenge/StraightSmoke.lean
+lake env lean ShorECDLP/Challenge/DecoderSmoke.lean
 
 # Ask Lean itself for every module's imports, then reject out-of-tree sources and
 # anything not reachable from the root aggregator.
@@ -41,6 +42,16 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_gateSlots
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_measurements
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_run
+#print axioms ShorECDLP.Challenge.numeratorInterval_card
+#print axioms ShorECDLP.Challenge.wrappedNumerators_card
+#print axioms ShorECDLP.Challenge.fixedCandidates_card
+#print axioms ShorECDLP.Challenge.fixedCandidates_take
+#print axioms ShorECDLP.Challenge.trialCandidates_length
+#print axioms ShorECDLP.Challenge.candidates_length_trials
+#print axioms ShorECDLP.Challenge.Certificate.candidateChecks_le
+#print axioms ShorECDLP.Challenge.candidates_length
+#print axioms ShorECDLP.Challenge.verifiedCandidate_mem
+#print axioms ShorECDLP.Challenge.verifiedCandidate_sound
 #print axioms ShorECDLP.Challenge.Straight.instantiate_wellFormed
 #print axioms ShorECDLP.Challenge.Straight.measurementCount
 #print axioms ShorECDLP.Challenge.Straight.allGateCount_le
@@ -3922,8 +3933,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3869 ]]; then
-  printf 'expected 3869 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3906 ]]; then
+  printf 'expected 3906 #print axioms results\n' >&2
   exit 1
 fi
 
