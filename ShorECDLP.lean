@@ -86,3 +86,5 @@ import ShorECDLP.Submission.Naive.Challenge.NumericLengths
 import ShorECDLP.Submission.Naive.Challenge.NumericCertificate
 import ShorECDLP.Challenge.ExtendedContract
 import ShorECDLP.Submission.Naive.Challenge.ExtendedCertificate
+
+import ShorECDLP.Submission.«2607_13816».Challenge.CertificateAssembly
