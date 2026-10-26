@@ -13,6 +13,10 @@ structure PointCoeff where
 
 inductive PointField where
   | x | y | infinity | negX | negY | tripleX
+  | exceptionalZeroX | exceptionalZeroY | negDoubleX
+  | exceptionalNegX | exceptionalNegY
+  | exceptionalNegDoubleX | exceptionalNegDoubleY
+  | doubleX | doubleY | doubleInfinity
   deriving DecidableEq, Repr
 
 /-- Reference to one of the protected table fields. -/
@@ -99,13 +103,48 @@ def pointCoordinates : Point → Bool × (Fp × Fp)
   | .zero => (true, 0, 0)
   | .some (x := x) (y := y) _ => (false, x, y)
 
-def fieldValue (P : Point) : PointField → Nat
+/-- The source coordinate permutation replaces a zero denominator by one.
+This is deliberately different from taking the inverse of zero. -/
+def exceptionalDenominator (z : Fp) : Fp := if z = 0 then 1 else z
+
+/-- Fixed rational coordinate map for one public table point (x,y).
+All arguments are evaluator-owned coordinates, never entrant callbacks. -/
+def exceptionalImage (x y r s : Fp) : Fp × Fp :=
+  let u := (s - y) / exceptionalDenominator (r - x)
+  let w := r + 2*x - u^2
+  (x - w, u * exceptionalDenominator w - y)
+
+/-- Canonical coordinates of twice the same protected table point. -/
+noncomputable def doubledCoordinates (P : Point) : Bool × (Fp × Fp) :=
+  pointCoordinates (P + P)
+
+noncomputable def fieldValue (P : Point) : PointField → Nat
   | .x => (pointCoordinates P).2.1.val
   | .y => (pointCoordinates P).2.2.val
   | .infinity => if (pointCoordinates P).1 then 1 else 0
   | .negX => (-(pointCoordinates P).2.1).val
   | .negY => (-(pointCoordinates P).2.2).val
   | .tripleX => (3 * (pointCoordinates P).2.1).val
+  | .exceptionalZeroX =>
+      (exceptionalImage (pointCoordinates P).2.1 (pointCoordinates P).2.2 0 0).1.val
+  | .exceptionalZeroY =>
+      (exceptionalImage (pointCoordinates P).2.1 (pointCoordinates P).2.2 0 0).2.val
+  | .negDoubleX => (-2 * (pointCoordinates P).2.1).val
+  | .exceptionalNegX =>
+      (exceptionalImage (pointCoordinates P).2.1 (pointCoordinates P).2.2
+        (pointCoordinates P).2.1 (-(pointCoordinates P).2.2)).1.val
+  | .exceptionalNegY =>
+      (exceptionalImage (pointCoordinates P).2.1 (pointCoordinates P).2.2
+        (pointCoordinates P).2.1 (-(pointCoordinates P).2.2)).2.val
+  | .exceptionalNegDoubleX =>
+      (exceptionalImage (pointCoordinates P).2.1 (pointCoordinates P).2.2
+        (doubledCoordinates P).2.1 (-(doubledCoordinates P).2.2)).1.val
+  | .exceptionalNegDoubleY =>
+      (exceptionalImage (pointCoordinates P).2.1 (pointCoordinates P).2.2
+        (doubledCoordinates P).2.1 (-(doubledCoordinates P).2.2)).2.val
+  | .doubleX => (doubledCoordinates P).2.1.val
+  | .doubleY => (doubledCoordinates P).2.2.val
+  | .doubleInfinity => if (doubledCoordinates P).1 then 1 else 0
 
 noncomputable def readConstant {n : Nat} (coeffs : Fin n → PointCoeff) (Q : Point)
     (ref : ConstantBit n) : Bool :=
