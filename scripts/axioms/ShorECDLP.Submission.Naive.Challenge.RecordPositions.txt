@@ -1,0 +1,8 @@
+ShorECDLP.NaiveChallenge.fixedRepeatedSuccess_actualWords
+ShorECDLP.NaiveChallenge.fixedRepeatedSuccess_iff
+ShorECDLP.NaiveChallenge.naiveRepeatedEntry_history_length
+ShorECDLP.NaiveChallenge.readWord_range
+ShorECDLP.NaiveChallenge.repeatFailed_success_iff
+ShorECDLP.NaiveChallenge.repeatedDecoderParams
+ShorECDLP.NaiveChallenge.repeatedTrialPositions
+ShorECDLP.NaiveChallenge.repeatedTrialPositions_read

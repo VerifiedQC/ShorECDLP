@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.Fourier
 import ShorECDLP.Submission.«2607_13816».Challenge.Support
 import ShorECDLP.Submission.«2607_13816».Challenge.Records
 import ShorECDLP.Submission.«2607_13816».Challenge.Positions
@@ -39,4 +40,5 @@ import ShorECDLP.Submission.Naive.Challenge.TrialGates
 import ShorECDLP.Submission.Naive.Challenge.Static
 import ShorECDLP.Submission.Naive.Challenge.StaticResources
 import ShorECDLP.Submission.Naive.Challenge.RepeatedEntry
-import ShorECDLP.Submission.«2607_13816».Challenge.Fourier
+import ShorECDLP.Submission.Naive.Challenge.RecordPositions
+import ShorECDLP.Submission.Naive.Challenge.Certificate
