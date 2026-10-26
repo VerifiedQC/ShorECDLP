@@ -36,4 +36,4 @@ The baseline migration must prove absolute record-position extraction equals
 its former parser, and the accepted candidate event equals its original event.
 Those are not inferred from this API or from resource-count agreement.
 
-The organizer configuration exposes candidateLimit48 = 2^48. Certificate.candidateChecks_le bounds the entire candidate list for every history, using the actual trial count. The 56-trial 256/208 baseline does not satisfy that cap. Other admission limits remain explicit organizer parameters.
+The organizer configuration exposes budget48 = 2^48 and budget55 = 56 * (2^49 + 2), without a default. Certificate.candidateChecks_le bounds the entire candidate list for every history, using the actual trial count. The 56-trial 256/208 baseline does not satisfy budget48. Other admission limits remain explicit organizer parameters.

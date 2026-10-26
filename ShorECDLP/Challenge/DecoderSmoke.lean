@@ -6,6 +6,8 @@ def baselineParams : DecoderParams := ⟨256, 208, by decide, by decide, by deci
 def fullParams : DecoderParams := ⟨256, 256, by decide, by decide, by decide, by decide⟩
 example : trialCandidateLimit baselineParams = 2^49+2 := by decide +kernel
 example : trialCandidateLimit fullParams = 4 := by decide +kernel
+example : 56 * trialCandidateLimit baselineParams = budget55 := by decide +kernel
+example : budget48 < 56 * trialCandidateLimit baselineParams := by decide +kernel
 #print axioms fixedCandidates_card
 #print axioms fixedCandidates_take
 #print axioms candidates_length

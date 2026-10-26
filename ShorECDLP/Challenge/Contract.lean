@@ -44,8 +44,9 @@ structure Limits where
   coefficientRows : Nat
   candidateChecks : Nat
 
-/-- Initial organizer candidate cap requested by the owner. Other limits remain explicit. -/
-def candidateLimit48 : Nat := 2^48
+/-- Named organizer policy options. Neither is a default. -/
+def budget48 : Nat := 2^48
+def budget55 : Nat := 56 * (2^49 + 2)
 
 /-- The decoder algorithm is protected; the submission supplies only index data.
 All resource and probability expressions refer to the SAME instantiated circuit.
