@@ -42,3 +42,8 @@ import ShorECDLP.Submission.Naive.Challenge.StaticResources
 import ShorECDLP.Submission.Naive.Challenge.RepeatedEntry
 import ShorECDLP.Submission.Naive.Challenge.RecordPositions
 import ShorECDLP.Submission.Naive.Challenge.Certificate
+
+import ShorECDLP.Submission.Naive.Challenge.NumericCosts
+import ShorECDLP.Submission.Naive.Challenge.NumericQubits
+import ShorECDLP.Submission.Naive.Challenge.NumericLengths
+import ShorECDLP.Submission.Naive.Challenge.NumericCertificate

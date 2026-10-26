@@ -685,7 +685,7 @@ theorem scalarMul_tCount_of_table_ne_zero
 omit [Fact (Nat.Prime p)] in
 /-- Every generic scalar-fold circuit stays inside its controls, point
 register, and shared controlled-add workspace. -/
-private theorem scalarMulCore_usesOnly
+theorem scalarMulCore_usesOnly
     (controls pointReg : List Wire)
     (points : List Point)
     (workStart : Wire) :

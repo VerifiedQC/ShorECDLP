@@ -1,0 +1,8 @@
+ShorECDLP.NaiveChallenge.gateNative_wires
+ShorECDLP.NaiveChallenge.naiveRepeatedEntry_fixed_support
+ShorECDLP.NaiveChallenge.naiveRepeatedEntry_qubit_bound
+ShorECDLP.NaiveChallenge.observedNative_fixed_support
+ShorECDLP.NaiveChallenge.repeatFixed_support
+ShorECDLP.NaiveChallenge.resetNative_support
+ShorECDLP.NaiveChallenge.roundNative_fixed_support
+ShorECDLP.NaiveChallenge.trialGates_fixed_support
