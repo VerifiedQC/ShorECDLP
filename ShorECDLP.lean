@@ -1,3 +1,6 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.Relabel
+import ShorECDLP.Submission.«2607_13816».Challenge.Wrapper
+import ShorECDLP.Submission.«2607_13816».Challenge.Workspace
 import ShorECDLP.Submission.«2607_13816».Challenge.Schedule
 import ShorECDLP.Submission.«2607_13816».Challenge.IntervalWhole
 import ShorECDLP.Submission.«2607_13816».Challenge.Coefficient
