@@ -1,0 +1,7 @@
+ShorECDLP.NaiveChallenge.bornMass_filter_mono
+ShorECDLP.NaiveChallenge.naiveRepeatedEntry_certificate
+ShorECDLP.NaiveChallenge.naiveRepeatedEntry_verified_success
+ShorECDLP.NaiveChallenge.repeatedDecodeLayout
+ShorECDLP.NaiveChallenge.repeatedDecodeLayout_candidates_bound
+ShorECDLP.NaiveChallenge.repeated_success_candidate
+ShorECDLP.NaiveChallenge.repeated_success_verified

@@ -27,3 +27,23 @@ import ShorECDLP.Challenge.Contract
 import ShorECDLP.Challenge.Smoke
 import ShorECDLP.Challenge.StraightSmoke
 import ShorECDLP.Challenge.DecoderSmoke
+
+import ShorECDLP.Submission.Naive.Challenge.Readout
+import ShorECDLP.Submission.Naive.Challenge.Probability
+import ShorECDLP.Submission.Naive.Challenge.ResetRepeat
+import ShorECDLP.Submission.Naive.Challenge.Physical
+
+import ShorECDLP.Submission.Naive.Challenge.FixedReset
+import ShorECDLP.Submission.Naive.Challenge.Constants
+import ShorECDLP.Submission.Naive.Challenge.PointGates
+import ShorECDLP.Submission.Naive.Challenge.TrialGates
+import ShorECDLP.Submission.Naive.Challenge.Static
+import ShorECDLP.Submission.Naive.Challenge.StaticResources
+import ShorECDLP.Submission.Naive.Challenge.RepeatedEntry
+import ShorECDLP.Submission.Naive.Challenge.RecordPositions
+import ShorECDLP.Submission.Naive.Challenge.Certificate
+
+import ShorECDLP.Submission.Naive.Challenge.NumericCosts
+import ShorECDLP.Submission.Naive.Challenge.NumericQubits
+import ShorECDLP.Submission.Naive.Challenge.NumericLengths
+import ShorECDLP.Submission.Naive.Challenge.NumericCertificate

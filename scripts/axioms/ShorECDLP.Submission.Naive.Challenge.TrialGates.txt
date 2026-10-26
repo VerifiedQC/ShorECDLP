@@ -1,0 +1,13 @@
+ShorECDLP.NaiveChallenge.constantGateProgram_append_instantiate
+ShorECDLP.NaiveChallenge.gPowerRows
+ShorECDLP.NaiveChallenge.gPowerRows_source
+ShorECDLP.NaiveChallenge.observedTrialProgram
+ShorECDLP.NaiveChallenge.observedTrialProgram_run
+ShorECDLP.NaiveChallenge.qPowerRows
+ShorECDLP.NaiveChallenge.qPowerRows_source
+ShorECDLP.NaiveChallenge.scalarGates
+ShorECDLP.NaiveChallenge.scalarGates_source
+ShorECDLP.NaiveChallenge.trialGates
+ShorECDLP.NaiveChallenge.trialGates_source
+ShorECDLP.NaiveChallenge.trialProgram
+ShorECDLP.NaiveChallenge.trialProgram_run

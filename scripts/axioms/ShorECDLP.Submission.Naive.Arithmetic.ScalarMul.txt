@@ -1,3 +1,4 @@
+ShorECDLP.Secp256k1.scalarMulCore_usesOnly
 ShorECDLP.Secp256k1.scalarMul_HPFree
 ShorECDLP.Secp256k1.scalarMul_correct
 ShorECDLP.Secp256k1.scalarMul_tCount_of_table_ne_zero

@@ -81,7 +81,7 @@ private theorem hadamards_tCount (reg : List Wire) :
         simpa only [hadamards] using ih
       simpa only [tCost, zero_add] using ih'
 
-private theorem hadamards_usesOnly (reg : List Wire) :
+theorem hadamards_usesOnly (reg : List Wire) :
     CircuitUsesOnly reg (hadamards reg) := by
   intro g hg
   simp only [hadamards, List.mem_map] at hg
@@ -198,7 +198,7 @@ private theorem bitReverse_usesOnly
       hleft, hright]
   exact hswap g hg
 
-private theorem iqft_usesOnly
+theorem iqft_usesOnly
     (reg : List Wire) (ancilla : Wire) :
     CircuitUsesOnly (reg ++ [ancilla])
       (Quantum.iqft reg ancilla) := by
@@ -836,7 +836,7 @@ theorem bitcoinWireLayout :
   exact ⟨by simp [bitcoinAReg], by simp [bitcoinBReg],
     by simp [bitcoinPointReg], hnodup, hancillaFresh⟩
 
-private theorem bitcoinDeclaredWires_subset :
+theorem bitcoinDeclaredWires_subset :
     ∀ w ∈
       bitcoinAReg ++ bitcoinBReg ++ bitcoinPointReg ++
         scalarMulWork bitcoinWorkStart ++ [bitcoinQFTAncilla],
@@ -885,6 +885,16 @@ private theorem qubitCount_le_of_usesOnly
   rw [List.toFinset_card_of_nodup (List.nodup_dedup _),
     List.toFinset_card_of_nodup hsupport] at hcard
   simpa [qubitCount] using hcard
+
+/-- A fixed, key-independent dense envelope for the complete Naive circuit. -/
+theorem bitcoinECDLPTrial_fixed_support (Q : Point) :
+    circuitWires (ecdlpTrial bitcoinAReg bitcoinBReg bitcoinPointReg
+      bitcoinWorkStart bitcoinQFTAncilla Q) ⊆ List.range bitcoinQubitCount := by
+  apply (ModAddSupport.circuitUsesOnly_iff_support _ _).mp
+  apply Arithmetic.usesOnly_mono
+    (ecdlpTrial_usesOnly Q bitcoinAReg bitcoinBReg bitcoinPointReg
+      bitcoinWorkStart bitcoinQFTAncilla)
+  exact bitcoinDeclaredWires_subset
 
 /-- The current concrete one-trial Bitcoin circuit touches at most
 `206,624` distinct qubit wires.  Sequential measured repetition reuses this
