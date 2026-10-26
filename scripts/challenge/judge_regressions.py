@@ -8,6 +8,7 @@ import gate
 
 PREFIX = '''import ShorECDLP.Submission.Naive.Challenge.NumericCertificate
 import ShorECDLP.Challenge.Official
+import ShorECDLP.Challenge.ExtendedContract
 open ShorECDLP.Challenge ShorECDLP.NaiveChallenge
 '''
 REAL_CERT = '''theorem certificate : Certificate officialLimits layout entry bounds :=

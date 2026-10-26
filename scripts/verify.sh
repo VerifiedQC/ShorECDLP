@@ -27,6 +27,7 @@ lake env lean ShorECDLP/Challenge/DecoderSmoke.lean
 
 python3 scripts/challenge/gate.py --replay ShorECDLP.Challenge
 python3 scripts/challenge/regressions.py
+python3 scripts/challenge/judge_regressions.py
 
 # Ask Lean itself for every module's imports, then reject out-of-tree sources and
 # anything not reachable from the root aggregator.

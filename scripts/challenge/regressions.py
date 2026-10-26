@@ -129,5 +129,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    import judge_regressions
-    judge_regressions.main()
+
