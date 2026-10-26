@@ -1,3 +1,6 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.Lookup
+import ShorECDLP.Submission.«2607_13816».Challenge.Coefficients
+import ShorECDLP.Submission.«2607_13816».Challenge.PointTable
 import ShorECDLP.Submission.«2607_13816».Challenge.Fourier
 import ShorECDLP.Submission.«2607_13816».Challenge.Support
 import ShorECDLP.Submission.«2607_13816».Challenge.Records
