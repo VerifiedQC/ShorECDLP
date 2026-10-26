@@ -6,7 +6,7 @@ cd "$root"
 # 1. Only the editable path may differ from the pinned trusted tree (checker runs from the TRUSTED copy, before any cache restore).
 : "${TRUSTED_REPO:?runner must set TRUSTED_REPO (evaluator-owned checkout)}"
 : "${TRUSTED_TREE:?runner must set TRUSTED_TREE (full tree hash)}"
-"$TRUSTED_REPO/scripts/challenge/check-editable.py" --repo "$root" \
+python3 "$TRUSTED_REPO/scripts/challenge/check-editable.py" --repo "$root" \
   --trusted-repo "$TRUSTED_REPO" --trusted-tree "$TRUSTED_TREE" \
   --allow ShorECDLP/Submission/Entrant
 # 2. Source policy (no kernel-disable option) and layer rules.
