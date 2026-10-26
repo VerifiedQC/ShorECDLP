@@ -42,6 +42,15 @@ def fakeBounds : Bounds := ⟨0, 0, 0⟩
 @[implemented_by fakeBounds] def bounds : Bounds := naiveNumericBounds
 end ShorECDLP.Entrant
 ''' + ENTRY + REAL_CERT + END, True),
+    ('ValidTighterDiagnostics', PREFIX.replace('Naive.Challenge.NumericCertificate',
+        'Naive.Challenge.ExtendedCertificate') + ENTRY +
+     'def bounds : Bounds := naiveNumericBounds\n' + REAL_CERT +
+     'def extendedBounds : ExtendedBounds := naiveExtendedBounds\n' +
+     'theorem extendedCertificate : ExtendedCertificate officialLimits layout entry bounds extendedBounds :=\n'
+     '  ⟨certificate, naiveRepeatedEntry_extended_certificate.diagnostics⟩\n' + END, True),
+    ('WrongExtendedCertificate', PREFIX + ENTRY + 'def bounds : Bounds := naiveNumericBounds\n' +
+     REAL_CERT + 'def extendedBounds : ExtendedBounds := ⟨0, 0⟩\n'
+     'theorem extendedCertificate : True := True.intro\n' + END, False),
 ]
 
 
@@ -82,8 +91,10 @@ def main():
                 assert data['score_tModel'] == 8918039383771648, data
                 assert data['qubits'] == 206624, data
                 assert data['measurements'] == 5385536, data
+                assert data['toffoli_derived_upper_bound'] == 1274005626253092, data
+                assert data['nonClifford_derived_upper_bound'] == (3620864829523968 if name == 'ValidTighterDiagnostics' else 4000000000000000), data
             else:
-                expected = 'wrong kernel type' if name == 'MacroZeroScore' else 'non-allowlisted axiom'
+                expected = 'wrong kernel type' if name in ('MacroZeroScore', 'WrongExtendedCertificate') else 'non-allowlisted axiom'
                 if result.returncode != 1 or expected not in result.stderr:
                     raise AssertionError(f'{name}: wrong rejection\n{result.stdout}\n{result.stderr}')
             print(f'{name}: kernel acceptance check ' + ('accepted true metrics' if accepted else 'rejected'))

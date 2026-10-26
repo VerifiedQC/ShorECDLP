@@ -59,6 +59,12 @@ unsafe def main (args : List String) : IO UInt32 := do
     let slots ← natValue env (field `ShorECDLP.Challenge.Limits.gateSlots limits)
     let rows ← natValue env (field `ShorECDLP.Challenge.Limits.coefficientRows limits)
     let candidates ← natValue env (field `ShorECDLP.Challenge.Limits.candidateChecks limits)
+    let derived := mkAppN (mkConst `ShorECDLP.Judge.derive_diagnostics)
+      #[entry, layout, bounds, mkConst `ShorECDLP.Entrant.certificate]
+    let derivedBounds := mkAppN (mkConst `ShorECDLP.Challenge.ExtendedBounds.mk)
+      #[mkNatLit (t / 7), mkNatLit slots]
+    checkType env derived
+      (mkAppN (mkConst `ShorECDLP.Judge.extendedAcceptance) #[entry, layout, bounds, derivedBounds])
     let mut toffoli := t / 7
     let mut nonClifford := slots
     let extraName := `ShorECDLP.Entrant.extendedBounds
