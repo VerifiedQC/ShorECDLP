@@ -886,6 +886,16 @@ private theorem qubitCount_le_of_usesOnly
     List.toFinset_card_of_nodup hsupport] at hcard
   simpa [qubitCount] using hcard
 
+/-- A fixed, key-independent dense envelope for the complete Naive circuit. -/
+theorem bitcoinECDLPTrial_fixed_support (Q : Point) :
+    circuitWires (ecdlpTrial bitcoinAReg bitcoinBReg bitcoinPointReg
+      bitcoinWorkStart bitcoinQFTAncilla Q) ⊆ List.range bitcoinQubitCount := by
+  apply (ModAddSupport.circuitUsesOnly_iff_support _ _).mp
+  apply Arithmetic.usesOnly_mono
+    (ecdlpTrial_usesOnly Q bitcoinAReg bitcoinBReg bitcoinPointReg
+      bitcoinWorkStart bitcoinQFTAncilla)
+  exact bitcoinDeclaredWires_subset
+
 /-- The current concrete one-trial Bitcoin circuit touches at most
 `206,624` distinct qubit wires.  Sequential measured repetition reuses this
 same device, so the bound is not multiplied by 26. -/

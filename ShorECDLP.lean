@@ -31,4 +31,6 @@ import ShorECDLP.Submission.Naive.Challenge.Readout
 import ShorECDLP.Submission.Naive.Challenge.Probability
 import ShorECDLP.Submission.Naive.Challenge.ResetRepeat
 import ShorECDLP.Submission.Naive.Challenge.Physical
+
+import ShorECDLP.Submission.Naive.Challenge.FixedReset
 import ShorECDLP.Submission.«2607_13816».Challenge.Fourier
