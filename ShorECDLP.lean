@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.OddFields
 import ShorECDLP.Submission.«2607_13816».Challenge.Lookup
 import ShorECDLP.Submission.«2607_13816».Challenge.Coefficients
 import ShorECDLP.Submission.«2607_13816».Challenge.PointTable
