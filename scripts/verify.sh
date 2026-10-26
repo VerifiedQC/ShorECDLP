@@ -13,10 +13,14 @@ fi
 
 # Lean reports `sorry`/`admit` as warnings, so make the compiler's own parser
 # authoritative instead of attempting to duplicate Lean's extensible syntax in a hand lexer.
+python3 scripts/challenge/gate.py --source-only
 lake --wfail build
 lake env lean ShorECDLP/Challenge/Smoke.lean
 lake env lean ShorECDLP/Challenge/StraightSmoke.lean
 lake env lean ShorECDLP/Challenge/DecoderSmoke.lean
+
+python3 scripts/challenge/gate.py --replay ShorECDLP.Challenge
+python3 scripts/challenge/regressions.py
 
 # Ask Lean itself for every module's imports, then reject out-of-tree sources and
 # anything not reachable from the root aggregator.
