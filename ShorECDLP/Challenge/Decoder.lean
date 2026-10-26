@@ -1,4 +1,6 @@
 import ShorECDLP.Challenge.Template
+import ShorECDLP.Math.Bitcoin
+import ShorECDLP.Math.BitcoinPrimes
 import Mathlib.Order.Interval.Finset.Nat
 
 namespace ShorECDLP.Challenge
@@ -6,6 +8,7 @@ namespace ShorECDLP.Challenge
 code review, not a submission-provided callback. -/
 inductive DecoderKind where
   | wrappedShift
+  | nearestPair
   deriving DecidableEq, Repr
 
 /-- Fixed bounded menu of precisions; no submitted algorithm. -/
@@ -101,26 +104,86 @@ theorem trialCandidates_length (params : DecoderParams) (history : List Bool) (p
   unfold trialCandidates
   split <;> simp [List.length_take]
 
+/-- Fixed canonical Naive decoder. Mismatched precisions reject the trial.
+Reduction modulo the register size is inert on actual bounded register samples. -/
+noncomputable def nearestPairCandidates (params : DecoderParams) (left right : Nat) :
+    List (ZMod order) :=
+  if params.leftBits = params.rightBits then
+    (Quantum.OrderFinding.orderFindingPostprocess order params.leftBits Secp256k1.order_prime
+      (Fin.ofNat (2^params.leftBits) left, Fin.ofNat (2^params.leftBits) right)).toList
+  else []
+
+theorem nearestPairCandidates_length (params : DecoderParams) (left right : Nat) :
+    (nearestPairCandidates params left right).length ≤ 1 := by
+  unfold nearestPairCandidates
+  split
+  · generalize Quantum.OrderFinding.orderFindingPostprocess order params.leftBits Secp256k1.order_prime
+      (Fin.ofNat (2^params.leftBits) left, Fin.ofNat (2^params.leftBits) right) = result
+    cases result <;> simp
+  · simp
+
+theorem nearestPairCandidates_eq_postprocess (params : DecoderParams)
+    (h : params.leftBits = params.rightBits)
+    (left right : Fin (2^params.leftBits)) :
+    nearestPairCandidates params left.val right.val =
+      (Quantum.OrderFinding.orderFindingPostprocess order params.leftBits Secp256k1.order_prime
+        (left, right)).toList := by
+  simp [nearestPairCandidates, h, Fin.ofNat_eq_cast]
+
+/-- A protected menu determines each trial's budget; entrants cannot provide it. -/
+def decoderCandidateLimit (kind : DecoderKind) (params : DecoderParams) : Nat :=
+  match kind with
+  | .wrappedShift => trialCandidateLimit params
+  | .nearestPair => 1
+
+noncomputable def decodeTrial (kind : DecoderKind) (params : DecoderParams)
+    (history : List Bool) (positions : TrialPositions params) : List (ZMod order) :=
+  match kind with
+  | .wrappedShift => trialCandidates params history positions
+  | .nearestPair =>
+    match readWord history positions.left.toList, readWord history positions.right.toList with
+    | some left, some right => nearestPairCandidates params left right
+    | _, _ => []
+
+theorem decodeTrial_length (kind : DecoderKind) (params : DecoderParams)
+    (history : List Bool) (positions : TrialPositions params) :
+    (decodeTrial kind params history positions).length ≤ decoderCandidateLimit kind params := by
+  cases kind with
+  | wrappedShift => exact trialCandidates_length params history positions
+  | nearestPair =>
+    simp only [decodeTrial, decoderCandidateLimit]
+    split
+    · exact nearestPairCandidates_length _ _ _
+    · simp
+
 noncomputable def candidates (layout : DecodeLayout) (history : List Bool) : List (ZMod order) :=
-  match layout.kind with
-  | .wrappedShift => layout.trials.flatMap (trialCandidates layout.params history)
+  layout.trials.flatMap (decodeTrial layout.kind layout.params history)
+
+/-- The original wrappedShift algorithm is unchanged, including its ordering. -/
+theorem candidates_wrappedShift (layout : DecodeLayout) (h : layout.kind = .wrappedShift)
+    (history : List Bool) :
+    candidates layout history = layout.trials.flatMap (trialCandidates layout.params history) := by
+  unfold candidates
+  rw [h]
+  rfl
 
 theorem candidates_length_trials (layout : DecodeLayout) (history : List Bool) :
-    (candidates layout history).length ≤ layout.trials.length * trialCandidateLimit layout.params := by
+    (candidates layout history).length ≤
+      layout.trials.length * decoderCandidateLimit layout.kind layout.params := by
   have aux : ∀ ps : List (TrialPositions layout.params),
-      (ps.flatMap (trialCandidates layout.params history)).length ≤ ps.length * trialCandidateLimit layout.params := by
+      (ps.flatMap (decodeTrial layout.kind layout.params history)).length ≤
+        ps.length * decoderCandidateLimit layout.kind layout.params := by
     intro ps
     induction ps with
     | nil => simp
     | cons p ps ih =>
       simp only [List.flatMap_cons, List.length_append, List.length_cons, Nat.add_mul]
-      have h := trialCandidates_length layout.params history p
+      have h := decodeTrial_length layout.kind layout.params history p
       omega
-  cases hk : layout.kind
-  simpa [candidates, hk] using
-    aux layout.trials
+  exact aux layout.trials
+
 theorem candidates_length (layout : DecodeLayout) (history : List Bool) :
-    (candidates layout history).length ≤ 56 * trialCandidateLimit layout.params :=
+    (candidates layout history).length ≤ 56 * decoderCandidateLimit layout.kind layout.params :=
   (candidates_length_trials layout history).trans
     (Nat.mul_le_mul_right _ layout.trials_le)
 

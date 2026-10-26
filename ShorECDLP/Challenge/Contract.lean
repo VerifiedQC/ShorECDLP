@@ -55,7 +55,7 @@ structure Certificate (limits : Limits) (layout : DecodeLayout) (e : StraightEnt
   gateBudget : e.program.gateSlots ≤ limits.gateSlots
   recordBudget : e.finalCursor ≤ limits.measurements
   tableBudget : e.coefficients.length ≤ limits.coefficientRows
-  candidateBudget : layout.trials.length * trialCandidateLimit layout.params ≤ limits.candidateChecks
+  candidateBudget : layout.trials.length * decoderCandidateLimit layout.kind layout.params ≤ limits.candidateChecks
   wellFormed : e.program.WellFormed
   resources : ∀ Q : Point,
     (resources (e.instantiate Q)).qubits ≤ bounds.qubits ∧
