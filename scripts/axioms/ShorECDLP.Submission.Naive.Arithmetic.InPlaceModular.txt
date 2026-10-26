@@ -1,0 +1,4 @@
+ShorECDLP.controlledModAdd_correct
+ShorECDLP.controlledModAdd_tCount
+ShorECDLP.modularDouble_correct
+ShorECDLP.modularDouble_tCount

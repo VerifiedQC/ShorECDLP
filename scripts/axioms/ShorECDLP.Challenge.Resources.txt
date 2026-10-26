@@ -1,0 +1,3 @@
+ShorECDLP.Challenge.nonCliffordCount
+ShorECDLP.Challenge.resources
+ShorECDLP.Challenge.toffoliCount

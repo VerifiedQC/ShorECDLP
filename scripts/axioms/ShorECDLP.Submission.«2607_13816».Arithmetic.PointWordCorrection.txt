@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.pointCoordinateWord_injective
+ShorECDLP.Paper2607_13816.pointCoordinateWord_length
+ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_adjacent
+ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_correct
+ShorECDLP.Paper2607_13816.pointCorrectionWordEdges_length

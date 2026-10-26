@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.reducedPhasePrepare_uniform
+ShorECDLP.Paper2607_13816.reducedPhaseWord_inputs
+ShorECDLP.Paper2607_13816.reducedWindowTrialOutputMass_uniform

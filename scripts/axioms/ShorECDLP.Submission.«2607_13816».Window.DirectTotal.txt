@@ -1,0 +1,2 @@
+ShorECDLP.Paper2607_13816.directSecpWindowDecode_total
+ShorECDLP.Paper2607_13816.directSecpWindowProgram_total

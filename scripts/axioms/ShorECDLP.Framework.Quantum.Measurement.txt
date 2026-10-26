@@ -1,0 +1,2 @@
+ShorECDLP.Quantum.OrderFinding.jointRegisterProbability_nonneg
+ShorECDLP.Quantum.OrderFinding.jointRegisterProbability_sum_eq_normSq

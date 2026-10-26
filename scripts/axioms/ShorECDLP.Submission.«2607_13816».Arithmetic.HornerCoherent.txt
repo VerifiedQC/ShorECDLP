@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.HornerInputValid
+ShorECDLP.Paper2607_13816.hornerClearOutput
+ShorECDLP.Paper2607_13816.hornerMulInverse_coherent
+ShorECDLP.Paper2607_13816.hornerMul_coherent
+ShorECDLP.Paper2607_13816.hornerMul_forward_inverse_coherent

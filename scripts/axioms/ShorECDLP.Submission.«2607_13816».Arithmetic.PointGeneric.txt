@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.fig14CoordinateState_generic
+ShorECDLP.Paper2607_13816.fig14CoordinateValues_generic
+ShorECDLP.Paper2607_13816.fig14InterfaceValues_nonzero
+ShorECDLP.Paper2607_13816.fig14RawDomain_of_factors

@@ -1,0 +1,7 @@
+ShorECDLP.Paper2607_13816.axisWindowState_split
+ShorECDLP.Paper2607_13816.directScalar_coherent
+ShorECDLP.Paper2607_13816.directScalar_measurementCount
+ShorECDLP.Paper2607_13816.directScalar_qubitCount
+ShorECDLP.Paper2607_13816.directScalar_support
+ShorECDLP.Paper2607_13816.directScalar_tCount
+ShorECDLP.Paper2607_13816.directSchedule_coherent

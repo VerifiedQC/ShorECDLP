@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.reducedFourierSlice_filter
+ShorECDLP.Paper2607_13816.reducedWindowTrialOutputMass_kernel
+ShorECDLP.Paper2607_13816.reducedWindowTrialSlice_filter
+ShorECDLP.Paper2607_13816.reducedWindowTrial_zero_initial

@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.controlledModularNegate_branch_correct
+ShorECDLP.Paper2607_13816.controlledModularNegate_coherent
+ShorECDLP.Paper2607_13816.controlledModularNegate_wellFormed
+ShorECDLP.Paper2607_13816.modularNegateIdealState_correct

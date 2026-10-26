@@ -1,0 +1,5 @@
+ShorECDLP.Secp256k1.controlledPointAdd_HPFree
+ShorECDLP.Secp256k1.controlledPointAdd_correct
+ShorECDLP.Secp256k1.controlledPointAdd_tCount_of_ne_zero
+ShorECDLP.Secp256k1.controlledPointAdd_wellFormed
+ShorECDLP.Secp256k1.controlledPointAdd_zero_tCount

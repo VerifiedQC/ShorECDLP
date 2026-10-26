@@ -1,0 +1,4 @@
+ShorECDLP.Challenge.Straight.allGateCount_le
+ShorECDLP.Challenge.Straight.gateSlots_append
+ShorECDLP.Challenge.Straight.instantiate_wellFormed
+ShorECDLP.Challenge.Straight.measurementCount

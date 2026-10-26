@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.instrumentFilter_seq_first
+ShorECDLP.Paper2607_13816.instrumentMass_seq_preserving
+ShorECDLP.Paper2607_13816.resetRegister_mass
+ShorECDLP.Paper2607_13816.resetWindowOutputMass_physical
+ShorECDLP.Paper2607_13816.resetWindowTrial_total

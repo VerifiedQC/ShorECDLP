@@ -1,0 +1,6 @@
+ShorECDLP.Paper2607_13816.streamRawTrial_phase_le
+ShorECDLP.Paper2607_13816.streamRawTrial_tCount_le
+ShorECDLP.Paper2607_13816.streamRawTrial_toffoli
+ShorECDLP.Paper2607_13816.streamRepeatedProgram_gate_certificate
+ShorECDLP.Paper2607_13816.streamRepeatedProgram_gate_counts
+ShorECDLP.Paper2607_13816.streamRepeatedProgram_tCount_le

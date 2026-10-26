@@ -1,0 +1,2 @@
+ShorECDLP.Paper2607_13816.zeroAllowedDivisionOutputState_zero
+ShorECDLP.Paper2607_13816.zeroAllowedMultiplicationOutputState_zero

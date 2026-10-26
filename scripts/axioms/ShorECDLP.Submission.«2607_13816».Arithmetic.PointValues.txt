@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.fig14CoordinateProgram_disabled
+ShorECDLP.Paper2607_13816.fig14CoordinateState_disabled
+ShorECDLP.Paper2607_13816.fig14CoordinateState_values
+ShorECDLP.Paper2607_13816.fig14CoordinateValues_disabled
+ShorECDLP.Paper2607_13816.fig14_interfaces_values

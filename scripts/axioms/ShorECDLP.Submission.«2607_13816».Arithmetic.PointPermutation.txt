@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.fig14CoordinateState_equiv
+ShorECDLP.Paper2607_13816.fig14CoordinateState_injectiveOn
+ShorECDLP.Paper2607_13816.fig14CoordinateValues_equiv

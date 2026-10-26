@@ -1,0 +1,9 @@
+ShorECDLP.Paper2607_13816.oddWindowPoint
+ShorECDLP.Paper2607_13816.oddWindowPoint_ne_zero
+ShorECDLP.Paper2607_13816.oddWindowTable_point
+ShorECDLP.Paper2607_13816.oddWindowTable_valid
+ShorECDLP.Paper2607_13816.oddWindowX
+ShorECDLP.Paper2607_13816.oddWindowY
+ShorECDLP.Paper2607_13816.preparedOddWindowCallAt_correct
+ShorECDLP.Paper2607_13816.preparedOddWindowCallIndexed_correct
+ShorECDLP.Paper2607_13816.preparedOddWindowCall_correct

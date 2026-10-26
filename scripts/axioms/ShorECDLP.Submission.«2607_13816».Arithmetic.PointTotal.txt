@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.pointAddProgram_coherent
+ShorECDLP.Paper2607_13816.pointAddState_correct
+ShorECDLP.Paper2607_13816.totalPointState_correct

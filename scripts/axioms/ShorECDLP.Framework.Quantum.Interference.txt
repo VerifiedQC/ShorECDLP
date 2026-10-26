@@ -1,0 +1,7 @@
+ShorECDLP.Quantum.CoherentlyImplementsOn.eventMass
+ShorECDLP.Quantum.Instrument.eventMass_interference
+ShorECDLP.Quantum.Instrument.eventMass_le_bornMass
+ShorECDLP.Quantum.normSq_filter_le
+ShorECDLP.Quantum.normSq_interference
+ShorECDLP.Quantum.normSq_mapDomain
+ShorECDLP.Quantum.normSq_neg

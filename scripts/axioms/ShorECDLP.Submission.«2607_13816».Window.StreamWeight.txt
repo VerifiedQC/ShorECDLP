@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.streamFirstWord_excluded_mass
+ShorECDLP.Paper2607_13816.streamLogicalEntry_excluded_mass
+ShorECDLP.Paper2607_13816.streamLogicalEntry_filtered_mass
+ShorECDLP.Paper2607_13816.streamRawExclusions_word_count

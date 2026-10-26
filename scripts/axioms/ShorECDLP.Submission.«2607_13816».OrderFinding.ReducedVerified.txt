@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.reducedVerifiedCandidate_complete
+ShorECDLP.Paper2607_13816.reducedVerifiedCandidate_sound
+ShorECDLP.Paper2607_13816.reducedVerifiedMass_eq
+ShorECDLP.Paper2607_13816.reducedVerifiedMass_lower

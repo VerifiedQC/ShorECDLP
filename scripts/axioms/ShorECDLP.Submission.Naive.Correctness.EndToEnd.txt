@@ -1,0 +1,7 @@
+ShorECDLP.Secp256k1.bitcoinECDLPTotalGateCount_correct
+ShorECDLP.Secp256k1.bitcoinECDLPTrial_correct
+ShorECDLP.Secp256k1.bitcoinECDLPTrial_qubitCount
+ShorECDLP.Secp256k1.bitcoinECDLP_correct
+ShorECDLP.Secp256k1.ecdlpTrial_tCount
+ShorECDLP.Secp256k1.ecdlpTrial_wellFormed
+ShorECDLP.Secp256k1.orderFinding_correct

@@ -1,0 +1,11 @@
+ShorECDLP.Paper2607_13816.dyadicPhaseAverage
+ShorECDLP.Paper2607_13816.dyadicPhaseAverage_succ
+ShorECDLP.Paper2607_13816.phaseProduct
+ShorECDLP.Paper2607_13816.phaseProductRoot
+ShorECDLP.Paper2607_13816.phaseProductRoot_cons
+ShorECDLP.Paper2607_13816.phaseProductRoot_nil
+ShorECDLP.Paper2607_13816.phaseProductRoot_power
+ShorECDLP.Paper2607_13816.phaseProduct_average
+ShorECDLP.Paper2607_13816.phaseProduct_cons_point
+ShorECDLP.Paper2607_13816.phaseProduct_eq_amplitude
+ShorECDLP.Paper2607_13816.phaseProduct_peak_mass

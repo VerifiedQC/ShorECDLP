@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.scalarFourierProgram_resources
+ShorECDLP.Paper2607_13816.scalarFourierProgram_tCount_le
+ShorECDLP.Paper2607_13816.semiclassicalFourier_gateCount
+ShorECDLP.Paper2607_13816.windowTrialProgram_tCount_le

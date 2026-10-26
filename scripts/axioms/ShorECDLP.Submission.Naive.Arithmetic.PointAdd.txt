@@ -1,0 +1,4 @@
+ShorECDLP.Secp256k1.pointAddFiniteCompute_tCount
+ShorECDLP.Secp256k1.pointAdd_correct
+ShorECDLP.Secp256k1.pointAdd_finite_tCount
+ShorECDLP.Secp256k1.pointAdd_zero_tCount

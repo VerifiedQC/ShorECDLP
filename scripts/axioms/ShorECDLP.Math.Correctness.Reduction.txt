@@ -1,0 +1,3 @@
+ShorECDLP.Reduction.annihilatesPeriod_iff
+ShorECDLP.Reduction.oracleExponent_shiftBy
+ShorECDLP.Reduction.recoverShift_correct

@@ -1,0 +1,7 @@
+ShorECDLP.Paper2607_13816.knownScratchControl_HPFree
+ShorECDLP.Paper2607_13816.knownScratchControl_usesOnly
+ShorECDLP.Paper2607_13816.knownScratchControl_wellFormed
+ShorECDLP.Paper2607_13816.knownScratchMCX_counts
+ShorECDLP.Paper2607_13816.run_knownScratchControl
+ShorECDLP.Paper2607_13816.run_knownScratchMCX
+ShorECDLP.Paper2607_13816.xorConstant_clears_known

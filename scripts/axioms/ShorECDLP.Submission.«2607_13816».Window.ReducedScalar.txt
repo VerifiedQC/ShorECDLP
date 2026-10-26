@@ -1,0 +1,6 @@
+ShorECDLP.Paper2607_13816.reducedScalarState_correct
+ShorECDLP.Paper2607_13816.reducedScalarState_registers
+ShorECDLP.Paper2607_13816.reducedScalar_coherent
+ShorECDLP.Paper2607_13816.reducedScalar_qubitCount
+ShorECDLP.Paper2607_13816.reducedScalar_registers_coherent
+ShorECDLP.Paper2607_13816.reducedScalar_support

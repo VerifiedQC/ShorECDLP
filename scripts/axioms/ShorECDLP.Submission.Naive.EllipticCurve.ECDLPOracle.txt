@@ -1,0 +1,5 @@
+ShorECDLP.Secp256k1.ecdlpOracle_HPFree
+ShorECDLP.Secp256k1.ecdlpOracle_correct
+ShorECDLP.Secp256k1.ecdlpOracle_spec
+ShorECDLP.Secp256k1.ecdlpOracle_tCount_of_tables_ne_zero
+ShorECDLP.Secp256k1.ecdlpOracle_wellFormed

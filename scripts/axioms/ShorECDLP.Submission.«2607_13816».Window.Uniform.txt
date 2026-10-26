@@ -1,0 +1,9 @@
+ShorECDLP.Paper2607_13816.phaseHadamards_uniform
+ShorECDLP.Paper2607_13816.phaseUniformSum_append
+ShorECDLP.Paper2607_13816.phaseWordState_append
+ShorECDLP.Paper2607_13816.phaseWordState_frame
+ShorECDLP.Paper2607_13816.phaseWordState_word
+ShorECDLP.Paper2607_13816.scalarPhasePrepare_uniform
+ShorECDLP.Paper2607_13816.scalarPhaseWord_inputs
+ShorECDLP.Paper2607_13816.stateLinear_list_sum
+ShorECDLP.Paper2607_13816.windowTrialOutputMass_uniform

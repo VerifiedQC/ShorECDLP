@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.boolWordToNat_reverse_slice
+ShorECDLP.Paper2607_13816.boolWordToNat_slice
+ShorECDLP.Paper2607_13816.boolWordToNat_splice
+ShorECDLP.Paper2607_13816.endIterationLowerRangeBits_extract
+ShorECDLP.Paper2607_13816.endIterationUpperRangeBits_extract
