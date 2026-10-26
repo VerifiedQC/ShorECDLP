@@ -26,7 +26,7 @@ CASES = {
     "BranchLookup": (
         f"def submitted : {ENTRY} := ⟨[], 1, .measure 0 .done .done⟩\n", ENTRY, False),
     "FutureRecord": (
-        f"def submitted : {ENTRY} := ⟨[], 0, .recordGate ⟨0, by omega⟩ true (.X 0) .done⟩\n",
+        f"def submitted : {ENTRY} := ⟨[], 0, .recordGate ⟨0, by decide⟩ true (.X 0) .done⟩\n",
         ENTRY, False),
     "NamespaceShadow": (
         "namespace Entrant.ShorECDLP.Challenge\n"
@@ -39,6 +39,28 @@ CASES = {
         "  (.unitary (List.replicate 7 (.P .forward 3 0)) .done)).tModel = 0 := by decide\n",
         "(ShorECDLP.Challenge.resources (.unitary (List.replicate 7 (.P .forward 3 0)) .done)).tModel = 0", False),
 }
+# Pinned Lean diagnostics distinguish intended rejection from a typo/import error.
+EXPECTED_ERRORS = {
+    "EditableCounter": ("`counter` is not a field", "ShorECDLP.Challenge.StraightEntry"),
+    "DecoderReadsQ": ("Type mismatch", "has type ShorECDLP.Secp256k1.Point → ShorECDLP.Secp256k1.Point",
+                      "expected to have type ShorECDLP.Challenge.DecodeLayout"),
+    "GeneratorReadsQ": ("Type mismatch", "has type ShorECDLP.Secp256k1.Point → ShorECDLP.Challenge.StraightEntry",
+                        "expected to have type ShorECDLP.Challenge.StraightEntry"),
+    "CopiedCoordinatesDecoder": ("Type mismatch", "has type List Bool → ℕ",
+                                 "expected to have type DecodeLayout"),
+    "BranchLookup": ("Function expected at", "Straight.measure 0", "applied to the argument .done"),
+    "FutureRecord": ("Tactic `decide` proved that the proposition", "0 < 0", "is false"),
+    "NamespaceShadow": ("Type mismatch", "has type Entrant.ShorECDLP.Challenge.StraightEntry",
+                        "expected to have type ShorECDLP.Challenge.StraightEntry"),
+    "FalseScore": ("Tactic `decide` proved that the proposition", "List.replicate 7",
+                   ".tModel = 0", "is false"),
+}
+
+def require_diagnostic(name, output, fragments):
+    normalized = " ".join(output.split())
+    if any(fragment not in normalized for fragment in fragments):
+        raise AssertionError(f"{name}: wrong rejection reason\n{output}")
+
 FORGED = """import Lean
 set_option debug.skipKernelTC true
 open Lean Elab Command
@@ -68,6 +90,8 @@ def main():
                 raise AssertionError(f"{name}: unexpected compiler result\n{result.stdout}\n{result.stderr}")
             if not accept and (result.returncode != 1 or "error:" not in result.stdout):
                 raise AssertionError(f"{name}: rejection was not a Lean diagnostic: {result.stdout} {result.stderr}")
+            if not accept:
+                require_diagnostic(name, result.stdout, EXPECTED_ERRORS[name])
             if accept:
                 replay = gate.replay(name, extra_path=root)
                 if replay.returncode:
@@ -76,7 +100,8 @@ def main():
         # Check the explicit policy separately from the independent kernel.
         try:
             gate.reject_disabled_kernel(FORGED)
-        except ValueError:
+        except ValueError as exc:
+            require_diagnostic("SkipKernelTC", str(exc), ("debug.skipKernelTC is forbidden",))
             print("SkipKernelTC: source policy rejected", flush=True)
         else:
             raise AssertionError("kernel-disable policy did not reject fixture")
@@ -94,6 +119,9 @@ def main():
             raise AssertionError("independent replay accepted forged False")
         if "leanchecker found a problem" not in replay.stderr:
             raise AssertionError("replay failed for an unrelated reason:\n" + replay.stderr)
+        require_diagnostic("Forged", replay.stderr,
+                           ("(kernel) declaration type mismatch", "'forgedFalse' has type True",
+                            "expected to have type False"))
         print("Forged artifact: independent kernel replay rejected", flush=True)
 
 if __name__ == "__main__":

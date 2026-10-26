@@ -33,7 +33,7 @@ def replay(module: str, *, extra_path: Path | None = None,
         env["LEAN_PATH"] = str(extra_path) + os.pathsep + env["LEAN_PATH"]
     # A separate process replays stored declarations with Lean's kernel.
     # It does not evaluate the submitted source's commands/options.
-    return subprocess.run([str(lean.with_name("leanchecker")), module],
+    return subprocess.run([str(lean.with_name("leanchecker")), "--verbose", module],
                           cwd=ROOT, env=env, text=True, capture_output=True,
                           timeout=timeout)
 
@@ -60,7 +60,12 @@ def main() -> int:
     sys.stderr.write(result.stderr)
     if result.returncode:
         return result.returncode
-    print(f"explicit kernel-disable policy passed ({count} sources); replay passed: {args.replay}")
+    modules = [line[len("replaying "):] for line in result.stdout.splitlines()
+               if line.startswith("replaying ")]
+    if not modules:
+        raise ValueError("leanchecker reported no replayed modules")
+    print(f"explicit kernel-disable policy passed ({count} sources); "
+          f"replay passed: {len(modules)} modules under {args.replay}")
     return 0
 
 if __name__ == "__main__":

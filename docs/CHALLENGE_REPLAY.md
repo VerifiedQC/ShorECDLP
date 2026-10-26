@@ -4,7 +4,7 @@ Tracker: #462, A4/A5. This prepares local verification; it is not the deployed E
 
 `python3 scripts/challenge/gate.py --source-only` rejects the explicit `skipKernelTC` option in project Lean sources before compilation. The check deliberately also rejects that spelling in comments and quoted identifiers. It is conservative text policy, not a Lean parser and not a proof that arbitrary elaborator code cannot manipulate the environment.
 
-After building, `python3 scripts/challenge/gate.py --replay ShorECDLP.Challenge` launches the pinned toolchain's `leanchecker` in a separate process. It replays every compiled module under that prefix with the Lean kernel. Submitted source commands and options do not control this replay. This uses the same kernel implementation, with imported dependencies as its base; it is not an independent kernel implementation or a fresh replay of Mathlib. Existing exact and exhaustive axiom audits remain mandatory: replay alone permits declared axioms.
+After building, `python3 scripts/challenge/gate.py --replay ShorECDLP.Challenge` launches the pinned toolchain's `leanchecker` in a separate process. It replays every compiled module under that prefix with the Lean kernel, prints leanchecker’s actual module list, and reports its size. A successful command with no reported modules is rejected. Submitted source commands and options do not control this replay. This uses the same kernel implementation, with imported dependencies as its base; it is not an independent kernel implementation or a fresh replay of Mathlib. Existing exact and exhaustive axiom audits remain mandatory: replay alone permits declared axioms.
 
 The checked prefix is an organizer argument. The current CI integration checks the protected Challenge modules. A release judge must also replay every allowed submission/proof module and its untrusted import closure; a submission cannot choose that list. The current call does not certify the entire old Submission tree by kernel replay.
 
@@ -20,6 +20,8 @@ The checked prefix is an organizer argument. The current CI integration checks t
 - future record references;
 - a namespace-local imitation of a protected entry type;
 - a false zero-T cost claim.
+
+Each negative fixture asserts its specific Lean diagnostic, including the expected protected type or failed arithmetic claim. A syntax error or missing import alone cannot satisfy these assertions.
 
 A second fixture deliberately disables the compiler's kernel check and injects a theorem of False with the proof of True. The source policy rejects it. The test then intentionally bypasses that text policy, compiles the known fixture, and requires a kernel error when replaying its actual .olean. Thus the replay test cannot pass merely because compilation failed or a text pattern was found.
 
