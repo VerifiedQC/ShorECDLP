@@ -54,6 +54,8 @@ import ShorECDLP.Framework.Quantum.Measurement
 import ShorECDLP.Framework.Repetition
 import ShorECDLP.Math.All
 import ShorECDLP.Submission.Naive.All
+import ShorECDLP.Judge.Main
+import ShorECDLP.Submission.Entrant.Main
 import ShorECDLP.Submission.«2607_13816».All
 
 import ShorECDLP.Challenge.Template
@@ -82,3 +84,5 @@ import ShorECDLP.Submission.Naive.Challenge.NumericCosts
 import ShorECDLP.Submission.Naive.Challenge.NumericQubits
 import ShorECDLP.Submission.Naive.Challenge.NumericLengths
 import ShorECDLP.Submission.Naive.Challenge.NumericCertificate
+import ShorECDLP.Challenge.ExtendedContract
+import ShorECDLP.Submission.Naive.Challenge.ExtendedCertificate

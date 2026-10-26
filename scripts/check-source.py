@@ -19,6 +19,8 @@ FRAMEWORK_ROOT = SOURCE_ROOT / "Framework"
 CHALLENGE_ROOT = SOURCE_ROOT / "Challenge"
 NAIVE_ROOT = SOURCE_ROOT / "Submission" / "Naive"
 PAPER_ROOT = SOURCE_ROOT / "Submission" / "2607_13816"
+ENTRANT_ROOT = SOURCE_ROOT / "Submission" / "Entrant"
+JUDGE_ROOT = SOURCE_ROOT / "Judge"
 
 LAYER_ROOTS = {
     "Math": MATH_ROOT,
@@ -26,6 +28,8 @@ LAYER_ROOTS = {
     "Challenge": CHALLENGE_ROOT,
     "Naive": NAIVE_ROOT,
     "2607_13816": PAPER_ROOT,
+    "Entrant": ENTRANT_ROOT,
+    "Judge": JUDGE_ROOT,
 }
 
 ALLOWED_PROJECT_IMPORTS = {
@@ -34,7 +38,11 @@ ALLOWED_PROJECT_IMPORTS = {
     "Challenge": {"Math", "Framework", "Challenge"},
     "Naive": {"Math", "Framework", "Challenge", "Naive"},
     "2607_13816": {"Math", "Framework", "Challenge", "2607_13816"},
-    "Root": {"Math", "Framework", "Challenge", "Naive", "2607_13816"},
+    # The editable entrant may reuse proved baseline lemmas; it can never reach the judge.
+    "Entrant": {"Math", "Framework", "Challenge", "Naive", "2607_13816", "Entrant"},
+    # The protected acceptance module never imports entrant syntax/extensions.
+    "Judge": {"Challenge", "Judge"},
+    "Root": {"Math", "Framework", "Challenge", "Naive", "2607_13816", "Entrant", "Judge"},
 }
 
 TEXTUAL_LAYER_PREFIXES = {
@@ -43,6 +51,8 @@ TEXTUAL_LAYER_PREFIXES = {
     "ShorECDLP.Challenge": "Challenge",
     "ShorECDLP.Submission.Naive": "Naive",
     "ShorECDLP.Submission.«2607_13816»": "2607_13816",
+    "ShorECDLP.Submission.Entrant": "Entrant",
+    "ShorECDLP.Judge": "Judge",
 }
 
 IMPORT_RE = re.compile(r"^\s*import\s+(.+?)(?:\s+--.*)?$")
@@ -273,7 +283,7 @@ def main() -> int:
         failures.append(f"could not enumerate tracked Lean sources: {error}")
     else:
         source_set = set(files)
-        sanctioned = source_set | {ROOT / "lakefile.lean"}
+        sanctioned = source_set | {ROOT / "lakefile.lean", ROOT / "scripts/challenge/judge.lean"}
         unexpected_tracked = sorted(tracked - sanctioned)
         if unexpected_tracked:
             failures.append(

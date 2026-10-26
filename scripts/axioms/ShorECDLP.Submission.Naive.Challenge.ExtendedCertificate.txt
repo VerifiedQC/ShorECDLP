@@ -1,0 +1,2 @@
+ShorECDLP.NaiveChallenge.naiveExtendedBounds
+ShorECDLP.NaiveChallenge.naiveRepeatedEntry_extended_certificate
