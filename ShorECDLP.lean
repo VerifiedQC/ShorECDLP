@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.ExceptionalFields
 import ShorECDLP.Submission.«2607_13816».Challenge.EndpointTransposition
 import ShorECDLP.Submission.«2607_13816».Challenge.FixedMatching
 import ShorECDLP.Submission.«2607_13816».Challenge.RegisterEquality
