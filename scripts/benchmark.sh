@@ -1,50 +1,37 @@
 #!/usr/bin/env bash
-# PROTECTED challenge benchmark (Eigen-style). Run from the evaluator's TRUSTED copy,
-# inside an isolated worker with no credentials. The runner supplies:
-#   CANDIDATE      absolute path of the frozen candidate source snapshot
-#   TRUSTED_REPO   evaluator-owned checkout (outside CANDIDATE)
-#   TRUSTED_TREE   full Git tree hash of the protected tree
-# Only ShorECDLP/Submission/Entrant/ may differ from TRUSTED_TREE.
+# PROTECTED controller. Never run this controller inside the entrant build worker.
+# CANDIDATE_BUILDER is an evaluator-owned adapter: restore trusted caches AFTER
+# the boundary check, run verify.sh in an isolated worker, then terminate ALL
+# worker processes and freeze its outputs before returning success.
 set -euo pipefail
 : "${CANDIDATE:?runner must set CANDIDATE}"
 : "${TRUSTED_REPO:?runner must set TRUSTED_REPO}"
 : "${TRUSTED_TREE:?runner must set TRUSTED_TREE}"
+: "${CANDIDATE_BUILDER:?runner must supply an isolated build adapter}"
 trusted_scripts="$(cd "$(dirname "$0")" && pwd)"
 
-# 1. Editable boundary, BEFORE any build cache is restored.
 python3 "$trusted_scripts/challenge/check-editable.py" --repo "$CANDIDATE" \
   --trusted-repo "$TRUSTED_REPO" --trusted-tree "$TRUSTED_TREE" \
   --allow ShorECDLP/Submission/Entrant
+python3 "$trusted_scripts/challenge/gate.py" --root "$CANDIDATE" --source-only
 
-cd "$CANDIDATE"
-# 2. Full protected verification: source policy, layering, warning-fatal build,
-#    kernel replay, cheat regressions, explicit + exhaustive axiom audits.
-"$trusted_scripts/verify.sh"
-python3 "$trusted_scripts/challenge/gate.py" --replay ShorECDLP.Submission.Entrant
-python3 "$trusted_scripts/challenge/gate.py" --replay ShorECDLP.Judge
+# The adapter receives paths as separate arguments, not shell text to evaluate.
+# It must set SHORECDLP_ROOT=CANDIDATE for the protected verification tools.
+"$CANDIDATE_BUILDER" "$CANDIDATE" "$TRUSTED_REPO" "$trusted_scripts/verify.sh"
 
-# 3. Report. The acceptance theorem is ShorECDLP.Judge.check_certificate.
-report="$(lake env lean --stdin <<'LEAN' 2>&1
-import ShorECDLP.Judge.Main
-#print axioms ShorECDLP.Judge.check_certificate
-#eval ShorECDLP.Judge.score
-#eval ShorECDLP.Judge.qubits
-#eval ShorECDLP.Judge.measurements
-LEAN
-)"
-printf '%s\n' "$report"
-python3 - "$report" <<'PY'
-import json, re, sys
-report = sys.argv[1]
-allowed = {"propext", "Classical.choice", "Quot.sound"}
-m = re.search(r"^'ShorECDLP\.Judge\.check_certificate' (?:depends on axioms: \[(.*)\]|does not depend on any axioms)$", report, re.M)
-if not m:
-    sys.exit("REJECT: no axiom report for the acceptance theorem")
-used = {a.strip() for a in (m.group(1) or "").split(",") if a.strip()}
-if not used <= allowed:
-    sys.exit(f"REJECT: acceptance theorem uses {sorted(used - allowed)}")
-values = [int(v) for v in re.findall(r"^([0-9]+)$", report, re.M)]
-if len(values) != 3:
-    sys.exit("REJECT: could not read metrics")
-print(json.dumps({"accepted": True, "score_tModel": values[0], "qubits": values[1], "measurements": values[2]}))
-PY
+# Final checks run outside the stopped worker. Only entrant artifacts are copied;
+# candidate-produced Framework/Challenge/Judge artifacts are never imported here.
+overlay="$(mktemp -d "${RUNNER_TEMP:-/tmp}/shorecdlp-entrant.XXXXXX")"
+trap 'rm -rf "$overlay"' EXIT
+python3 "$trusted_scripts/challenge/stage-entrant.py" \
+  --candidate "$CANDIDATE" --overlay "$overlay" \
+  --trusted-lib "$TRUSTED_REPO/.lake/build/lib/lean"
+cd "$TRUSTED_REPO"
+export SHORECDLP_ROOT="$TRUSTED_REPO"
+# Do not inherit a candidate search path into the controller.
+unset LEAN_PATH LEAN_SRC_PATH
+python3 "$trusted_scripts/challenge/gate.py" --root "$TRUSTED_REPO" \
+  --replay ShorECDLP.Submission.Entrant --artifact-path "$overlay"
+# This trusted script imports only Lean at elaboration time. Runtime import does
+# not load entrant extensions; acceptance and metrics use direct kernel Expr APIs.
+lake env lean --run "$trusted_scripts/challenge/judge.lean" "$overlay"

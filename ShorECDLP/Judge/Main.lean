@@ -1,28 +1,23 @@
 import ShorECDLP.Challenge.Official
-import ShorECDLP.Submission.Entrant.Main
+import ShorECDLP.Challenge.ExtendedContract
 
-/-! PROTECTED judge. Binds the entrant's four names to fully `_root_`-qualified
-protected types, so an entrant namespace cannot shadow them. If this module
-elaborates and its axioms are within the allowlist, the entry is admitted. -/
-
+/-! Protected acceptance predicates. This module never imports entrant code.
+The external trusted judge constructs applications of these constants as Expr
+and checks them with the kernel, without elaborating syntax after importing an
+entrant. Qualified names alone do not defend against imported macros. -/
 namespace ShorECDLP.Judge
-noncomputable section
+open Challenge
 
-def check_entry : _root_.ShorECDLP.Challenge.StraightEntry := _root_.ShorECDLP.Entrant.entry
-def check_layout : _root_.ShorECDLP.Challenge.DecodeLayout := _root_.ShorECDLP.Entrant.layout
-def check_bounds : _root_.ShorECDLP.Challenge.Bounds := _root_.ShorECDLP.Entrant.bounds
+def acceptance (e : StraightEntry) (layout : DecodeLayout) (bounds : Bounds) : Prop :=
+  Certificate officialLimits layout e bounds
 
-/-- The single acceptance statement, against the protected organizer limits. -/
-theorem check_certificate :
-    _root_.ShorECDLP.Challenge.Certificate _root_.ShorECDLP.Challenge.officialLimits
-      check_layout check_entry check_bounds :=
-  _root_.ShorECDLP.Entrant.certificate
+def extendedAcceptance (e : StraightEntry) (layout : DecodeLayout)
+    (bounds : Bounds) (extra : ExtendedBounds) : Prop :=
+  ExtendedCertificate officialLimits layout e bounds extra
 
-end
-
-/-- Score: declared T-model bound of the whole program (lower is better). -/
-def score : Nat := _root_.ShorECDLP.Challenge.declaredScore _root_.ShorECDLP.Entrant.bounds
-def qubits : Nat := _root_.ShorECDLP.Entrant.bounds.qubits
-def measurements : Nat := _root_.ShorECDLP.Entrant.bounds.measurements
+theorem derive_diagnostics {e : StraightEntry} {layout : DecodeLayout} {bounds : Bounds}
+    (h : acceptance e layout bounds) :
+    extendedAcceptance e layout bounds ⟨bounds.tModel / 7, officialLimits.gateSlots⟩ :=
+  h.extend
 
 end ShorECDLP.Judge

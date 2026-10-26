@@ -2,6 +2,7 @@
 """Run the unchanged explicit axiom disclosures in two bounded Lean processes."""
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import os
 import re
 import subprocess
 import sys
@@ -23,7 +24,7 @@ def main():
         return subprocess.run(
             ['lake', 'env', 'lean', '/dev/stdin'],
             input='import ShorECDLP\n' + '\n'.join(chunk) + '\n',
-            cwd=Path(__file__).resolve().parents[1],
+            cwd=Path(os.environ.get("SHORECDLP_ROOT", Path(__file__).resolve().parents[1])).resolve(),
             text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
 

@@ -59,7 +59,7 @@ All metrics are recorded. The judge prints the declared, proved bounds of the wh
 | Logical qubits | distinct wires |
 | Measurements | records written |
 | Gate slots, coefficient rows, candidate checks | admission limits above |
-| Toffoli and non-Clifford counts | to be added as proved bounds |
+| Toffoli and non-Clifford counts | derived upper bounds via `Certificate.extend`; optionally tighter proved `ExtendedCertificate` |
 
 Cost-model limits: each rotation costs 1 regardless of angle; rotation synthesis and its error
 are not modelled. Scores are formal results in this abstract cost model, not hardware estimates.
@@ -68,9 +68,12 @@ are not modelled. Scores are formal results in this abstract cost model, not har
 
 - Locked: everything outside `ShorECDLP/Submission/Entrant/` (toolchain, lakefile, manifest,
   `scripts/`, Framework, Math, Challenge, Judge, baselines).
-- The acceptance theorem `ShorECDLP.Judge.check_certificate` may depend only on `propext`,
+- The submitted certificate and its data may depend only on `propext`,
   `Classical.choice` and `Quot.sound`. `sorry`, new axioms and `debug.skipKernelTC` are rejected;
-  compiled modules are replayed by the kernel (`leanchecker`).
+  entrant compiled modules are replayed against trusted dependencies by the kernel (`leanchecker`).
+- The trusted judge constructs the required `Judge.acceptance entry layout bounds` expression
+  directly and checks its type with the kernel. It never elaborates acceptance syntax after
+  importing entrant macros. Metrics are kernel-reduced; `#eval` and native replacements are not used.
 
 ## Baselines
 
@@ -83,9 +86,40 @@ are not modelled. Scores are formal results in this abstract cost model, not har
 
 ```sh
 CANDIDATE=/worker/source TRUSTED_REPO=/trusted/repository TRUSTED_TREE=<full tree hash> \
+  CANDIDATE_BUILDER=/runner/isolated-build \
   /trusted/repository/scripts/benchmark.sh
 ```
 
+### Source boundary
+
 It checks the editable boundary (`docs/CHALLENGE_EDITABLE_BOUNDARY.md`) before any build cache is
-restored, runs `scripts/verify.sh`, replays the entrant and judge, and prints a JSON line with the
-metrics. Locally, `lake build ShorECDLP.Judge.Main` checks the acceptance theorem.
+restored. The evaluator-owned `CANDIDATE_BUILDER` adapter receives the candidate root,
+trusted root and protected verification-script path as separate arguments. It must restore
+trusted dependencies, run verification with `SHORECDLP_ROOT` set to the candidate, and terminate
+all worker processes before returning a frozen build output. The trusted repository must be
+read-only to that worker. The adapter is deployment-specific and is not provided by this repo;
+this script alone is not a sandbox.
+
+### Build-artifact boundary
+
+The controller copies trusted dependency artifacts and replaces only the Entrant subtree from
+the stopped worker. It rejects symlinks in worker artifact paths. It then independently replays
+that snapshot, imports declarations without loading entrant extensions, performs the kernel
+acceptance check and reports JSON metrics. Candidate-produced protected artifacts are ignored.
+The controller's environment, toolchain, trusted artifacts and snapshot must remain inaccessible
+to candidate processes throughout this phase.
+
+For the shipped, trusted example only, after building the root library:
+
+```sh
+lake env lean --run scripts/challenge/judge.lean
+```
+
+`lake build ShorECDLP.Judge.Main` alone does **not** admit a submission; that module contains
+only protected predicates. The standalone controller performs admission.
+
+Optional tighter diagnostics use `ShorECDLP.Entrant.extendedBounds : ExtendedBounds` and
+`extendedCertificate : ExtendedCertificate officialLimits layout entry bounds extendedBounds`.
+Both must be present and pass the same syntax-free kernel type and axiom checks. Otherwise the
+judge derives Toffoli ≤ T-model/7 and non-Clifford ≤ the official gate-slot limit. JSON names
+explicitly distinguish these derived upper bounds and organizer limits from exact counts.

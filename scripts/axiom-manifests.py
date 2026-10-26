@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Load explicit per-module disclosures and check Lean's exact output coverage."""
 from pathlib import Path
+import os
 import re
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(os.environ.get("SHORECDLP_ROOT", Path(__file__).resolve().parents[1])).resolve()
 NAME = re.compile(r"ShorECDLP\.[^\s]+")
 RESULT = re.compile(r"^'(.+)' (?:depends on axioms:|does not depend on any axioms)", re.M)
 

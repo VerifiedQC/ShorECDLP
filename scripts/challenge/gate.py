@@ -7,7 +7,7 @@ import re
 import subprocess
 import sys
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(os.environ.get("SHORECDLP_ROOT", Path(__file__).resolve().parents[2])).resolve()
 
 def reject_disabled_kernel(source: str) -> None:
     # Conservative explicit policy, including comments and escaped identifiers.
@@ -50,12 +50,17 @@ def main() -> int:
     group.add_argument("--source-only", action="store_true")
     group.add_argument("--replay",
                         help="Organizer-selected module prefix; all matching oleans are replayed")
+    parser.add_argument("--root", type=Path, help="evaluator-selected candidate root")
+    parser.add_argument("--artifact-path", type=Path, help="evaluator-sealed Entrant-only overlay")
     args = parser.parse_args()
+    global ROOT
+    if args.root is not None:
+        ROOT = args.root.resolve()
     count = check_project_sources()
     if args.source_only:
         print(f"explicit kernel-disable policy passed ({count} sources)")
         return 0
-    result = replay(args.replay)
+    result = replay(args.replay, extra_path=args.artifact_path)
     sys.stdout.write(result.stdout)
     sys.stderr.write(result.stderr)
     if result.returncode:

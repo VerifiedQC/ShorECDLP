@@ -1,1 +1,3 @@
-ShorECDLP.Judge.check_certificate
+ShorECDLP.Judge.acceptance
+ShorECDLP.Judge.extendedAcceptance
+ShorECDLP.Judge.derive_diagnostics

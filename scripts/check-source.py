@@ -40,8 +40,8 @@ ALLOWED_PROJECT_IMPORTS = {
     "2607_13816": {"Math", "Framework", "Challenge", "2607_13816"},
     # The editable entrant may reuse proved baseline lemmas; it can never reach the judge.
     "Entrant": {"Math", "Framework", "Challenge", "Naive", "2607_13816", "Entrant"},
-    # The protected judge sees only the protected interface and the entrant.
-    "Judge": {"Challenge", "Entrant", "Judge"},
+    # The protected acceptance module never imports entrant syntax/extensions.
+    "Judge": {"Challenge", "Judge"},
     "Root": {"Math", "Framework", "Challenge", "Naive", "2607_13816", "Entrant", "Judge"},
 }
 
@@ -283,7 +283,7 @@ def main() -> int:
         failures.append(f"could not enumerate tracked Lean sources: {error}")
     else:
         source_set = set(files)
-        sanctioned = source_set | {ROOT / "lakefile.lean"}
+        sanctioned = source_set | {ROOT / "lakefile.lean", ROOT / "scripts/challenge/judge.lean"}
         unexpected_tracked = sorted(tracked - sanctioned)
         if unexpected_tracked:
             failures.append(

@@ -4,6 +4,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
+export SHORECDLP_ROOT="$repo_root"
 
 bash -n "$script_dir/verify.sh"
 python3 "$script_dir/test-axiom-manifests.py"
@@ -17,6 +18,7 @@ fi
 # Lean reports `sorry`/`admit` as warnings, so make the compiler's own parser
 # authoritative instead of attempting to duplicate Lean's extensible syntax in a hand lexer.
 python3 scripts/challenge/test-editable.py
+python3 scripts/challenge/test-runner-boundary.py
 python3 scripts/challenge/gate.py --source-only
 lake --wfail build
 lake env lean ShorECDLP/Challenge/Smoke.lean
