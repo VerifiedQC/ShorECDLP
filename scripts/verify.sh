@@ -28,6 +28,24 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram_slots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram_run
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.lookupLeafGates
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.lookupLeafGates_instantiate
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.lookupLeaf_slots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires_length
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.castFinish
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.castFinish_gateSlots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetProgram
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetProgram_gateSlots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.castFinish_instantiate
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetProgram_run
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_gateSlots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_measurements
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_run
 #print axioms ShorECDLP.Challenge.numeratorInterval_card
 #print axioms ShorECDLP.Challenge.wrappedNumerators_card
 #print axioms ShorECDLP.Challenge.fixedCandidates_card
@@ -3919,8 +3937,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3888 ]]; then
-  printf 'expected 3888 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3906 ]]; then
+  printf 'expected 3906 #print axioms results\n' >&2
   exit 1
 fi
 
