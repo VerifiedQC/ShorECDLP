@@ -22,7 +22,7 @@ def gidneyCompareCarryCell (q current spare ancilla input dirty flag : Wire)
     [.CX current input, .CX current ancilla] ++
     (if constant then [.CX q ancilla] else [])
 
-private def gidneyCompareTail (q current spare ancilla flag : Wire)
+def gidneyCompareTail (q current spare ancilla flag : Wire)
     (callback : List Bool → Circuit) (outcomes : List Bool) :
     List Wire → List Wire → List Bool → Quantum.AdaptiveCircuit
   | [], [], [] => .xMeasureReset current

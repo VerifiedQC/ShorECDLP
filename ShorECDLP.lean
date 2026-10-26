@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.ModularAdd
 import ShorECDLP.Submission.«2607_13816».Challenge.GidneyAdd
 import ShorECDLP.Submission.«2607_13816».Challenge.OddFields
 import ShorECDLP.Submission.«2607_13816».Challenge.Lookup
