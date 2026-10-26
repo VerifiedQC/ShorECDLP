@@ -11,7 +11,7 @@ namespace ShorECDLP.Paper2607_13816
 open Classical
 set_option linter.unusedSimpArgs false
 
-private def gidneyCompareVirtualControl (input dirty : List Wire) (c r t f : Wire) : Wire :=
+def gidneyCompareVirtualControl (input dirty : List Wire) (c r t f : Wire) : Wire :=
   ([c,r,t,f] ++ input ++ dirty).sum + 1
 
 private theorem gidneyCompareVirtualControl_fresh (input dirty : List Wire) (c r t f : Wire) :

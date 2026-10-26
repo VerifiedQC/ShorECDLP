@@ -19,14 +19,14 @@ def gidneyAddCarryCell (q current spare ancilla input dirty : Wire) (constant : 
       .CX current spare, .CX spare dirty, .CX current ancilla] ++
     (if constant then [.CX q ancilla, .CX q input] else [])
 
-private def gidneyFlipWord (input : List Wire) : Circuit := input.map Gate.X
+def gidneyFlipWord (input : List Wire) : Circuit := input.map Gate.X
 
-private def gidneyAddCleanup (input dirty : List Wire) (constant : List Bool) (q carry : Wire) : Circuit :=
+def gidneyAddCleanup (input dirty : List Wire) (constant : List Bool) (q carry : Wire) : Circuit :=
   gidneyFlipWord input ++
     controlledConstCarryXor (input.take dirty.length) dirty (constant.take dirty.length) q carry ++
     gidneyFlipWord input
 
-private def gidneyAddTail (q current spare ancilla : Wire)
+def gidneyAddTail (q current spare ancilla : Wire)
     (onComplete : List Bool → Circuit) (outcomes : List Bool) :
     List Wire → List Wire → List Bool → Quantum.AdaptiveCircuit
   | [a], [], [k] =>
