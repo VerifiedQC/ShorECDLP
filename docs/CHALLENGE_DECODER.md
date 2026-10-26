@@ -8,7 +8,7 @@ vectors of those widths. Positions are absolute, zero-based, little-endian.
 A missing position rejects that trial. Neither parsing nor candidate generation
 receives Q. Only verifiedCandidate checks the public group relation afterward.
 
-The protected candidate generator uses the upstream half-bin interval, optional
+The protected wrappedShift candidate generator uses the upstream half-bin interval, optional
 zero-endpoint wrap, and nearest-left-numerator inverse formulas. Its namespace
 and imports are protected. It imports no editable Submission code.
 
@@ -18,6 +18,15 @@ numberOfTrials * perTrialBound, not observed/unique candidates for one sample.
 At 256/208 the bound is 2^49+2 per trial; at 256/256 it is 4. Explicit candidate
 enumeration at the former scale is enormous: these are mathematical definitions,
 not a claim of efficient practical classical execution.
+
+The second protected tag, nearestPair, directly reuses the mathematical
+orderFindingPostprocess used by Naive. It requires equal register widths,
+rounds both samples, and returns either no candidate or one candidate. Unequal
+widths reject the trial. Its admission bound is one candidate per trial (26 for
+26 trials), followed by the same verifiedCandidate group check. The bounded
+sample equality is proved; the Naive readout and success transfer remain separate
+migration obligations. wrappedShift's candidate list and ordering are unchanged.
+Neither tag permits a submitted classical function.
 
 Certificate binds a StraightEntry's interpreted circuit to:
 - well-formed primitive gates;

@@ -11,6 +11,8 @@ LAYOUT = "_root_.ShorECDLP.Challenge.DecodeLayout"
 COORDINATE_COPY = 'open ShorECDLP.Challenge\n\ndef copyCoordinateBits : (n start : Nat) → Straight 1 start (start+n)\n  | 0, start => by simpa using (Straight.done : Straight 1 start start)\n  | n+1, start => .gate (.whenBit ⟨0, if n < 256 then .x else .y, Fin.ofNat 256 n⟩ true (.X n))\n      (.measure n (by simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using copyCoordinateBits n (start+1)))\n\ndef copiedEntry : StraightEntry := ⟨[⟨⟨0, by decide⟩,⟨1, by decide⟩⟩],512,copyCoordinateBits 512 0⟩\n'
 CASES = {
     "Valid": (f"def submitted : {ENTRY} := ⟨[], 0, .done⟩\n", ENTRY, True),
+    "CustomPostprocessor": (
+        "def submitted := fun (_history : List Bool) => (0 : Nat)\n", LAYOUT, False),
     "EditableCounter": (
         f"def submitted : {ENTRY} := {{ coefficients := [], finalCursor := 0, program := .done, counter := 0 }}\n",
         ENTRY, False),
@@ -41,6 +43,7 @@ CASES = {
 }
 # Pinned Lean diagnostics distinguish intended rejection from a typo/import error.
 EXPECTED_ERRORS = {
+    "CustomPostprocessor": ("Type mismatch", "has type List Bool → ℕ", "expected to have type ShorECDLP.Challenge.DecodeLayout"),
     "EditableCounter": ("`counter` is not a field", "ShorECDLP.Challenge.StraightEntry"),
     "DecoderReadsQ": ("Type mismatch", "has type ShorECDLP.Secp256k1.Point → ShorECDLP.Secp256k1.Point",
                       "expected to have type ShorECDLP.Challenge.DecodeLayout"),

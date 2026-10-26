@@ -81,6 +81,10 @@ import ShorECDLP
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_gateSlots
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_measurements
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_run
+#print axioms ShorECDLP.Challenge.nearestPairCandidates_length
+#print axioms ShorECDLP.Challenge.nearestPairCandidates_eq_postprocess
+#print axioms ShorECDLP.Challenge.decodeTrial_length
+#print axioms ShorECDLP.Challenge.candidates_wrappedShift
 #print axioms ShorECDLP.Challenge.numeratorInterval_card
 #print axioms ShorECDLP.Challenge.wrappedNumerators_card
 #print axioms ShorECDLP.Challenge.fixedCandidates_card
@@ -3972,8 +3976,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3941 ]]; then
-  printf 'expected 3941 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3945 ]]; then
+  printf 'expected 3945 #print axioms results\n' >&2
   exit 1
 fi
 
