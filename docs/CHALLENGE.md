@@ -106,7 +106,9 @@ The controller copies trusted dependency artifacts and replaces only the Entrant
 the stopped worker. It rejects symlinks in worker artifact paths. It then independently replays
 that snapshot, imports declarations without loading entrant extensions, performs the kernel
 acceptance check and reports JSON metrics. Candidate-produced protected artifacts are ignored.
-The controller's environment, toolchain, trusted artifacts and snapshot must remain inaccessible
+The trusted dependency artifacts must be built and validated from the pinned `TRUSTED_TREE`
+and pinned toolchain before serving submissions; an arbitrary pre-existing build cache is not
+a trusted dependency set. The controller's environment, toolchain, trusted artifacts and snapshot must remain inaccessible
 to candidate processes throughout this phase.
 
 For the shipped, trusted example only, after building the root library:
