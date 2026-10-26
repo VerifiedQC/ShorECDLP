@@ -394,21 +394,94 @@ theorem controlledOutProgram_run {n : Nat} (coeffs : Fin n → PointCoeff) (Q : 
       (controlledPointAddOut control pointReg outReg workStart (constantPoint Q (coeffs row))) .done).run := by
   rw [constantGateProgram_run, controlledOutGates_source]
 
+/-- The Naive sign-reindexing construction uses only the original field menu. -/
+def LegacyField (f : PointField) : Prop :=
+  f = .x ∨ f = .y ∨ f = .infinity ∨ f = .negX ∨ f = .negY ∨ f = .tripleX
+
+private def legacySlot {n : Nat} : TemplateGate n → Prop
+  | .literal _ => True
+  | .whenBit r _ _ => LegacyField r.field
+
+private def legacySlots {n : Nat} (gs : List (TemplateGate n)) : Prop :=
+  ∀ g ∈ gs, legacySlot g
+
+@[simp] private theorem legacySlots_append {n : Nat} (a b : List (TemplateGate n)) :
+    legacySlots (a ++ b) ↔ legacySlots a ∧ legacySlots b := by
+  simp [legacySlots, List.mem_append, or_imp, forall_and]
+
+@[simp] private theorem legacySlots_reverse {n : Nat} (a : List (TemplateGate n)) :
+    legacySlots a.reverse ↔ legacySlots a := by simp [legacySlots]
+
+@[simp] private theorem legacySlots_literals {n : Nat} (gs : Circuit) :
+    legacySlots (gs.map (TemplateGate.literal (tableSize := n))) := by
+  simp [legacySlots, legacySlot]
+
+private theorem legacySlots_load {n : Nat} (row : Fin n) (f : PointField)
+    (hf : LegacyField f) (ws : List Wire) (i : Nat) :
+    legacySlots (fieldLoadGates row f ws i) := by
+  induction ws generalizing i with
+  | nil => simp [fieldLoadGates, legacySlots]
+  | cons w ws ih =>
+    rw [fieldLoadGates, legacySlots_append]
+    refine ⟨?_, ih _⟩
+    split <;> simp_all [legacySlots, legacySlot]
+
+private theorem legacySlots_sub {n : Nat} (row : Fin n) (f : PointField)
+    (hf : LegacyField f) (offset : Wire) (lhs out : List Wire) :
+    legacySlots (fieldSubConstGates row f offset lhs out) := by
+  simp only [fieldSubConstGates, legacySlots_append, legacySlots_literals,
+    legacySlots_load row f hf, and_self]
+
+private theorem legacySlots_packed {n : Nat} (row : Fin n) (ws : List Wire) (i : Nat) :
+    legacySlots (packedLoadGates row ws i) := by
+  induction ws generalizing i with
+  | nil => simp [packedLoadGates, legacySlots]
+  | cons w ws ih =>
+    rw [packedLoadGates, legacySlots_append]
+    refine ⟨?_, ih _⟩
+    simp only [packedGate]
+    split_ifs <;> simp [legacySlots, legacySlot, LegacyField]
+
+private theorem controlledOutGates_legacy {n : Nat} (row : Fin n) (c : Wire)
+    (p o : List Wire) (w : Wire) : legacySlots (controlledOutGates row c p o w) := by
+  have hx : LegacyField .x := by simp [LegacyField]
+  have hy : LegacyField .y := by simp [LegacyField]
+  have hn : LegacyField .negY := by simp [LegacyField]
+  have hgeneric (v : Wire) : legacySlots (genericPointGates row v) := by
+    simp only [genericPointGates, legacySlots_append, legacySlots_reverse,
+      legacySlots_literals, legacySlots_sub row .x hx, legacySlots_sub row .y hy, and_self]
+  have hflags (p : List Wire) (v : Wire) : legacySlots (pointFlagGates row p v) := by
+    simp only [pointFlagGates, legacySlots_append, legacySlots_literals,
+      legacySlots_load row .x hx, legacySlots_load row .negY hn, and_self]
+  have hfinite : legacySlots (finiteControlledOutGates row c p o w) := by
+    simp only [finiteControlledOutGates, finiteComputeGates, genericBranchGates,
+      infinityBranchGates, legacySlots_append, legacySlots_reverse, legacySlots_literals,
+      legacySlots_packed, hgeneric, hflags, and_self]
+  rw [controlledOutGates, legacySlots_append]
+  constructor
+  · intro g hg
+    obtain ⟨v, hv, rfl⟩ := List.mem_map.mp hg
+    have hh := hfinite v hv
+    cases v <;> simp_all [guardSlot, legacySlot, LegacyField]
+  · simp [legacySlots, legacySlot, LegacyField]
+
 def negPointField : PointField → PointField
   | .y => .negY
   | .negY => .y
   | f => f
 
-theorem fieldValue_neg (P : Point) (f : PointField) : fieldValue (-P) f =
+theorem fieldValue_neg (P : Point) (f : PointField) (hf : LegacyField f) : fieldValue (-P) f =
     fieldValue P (negPointField f) := by
   cases P with
   | zero =>
     change fieldValue (-(0 : Point)) f = fieldValue 0 (negPointField f)
     rw [neg_zero]
-    cases f <;> simp [fieldValue, pointCoordinates, negPointField]
+    rcases hf with rfl | rfl | rfl | rfl | rfl | rfl <;>
+      simp [fieldValue, pointCoordinates, negPointField]
   | @some x y h =>
-    cases f <;> simp [fieldValue, pointCoordinates, negPointField,
-      WeierstrassCurve.Affine.Point.neg_some, WeierstrassCurve.Affine.negY, curve]
+    rcases hf with rfl | rfl | rfl | rfl | rfl | rfl <;>
+      simp [fieldValue, pointCoordinates, negPointField,
+        WeierstrassCurve.Affine.Point.neg_some, WeierstrassCurve.Affine.negY, curve]
 
 def reindexSlot {m n : Nat} (f : ConstantBit m → ConstantBit n) : TemplateGate m → TemplateGate n
   | .literal g => .literal g
@@ -429,11 +502,10 @@ def negRowRef {n : Nat} (row : Fin n) (r : ConstantBit 1) : ConstantBit n :=
   ⟨row, negPointField r.field, r.bit⟩
 
 theorem negRowRef_read {n : Nat} (coeffs : Fin n → PointCoeff) (Q : Point)
-    (row : Fin n) :
-    (fun r => readConstant coeffs Q (negRowRef row r)) =
-      readConstant (fun _ : Fin 1 => qCoefficient) (-(constantPoint Q (coeffs row))) := by
-  funext r
-  simp only [readConstant, negRowRef, qCoefficient_point, fieldValue_neg]
+    (row : Fin n) (r : ConstantBit 1) (hr : LegacyField r.field) :
+    readConstant coeffs Q (negRowRef row r) =
+      readConstant (fun _ : Fin 1 => qCoefficient) (-(constantPoint Q (coeffs row))) r := by
+  simp only [readConstant, negRowRef, qCoefficient_point, fieldValue_neg _ _ hr]
 
 def negControlledOutGates {n : Nat} (row : Fin n) (control : Wire)
     (pointReg outReg : List Wire) (workStart : Wire) : List (TemplateGate n) :=
@@ -445,8 +517,20 @@ theorem negControlledOutGates_source {n : Nat} (coeffs : Fin n → PointCoeff) (
     (negControlledOutGates row control pointReg outReg workStart).flatMap
       (TemplateGate.instantiate (readConstant coeffs Q)) =
       controlledPointAddOut control pointReg outReg workStart (-(constantPoint Q (coeffs row))) := by
-  rw [negControlledOutGates, reindexSlot_source, negRowRef_read, controlledOutGates_source,
-    qCoefficient_point]
+  rw [negControlledOutGates, reindexSlot_source]
+  have he : (controlledOutGates (0 : Fin 1) control pointReg outReg workStart).flatMap
+      (TemplateGate.instantiate (fun r => readConstant coeffs Q (negRowRef row r))) =
+      (controlledOutGates (0 : Fin 1) control pointReg outReg workStart).flatMap
+        (TemplateGate.instantiate
+          (readConstant (fun _ : Fin 1 => qCoefficient) (-(constantPoint Q (coeffs row))))) := by
+    apply List.flatMap_congr
+    intro g hg
+    have hh := controlledOutGates_legacy (0 : Fin 1) control pointReg outReg workStart g hg
+    cases g with
+    | literal g => rfl
+    | whenBit r b g =>
+      simp only [TemplateGate.instantiate, negRowRef_read coeffs Q row r hh]
+  rw [he, controlledOutGates_source, qCoefficient_point]
 
 def controlledPointGates {n : Nat} (row : Fin n) (control : Wire)
     (pointReg : List Wire) (workStart : Wire) : List (TemplateGate n) :=

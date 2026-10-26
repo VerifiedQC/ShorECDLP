@@ -103,6 +103,17 @@ def pointCoordinates : Point → Bool × (Fp × Fp)
   | .zero => (true, 0, 0)
   | .some (x := x) (y := y) _ => (false, x, y)
 
+/-- Computable original six-field menu. This helper returns zero for new
+constructors; callers using it must choose an original field. -/
+def baseFieldValue (P : Point) : PointField → Nat
+  | .x => (pointCoordinates P).2.1.val
+  | .y => (pointCoordinates P).2.2.val
+  | .infinity => if (pointCoordinates P).1 then 1 else 0
+  | .negX => (-(pointCoordinates P).2.1).val
+  | .negY => (-(pointCoordinates P).2.2).val
+  | .tripleX => (3 * (pointCoordinates P).2.1).val
+  | _ => 0
+
 /-- The source coordinate permutation replaces a zero denominator by one.
 This is deliberately different from taking the inverse of zero. -/
 def exceptionalDenominator (z : Fp) : Fp := if z = 0 then 1 else z
