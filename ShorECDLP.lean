@@ -1,3 +1,5 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.Gates
+import ShorECDLP.Submission.«2607_13816».Challenge.Reset
 -- ShorECDLP: shared verified semantics and independent Bitcoin ECDLP submissions.
 --
 -- This is the only Lean module that imports both submission trees. Import-direction

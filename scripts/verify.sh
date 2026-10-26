@@ -23,6 +23,24 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram_slots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.gateProgram_run
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.lookupLeafGates
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.lookupLeafGates_instantiate
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.lookupLeaf_slots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires_length
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.castFinish
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.castFinish_gateSlots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetProgram
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetProgram_gateSlots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.castFinish_instantiate
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetProgram_run
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_gateSlots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_measurements
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fixedReset_run
 #print axioms ShorECDLP.Challenge.Straight.instantiate_wellFormed
 #print axioms ShorECDLP.Challenge.Straight.measurementCount
 #print axioms ShorECDLP.Challenge.Straight.allGateCount_le
