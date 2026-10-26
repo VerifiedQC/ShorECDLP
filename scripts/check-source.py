@@ -16,12 +16,14 @@ ENTRY = ROOT / "ShorECDLP.lean"
 SOURCE_ROOT = ROOT / "ShorECDLP"
 MATH_ROOT = SOURCE_ROOT / "Math"
 FRAMEWORK_ROOT = SOURCE_ROOT / "Framework"
+CHALLENGE_ROOT = SOURCE_ROOT / "Challenge"
 NAIVE_ROOT = SOURCE_ROOT / "Submission" / "Naive"
 PAPER_ROOT = SOURCE_ROOT / "Submission" / "2607_13816"
 
 LAYER_ROOTS = {
     "Math": MATH_ROOT,
     "Framework": FRAMEWORK_ROOT,
+    "Challenge": CHALLENGE_ROOT,
     "Naive": NAIVE_ROOT,
     "2607_13816": PAPER_ROOT,
 }
@@ -29,14 +31,16 @@ LAYER_ROOTS = {
 ALLOWED_PROJECT_IMPORTS = {
     "Math": {"Math"},
     "Framework": {"Math", "Framework"},
-    "Naive": {"Math", "Framework", "Naive"},
-    "2607_13816": {"Math", "Framework", "2607_13816"},
-    "Root": {"Math", "Framework", "Naive", "2607_13816"},
+    "Challenge": {"Math", "Framework", "Challenge"},
+    "Naive": {"Math", "Framework", "Challenge", "Naive"},
+    "2607_13816": {"Math", "Framework", "Challenge", "2607_13816"},
+    "Root": {"Math", "Framework", "Challenge", "Naive", "2607_13816"},
 }
 
 TEXTUAL_LAYER_PREFIXES = {
     "ShorECDLP.Math": "Math",
     "ShorECDLP.Framework": "Framework",
+    "ShorECDLP.Challenge": "Challenge",
     "ShorECDLP.Submission.Naive": "Naive",
     "ShorECDLP.Submission.«2607_13816»": "2607_13816",
 }

@@ -16,3 +16,5 @@ import ShorECDLP.Submission.Naive.All
 import ShorECDLP.Submission.«2607_13816».All
 
 import ShorECDLP.Challenge.Template
+
+import ShorECDLP.Challenge.Smoke

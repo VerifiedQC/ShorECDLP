@@ -14,7 +14,7 @@ fi
 # Lean reports `sorry`/`admit` as warnings, so make the compiler's own parser
 # authoritative instead of attempting to duplicate Lean's extensible syntax in a hand lexer.
 lake --wfail build
-lake env lean tests/challenge/Smoke.lean
+lake env lean ShorECDLP/Challenge/Smoke.lean
 
 # Ask Lean itself for every module's imports, then reject out-of-tree sources and
 # anything not reachable from the root aggregator.
