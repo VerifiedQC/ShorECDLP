@@ -1,3 +1,4 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.SharedTable
 import ShorECDLP.Submission.«2607_13816».Challenge.Coordinate
 import ShorECDLP.Submission.«2607_13816».Challenge.RetainedRecords
 import ShorECDLP.Submission.«2607_13816».Challenge.InPlace
