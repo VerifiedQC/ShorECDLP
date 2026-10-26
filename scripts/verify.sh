@@ -28,6 +28,18 @@ SHORECDLP_ROOT="$repo_root" python3 "$script_dir/check-source.py"
 
 axiom_output="$({ python3 "$script_dir/print-axioms.py" <<'LEAN'
 import ShorECDLP
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.feedbackProgram
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.feedbackProgram_run
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierProgram
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierProgram_run
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.feedbackProgram_slots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierSlots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierProgram_slots
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierProgram_branch
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierProgram_record_at
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.feedbackProgram_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.castFinish_wellFormed
+#print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.fourierProgram_wellFormed
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires_eq_streamTightAllocation
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.rawTrial_support_resetWires
 #print axioms ShorECDLP.Paper2607_13816.ChallengeMigration.resetWires_avoids_837
@@ -3960,8 +3972,8 @@ import ShorECDLP
 LEAN
 } 2>&1)"
 printf '%s\n' "$axiom_output"
-if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3929 ]]; then
-  printf 'expected 3929 #print axioms results\n' >&2
+if [[ "$(printf '%s\n' "$axiom_output" | awk '/^\047/ { n++ } END { print n + 0 }')" -ne 3941 ]]; then
+  printf 'expected 3941 #print axioms results\n' >&2
   exit 1
 fi
 
