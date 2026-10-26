@@ -1,0 +1,2 @@
+ShorECDLP.Secp256k1.encode_injective
+ShorECDLP.Secp256k1.validCode_iff_exists_point

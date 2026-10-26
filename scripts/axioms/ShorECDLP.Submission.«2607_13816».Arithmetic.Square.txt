@@ -1,0 +1,8 @@
+ShorECDLP.Paper2607_13816.secp256k1Square_correct_resources
+ShorECDLP.Paper2607_13816.squareAddIdealState_correct
+ShorECDLP.Paper2607_13816.squareAdd_branch_correct
+ShorECDLP.Paper2607_13816.squareAdd_wellFormed
+ShorECDLP.Paper2607_13816.squareLoopIdealState_correct
+ShorECDLP.Paper2607_13816.squareLoop_branch_correct
+ShorECDLP.Paper2607_13816.squareLoop_wellFormed
+ShorECDLP.Paper2607_13816.squareWrap_counts

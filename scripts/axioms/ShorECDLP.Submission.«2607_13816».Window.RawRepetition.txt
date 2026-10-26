@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.rawRepeatedCandidate_mass
+ShorECDLP.Paper2607_13816.rawRepeatedCandidate_sound
+ShorECDLP.Paper2607_13816.rawRepeatedCandidate_success
+ShorECDLP.Paper2607_13816.rawRepeatedProgram_zero

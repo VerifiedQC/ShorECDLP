@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.fig14RawDomain_interfaces
+ShorECDLP.Paper2607_13816.fig14RawProgram_coherent
+ShorECDLP.Paper2607_13816.fig14RawProgram_output
+ShorECDLP.Paper2607_13816.rawDivision_agrees
+ShorECDLP.Paper2607_13816.rawMultiplication_agrees

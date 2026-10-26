@@ -1,0 +1,6 @@
+ShorECDLP.Paper2607_13816.PaperCircuitUsesOnly.run_congrOn
+ShorECDLP.Paper2607_13816.cleanC3X_preservesScratch
+ShorECDLP.Paper2607_13816.run_cleanC3X
+ShorECDLP.Paper2607_13816.run_controlledRotateLeftOne_values
+ShorECDLP.Paper2607_13816.run_controlledSwap
+ShorECDLP.Paper2607_13816.run_dirtyC3X

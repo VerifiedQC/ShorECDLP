@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.canonicalWork2RotationBit
+ShorECDLP.Paper2607_13816.canonicalWork2RotationBit_HPFree
+ShorECDLP.Paper2607_13816.canonicalWork2RotationBit_correct
+ShorECDLP.Paper2607_13816.canonicalWork2RotationBit_resources
+ShorECDLP.Paper2607_13816.canonicalWork2RotationBit_wellFormed

@@ -1,0 +1,4 @@
+ShorECDLP.Arithmetic.equalFlag_correct
+ShorECDLP.Arithmetic.equalFlag_tCount
+ShorECDLP.Arithmetic.zeroFlag_correct
+ShorECDLP.Arithmetic.zeroFlag_tCount

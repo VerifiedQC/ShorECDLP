@@ -1,0 +1,6 @@
+ShorECDLP.Paper2607_13816.fig14CorrectionSwaps_correct
+ShorECDLP.Paper2607_13816.fig14CorrectionSwaps_length
+ShorECDLP.Paper2607_13816.fig14EncodedEquiv_nonexceptional
+ShorECDLP.Paper2607_13816.fig14ExceptionalList_length
+ShorECDLP.Paper2607_13816.fig14ExceptionalList_mem
+ShorECDLP.Paper2607_13816.fig14PointEncoding_injective

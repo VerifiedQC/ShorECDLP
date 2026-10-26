@@ -1,0 +1,6 @@
+ShorECDLP.Paper2607_13816.streamBankBranch_clean
+ShorECDLP.Paper2607_13816.streamBankPerm_address
+ShorECDLP.Paper2607_13816.streamBankPerm_clean
+ShorECDLP.Paper2607_13816.streamBankPerm_core
+ShorECDLP.Paper2607_13816.streamBankPerm_moved
+ShorECDLP.Paper2607_13816.streamBankPerm_symm

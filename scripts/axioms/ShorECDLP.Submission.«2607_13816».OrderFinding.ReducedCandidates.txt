@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.nearNumerator_mem_candidates
+ShorECDLP.Paper2607_13816.nearNumerator_shift_mem
+ShorECDLP.Paper2607_13816.numeratorCandidates_card
+ShorECDLP.Paper2607_13816.secp_numeratorCandidates_card

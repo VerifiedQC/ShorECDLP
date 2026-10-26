@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.wordGraySwaps_correct
+ShorECDLP.Paper2607_13816.wordGraySwaps_edges
+ShorECDLP.Paper2607_13816.wordGraySwaps_length

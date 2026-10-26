@@ -1,0 +1,2 @@
+ShorECDLP.Precompute.doublingTable_adjacent
+ShorECDLP.Precompute.doublingTable_getElem

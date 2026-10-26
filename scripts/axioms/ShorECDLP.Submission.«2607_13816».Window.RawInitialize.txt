@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.initializedRawDomain_iff_no_firstFailure
+ShorECDLP.Paper2607_13816.initializedRawProgram_coherent
+ShorECDLP.Paper2607_13816.rawInitialState_ready
+ShorECDLP.Paper2607_13816.rawWindowSchedule_domain_or_firstFailure

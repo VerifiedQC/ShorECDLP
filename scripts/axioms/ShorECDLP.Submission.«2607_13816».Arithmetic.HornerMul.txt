@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.hornerMulIdealState_correct
+ShorECDLP.Paper2607_13816.hornerMul_branch_correct
+ShorECDLP.Paper2607_13816.hornerMul_wellFormed
+ShorECDLP.Paper2607_13816.secp256k1HornerMul_correct_resources

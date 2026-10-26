@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.reducedRawEntryState_filtered_mass
+ShorECDLP.Paper2607_13816.reducedRawEntryState_uniform
+ShorECDLP.Paper2607_13816.reducedRawEntryWord_ready
+ShorECDLP.Paper2607_13816.reducedRawEntryWord_root
+ShorECDLP.Paper2607_13816.scalarRootFlip_phaseWordState

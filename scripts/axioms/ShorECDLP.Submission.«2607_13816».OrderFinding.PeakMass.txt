@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.nearNumerator_abs
+ShorECDLP.Paper2607_13816.paperPhaseAmplitude
+ShorECDLP.Paper2607_13816.paperPhasePeak_mass

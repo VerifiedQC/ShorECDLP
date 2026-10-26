@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.secpSuccessBound_numeric
+ShorECDLP.Paper2607_13816.secpWindowRetrySuccess
+ShorECDLP.Paper2607_13816.secpWindowSuccessMass_le_one
+ShorECDLP.Paper2607_13816.secpWindowSuccessMass_numeric
+ShorECDLP.Paper2607_13816.selectedMass_le_total

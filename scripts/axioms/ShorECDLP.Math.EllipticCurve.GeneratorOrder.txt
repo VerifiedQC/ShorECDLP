@@ -1,0 +1,2 @@
+ShorECDLP.Secp256k1.generator_nsmul_eq_zero
+ShorECDLP.Secp256k1.generator_order

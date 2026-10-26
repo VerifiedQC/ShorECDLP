@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.controlledConstantModularAdd256_counts
+ShorECDLP.Paper2607_13816.controlledModularNegate256_counts
+ShorECDLP.Paper2607_13816.modularArithmetic256_counts
+ShorECDLP.Paper2607_13816.modularScaling256_counts
+ShorECDLP.Paper2607_13816.uncontrolledConstantModularAdd256_counts

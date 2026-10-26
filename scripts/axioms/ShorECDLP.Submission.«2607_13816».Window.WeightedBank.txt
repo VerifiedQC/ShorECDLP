@@ -1,0 +1,6 @@
+ShorECDLP.Paper2607_13816.parkedWindowProgram_reuse
+ShorECDLP.Paper2607_13816.preparedWindowCall_reuse
+ShorECDLP.Paper2607_13816.streamBankPerm_address_comp
+ShorECDLP.Paper2607_13816.streamBankPerm_bits
+ShorECDLP.Paper2607_13816.streamPointCall_reuse
+ShorECDLP.Paper2607_13816.windowPrepareCircuit_reuse

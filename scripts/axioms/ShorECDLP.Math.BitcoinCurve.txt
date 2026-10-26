@@ -1,0 +1,3 @@
+ShorECDLP.Secp256k1.G_ne_zero
+ShorECDLP.Secp256k1.curve_discriminant_ne_zero
+ShorECDLP.Secp256k1.generator_equation

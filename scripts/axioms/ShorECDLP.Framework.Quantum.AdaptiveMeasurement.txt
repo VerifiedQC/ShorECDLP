@@ -1,0 +1,4 @@
+ShorECDLP.Quantum.measureResetThen
+ShorECDLP.Quantum.measureResetThen_coherent
+ShorECDLP.Quantum.measureResetThen_wellFormed
+ShorECDLP.Quantum.run_measureResetThen

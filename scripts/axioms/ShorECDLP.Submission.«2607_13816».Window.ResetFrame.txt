@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.resetWindowTrial_zero_branch
+ShorECDLP.Paper2607_13816.resetWindowTrial_zero_support
+ShorECDLP.Paper2607_13816.supportedZero_scalar

@@ -1,0 +1,3 @@
+ShorECDLP.Challenge.Certificate.candidateChecks_le
+ShorECDLP.Challenge.verifiedCandidate_mem
+ShorECDLP.Challenge.verifiedCandidate_sound

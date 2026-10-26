@@ -1,0 +1,9 @@
+ShorECDLP.Quantum.BranchCoherentOn.on_supported
+ShorECDLP.Quantum.CoherentlyImplementsOn
+ShorECDLP.Quantum.CoherentlyImplementsOn.branch_coefficient
+ShorECDLP.Quantum.CoherentlyImplementsOn.seq
+ShorECDLP.Quantum.CoherentlyImplementsOn.tensor_or_disjoint
+ShorECDLP.Quantum.CoherentlyImplementsOn.unitary
+ShorECDLP.Quantum.coherent_final_probability_eq
+ShorECDLP.Quantum.coherent_on_supported_state
+ShorECDLP.Quantum.eventProbability_smul

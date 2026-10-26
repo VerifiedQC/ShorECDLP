@@ -1,0 +1,2 @@
+ShorECDLP.Secp256k1.order_prime
+ShorECDLP.Secp256k1.p_prime

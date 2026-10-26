@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.primitivePhaseCost_of_HPFree
+ShorECDLP.Paper2607_13816.primitiveResources_T_le
+ShorECDLP.Paper2607_13816.primitiveResources_T_of_no_phase
+ShorECDLP.Paper2607_13816.primitiveResources_branch
+ShorECDLP.Paper2607_13816.primitiveResources_seq

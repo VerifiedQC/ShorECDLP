@@ -1,0 +1,2 @@
+ShorECDLP.Paper2607_13816.resetDirectWindowOutputMass_physical
+ShorECDLP.Paper2607_13816.resetDirectWindowTrial_total

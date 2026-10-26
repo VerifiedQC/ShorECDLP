@@ -1,0 +1,2 @@
+ShorECDLP.Challenge.Entry.program_wellFormed
+ShorECDLP.Challenge.Template.instantiate_seq

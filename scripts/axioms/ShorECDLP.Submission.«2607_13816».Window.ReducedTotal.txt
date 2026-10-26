@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.reducedFourierDecode_total
+ShorECDLP.Paper2607_13816.reducedSecpWindowDecode_total
+ShorECDLP.Paper2607_13816.reducedSecpWindowProgram_total

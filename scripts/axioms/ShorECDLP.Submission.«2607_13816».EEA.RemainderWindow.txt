@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.run_remainderInterval_logicalBorrow
+ShorECDLP.Paper2607_13816.run_remainderInterval_logicalSlices
+ShorECDLP.Paper2607_13816.run_remainderInterval_logicalValues

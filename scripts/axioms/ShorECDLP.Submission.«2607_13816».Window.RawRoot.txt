@@ -1,0 +1,7 @@
+ShorECDLP.Paper2607_13816.fourierBranch_root
+ShorECDLP.Paper2607_13816.reducedFourierSelection_root
+ShorECDLP.Paper2607_13816.reducedRawIdealFourierEventMass_root
+ShorECDLP.Paper2607_13816.reducedScalarMap_root
+ShorECDLP.Paper2607_13816.reducedScalarOutput_root
+ShorECDLP.Paper2607_13816.scalarRootFlip_normSq
+ShorECDLP.Paper2607_13816.scalarRootFlip_run

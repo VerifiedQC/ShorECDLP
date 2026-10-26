@@ -1,0 +1,6 @@
+ShorECDLP.Paper2607_13816.signedRawBeforeMultiplication_eq
+ShorECDLP.Paper2607_13816.signedRawDomain_iff_selected
+ShorECDLP.Paper2607_13816.signedRawDomain_interfaces
+ShorECDLP.Paper2607_13816.signedRawDomain_of_nonexceptional
+ShorECDLP.Paper2607_13816.signedRawProgram_coherent
+ShorECDLP.Paper2607_13816.signedRawProgram_output

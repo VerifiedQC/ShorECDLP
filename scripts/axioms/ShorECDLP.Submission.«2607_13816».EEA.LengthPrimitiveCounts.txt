@@ -1,0 +1,7 @@
+ShorECDLP.Paper2607_13816.eeaLengthScan_primitive
+ShorECDLP.Paper2607_13816.eeaLengthSetup_primitive
+ShorECDLP.Paper2607_13816.eeaLengthUndo_primitive
+ShorECDLP.Paper2607_13816.knownScratchControl_primitive
+ShorECDLP.Paper2607_13816.lengthInitializeCase_primitive
+ShorECDLP.Paper2607_13816.lengthInitializeScan_primitive
+ShorECDLP.Paper2607_13816.lengthInitialize_primitive

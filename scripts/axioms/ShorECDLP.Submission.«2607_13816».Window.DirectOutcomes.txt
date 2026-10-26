@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.directWindowTrialOutputMass_eq
+ShorECDLP.Paper2607_13816.directWindowTrialOutputMass_kernel
+ShorECDLP.Paper2607_13816.directWindowTrialSlice_filter

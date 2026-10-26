@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.preparedSchedulePrimitives_phase_zero
+ShorECDLP.Paper2607_13816.secpWindowProgram_tCount_exact
+ShorECDLP.Paper2607_13816.secpWindowRepeatedProgram_tCount_exact
+ShorECDLP.Paper2607_13816.windowTrialProgram_tCount_exact

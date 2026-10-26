@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.squareLoopInverse_branch_of_value
+ShorECDLP.Paper2607_13816.squareLoop_image_of_value
+ShorECDLP.Paper2607_13816.squareSubtract_coherent
+ShorECDLP.Paper2607_13816.squareSubtract_correct
+ShorECDLP.Paper2607_13816.squareSubtract_wellFormed

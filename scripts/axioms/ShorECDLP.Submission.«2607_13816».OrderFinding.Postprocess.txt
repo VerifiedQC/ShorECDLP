@@ -1,0 +1,9 @@
+ShorECDLP.Paper2607_13816.NearNumerator
+ShorECDLP.Paper2607_13816.nearNumerator_round
+ShorECDLP.Paper2607_13816.paperExponentPrecision
+ShorECDLP.Paper2607_13816.paperExponentPrecision_order
+ShorECDLP.Paper2607_13816.paperPeak
+ShorECDLP.Paper2607_13816.paperPeak_injective
+ShorECDLP.Paper2607_13816.paperPeak_near
+ShorECDLP.Paper2607_13816.paperPeak_round
+ShorECDLP.Paper2607_13816.paperPostprocess_correct

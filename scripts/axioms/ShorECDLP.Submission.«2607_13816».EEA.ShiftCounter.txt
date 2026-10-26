@@ -1,0 +1,3 @@
+ShorECDLP.Paper2607_13816.boolWordToNat_decrementBits
+ShorECDLP.Paper2607_13816.postShiftUnitary_counter
+ShorECDLP.Paper2607_13816.preShiftUnitary_counter

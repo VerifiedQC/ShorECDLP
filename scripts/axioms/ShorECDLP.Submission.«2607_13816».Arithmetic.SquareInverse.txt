@@ -1,0 +1,5 @@
+ShorECDLP.Paper2607_13816.secp256k1SquareInverse_correct_resources
+ShorECDLP.Paper2607_13816.squareLoopInverse_after_forward
+ShorECDLP.Paper2607_13816.squareLoopInverse_wellFormed
+ShorECDLP.Paper2607_13816.squareSub_after_add
+ShorECDLP.Paper2607_13816.squareSub_wellFormed

@@ -1,0 +1,4 @@
+ShorECDLP.Paper2607_13816.reducedScalar_toffoli_bound
+ShorECDLP.Paper2607_13816.reducedSecpWindowRepeated_tCount_bound
+ShorECDLP.Paper2607_13816.reducedSecpWindow_tCount_bound
+ShorECDLP.Paper2607_13816.reducedWindowTrial_tCount_bound
