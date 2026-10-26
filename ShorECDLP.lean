@@ -1,3 +1,6 @@
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACenter
+import ShorECDLP.Submission.«2607_13816».Challenge.Unary
+import ShorECDLP.Submission.«2607_13816».Challenge.VChain
 import ShorECDLP.Submission.«2607_13816».Challenge.Square
 import ShorECDLP.Submission.«2607_13816».Challenge.Horner
 import ShorECDLP.Submission.«2607_13816».Challenge.SignedWindow
