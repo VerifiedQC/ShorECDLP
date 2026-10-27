@@ -90,3 +90,5 @@ import ShorECDLP.Submission.Naive.Challenge.ExtendedCertificate
 
 import ShorECDLP.Challenge.PointFields
 import ShorECDLP.Submission.«2607_13816».Challenge.CertificateAssembly
+import ShorECDLP.Submission.«2607_13816».Challenge.FixedNetwork
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointLoad
