@@ -74,3 +74,18 @@ Signed point-addition composition for the whole window, physical validity of
 its remaining components, and complete support/resource bounds remain outstanding. The reset list
 does not substitute for workspace restoration before reset. No final Streaming
 certificate is claimed.
+
+The accumulator encoding bridge now identifies the ordered 513 physical ports
+with `pointLogicalWires` and the coordinate bit function with
+`pointCoordinateWord`. `placedBatchState_pointWrite` therefore gives the complete
+canonical point state and preserves every other wire, under the explicit batch
+readiness and raw-coordinate input conditions. Its output is ready for the
+existing arithmetic interfaces.
+
+`windowYNegate_coherent` and `windowYNegateState_pointWrite` prove the actual
+signed modular-negation component, including canonical output and external-wire
+restoration. `fig14EncodedEquiv_negY` proves the coordinate permutation's
+conjugacy under Y negation, and `signedCorrection_negY` obtains subtraction after
+all exceptional corrections without assuming that conjugacy. These component
+bridges do not yet establish readiness and selected-row consistency through the
+entire signed window sequence.

@@ -1,0 +1,6 @@
+ShorECDLP.Paper2607_13816.fig14CoordinateEquiv_negY
+ShorECDLP.Paper2607_13816.encodedNegY
+ShorECDLP.Paper2607_13816.encodedNegY_involution
+ShorECDLP.Paper2607_13816.fig14PointEncoding_neg
+ShorECDLP.Paper2607_13816.fig14EncodedEquiv_negY
+ShorECDLP.Paper2607_13816.signedCorrection_negY

@@ -112,3 +112,9 @@ import ShorECDLP.Submission.«2607_13816».Challenge.BatchCost
 import ShorECDLP.Submission.«2607_13816».Challenge.PlacedBatch
 import ShorECDLP.Submission.«2607_13816».Challenge.LookupPhysical
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchTemplate
+
+import ShorECDLP.Submission.«2607_13816».Challenge.CoordinateConjugacy
+
+import ShorECDLP.Submission.«2607_13816».Challenge.AccumulatorEncoding
+
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowNegation
