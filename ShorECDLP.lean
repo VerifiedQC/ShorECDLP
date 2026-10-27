@@ -123,3 +123,5 @@ import ShorECDLP.Submission.«2607_13816».Challenge.BatchBoundary
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchedWindowState
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchedWindowCoherent
 import ShorECDLP.Submission.«2607_13816».Challenge.PreparedBatch
+import ShorECDLP.Submission.«2607_13816».Challenge.ActualWindow
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowPhysical
