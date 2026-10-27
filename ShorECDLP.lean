@@ -103,3 +103,6 @@ import ShorECDLP.Submission.«2607_13816».Challenge.BatchState
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchPlacement
 import ShorECDLP.Submission.«2607_13816».Challenge.CursorShift
 import ShorECDLP.Submission.«2607_13816».Challenge.WindowBody
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchQuery
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchExecution
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchCoherent

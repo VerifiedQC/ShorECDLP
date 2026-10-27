@@ -53,8 +53,15 @@ an overall cap, not free headroom for these queries.
 
 ## Remaining obligations
 
-The actual query and transposition sequence still needs its gate-level
-connection to the register model, including per-stage path/scratch cleanliness,
-coherent phase preservation, signed point-addition semantics, and the complete
-support and resource bounds. The reset list does not substitute for proving
-workspace restoration before reset. No final Streaming certificate is claimed.
+`batchUnitary_schedule` now connects the actual classical gate sequence to
+that register model: it proves the matching result, all five endpoint words
+zero, path/scratch cleanliness, a zero flag, and preservation of the lower
+address/control wires. `batchSource_coherent` proves the actual adaptive
+query/transposition sequence coherently implements this same unitary sequence.
+Both proofs compose over the submitted `batchSchedule`, without assuming a
+successful classical execution as an external premise.
+
+Signed point-addition semantics after placement, full physical validity, and
+the complete support and resource bounds remain outstanding. The reset list
+does not substitute for workspace restoration before reset. No final Streaming
+certificate is claimed.
