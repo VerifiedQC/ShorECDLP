@@ -1,2 +1,7 @@
 ShorECDLP.Challenge.Entry.program_wellFormed
 ShorECDLP.Challenge.Template.instantiate_seq
+ShorECDLP.Challenge.exceptionalDenominator
+ShorECDLP.Challenge.exceptionalImage
+ShorECDLP.Challenge.doubledCoordinates
+
+ShorECDLP.Challenge.baseFieldValue

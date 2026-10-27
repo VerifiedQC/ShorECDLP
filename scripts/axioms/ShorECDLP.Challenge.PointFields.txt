@@ -1,0 +1,6 @@
+ShorECDLP.Challenge.exceptionalDenominator_zero
+ShorECDLP.Challenge.exceptionalDenominator_ne_zero
+ShorECDLP.Challenge.exceptionalImage_self
+ShorECDLP.Challenge.exceptionalImage_neg
+ShorECDLP.Challenge.fieldValue_zero
+ShorECDLP.Challenge.doubledCoordinates_eq

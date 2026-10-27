@@ -2,6 +2,7 @@
 """Own benign fixtures only. This is not a sandbox for arbitrary submissions."""
 from pathlib import Path
 import subprocess
+import re
 import tempfile
 import gate
 
@@ -10,6 +11,15 @@ ENTRY = "_root_.ShorECDLP.Challenge.StraightEntry"
 LAYOUT = "_root_.ShorECDLP.Challenge.DecodeLayout"
 COORDINATE_COPY = 'open ShorECDLP.Challenge\n\ndef copyCoordinateBits : (n start : Nat) → Straight 1 start (start+n)\n  | 0, start => by simpa using (Straight.done : Straight 1 start start)\n  | n+1, start => .gate (.whenBit ⟨0, if n < 256 then .x else .y, Fin.ofNat 256 n⟩ true (.X n))\n      (.measure n (by simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using copyCoordinateBits n (start+1)))\n\ndef copiedEntry : StraightEntry := ⟨[⟨⟨0, by decide⟩,⟨1, by decide⟩⟩],512,copyCoordinateBits 512 0⟩\n'
 CASES = {
+    "ValidExceptionalField": (
+        "def submitted : ShorECDLP.Challenge.PointField := .exceptionalNegDoubleY\n",
+        "_root_.ShorECDLP.Challenge.PointField", True),
+    "CustomFieldCallback": (
+        "def submitted := fun (_P : ShorECDLP.Secp256k1.Point) => (0 : Nat)\n",
+        "_root_.ShorECDLP.Challenge.PointField", False),
+    "InventedField": (
+        "def submitted : ShorECDLP.Challenge.PointField := .discreteLog\n",
+        "_root_.ShorECDLP.Challenge.PointField", False),
     "Valid": (f"def submitted : {ENTRY} := ⟨[], 0, .done⟩\n", ENTRY, True),
     "CustomPostprocessor": (
         "def submitted := fun (_history : List Bool) => (0 : Nat)\n", LAYOUT, False),
@@ -43,6 +53,9 @@ CASES = {
 }
 # Pinned Lean diagnostics distinguish intended rejection from a typo/import error.
 EXPECTED_ERRORS = {
+    "CustomFieldCallback": ("Type mismatch", "ShorECDLP.Secp256k1.Point → ℕ",
+                            "ShorECDLP.Challenge.PointField"),
+    "InventedField": ("Unknown constant", "ShorECDLP.Challenge.PointField.discreteLog"),
     "CustomPostprocessor": ("Type mismatch", "has type List Bool → ℕ", "expected to have type ShorECDLP.Challenge.DecodeLayout"),
     "EditableCounter": ("`counter` is not a field", "ShorECDLP.Challenge.StraightEntry"),
     "DecoderReadsQ": ("Type mismatch", "has type ShorECDLP.Secp256k1.Point → ShorECDLP.Secp256k1.Point",
@@ -91,7 +104,7 @@ def main():
                 cwd=gate.ROOT, env=env, text=True, capture_output=True, timeout=120)
             if (result.returncode == 0) != accept:
                 raise AssertionError(f"{name}: unexpected compiler result\n{result.stdout}\n{result.stderr}")
-            if not accept and (result.returncode != 1 or "error:" not in result.stdout):
+            if not accept and (result.returncode != 1 or re.search(r"error(?:\([^\n)]+\))?:", result.stdout) is None):
                 raise AssertionError(f"{name}: rejection was not a Lean diagnostic: {result.stdout} {result.stderr}")
             if not accept:
                 require_diagnostic(name, result.stdout, EXPECTED_ERRORS[name])

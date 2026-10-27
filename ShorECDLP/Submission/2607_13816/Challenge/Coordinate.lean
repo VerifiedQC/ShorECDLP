@@ -77,19 +77,23 @@ theorem field_x_mod (P : Point) : fieldValue P .x % ShorECDLP.p = fieldValue P .
   exact Nat.mod_eq_of_lt (ZMod.val_lt ((pointCoordinates P).2.1))
 
 def coordinateSources (Q : Point) (w : OddWindow) : List AdaptiveCircuit :=
-  [fig14LookupX (fun l => fieldValue (windowPoint Q w l) .negX),
-   signedPointLookupY (fun l => fieldValue (windowPoint Q w l) .negY),
+  [fig14LookupX (fun l => baseFieldValue (windowPoint Q w l) .negX),
+   signedPointLookupY (fun l => baseFieldValue (windowPoint Q w l) .negY),
    secp256k1ZeroAllowedDivision, fig14SquareSubtract,
-   fig14LookupX (fun l => fieldValue (windowPoint Q w l) .tripleX),
+   fig14LookupX (fun l => baseFieldValue (windowPoint Q w l) .tripleX),
    secp256k1ZeroAllowedMultiplication, fig14Negate,
-   fig14LookupX (fun l => fieldValue (windowPoint Q w l) .x),
-   signedPointLookupY (fun l => fieldValue (windowPoint Q w l) .negY)]
+   fig14LookupX (fun l => baseFieldValue (windowPoint Q w l) .x),
+   signedPointLookupY (fun l => baseFieldValue (windowPoint Q w l) .negY)]
 
 theorem coordinateSources_eq (Q : Point) (w : OddWindow) :
     sequenceCircuit (coordinateSources Q w) =
       signedLookupCoordinateProgram (fun l => fieldValue (windowPoint Q w l) .x)
         (fun l => fieldValue (windowPoint Q w l) .y) := by
-  simp only [coordinateSources, sequenceCircuit, signedLookupCoordinateProgram,
+  have hx (P : Point) : baseFieldValue P .x = fieldValue P .x := rfl
+  have hn (P : Point) : baseFieldValue P .negX = fieldValue P .negX := rfl
+  have hy (P : Point) : baseFieldValue P .negY = fieldValue P .negY := rfl
+  have ht (P : Point) : baseFieldValue P .tripleX = fieldValue P .tripleX := rfl
+  simp only [coordinateSources, hx, hn, hy, ht, sequenceCircuit, signedLookupCoordinateProgram,
     adaptive_seq_assoc, adaptive_seq_done, field_negX, field_negY, field_tripleX, field_x_mod]
 
 def coordinateSegments : List (FixedSegment 32768) :=
