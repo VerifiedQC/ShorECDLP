@@ -90,4 +90,11 @@ import ShorECDLP.Submission.Naive.Challenge.ExtendedCertificate
 
 import ShorECDLP.Challenge.PointFields
 import ShorECDLP.Submission.«2607_13816».Challenge.CertificateAssembly
+import ShorECDLP.Submission.«2607_13816».Challenge.FixedNetwork
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointLoad
+import ShorECDLP.Submission.«2607_13816».Challenge.MatchingPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointEncoding
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointQROM
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointSandwich
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointCoherent
 import ShorECDLP.Submission.«2607_13816».Challenge.Outer
