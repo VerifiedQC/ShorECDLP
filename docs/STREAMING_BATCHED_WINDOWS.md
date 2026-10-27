@@ -32,8 +32,10 @@ compilers to prove cursor independence.
 
 ## Space and T tradeoff
 
-The following are analytical component estimates, **not complete resource
-certificates**. They exclude coordinate arithmetic, sign processing, Fourier,
+The five-word T count and measurement count below are proved for the actual
+correction block. The qubit-set bounds and eight-word comparison remain
+analytical component estimates, **not complete resource certificates**.
+They exclude coordinate arithmetic, sign processing, Fourier,
 and reset. They use a conservative 855-wire original support set plus the
 endpoint words and 512 comparator work wires. Wire-label maxima are not qubit
 counts.
@@ -61,7 +63,14 @@ query/transposition sequence coherently implements this same unitary sequence.
 Both proofs compose over the submitted `batchSchedule`, without assuming a
 successful classical execution as an external premise.
 
-Signed point-addition semantics after placement, full physical validity, and
-the complete support and resource bounds remain outstanding. The reset list
+`batchUnitary_fullFrame` additionally restores every non-data wire.
+`placedBatchSource_state` transports the coherent execution to the actual
+accumulator ports, and `placedBatchState_finite` proves the finite-point result
+on those ports. `placedBatchProgram_wellFormed` checks the submitted correction
+template itself, including all conditional slots. `placedBatchSource_tCount`
+proves exactly 3,784,382 T gates for that correction block.
+
+Signed point-addition composition for the whole window, physical validity of
+its remaining components, and complete support/resource bounds remain outstanding. The reset list
 does not substitute for workspace restoration before reset. No final Streaming
 certificate is claimed.

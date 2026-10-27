@@ -106,3 +106,9 @@ import ShorECDLP.Submission.«2607_13816».Challenge.WindowBody
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchQuery
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchExecution
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchCoherent
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchFrame
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchCost
+import ShorECDLP.Submission.«2607_13816».Challenge.PlacedBatch
+import ShorECDLP.Submission.«2607_13816».Challenge.LookupPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchTemplate
