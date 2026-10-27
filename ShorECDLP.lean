@@ -118,3 +118,4 @@ import ShorECDLP.Submission.«2607_13816».Challenge.CoordinateConjugacy
 import ShorECDLP.Submission.«2607_13816».Challenge.AccumulatorEncoding
 
 import ShorECDLP.Submission.«2607_13816».Challenge.WindowNegation
+import ShorECDLP.Submission.«2607_13816».Challenge.OuterResources
