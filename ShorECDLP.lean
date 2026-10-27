@@ -130,3 +130,4 @@ import ShorECDLP.Submission.«2607_13816».Challenge.ModularPhysical
 import ShorECDLP.Submission.«2607_13816».Challenge.SquarePhysical
 import ShorECDLP.Submission.«2607_13816».Challenge.InPlacePhysical
 import ShorECDLP.Submission.«2607_13816».Challenge.EEACenterPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.EEAStructuralPhysical
