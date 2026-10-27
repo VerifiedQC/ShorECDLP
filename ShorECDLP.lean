@@ -97,3 +97,4 @@ import ShorECDLP.Submission.«2607_13816».Challenge.EndpointEncoding
 import ShorECDLP.Submission.«2607_13816».Challenge.EndpointQROM
 import ShorECDLP.Submission.«2607_13816».Challenge.EndpointSandwich
 import ShorECDLP.Submission.«2607_13816».Challenge.EndpointCoherent
+import ShorECDLP.Submission.«2607_13816».Challenge.Outer
