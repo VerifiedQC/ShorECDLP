@@ -130,3 +130,6 @@ import ShorECDLP.Submission.«2607_13816».Challenge.WindowBudget
 import ShorECDLP.Submission.«2607_13816».Challenge.LookupSlots
 import ShorECDLP.Submission.«2607_13816».Challenge.ArithmeticSlots
 import ShorECDLP.Submission.«2607_13816».Challenge.DecoderSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACellSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEALengthSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEAScheduleSlots
