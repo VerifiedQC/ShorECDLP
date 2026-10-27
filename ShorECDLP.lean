@@ -135,3 +135,5 @@ import ShorECDLP.Submission.«2607_13816».Challenge.EEAStructuralPhysical
 import ShorECDLP.Submission.«2607_13816».Challenge.EEAIntervalPhysical
 
 import ShorECDLP.Submission.«2607_13816».Challenge.MeasuredEEAPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceCompletePhysical
