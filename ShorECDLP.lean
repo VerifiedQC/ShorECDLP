@@ -125,3 +125,4 @@ import ShorECDLP.Submission.«2607_13816».Challenge.BatchedWindowCoherent
 import ShorECDLP.Submission.«2607_13816».Challenge.PreparedBatch
 import ShorECDLP.Submission.«2607_13816».Challenge.ActualWindow
 import ShorECDLP.Submission.«2607_13816».Challenge.WindowPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.ModularPhysical
