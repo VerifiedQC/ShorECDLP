@@ -70,8 +70,8 @@ on those ports. `placedBatchProgram_wellFormed` checks the submitted correction
 template itself, including all conditional slots. `placedBatchSource_tCount`
 proves exactly 3,784,382 T gates for that correction block.
 
-Signed point-addition composition for the whole window, physical validity of
-its remaining components, and complete support/resource bounds remain outstanding. The reset list
+Address relabeling and outer-loop semantic integration, physical validity of
+the remaining window components, and complete support/resource bounds remain outstanding. The reset list
 does not substitute for workspace restoration before reset. No final Streaming
 certificate is claimed.
 
@@ -86,6 +86,20 @@ existing arithmetic interfaces.
 signed modular-negation component, including canonical output and external-wire
 restoration. `fig14EncodedEquiv_negY` proves the coordinate permutation's
 conjugacy under Y negation, and `signedCorrection_negY` obtains subtraction after
-all exceptional corrections without assuming that conjugacy. These component
-bridges do not yet establish readiness and selected-row consistency through the
-entire signed window sequence.
+all exceptional corrections without assuming that conjugacy. The subsequent window composition proves readiness and selected-row consistency
+through the entire signed window sequence.
+
+
+`BatchedPointReady` now states the original arithmetic conditions together with
+zero values on the five-word endpoint bank and the correction flag/scratch bank.
+The coordinate stages and modular negation preserve this condition. The actual
+QROM row agrees with the same address read by the coordinate stages.
+
+`batchedWindowState_correct` proves full signed point addition for a nonzero
+order-torsion public point, including exceptional inputs and every external wire.
+`batchedWindowCore_coherent` binds the corresponding coherent execution to the
+submitted four-stage Straight program for any existing record prefix. The
+address preparation/unpreparation pair preserves the domain and cancels outside
+the point update; `batchedWindowPrepared_coherent` binds that complete prepared
+program as well. These proofs precede the address-bank relabeling and the outer
+repeated-trial integration, which remain separate obligations.
