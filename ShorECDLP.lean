@@ -98,4 +98,24 @@ import ShorECDLP.Submission.«2607_13816».Challenge.EndpointQROM
 import ShorECDLP.Submission.«2607_13816».Challenge.EndpointSandwich
 import ShorECDLP.Submission.«2607_13816».Challenge.EndpointCoherent
 import ShorECDLP.Submission.«2607_13816».Challenge.Outer
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchedEndpoint
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchState
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchPlacement
+import ShorECDLP.Submission.«2607_13816».Challenge.CursorShift
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowBody
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchQuery
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchExecution
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchCoherent
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchFrame
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchCost
+import ShorECDLP.Submission.«2607_13816».Challenge.PlacedBatch
+import ShorECDLP.Submission.«2607_13816».Challenge.LookupPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchTemplate
+
+import ShorECDLP.Submission.«2607_13816».Challenge.CoordinateConjugacy
+
+import ShorECDLP.Submission.«2607_13816».Challenge.AccumulatorEncoding
+
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowNegation
 import ShorECDLP.Submission.«2607_13816».Challenge.OuterResources
