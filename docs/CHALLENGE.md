@@ -45,8 +45,12 @@ such a function could compute `d` classically at no counted cost.
 |---|---|
 | Candidate checks (whole program) | `56·(2^49+2)` ≈ 2^55 |
 | Gate slots (including untriggered optional slots) | 4·10^15 (provisional) |
-| Measurements | 47,471,340,504 (provisional) |
+| Measurements | 50,000,000,000 (provisional) |
 | Coefficient rows | 983,040 |
+
+The measurement cap was revised from 47,471,340,504 after the actual five-word
+exception-correction program was counted: 56 rounds write 48,194,018,992 records.
+This change does not certify the unfinished Streaming submission.
 
 ## Metrics
 
@@ -80,7 +84,7 @@ are not modelled. Scores are formal results in this abstract cost model, not har
 | Submission | Qubits | T-model | Measurements | Status |
 |---|---|---|---|---|
 | Naive | 206,624 | 8,918,039,383,771,648 | 5,385,536 | certified through the judge |
-| arXiv:2607.13816 streaming | ≤ 854 (paper claim) | | ≤ 47,471,340,504 | migration in progress |
+| arXiv:2607.13816 streaming with five-word correction | support bound pending | ≤ 806,028,979,896 | 48,194,018,992 | migration in progress; T and record bounds proved, full certificate pending |
 
 ## Running the judge
 

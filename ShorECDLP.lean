@@ -123,3 +123,8 @@ import ShorECDLP.Submission.«2607_13816».Challenge.BatchBoundary
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchedWindowState
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchedWindowCoherent
 import ShorECDLP.Submission.«2607_13816».Challenge.PreparedBatch
+
+import ShorECDLP.Submission.«2607_13816».Challenge.MeasurementBridge
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowCounts
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowBudget
+import ShorECDLP.Submission.«2607_13816».Challenge.LookupSlots

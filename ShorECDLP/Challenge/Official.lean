@@ -12,7 +12,7 @@ Entrants cannot change them: this file is outside the editable path.
 * `coefficientRows`: covers the 2607.13816 table (983,040 rows). -/
 def officialLimits : Limits where
   gateSlots := 4000000000000000
-  measurements := 47471340504
+  measurements := 50000000000
   coefficientRows := 983040
   candidateChecks := budget55
 
