@@ -3,6 +3,7 @@ import ShorECDLP.Submission.«2607_13816».Challenge.EEAIntervalPhysical
 production wrapper lemmas discharge that premise using the fixed source layouts. -/
 namespace ShorECDLP.Paper2607_13816.ChallengeMigration
 open Quantum ShorECDLP.Challenge
+attribute [local irreducible] terminalWork1Clear
 
 theorem zeroCellProgram_wellFormed (n start : Nat) (base : Bool) (r bit guard target temporary : Wire)
     (h : (measuredZeroCell base r bit guard target temporary).WellFormed) :

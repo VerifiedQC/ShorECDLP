@@ -3,6 +3,7 @@ import ShorECDLP.Submission.«2607_13816».Challenge.EEAStructuralPhysical
 production wrapper lemmas discharge that premise using the fixed source layouts. -/
 namespace ShorECDLP.Paper2607_13816.ChallengeMigration
 open ShorECDLP Quantum ShorECDLP.Challenge
+attribute [local irreducible] terminalWork1Clear
 
 theorem dualEraseProgram_wellFormed (n start : Nat) (a i x b j y : Wire) (ha : a ≠ i) (hb : b ≠ j) :
     (dualEraseProgram n start a i x b j y).2.WellFormed :=
