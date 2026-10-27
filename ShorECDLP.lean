@@ -92,3 +92,5 @@ import ShorECDLP.Challenge.PointFields
 import ShorECDLP.Submission.«2607_13816».Challenge.CertificateAssembly
 import ShorECDLP.Submission.«2607_13816».Challenge.FixedNetwork
 import ShorECDLP.Submission.«2607_13816».Challenge.EndpointLoad
+import ShorECDLP.Submission.«2607_13816».Challenge.MatchingPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointEncoding
