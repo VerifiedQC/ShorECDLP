@@ -87,4 +87,3 @@ theorem windowYNegateState_pointWrite (P : Point) (s : BasisState)
     intro hy
     exact hw (List.mem_append_right _ (List.mem_append_left _ hy))
 end ShorECDLP.Paper2607_13816.ChallengeMigration
-
