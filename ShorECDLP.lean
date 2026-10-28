@@ -149,3 +149,7 @@ import ShorECDLP.Submission.«2607_13816».Challenge.IntervalSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.StepSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.LengthSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.EndpointSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.WrapperSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CoordinateSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CompleteSupport
