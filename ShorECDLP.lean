@@ -143,3 +143,6 @@ import ShorECDLP.Submission.«2607_13816».Challenge.WindowSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.MultiplicationSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.EEACenterSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.EEACoreSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.PhaseSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CoefficientSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.IntervalSupport
