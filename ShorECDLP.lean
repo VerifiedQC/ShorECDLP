@@ -143,3 +143,6 @@ import ShorECDLP.Submission.«2607_13816».Challenge.CoordinatePhysical
 import ShorECDLP.Submission.«2607_13816».Challenge.ActualPhysical
 
 import ShorECDLP.Submission.«2607_13816».Challenge.ActualExecution
+
+import ShorECDLP.Submission.«2607_13816».Challenge.SourceAxis
+import ShorECDLP.Submission.«2607_13816».Challenge.AxisProbability
