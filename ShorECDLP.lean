@@ -174,3 +174,5 @@ import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceCompletePhysical
 import ShorECDLP.Submission.«2607_13816».Challenge.CoordinatePhysical
 
 import ShorECDLP.Submission.«2607_13816».Challenge.ActualPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.UniformT
+import ShorECDLP.Submission.«2607_13816».Challenge.ResourceCertificate
