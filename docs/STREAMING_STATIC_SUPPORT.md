@@ -44,3 +44,23 @@ changed by the larger static allocation.
 
 Success semantics and the final challenge certificate remain separate obligations.
 The frozen published challenge is unchanged.
+
+## Resource certificate shell
+
+`ResourceCertificate.lean` packages the actual 56-round program and its fixed
+983040-row coefficient table as `streamingEntry`. Its protected evaluator bounds
+are 3932 qubits and 806028979896 abstract T units; its measurement count is exactly
+48194018992. These resource statements hold for every public point Q. `UniformT.lean`
+removes the unnecessary group-order premise from the older T-count bridge by
+counting actual lookup gates independently of their constant bits.
+
+The gate-slot upper bound is 5000000000000. The shell proves the organizer's
+admission fields: gate slots, records, coefficient rows, and candidate budget.
+`officialLimits` does not impose qubit or T caps; those are declared resource
+bounds. The record check uses the development cap 50000000000 introduced by PR518;
+the older frozen cap 47471340504 does not admit this program.
+
+`streamingEntry_certificate` takes only the actual protected success-probability
+statement as a parameter. It is a conditional shell, not an unconditional
+certificate, accepted judge result, or release approval. The decoder is the actual
+outer plan's fixed 56-round layout, with wrappedShift and legacyDecoderParams.

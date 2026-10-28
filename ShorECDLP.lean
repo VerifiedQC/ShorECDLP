@@ -190,3 +190,14 @@ import ShorECDLP.Submission.«2607_13816».Challenge.RoundReset
 import ShorECDLP.Submission.«2607_13816».Challenge.DecoderBridge
 
 import ShorECDLP.Submission.«2607_13816».Challenge.RepeatEvent
+import ShorECDLP.Submission.«2607_13816».Challenge.ProductionEEASlots
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowSlots
+
+
+
+
+
+
+import ShorECDLP.Submission.«2607_13816».Challenge.UniformT
+import ShorECDLP.Submission.«2607_13816».Challenge.ResourceCertificate
