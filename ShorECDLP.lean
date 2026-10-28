@@ -134,3 +134,5 @@ import ShorECDLP.Submission.«2607_13816».Challenge.EEACellSlots
 import ShorECDLP.Submission.«2607_13816».Challenge.EEALengthSlots
 import ShorECDLP.Submission.«2607_13816».Challenge.EEAScheduleSlots
 import ShorECDLP.Submission.«2607_13816».Challenge.StructuralSupport
+
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchSupport
