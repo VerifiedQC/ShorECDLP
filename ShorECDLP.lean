@@ -204,3 +204,4 @@ import ShorECDLP.Submission.«2607_13816».Challenge.ResourceCertificate
 import ShorECDLP.Submission.«2607_13816».Challenge.CrossWindowWeights
 import ShorECDLP.Submission.«2607_13816».Challenge.CrossWindowPoint
 import ShorECDLP.Submission.«2607_13816».Challenge.WindowBranchSum
+import ShorECDLP.Submission.«2607_13816».Challenge.IdealDistribution
