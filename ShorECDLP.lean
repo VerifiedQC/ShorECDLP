@@ -153,3 +153,6 @@ import ShorECDLP.Submission.«2607_13816».Challenge.WrapperSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.CoordinateSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.CompleteSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.ProductionEEASlots
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowSlots
