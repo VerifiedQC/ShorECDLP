@@ -188,3 +188,5 @@ import ShorECDLP.Submission.«2607_13816».Challenge.CompleteSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.RoundReset
 
 import ShorECDLP.Submission.«2607_13816».Challenge.DecoderBridge
+
+import ShorECDLP.Submission.«2607_13816».Challenge.RepeatEvent
