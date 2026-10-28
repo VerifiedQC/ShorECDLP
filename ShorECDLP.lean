@@ -150,3 +150,7 @@ import ShorECDLP.Submission.«2607_13816».Challenge.TwoAxisProbability
 import ShorECDLP.Submission.«2607_13816».Challenge.FixedWord
 import ShorECDLP.Submission.«2607_13816».Challenge.TaggedAxis
 import ShorECDLP.Submission.«2607_13816».Challenge.ActualPair
+
+import ShorECDLP.Submission.«2607_13816».Challenge.RoundBoundary
+
+import ShorECDLP.Submission.«2607_13816».Challenge.FourierDirection
