@@ -55,5 +55,3 @@ def stage(candidate, overlay, trusted_lib):
             target.chmod(0o444)
             count += 1
     return count
-
-
