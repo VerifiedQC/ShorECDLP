@@ -1,10 +1,10 @@
 """Trusted Expr-level acceptance tests, including imported syntax and native overrides."""
 import json
-import shutil
 from pathlib import Path
 import subprocess
 import tempfile
 import gate
+from artifacts import stage
 
 PREFIX = '''import ShorECDLP.Submission.Naive.Challenge.NumericCertificate
 import ShorECDLP.Challenge.Official
@@ -55,22 +55,57 @@ end ShorECDLP.Entrant
 ]
 
 
+def sparse_overlay_regression(lean, env):
+    """Issue #552: a sparse same-package root shadows trusted imports."""
+    with tempfile.TemporaryDirectory(prefix='challenge-sparse-overlay-') as directory:
+        root = Path(directory)
+        candidate = root / 'candidate'
+        source = candidate / 'ShorECDLP/Submission/Entrant/Main.lean'
+        source.parent.mkdir(parents=True)
+        source.write_text('import ShorECDLP.Challenge.Contract\n'
+                          'def sparseWitness : ShorECDLP.Challenge.Bounds := ⟨0, 0, 0⟩\n')
+        sparse = candidate / '.lake/build/lib/lean'
+        artifact = sparse / 'ShorECDLP/Submission/Entrant/Main.olean'
+        artifact.parent.mkdir(parents=True)
+        result = subprocess.run([str(lean), '--root=' + str(candidate), '-o', str(artifact), str(source)],
+                                cwd=gate.ROOT, env=env, capture_output=True, text=True, timeout=120)
+        if result.returncode:
+            raise AssertionError('sparse fixture did not compile: ' + result.stdout + result.stderr)
+        broken = gate.replay('ShorECDLP.Submission.Entrant', extra_path=sparse)
+        missing = str(sparse / 'ShorECDLP/Challenge/Contract.olean')
+        if (not broken.returncode or missing not in broken.stderr
+                or 'does not exist' not in broken.stderr):
+            raise AssertionError('sparse fixture did not reproduce missing protected import: ' + broken.stdout + broken.stderr)
+        sealed = root / 'sealed'
+        sealed.mkdir()
+        stage(candidate, sealed, gate.ROOT / '.lake/build/lib/lean')
+        fixed = gate.replay('ShorECDLP.Submission.Entrant', extra_path=sealed)
+        if fixed.returncode or 'replaying ShorECDLP.Submission.Entrant.Main' not in fixed.stdout:
+            raise AssertionError('sealed sparse fixture did not replay: ' + fixed.stdout + fixed.stderr)
+        print('SparseOverlay: missing protected import reproduced; staged dependency replay passed', flush=True)
+
+
 def main():
     lean, env = gate.environment()
+    sparse_overlay_regression(lean, env)
     judge = Path(__file__).with_name('judge.lean').resolve()
     for name, source, accepted in CASES:
         with tempfile.TemporaryDirectory(prefix='challenge-judge-regression-') as directory:
             root = Path(directory)
-            shutil.copytree(gate.ROOT / '.lake/build/lib/lean', root, dirs_exist_ok=True)
-            shutil.rmtree(root / 'ShorECDLP/Submission/Entrant', ignore_errors=True)
-            path = root / 'ShorECDLP/Submission/Entrant/Main.lean'
+            candidate = root / 'candidate'
+            path = candidate / 'ShorECDLP/Submission/Entrant/Main.lean'
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(source)
-            result = subprocess.run([str(lean), '--root=' + str(root), '-o',
-                                     str(path.with_suffix('.olean')), str(path)],
+            artifact = candidate / '.lake/build/lib/lean/ShorECDLP/Submission/Entrant/Main.olean'
+            artifact.parent.mkdir(parents=True)
+            result = subprocess.run([str(lean), '--root=' + str(candidate), '-o',
+                                     str(artifact), str(path)],
                                     cwd=gate.ROOT, env=env, capture_output=True, text=True, timeout=120)
             if result.returncode:
                 raise AssertionError(f'{name}: fixture did not compile\n{result.stdout}\n{result.stderr}')
+            root = root / 'sealed'
+            root.mkdir()
+            stage(candidate, root, gate.ROOT / '.lake/build/lib/lean')
             replay = gate.replay('ShorECDLP.Submission.Entrant', extra_path=root)
             if replay.returncode:
                 raise AssertionError(f'{name}: valid kernel fixture did not replay\n{replay.stdout}\n{replay.stderr}')

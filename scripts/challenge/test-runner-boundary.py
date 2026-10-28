@@ -87,6 +87,22 @@ class RunnerBoundary(unittest.TestCase):
         self.assertEqual((overlay / 'ShorECDLP/Challenge/Official.olean').read_bytes(), b'trusted-protected')
         self.assertEqual((overlay / 'ShorECDLP/Submission/Entrant/Main.olean').read_bytes(), artifact.read_bytes())
 
+    def test_trusted_entrant_is_removed(self):
+        artifact, trusted, overlay = self.fixture_artifacts()
+        stale = trusted / 'ShorECDLP/Submission/Entrant/Stale.olean'
+        stale.parent.mkdir(parents=True)
+        stale.write_bytes(b'stale-entrant')
+        load(HERE / 'stage-entrant.py').stage(self.candidate, overlay, trusted)
+        self.assertFalse((overlay / 'ShorECDLP/Submission/Entrant/Stale.olean').exists())
+
+    def test_nonempty_overlay_rejected_before_copy(self):
+        artifact, trusted, overlay = self.fixture_artifacts()
+        marker = overlay / 'keep'
+        marker.write_bytes(b'keep')
+        with self.assertRaisesRegex(ValueError, 'empty runner-owned'):
+            load(HERE / 'stage-entrant.py').stage(self.candidate, overlay, trusted)
+        self.assertEqual(marker.read_bytes(), b'keep')
+
     def test_worker_artifact_symlink_rejected(self):
         artifact, trusted, overlay = self.fixture_artifacts()
         artifact.unlink()

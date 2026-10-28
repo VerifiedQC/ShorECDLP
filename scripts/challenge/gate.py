@@ -51,7 +51,7 @@ def main() -> int:
     group.add_argument("--replay",
                         help="Organizer-selected module prefix; all matching oleans are replayed")
     parser.add_argument("--root", type=Path, help="evaluator-selected candidate root")
-    parser.add_argument("--artifact-path", type=Path, help="evaluator-sealed Entrant-only overlay")
+    parser.add_argument("--artifact-path", type=Path, help="sealed combined artifact root from stage-entrant.py (not a sparse Entrant directory)")
     args = parser.parse_args()
     global ROOT
     if args.root is not None:
