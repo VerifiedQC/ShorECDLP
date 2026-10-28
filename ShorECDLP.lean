@@ -156,3 +156,21 @@ import ShorECDLP.Submission.«2607_13816».Challenge.CompleteSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.ProductionEEASlots
 import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceSlots
 import ShorECDLP.Submission.«2607_13816».Challenge.WindowSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.ActualWindow
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.ModularPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.SquarePhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlacePhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACenterPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.EEAStructuralPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.EEAIntervalPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.MeasuredEEAPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceCompletePhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.CoordinatePhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.ActualPhysical

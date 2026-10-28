@@ -103,3 +103,22 @@ address preparation/unpreparation pair preserves the domain and cancels outside
 the point update; `batchedWindowPrepared_coherent` binds that complete prepared
 program as well. These proofs precede the address-bank relabeling and the outer
 repeated-trial integration, which remain separate obligations.
+
+### Actual window address and physical compiler bridges
+
+`ActualWindow.lean` proves coherent execution of the instantiated submitted
+window after the address bank is moved to wires 855–870. Its selected row is
+`signedTableAddress 32768 (windowRawDigit 0 s)`; the point update restores every
+other wire and preserves the workspace conditions needed by subsequent windows.
+The actual first-window lookup has a separate coherent execution theorem for
+arbitrary point-valued tables, including infinity. Only that first table mixes
+G and Q; the following odd-multiple addition tables have nonzero rows under the
+challenge's nonzero order-torsion public-point assumption.
+
+`WindowPhysical.lean` proves well-formedness preservation for literal programs,
+composition, table reindexing and deferred recorded corrections. It connects the
+Gidney adder and comparator templates to their structural source well-formedness
+proofs and establishes both actual modular-negation templates. This does not yet
+establish well-formedness of the entire coordinate arithmetic program. Full outer
+composition, support/resource bounds and the final Streaming certificate remain
+outstanding.
