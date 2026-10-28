@@ -154,3 +154,33 @@ import ShorECDLP.Submission.«2607_13816».Challenge.ActualPair
 import ShorECDLP.Submission.«2607_13816».Challenge.RoundBoundary
 
 import ShorECDLP.Submission.«2607_13816».Challenge.FourierDirection
+
+import ShorECDLP.Submission.«2607_13816».Challenge.MeasurementBridge
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowCounts
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowBudget
+import ShorECDLP.Submission.«2607_13816».Challenge.LookupSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.ArithmeticSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.DecoderSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACellSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEALengthSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEAScheduleSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.StructuralSupport
+
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.ArithmeticSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.ControlSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowSupport
+
+import ShorECDLP.Submission.«2607_13816».Challenge.MultiplicationSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACenterSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACoreSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.PhaseSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CoefficientSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.IntervalSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.StepSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.LengthSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.WrapperSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CoordinateSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CompleteSupport
