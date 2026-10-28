@@ -137,3 +137,5 @@ import ShorECDLP.Submission.«2607_13816».Challenge.StructuralSupport
 
 import ShorECDLP.Submission.«2607_13816».Challenge.BatchSupport
 import ShorECDLP.Submission.«2607_13816».Challenge.ArithmeticSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.ControlSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowSupport
