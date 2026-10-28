@@ -146,3 +146,4 @@ import ShorECDLP.Submission.«2607_13816».Challenge.ActualExecution
 
 import ShorECDLP.Submission.«2607_13816».Challenge.SourceAxis
 import ShorECDLP.Submission.«2607_13816».Challenge.AxisProbability
+import ShorECDLP.Submission.«2607_13816».Challenge.TwoAxisProbability
