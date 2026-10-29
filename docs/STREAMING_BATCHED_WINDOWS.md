@@ -70,8 +70,8 @@ on those ports. `placedBatchProgram_wellFormed` checks the submitted correction
 template itself, including all conditional slots. `placedBatchSource_tCount`
 proves exactly 3,784,382 T gates for that correction block.
 
-Signed point-addition composition for the whole window, physical validity of
-its remaining components, and complete support/resource bounds remain outstanding. The reset list
+Address relabeling and outer-loop semantic integration, physical validity of
+the remaining window components, and complete support/resource bounds remain outstanding. The reset list
 does not substitute for workspace restoration before reset. No final Streaming
 certificate is claimed.
 
@@ -86,6 +86,39 @@ existing arithmetic interfaces.
 signed modular-negation component, including canonical output and external-wire
 restoration. `fig14EncodedEquiv_negY` proves the coordinate permutation's
 conjugacy under Y negation, and `signedCorrection_negY` obtains subtraction after
-all exceptional corrections without assuming that conjugacy. These component
-bridges do not yet establish readiness and selected-row consistency through the
-entire signed window sequence.
+all exceptional corrections without assuming that conjugacy. The subsequent window composition proves readiness and selected-row consistency
+through the entire signed window sequence.
+
+
+`BatchedPointReady` now states the original arithmetic conditions together with
+zero values on the five-word endpoint bank and the correction flag/scratch bank.
+The coordinate stages and modular negation preserve this condition. The actual
+QROM row agrees with the same address read by the coordinate stages.
+
+`batchedWindowState_correct` proves full signed point addition for a nonzero
+order-torsion public point, including exceptional inputs and every external wire.
+`batchedWindowCore_coherent` binds the corresponding coherent execution to the
+submitted four-stage Straight program for any existing record prefix. The
+address preparation/unpreparation pair preserves the domain and cancels outside
+the point update; `batchedWindowPrepared_coherent` binds that complete prepared
+program as well. These proofs precede the address-bank relabeling and the outer
+repeated-trial integration, which remain separate obligations.
+
+### Actual window address and physical compiler bridges
+
+`ActualWindow.lean` proves coherent execution of the instantiated submitted
+window after the address bank is moved to wires 855–870. Its selected row is
+`signedTableAddress 32768 (windowRawDigit 0 s)`; the point update restores every
+other wire and preserves the workspace conditions needed by subsequent windows.
+The actual first-window lookup has a separate coherent execution theorem for
+arbitrary point-valued tables, including infinity. Only that first table mixes
+G and Q; the following odd-multiple addition tables have nonzero rows under the
+challenge's nonzero order-torsion public-point assumption.
+
+`WindowPhysical.lean` proves well-formedness preservation for literal programs,
+composition, table reindexing and deferred recorded corrections. It connects the
+Gidney adder and comparator templates to their structural source well-formedness
+proofs and establishes both actual modular-negation templates. This does not yet
+establish well-formedness of the entire coordinate arithmetic program. Full outer
+composition, support/resource bounds and the final Streaming certificate remain
+outstanding.

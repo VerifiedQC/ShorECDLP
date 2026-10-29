@@ -119,3 +119,91 @@ import ShorECDLP.Submission.«2607_13816».Challenge.AccumulatorEncoding
 
 import ShorECDLP.Submission.«2607_13816».Challenge.WindowNegation
 import ShorECDLP.Submission.«2607_13816».Challenge.OuterResources
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchBoundary
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchedWindowState
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchedWindowCoherent
+import ShorECDLP.Submission.«2607_13816».Challenge.PreparedBatch
+import ShorECDLP.Submission.«2607_13816».Challenge.ActualWindow
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.ModularPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.SquarePhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlacePhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACenterPhysical
+import ShorECDLP.Submission.«2607_13816».Challenge.EEAStructuralPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.EEAIntervalPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.MeasuredEEAPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceCompletePhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.CoordinatePhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.ActualPhysical
+
+import ShorECDLP.Submission.«2607_13816».Challenge.ActualExecution
+
+import ShorECDLP.Submission.«2607_13816».Challenge.SourceAxis
+import ShorECDLP.Submission.«2607_13816».Challenge.AxisProbability
+import ShorECDLP.Submission.«2607_13816».Challenge.TwoAxisProbability
+import ShorECDLP.Submission.«2607_13816».Challenge.FixedWord
+import ShorECDLP.Submission.«2607_13816».Challenge.TaggedAxis
+import ShorECDLP.Submission.«2607_13816».Challenge.ActualPair
+
+import ShorECDLP.Submission.«2607_13816».Challenge.RoundBoundary
+
+import ShorECDLP.Submission.«2607_13816».Challenge.FourierDirection
+
+import ShorECDLP.Submission.«2607_13816».Challenge.MeasurementBridge
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowCounts
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowBudget
+import ShorECDLP.Submission.«2607_13816».Challenge.LookupSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.ArithmeticSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.DecoderSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACellSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEALengthSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.EEAScheduleSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.StructuralSupport
+
+import ShorECDLP.Submission.«2607_13816».Challenge.BatchSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.ArithmeticSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.ControlSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowSupport
+
+import ShorECDLP.Submission.«2607_13816».Challenge.MultiplicationSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACenterSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.EEACoreSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.PhaseSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CoefficientSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.IntervalSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.StepSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.LengthSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.EndpointSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.WrapperSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CoordinateSupport
+import ShorECDLP.Submission.«2607_13816».Challenge.CompleteSupport
+
+import ShorECDLP.Submission.«2607_13816».Challenge.RoundReset
+
+import ShorECDLP.Submission.«2607_13816».Challenge.DecoderBridge
+
+import ShorECDLP.Submission.«2607_13816».Challenge.RepeatEvent
+import ShorECDLP.Submission.«2607_13816».Challenge.ProductionEEASlots
+import ShorECDLP.Submission.«2607_13816».Challenge.InPlaceSlots
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowSlots
+
+
+
+
+
+
+import ShorECDLP.Submission.«2607_13816».Challenge.UniformT
+import ShorECDLP.Submission.«2607_13816».Challenge.ResourceCertificate
+import ShorECDLP.Submission.«2607_13816».Challenge.CrossWindowWeights
+import ShorECDLP.Submission.«2607_13816».Challenge.CrossWindowPoint
+import ShorECDLP.Submission.«2607_13816».Challenge.WindowBranchSum
+import ShorECDLP.Submission.«2607_13816».Challenge.IdealDistribution
+
+import ShorECDLP.Submission.«2607_13816».Challenge.FinalCertificate
