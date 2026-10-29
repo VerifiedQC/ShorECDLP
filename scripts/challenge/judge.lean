@@ -1,8 +1,9 @@
 import Lean
 
 /-! Run ONLY from the evaluator's protected installation with trusted dependencies.
-The optional path argument is an evaluator-created overlay containing only
-Entrant compiled artifacts. No entrant is imported while this file elaborates.
+The optional path argument is an evaluator-created combined artifact root populated by stage-entrant.py with trusted
+dependencies and only the Entrant artifacts from the stopped worker. A sparse
+Entrant-only directory shadows the trusted package root and is unsupported. No entrant is imported while this file elaborates.
 Runtime imports do not load extensions or execute initializers. -/
 open Lean
 

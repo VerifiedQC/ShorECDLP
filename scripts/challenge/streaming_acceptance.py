@@ -7,11 +7,11 @@ only this adapter against the shipped Naive entrant; it is NOT Streaming evidenc
 """
 import argparse
 import json
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 import gate
+from artifacts import stage
 
 SOURCE = '''import ShorECDLP.Submission.«2607_13816».Challenge.StreamingCertificate
 import ShorECDLP.Challenge.Official
@@ -36,17 +36,21 @@ def main():
     lean, env = gate.environment()
     with tempfile.TemporaryDirectory(prefix='shor-streaming-acceptance-') as directory:
         root = Path(directory)
-        shutil.copytree(gate.ROOT / '.lake/build/lib/lean', root, dirs_exist_ok=True)
-        shutil.rmtree(root / 'ShorECDLP/Submission/Entrant', ignore_errors=True)
-        source = root / 'ShorECDLP/Submission/Entrant/Main.lean'
+        candidate = root / 'candidate'
+        source = candidate / 'ShorECDLP/Submission/Entrant/Main.lean'
         source.parent.mkdir(parents=True, exist_ok=True)
         source.write_text(source_text)
-        result = subprocess.run([str(lean), '--root=' + str(root), '-o',
-                                 str(source.with_suffix('.olean')), str(source)],
+        artifact = candidate / '.lake/build/lib/lean/ShorECDLP/Submission/Entrant/Main.olean'
+        artifact.parent.mkdir(parents=True)
+        result = subprocess.run([str(lean), '--root=' + str(candidate), '-o',
+                                 str(artifact), str(source)],
                                 cwd=gate.ROOT, env=env, capture_output=True, text=True, timeout=120)
         if result.returncode:
             raise RuntimeError('Entrant compilation failed (no acceptance claimed):\n' +
                                result.stdout + result.stderr)
+        root = root / 'sealed'
+        root.mkdir()
+        stage(candidate, root, gate.ROOT / '.lake/build/lib/lean')
         replay = gate.replay('ShorECDLP.Submission.Entrant', extra_path=root)
         if replay.returncode:
             raise RuntimeError(replay.stdout + replay.stderr)
